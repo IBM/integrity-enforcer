@@ -29,6 +29,9 @@ The following prerequisites must be satisfied to deploy IE on a cluster.
   - Policied are stored in `ie-policy` namespace. 
 - All requests to namespaces with label `integrity-enforced=true` are processed by IE. 
 
+## Quick Start
+Please see [here](README_QUICK_START.md)
+
 ## Setting up a key-ring secret
 IE requires a key-ring secret to be available for enabling signature verification as part of integrity enforcement. See [here](operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml)
 
