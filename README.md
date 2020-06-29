@@ -13,7 +13,7 @@ Integrity Enforcer's capabilities are
 
 Integrity Enforcer aims to provide a built-in mechanism for preventing integrity violation to resources on a cluster. IE currently supports the following platforms:
 
-- [ROKS](https://cloud.ibm.com/docs/openshift){:target="_blank"}
+- [ROKS](https://cloud.ibm.com/docs/openshift)
 - RedHat OpenShift 4.3 (e.g. OCP on AWS)
 - Minikube
 
