@@ -1,0 +1,141 @@
+apiVersion: research.ibm.com/v1alpha1
+kind: EnforcePolicy
+metadata:
+  name: default-policy
+spec:
+  policy:
+    policyType: DefaultPolicy
+    allowedChange:
+    - key:
+      - metadata.managedFields.*
+      - metadata.resourceVersion
+      - metadata.selfLink
+      - metadata.annotations.control-plane.alpha.kubernetes.io/leader
+      - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+      - metadata.finalizers*
+      owner: {}
+      request: {}
+    allowedForInternalRequest:
+    - username: system:admin
+    - username: system:serviceaccount:openshift-marketplace:marketplace-operator
+    - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
+    - username: system:serviceaccount:openshift-network-operator:default
+    - username: system:serviceaccount:openshift-monitoring:prometheus-operator
+    - username: system:serviceaccount:kube-system:generic-garbage-collector
+    - username: system:serviceaccount:kube-system:attachdetach-controller
+    - username: system:serviceaccount:kube-system:certificate-controller
+    - username: system:serviceaccount:kube-system:clusterrole-aggregation-controller
+    - username: system:serviceaccount:kube-system:cronjob-controller
+    - username: system:serviceaccount:kube-system:disruption-controller
+    - username: system:serviceaccount:kube-system:endpoint-controller
+    - username: system:serviceaccount:kube-system:horizontal-pod-autoscaler
+    - username: system:serviceaccount:kube-system:ibm-file-plugin
+    - username: system:serviceaccount:kube-system:ibm-keepalived-watcher
+    - username: system:serviceaccount:kube-system:ibmcloud-block-storage-plugin
+    - username: system:serviceaccount:kube-system:job-controller
+    - username: system:serviceaccount:kube-system:namespace-controller
+    - username: system:serviceaccount:kube-system:node-controller
+    - username: system:serviceaccount:kube-system:job-controller
+    - username: system:serviceaccount:kube-system:pod-garbage-collector
+    - username: system:serviceaccount:kube-system:pv-protection-controller
+    - username: system:serviceaccount:kube-system:pvc-protection-controller
+    - username: system:serviceaccount:kube-system:replication-controller
+    - username: system:serviceaccount:kube-system:resourcequota-controller
+    - username: system:serviceaccount:kube-system:service-account-controller
+    - username: system:serviceaccount:kube-system:statefulset-controller
+    - kind: ControllerRevision, Pod
+      username: system:serviceaccount:kube-system:daemon-set-controller
+    - kind: ConfigMap
+      namespace: openshift-service-ca, openshift-network-operator
+      username: system:serviceaccount:openshift-service-ca:configmap-cabundle-injector-sa
+    - kind: ConfigMap
+      namespace: openshift-service-ca-operator
+      username: system:serviceaccount:openshift-service-ca-operator:service-ca-operator
+    - kind: ConfigMap
+      namespace: openshift-service-catalog-controller-manager-operator
+      username: system:serviceaccount:openshift-service-catalog-controller-manager-operator:openshift-service-catalog-controller-manager-operator
+    - kind: ConfigMap
+      namespace: openshift-console-operator
+      username: system:serviceaccount:openshift-console-operator:console-operator
+    - kind: ConfigMap
+      namespace: openshift-service-ca
+      username: system:serviceaccount:openshift-service-ca:apiservice-cabundle-injector-sa
+    - kind: ConfigMap
+      namespace: openshift-service-ca
+      username: system:serviceaccount:openshift-service-ca:service-serving-cert-signer-sa
+    - kind: ConfigMap
+      namespace: openshift-service-catalog-apiserver-operator
+      username: system:serviceaccount:openshift-service-catalog-apiserver-operator:openshift-service-catalog-apiserver-operator
+    - namespace: openshift-operator-lifecycle-manager
+      username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    - kind: Pod
+      username: system:serviceaccount:kube-system:persistent-volume-binder
+    - kind: ConfigMap,DaemonSet
+      namespace: openshift-cluster-node-tuning-operator
+      username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
+    - kind: Secret
+      namespace: openshift
+      username: system:serviceaccount:openshift-cluster-samples-operator:cluster-samples-operator
+    - kind: ReplicaSet
+      username: system:serviceaccount:kube-system:deployment-controller
+    - kind: Pod
+      username: system:serviceaccount:kube-system:replicaset-controller
+    - kind: PersistentVolumeClaim
+      username: system:serviceaccount:kube-system:statefulset-controller
+    - kind: Deployment
+      namespace: openshift-ingress
+      username: system:serviceaccount:openshift-ingress-operator:ingress-operator
+    - kind: ServiceAccount, Secret
+      username: system:serviceaccount:openshift-infra:serviceaccount-pull-secrets-controller
+    - kind: Pod
+      namespace: openshift-marketplace
+      username: system:node:*
+    - kind: ServiceAccount
+      username: system:kube-controller-manager
+    - kind: EndpointSlice
+      username: system:serviceaccount:kube-system:endpointslice-controller
+    - kind: Secret
+      operation: CREATE
+      type: kubernetes.io/service-account-token
+      username: system:kube-controller-manager
+    - kind: Secret
+      type: kubernetes.io/service-account-token
+      usergroup: system:masters
+    - kind: ServiceAccount
+      operation: UPDATE
+      usergroup: system:masters
+    - k8screatedby: openshift.io/create-dockercfg-secrets
+      kind: Secret
+      operation: UPDATE
+    - kind: ClusterServiceVersion, ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
+      operation: UPDATE
+      username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    - kind: InstallPlan, Role, RoleBinding, Deployment
+      operation: CREATE
+      username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    ignoreRequest:
+    - kind: Event
+    - kind: Lease
+    - kind: Endpoints
+    - kind: TokenReview
+    - kind: SubjectAccessReview
+    - kind: SelfSubjectAccessReview
+    - namespace: '-'
+    permitIfVerifiedOwner:
+    - request:
+        namespace: '*'
+        operation: CREATE
+      allowChangesBySignedServiceAccount: true
+    - allowChangesBySignedServiceAccount: true
+      authorizedServiceAccount:
+        - olm-operator-serviceaccount
+      request:
+        kind: ServiceAccount
+        namespace: '*'
+        operation: CREATE
+    permitIfCreator:
+    - request:
+        namespace: '*'
+        operation: UPDATE
+      allowChangesBySignedServiceAccount: true
+

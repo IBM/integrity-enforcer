@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signservice-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: signservice-operator
+  template:
+    metadata:
+      labels:
+        name: signservice-operator
+    spec:
+      serviceAccountName: signservice-operator
+      # imagePullSecrets:
+      #   - name: sampleregkey
+      containers:
+        - name: signservice-operator
+          # Replace this with the built image name
+          image: integrityenforcer/signservice-operator:dev
+          command:
+          - signservice-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "signservice-operator"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi

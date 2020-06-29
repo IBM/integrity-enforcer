@@ -13,7 +13,7 @@ Integrity Enforcer's capabilities are
 
 Integrity Enforcer aims to provide a built-in mechanism for preventing integrity violation to resources on a cluster. IE currently supports the following platforms:
 
-- ROKS
+- [ROKS](https://cloud.ibm.com/docs/openshift)
 - RedHat OpenShift 4.3 (e.g. OCP on AWS)
 - Minikube
 
@@ -24,10 +24,13 @@ The following prerequisites must be satisfied to deploy IE on a cluster.
 - ROKS or RedHat OpenShift 4.3 cluster
 - Admin access to the cluster to use `oc` command
 - Three namespaces for IE. All resources for IE are deployed there. 
-  - All IE resources are deployed in `integrity-enforcer` namespace.
+  - All IE resources are deployed in `integrity-enforcer-ns` namespace.
   - Signatures are stored in `ie-sign` namespace. 
   - Policied are stored in `ie-policy` namespace. 
 - All requests to namespaces with label `integrity-enforced=true` are processed by IE. 
+
+## Quick Start
+Please see [here](README_QUICK_START.md)
 
 ## Setting up a key-ring secret
 IE requires a key-ring secret to be available for enabling signature verification as part of integrity enforcement. See [here](operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml)
@@ -62,7 +65,7 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
 
 First, clone this repository and moved to `integrity-enforcer` directory
 ```
-git clone git@github.ibm.com:mutation-advisor/integrity-enforcer.git
+git clone https://github.com/IBM/integrity-enforcer.git
 cd integrity-enforcer
 ```
 
@@ -85,13 +88,10 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     ```
 
 2. Do the following commands to deploy `integrity-enforcer` operator
-    
+
+
     ```
     cd operator
-
-    # Create secret for pulling images from IKS registry
-
-    oc create -f deploy/mappregkey.yaml
 
     # Create CRDs
 

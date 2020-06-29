@@ -1,0 +1,30 @@
+apiVersion: research.ibm.com/v1alpha1
+kind: SignService
+metadata:
+  name: signservice
+spec:
+  enabled: true
+  keyRingSecretName: keyring-secret
+  PrivateKeyRingSecretName: private-keyring-secret
+  serviceAccountName: signservice-sa
+  imagePullSecrets: []
+  signers:
+  - cluster_signer@signer.com
+  invalidSigners:
+  - invalid_signer@invalid.signer.com
+  signService:
+    image: signservice:dev
+    imagePullPolicy: IfNotPresent
+    port: 8180
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    appName: signservice
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000580000
+

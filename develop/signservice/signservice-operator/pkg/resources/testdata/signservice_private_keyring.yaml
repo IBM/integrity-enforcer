@@ -1,0 +1,10 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    app: example-signservice
+    app.kubernetes.io/managed-by: operator
+    app.kubernetes.io/name: private-keyring-secret
+    role: security
+  name: private-keyring-secret
+  namespace: testns
+type: Opaque
