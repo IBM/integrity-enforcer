@@ -1,0 +1,8 @@
+{
+  "root": ".",
+  "structure": {
+      "readme": "readme.md",
+      "summary": "summary.md"
+      },
+  "plugins": ["-sharing","hide-published-with"]
+}

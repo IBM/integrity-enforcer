@@ -1,0 +1,29 @@
+{
+  "name": "integrity-enforcer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "gitbook-cli": "^2.3.2",
+    "rimraf": "^2.4.4",
+    "svgexport": "^0.3.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "docs:prepare": "gitbook install",
+    "docs:clean": "rimraf _book",
+    "docs:build": "npm run docs:prepare && npm run docs:clean && gitbook build",
+    "docs:watch": "npm run docs:prepare && gitbook serve",
+    "docs:publish": "npm run docs:build",
+    "docs:pdf": "gitbook pdf . integrity-enforcer.pdf"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.ibm.com/mutation-advisor/integrity-enforcer.git"
+  },
+  "author": "Yuji Watanabe <muew@jp.ibm.com>",
+  "license": "ISC"
+}
