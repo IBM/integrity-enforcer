@@ -450,7 +450,7 @@ Policy for IE is defined in EnforcePolicy custom resource in `integrity-enforcer
 - permitIfCreator: allow when username is same as when the resource was created (default false)
 - ignoreRequest: skip processing request in this condition (default false)
 - enforce: block if not allowed. (default true)
-- allowTainted: allow request in this condition (default false)
+- allowUnverified: allow request in this condition (default false)
 
 ---
 
@@ -462,7 +462,7 @@ $ ./watch_events.sh
 secure-ns false ConfigMap           test-cm                                      UPDATE  (username)                                   Failed to verify signature; Message in ResourceSignature is not identical with the requested object
 ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
 ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
-secure-ns true  ConfigMap           test-cm                                      UPDATE  (username)                                   allowed because no mutation foun
+secure-ns true  ConfigMap           test-cm                                      UPDATE  (username)                                   allowed because no mutation found
 ```
 
 
