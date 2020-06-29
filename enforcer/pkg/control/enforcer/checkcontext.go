@@ -45,7 +45,7 @@ type CheckContext struct {
 	policy               *policy.Policy
 	ReqC                 *common.ReqContext `json:"-"`
 	DryRun               bool               `json:"dryRun"`
-	ByPassed             bool               `json:"byPassed"`
+	Unverified           bool               `json:"unverified"`
 	PolicyReq            bool               `json:"policyReq"`
 	invalidPolicy        bool               `json:"invalidPolicy"`
 	invalidPolicyMessage string             `json:"invalidPolicyMessage"`
@@ -136,7 +136,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	policyChecker := policy.NewPolicyChecker(self.policy, self.ReqC)
 
-	self.ByPassed = policyChecker.IsEmergencyMode()
+	self.Unverified = policyChecker.IsTrustStateEnforcementDisabled()
 	self.Ignored = policyChecker.IsIgnoreRequest()
 	self.Enforced = policyChecker.IsEnforceResult()
 	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
@@ -329,12 +329,12 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	if allowed {
 		if self.Result.SignPolicyEvalResult.Allow {
 			annotations["integrityVerified"] = "true"
-			deleteKeys = append(deleteKeys, "integrityTainted")
+			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
 			self.Result.ResolveOwnerResult.Verified {
 			annotations["integrityVerified"] = "true"
-			deleteKeys = append(deleteKeys, "integrityTainted")
+			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else {
 			deleteKeys = append(deleteKeys, "integrityVerified")
 		}
@@ -344,15 +344,15 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			deleteKeys = append(deleteKeys, "ie-createdBy")
 		}
 	} else {
-		if self.ByPassed {
+		if self.Unverified {
 			self.Allow = true
 			allowed = self.Allow
-			self.Message = common.ReasonCodeMap[common.REASON_BYPASSED].Message
-			self.ReasonCode = common.REASON_BYPASSED
+			self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
+			self.ReasonCode = common.REASON_UNVERIFIED
 			msg = self.Message
 			annotations["integrityVerified"] = "false"
 			annotations["ie-createdBy"] = self.ReqC.UserName
-			annotations["integrityTainted"] = "true"
+			annotations["integrityUnverified"] = "true"
 		}
 	}
 
