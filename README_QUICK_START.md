@@ -224,8 +224,8 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     data:
     - apiVersion: research.ibm.com/v1alpha1
 
-  # create signature in the cluster
-  oc create -f /tmp/signer-policy-rsig.yaml -n ie-sign
+  # apply signature in the cluster
+  oc apply -f /tmp/signer-policy-rsig.yaml -n ie-sign
    
   # Apply signer policy changes
   oc apply -f /tmp/signer-policy.yaml -n integrity-enforcer-ns
@@ -397,7 +397,7 @@ spec:
 ```
 
 With this sample custom-policy, it is allowed to changes fields `data.comment1` and `data.comment2` of `test-cm` ConfigMap in `secure-ns` namespace.
-For detail description to customize policy, please refer to [README_FOR_ENFORCE_POLICY.md](https://github.ibm.com/mutation-advisor/integrity-enforcer/blob/master/README_FOR_ENFORCE_POLICY.md)
+
 
 create the custome policy in the cluster
 ```
