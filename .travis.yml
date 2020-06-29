@@ -34,7 +34,7 @@ script:
 - git checkout -b gh-pages
 - git add .
 - git commit -m "Publishing site on `date "+%Y-%m-%d %H:%M:%S"`"
-- git push git@github.com:${GH_REPO}.git gh-pages
+- git push -f git@github.com:${GH_REPO}.git gh-pages
 - popd
 - rm -rf _book
 - popd
