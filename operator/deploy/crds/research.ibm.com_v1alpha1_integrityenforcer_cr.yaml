@@ -1,0 +1,99 @@
+apiVersion: research.ibm.com/v1alpha1
+kind: IntegrityEnforcer
+metadata:
+  name: integrity-enforcer-server
+spec:
+  affinity: {}
+  enforcePolicy:
+    allowedByRule: []
+    allowedChange: []
+    allowedForInternalRequest: []
+    allowedSigner:
+    - request:
+        namespace: '*'
+      subject:
+        email: cluster_signer@signer.com
+    enforce:
+    - namespace: '*'
+    ignoreRequest: []
+    permitIfCreator: []
+    permitIfVerifiedOwner: []
+  enforcerConfig:
+    log:
+      consoleLog:
+        enabled: true
+        inScope:
+        - namespace: '*'
+      contextLog:
+        enabled: true
+        inScope:
+        - namespace: '*'
+      logLevel: trace
+    patch:
+      enabled: true
+  enforcerConfigCrName: ie-config
+  globalConfig:
+    openShift: true
+  imagePullSecrets: []
+  keyRingConfig:
+    createIfNotExist: false
+    keyValue: test
+    name: keyring-secret
+  labels:
+    app: ie-server
+  logger:
+    enabled: true
+    es:
+      enabled: false
+      host: 10.200.10.10
+      indexPrefix: ac-log
+      port: 9200
+      scheme: http
+    esSecretName: es-tls-certs
+    image: integrityenforcer/ie-logging:latest
+    imagePullPolicy: Always
+    name: forwarder
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+    stdOutput: true
+  replicaCount: 1
+  security:
+    clusterRole: ie-cluster-role
+    clusterRoleBinding: ie-cluster-role-binding
+    podSecurityPolicyName: ie-psp
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000580000
+    securityContextConstraintsName:  ie-scc
+    serviceAccountName: ie-sa
+  selector:
+    app: ie-server
+  server:
+    chartBaseUrl: http://sample-chart-repo-server/charts
+    contextLogEnabled: true
+    enforcePolicyReloadSec: 10
+    image: integrityenforcer/ie-server:latest
+    imagePullPolicy: Always
+    name: server
+    port: 8443
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    securityContext: {}
+  signatureNamespace: ie-sign
+  policyNamespace: ie-policy
+  webhookConfigName: ie-webhook-config
+  webhookServerTlsSecretName: ie-server-tls
+  webhookServiceName: ie-server

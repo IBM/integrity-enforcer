@@ -62,7 +62,7 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
 
 First, clone this repository and moved to `integrity-enforcer` directory
 ```
-git clone git@github.ibm.com:mutation-advisor/integrity-enforcer.git
+git clone https://github.com/IBM/integrity-enforcer.git
 cd integrity-enforcer
 ```
 
@@ -85,13 +85,14 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     ```
 
 2. Do the following commands to deploy `integrity-enforcer` operator
-    
+
+
+    <!-- # Create secret for pulling images from registry
+
+    oc create -f deploy/sampleregkey.yaml -->
+
     ```
     cd operator
-
-    # Create secret for pulling images from IKS registry
-
-    oc create -f deploy/mappregkey.yaml
 
     # Create CRDs
 
