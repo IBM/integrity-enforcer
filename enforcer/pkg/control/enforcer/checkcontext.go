@@ -558,7 +558,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 
 	}
 
-	if self.config.Log.IncludeRequest {
+	if self.config.Log.IncludeRequest && !reqc.IsSecret() {
 		logRecord["request.dump"] = reqc.RequestJsonStr
 	}
 
