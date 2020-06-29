@@ -605,7 +605,7 @@ spec:
               type: object
             defaultPolicy:
               properties:
-                allowTainted:
+                allowUnverified:
                   items:
                     properties:
                       namespace:
@@ -847,7 +847,7 @@ spec:
               type: object
             enforcePolicy:
               properties:
-                allowTainted:
+                allowUnverified:
                   items:
                     properties:
                       namespace:
@@ -1782,7 +1782,7 @@ spec:
               type: string
             signerPolicy:
               properties:
-                allowTainted:
+                allowUnverified:
                   items:
                     properties:
                       namespace:

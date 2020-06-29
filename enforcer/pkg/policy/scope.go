@@ -34,7 +34,7 @@ import (
 ***********************************************/
 
 type PolicyChecker interface {
-	IsEmergencyMode() bool
+	IsTrustStateEnforcementDisabled() bool
 	IsEnforceResult() bool
 	IsIgnoreRequest() bool
 	IsAllowedForInternalRequest() bool
@@ -69,10 +69,10 @@ func (self *concretePolicyChecker) check(patterns []RequestMatchPattern) bool {
 	return isInScope
 }
 
-func (self *concretePolicyChecker) IsEmergencyMode() bool {
+func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() bool {
 
-	if self.policy != nil && self.policy.AllowTainted != nil {
-		for _, pattern := range self.policy.AllowTainted {
+	if self.policy != nil && self.policy.AllowUnverified != nil {
+		for _, pattern := range self.policy.AllowUnverified {
 			if pattern.Namespace == self.reqc.Namespace {
 				return true
 			}
@@ -187,7 +187,7 @@ func (self *concretePolicyChecker) isAuthorizedServiceAccount(patterns []Allowed
 					}
 				}
 			}
-			if s, ok := sa.Annotations["integrityTainted"]; ok {
+			if s, ok := sa.Annotations["integrityUnverified"]; ok {
 				if b, err := strconv.ParseBool(s); err != nil {
 					continue
 				} else {

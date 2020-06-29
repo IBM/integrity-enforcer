@@ -220,7 +220,7 @@ const (
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
 	REASON_ABORTED
-	REASON_BYPASSED
+	REASON_UNVERIFIED
 	REASON_INVALID_SIG
 	REASON_NO_SIG
 	REASON_NO_POLICY
@@ -265,9 +265,9 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "aborted",
 		Code:    "aborted",
 	},
-	REASON_BYPASSED: {
-		Message: "allowed by allowTainted policy",
-		Code:    "bypassed",
+	REASON_UNVERIFIED: {
+		Message: "allowed by allowUnverified policy",
+		Code:    "unverified",
 	},
 	REASON_INVALID_SIG: {
 		Message: "Failed to verify signature",

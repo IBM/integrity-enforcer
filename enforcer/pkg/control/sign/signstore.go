@@ -231,7 +231,7 @@ func getMaskDef(kind string) []string {
 		{
 			"*": [
 				"metadata.annotations.integrityVerified",
-				"metadata.annotations.integrityTainted",
+				"metadata.annotations.integrityUnverified",
 				"metadata.annotations.ie-createdBy",
 				"metadata.annotations.sigOwnerApiVersion",
 				"metadata.annotations.sigOwnerKind",

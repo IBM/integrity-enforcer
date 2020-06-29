@@ -41,17 +41,17 @@ const (
 ***********************************************/
 
 type Policy struct {
-	Enforce                   []RequestMatchPattern    `json:"enforce,omitempty"`
-	AllowTainted              []AllowTaintedCondition  `json:"allowTainted,omitempty"`
-	IgnoreRequest             []RequestMatchPattern    `json:"ignoreRequest,omitempty"`
-	AllowedSigner             []SignerMatchPattern     `json:"allowedSigner,omitempty"`
-	AllowedForInternalRequest []RequestMatchPattern    `json:"allowedForInternalRequest,omitempty"`
-	AllowedByRule             []RequestMatchPattern    `json:"allowedByRule,omitempty"`
-	AllowedChange             []AllowedChangeCondition `json:"allowedChange,omitempty"`
-	PermitIfVerifiedOwner     []AllowedUserPattern     `json:"permitIfVerifiedOwner,omitempty"`
-	PermitIfCreator           []AllowedUserPattern     `json:"permitIfCreator,omitempty"`
-	Namespace                 string                   `json:"namespace,omitempty"`
-	PolicyType                PolicyType               `json:"policyType,omitempty"`
+	Enforce                   []RequestMatchPattern      `json:"enforce,omitempty"`
+	AllowUnverified           []AllowUnverifiedCondition `json:"AllowUnverified,omitempty"`
+	IgnoreRequest             []RequestMatchPattern      `json:"ignoreRequest,omitempty"`
+	AllowedSigner             []SignerMatchPattern       `json:"allowedSigner,omitempty"`
+	AllowedForInternalRequest []RequestMatchPattern      `json:"allowedForInternalRequest,omitempty"`
+	AllowedByRule             []RequestMatchPattern      `json:"allowedByRule,omitempty"`
+	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
+	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
+	PermitIfCreator           []AllowedUserPattern       `json:"permitIfCreator,omitempty"`
+	Namespace                 string                     `json:"namespace,omitempty"`
+	PolicyType                PolicyType                 `json:"policyType,omitempty"`
 }
 
 func (self *Policy) CheckFormat() (bool, string) {
@@ -106,7 +106,7 @@ type SubjectMatchPattern struct {
 	Uid   string `json:"uid,omitempty"`
 }
 
-type AllowTaintedCondition struct {
+type AllowUnverifiedCondition struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
@@ -172,6 +172,6 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
 		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
 		PermitIfCreator:           append(p.PermitIfCreator, p2.PermitIfCreator...),
-		AllowTainted:              append(p.AllowTainted, p2.AllowTainted...),
+		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
 	}
 }
