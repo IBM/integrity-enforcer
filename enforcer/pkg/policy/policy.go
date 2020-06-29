@@ -42,7 +42,7 @@ const (
 
 type Policy struct {
 	Enforce                   []RequestMatchPattern      `json:"enforce,omitempty"`
-	AllowUnverified           []AllowUnverifiedCondition `json:"AllowUnverified,omitempty"`
+	AllowUnverified           []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
 	IgnoreRequest             []RequestMatchPattern      `json:"ignoreRequest,omitempty"`
 	AllowedSigner             []SignerMatchPattern       `json:"allowedSigner,omitempty"`
 	AllowedForInternalRequest []RequestMatchPattern      `json:"allowedForInternalRequest,omitempty"`
