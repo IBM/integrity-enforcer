@@ -50,7 +50,7 @@ spec:
       port: 9200
       scheme: http
     esSecretName: es-tls-certs
-    image: integrityenforcer/ie-logging:latest
+    image: integrityenforcer/ie-logging:0.0.1
     imagePullPolicy: Always
     name: forwarder
     resources:
@@ -80,7 +80,7 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     enforcePolicyReloadSec: 10
-    image: integrityenforcer/ie-server:latest
+    image: integrityenforcer/ie-server:0.0.1
     imagePullPolicy: Always
     name: server
     port: 8443
