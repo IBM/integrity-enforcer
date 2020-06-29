@@ -13,7 +13,7 @@ Integrity Enforcer's capabilities are
 
 Integrity Enforcer aims to provide a built-in mechanism for preventing integrity violation to resources on a cluster. IE currently supports the following platforms:
 
-- ROKS
+- [ROKS](https://cloud.ibm.com/docs/openshift){:target="_blank"}
 - RedHat OpenShift 4.3 (e.g. OCP on AWS)
 - Minikube
 
@@ -24,7 +24,7 @@ The following prerequisites must be satisfied to deploy IE on a cluster.
 - ROKS or RedHat OpenShift 4.3 cluster
 - Admin access to the cluster to use `oc` command
 - Three namespaces for IE. All resources for IE are deployed there. 
-  - All IE resources are deployed in `integrity-enforcer` namespace.
+  - All IE resources are deployed in `integrity-enforcer-ns` namespace.
   - Signatures are stored in `ie-sign` namespace. 
   - Policied are stored in `ie-policy` namespace. 
 - All requests to namespaces with label `integrity-enforced=true` are processed by IE. 
@@ -86,10 +86,6 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 
 2. Do the following commands to deploy `integrity-enforcer` operator
 
-
-    <!-- # Create secret for pulling images from registry
-
-    oc create -f deploy/sampleregkey.yaml -->
 
     ```
     cd operator
