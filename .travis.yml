@@ -27,7 +27,7 @@ script:
 - cd ${DIR_TEMPLATE}
 - gitbook install
 - gitbook build
-- git push origin --delete gh-pages
+- git push -f git@github.com:${GH_REPO}.git --delete gh-pages
 - pushd .
 - cd _book
 - git init
