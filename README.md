@@ -1,4 +1,4 @@
-# integrity-enforcer
+# Integrity Enforcer (IE)
 Integrity Enforcer is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
 
 Integrity Enforcer's capabilities are 
@@ -114,7 +114,7 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 
 4. After successfully installing the operator, create a `integrity-enforcer` server.
     
-    Note: check [configuration](README_CONFIGURATION.md)
+    Note: check [configuration](docs/README_CONFIGURATION.md)
     
     deploy webhook server `integrity-enforcer-server` by creating custom resource for IE by
     ```     
