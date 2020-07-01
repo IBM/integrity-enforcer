@@ -17,6 +17,7 @@ install:
 - npm install
 - which gitbook
 - popd
+
 branches:
   only:
   - master
