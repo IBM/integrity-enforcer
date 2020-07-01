@@ -1,8 +1,8 @@
 # Deploy integrity-enforcer on ROKS
 
 This document is described for supporting evaluation of Integrity Enforcer (IE) on your RedHat OpenShift cluster including ROKS. The steps in this document include 
-- Step 1. Deploy signing serivce via Signing Service Operator
-- Step 2. Deploy admission webhook via Integrity Enforcer operator
+- Step 1. Deploy admission webhook via Integrity Enforcer operator
+- Step 2. Deploy signing serivce via Signing Service Operator
 - Step 3. Create signer policy
 - Step 4. Try to deploy resources with signature
 - Step 5. Change the resource after deploy
@@ -21,78 +21,28 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
 - All requests to namespaces with label `integrity-enforced=true` are processed by IE. 
 
 ---
-## Step.1 Deploy a signing serivce via Signing Service Operator
-
-First, clone this repository and moved to integrity-enforcer directory
-
-```
-git clone git@github.com:IBM/integrity-enforcer.git
-cd integrity-enforcer
-```
-
-Create a namespace
-
-```
-oc create ns integrity-enforcer-ns
-```
-
-Change label
-
-```
-oc label namespace integrity-enforcer-ns integrity-enforced=true
-```
-
-1. Switch to enforcer namespace
-    ```
-    oc project integrity-enforcer-ns
-    ```
-2. Do the following commands to deploy signing service operator   
-    ```
-    
-    cd develop/signservice/signservice-operator/
-    
-    # Create CRDs
-    
-    oc create -f deploy/crds/research.ibm.com_signservices_crd.yaml  
-    
-    # Deploy `sign-service-enforcer operator`    
-
-    oc create -f deploy/service_account.yaml 
-    oc create -f deploy/role.yaml 
-    oc create -f deploy/role_binding.yaml 
-    oc create -f deploy/operator.yaml
-    
-    ```
-3. Confirm if signing service operator is running properly. 
-    ```
-    $ oc get pod | grep signservice-operator
-    signservice-operator-6b4dd5cd47-4vmvt         1/1     Running   0          35
-    ```
-    
-4. Add a signer to signservice cr
-   Edit `deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml`
-   
-   ```
-    signers:
-    - cluster_signer@signer.com
-    - secure_ns_signer@signer.com
-   ```
-5. After successfully installing the operator, create a signing service.
-    deploy signing service `signservice` by creating custom resource for singingservice by
-   ```
-    oc create -f deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml
-   ```
-    
-    Check if the pods are running properly. 
-   ```
-    $ oc get pod | grep 'signservice'
-    signservice-775695d84d-s8qbp            1/1       Running   0          5s
-    signservice-operator-6b4dd5cd47-z4lg4   1/1       Running   0          3m8s
-   ```
----
-## Step.2 Deploy admission webhook via Integrity Enforcer operator
+## Step.1 Deploy admission webhook via Integrity Enforcer operator
   
   Install `integrity-enforcer-operator` on ROKS as follows.
+
+  First, clone this repository and moved to integrity-enforcer directory
+
+  ```
+  git clone git@github.com:IBM/integrity-enforcer.git
+  cd integrity-enforcer
+  ```
+
+  Create a namespace
+
+  ```
+  oc create ns integrity-enforcer-ns
+  ```
+
+  Change label
+
+  ```
+  oc label namespace integrity-enforcer-ns integrity-enforced=true
+  ```
 
 1. Switch to enforcer namespace
     ```
@@ -147,7 +97,12 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     oc label ns ie-policy integrity-enforced=true    
     ```   
 ---
+Step 2. Deploy a signing serivce via Signing Service Operator
 
+This documentation assume a signing service is deployed to create signatures.
+See documentation [here](docs/README_INSTALL_SIGNING_SERVICE.md)
+
+---
 
 ## Step.3 Create signer policy
     
@@ -486,16 +441,4 @@ oc delete -f deploy/operator.yaml
 # Delete CRD
 oc delete -f deploy/crds/research.ibm.com_integrityenforcers_crd.yaml
 
-# Delete CR `signingservice` 
-cd ../develop/signservice/signservice-operator
-oc delete -f deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml 
-
-# Delete SignService Operator    
-oc delete -f deploy/service_account.yaml
-oc delete -f deploy/role.yaml
-oc delete -f deploy/role_binding.yaml
-oc delete -f deploy/operator.yaml
-
-# Delete CRD
-oc delete -f deploy/crds/research.ibm.com_signservices_crd.yaml
 ```
