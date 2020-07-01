@@ -11,9 +11,6 @@ Integrity Enforcer aims to provide a built-in mechanism for preventing integrity
 ## Prerequisites
 see documentation [here](README_PREREQUISITES.md)
  
-## Tips
-- see installation tips for minikube [here](README_FOR_MINIKUBE_ENV.md)
-- see installation tips for OCP [here](README_FOR_OCP_ENV.md)
 
 ## Installation via CLI
 
@@ -26,23 +23,23 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
   
   Install `integrity-enforcer-operator` on ROKS as follows.
 
-First, clone this repository and moved to `integrity-enforcer` directory
-```
-git clone git@github.com:IBM/integrity-enforcer.git
-cd integrity-enforcer
-```
+  First, clone this repository and moved to `integrity-enforcer` directory
+  ```
+  git clone git@github.com:IBM/integrity-enforcer.git
+  cd integrity-enforcer
+  ```
 
-Create a namespace (if not exist).
+  Create a namespace (if not exist).
 
-```
-oc create ns integrity-enforcer-ns
-```
+  ```
+  oc create ns integrity-enforcer-ns
+  ```
 
-Change label
+  Change label
 
-```
-oc label namespace integrity-enforcer-ns integrity-enforced=true
-```
+  ```
+  oc label namespace integrity-enforcer-ns integrity-enforced=true
+  ```
 
 1. Switch to enforcer namespace
 
