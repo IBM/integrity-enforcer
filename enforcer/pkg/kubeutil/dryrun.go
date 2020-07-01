@@ -147,6 +147,62 @@ func strategicMergePatch(objBytes []byte, namespace string) ([]byte, []byte, err
 	return patchedBytes, currentObjBytes, nil
 }
 
+func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte, error) {
+	config, err := GetKubeConfig()
+	if err != nil {
+		return nil, fmt.Errorf("Error in getting K8s config; %s", err.Error())
+	}
+	dyClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("Error in createging DynamicClient; %s", err.Error())
+	}
+
+	obj := &unstructured.Unstructured{}
+	err = obj.UnmarshalJSON(objBytes)
+	if err != nil {
+		return nil, fmt.Errorf("Error in Unmarshal into unstructured obj; %s", err.Error())
+	}
+	gvk := obj.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	gvClient := dyClient.Resource(gvr)
+	claimedNamespace := obj.GetNamespace()
+	claimedName := obj.GetName()
+	if namespace != "" && claimedNamespace != "" && namespace != claimedNamespace {
+		return nil, fmt.Errorf("namespace is not identical, requested: %s, defined in yaml: %s", namespace, claimedNamespace)
+	}
+	if namespace == "" && claimedNamespace != "" {
+		namespace = claimedNamespace
+	}
+
+	var currentObj *unstructured.Unstructured
+	if namespace == "" {
+		currentObj, err = gvClient.Get(claimedName, metav1.GetOptions{})
+	} else {
+		currentObj, err = gvClient.Namespace(namespace).Get(claimedName, metav1.GetOptions{})
+	}
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, fmt.Errorf("Error in getting current obj; %s", err.Error())
+	}
+	currentObjBytes, err := json.Marshal(currentObj)
+	if err != nil {
+		return nil, fmt.Errorf("Error in converting current obj to json; %s", err.Error())
+	}
+	creator := scheme.Scheme
+	mocObj, err := creator.New(gvk)
+	if err != nil {
+		return nil, fmt.Errorf("Error in getting moc obj; %s", err.Error())
+	}
+	patchJsonBytes, err := yaml.YAMLToJSON(patchBytes)
+	if err != nil {
+		return nil, fmt.Errorf("Error in converting patchBytes to json; %s", err.Error())
+	}
+	patchedBytes, err := strategicpatch.StrategicMergePatch(currentObjBytes, patchJsonBytes, mocObj)
+	if err != nil {
+		return nil, fmt.Errorf("Error in getting patched obj bytes; %s", err.Error())
+	}
+	return patchedBytes, nil
+}
+
 func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, error) {
 	obj := &unstructured.Unstructured{}
 	objFileName := "/tmp/obj.yaml"

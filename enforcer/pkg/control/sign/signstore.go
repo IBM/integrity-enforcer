@@ -266,26 +266,22 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNames
 		}
 	}
 	if !matched && signType == SignatureTypePatch {
-		reqNode, err := mapnode.NewFromBytes(reqObj)
+		patchedBytes, err := kubeutil.StrategicMergePatch(reqObj, orgObj, "")
 		if err != nil {
-			logger.Error(fmt.Sprintf("Error in loading reqNode: %s", err.Error()))
+			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
 			return false
 		}
-		reqNamespace := reqNode.GetString("metadata.namespace")
-		reqYaml, err := yaml.JSONToYAML(reqObj)
+		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
+		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
 		if err != nil {
-			logger.Error(fmt.Sprintf("Error in loading reqYaml: %s", err.Error()))
+			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
 			return false
 		}
-		patch, _, err := kubeutil.GetApplyPatchBytes([]byte(reqYaml), reqNamespace)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Error in CalcApplyResult: %s", err.Error()))
-			return false
-		}
-		orgPatch := orgObj
-		reqPatch := patch
 		mask = getMaskDef("")
-		matched = matchContents(orgPatch, reqPatch, mask)
+		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+		matched = matchContents(simPatchedObj, reqObj, mask)
 		if matched {
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
