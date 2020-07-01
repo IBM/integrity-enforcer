@@ -2,9 +2,6 @@ language: node_js
 node_js:
 - stable
 sudo: false
-cache:
-  directories:
-  - docs/node_modules
 before_install:
 - openssl aes-256-cbc -K $encrypted_225a7d4b2fd8_key -iv $encrypted_225a7d4b2fd8_iv -in ie_travis_gh_deploy_key.enc -out ie_travis_gh_deploy_key -d
 - chmod 600 ie_travis_gh_deploy_key
