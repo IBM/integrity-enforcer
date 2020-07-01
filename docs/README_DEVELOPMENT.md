@@ -96,6 +96,21 @@ Depending on the changes made, it may be required to re-deploy `Integrity-Enforc
     
 ## Signing Service Tool
 
-   Above build steps also include building source code and container images for signing service.
-   see [documention](README_INSTALL_SIGNING_SERVICE.md)
+   The followins are the steps building source code and container images for signing service.
+   
+   Start building source code as well container images
+
+   ```
+   $./develop/signservice/develop/scripts/build_images.sh
+   ```
+
+   Push container images to registry
+
+   Note:  Setup container image registry (e.g. dockerhub, quay.io etc.) and change the container images' name and tag as needed 
+
+   ```
+   $./develop/signservice/develop/scripts/push_images.sh
+   ```
+
+   see documention [here](README_INSTALL_SIGNING_SERVICE.md) for deploying signing service.
 
