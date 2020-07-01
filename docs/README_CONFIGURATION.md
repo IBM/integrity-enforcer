@@ -116,13 +116,5 @@ This document describes a set of confiuration required for IE to enable integrit
   
   see documentation [here](README_FOR_ENFORCE_POLICY.md)
   
-- Configure ES for forwarding logging
-  
-  see documentation [here](README_FOR_OCP_ENV.md)
-  
-- Configure Helm Chart repository (ChartMuseum)
-  
-  - For minikube, see documentation [here](README_FOR_MINIKUBE_ENV.md)
-  - For OCP, see documentation [here](README_FOR_OCP_ENV.md)
-  
+
   
