@@ -11,7 +11,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
 - How to check why IE allowed/denied the requests in detail
 - How to Delete Integrity Enforcer from cluster
 
-## Prerequeistes
+## Prerequisites
 - ROKS or RedHat OpenShift 4.3 cluster
 - admin access to the cluster to use `oc` command
 - create three namespaces for IE. all resources for IE are deployed there. 
