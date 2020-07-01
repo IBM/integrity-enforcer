@@ -97,10 +97,10 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
     oc label ns ie-policy integrity-enforced=true    
     ```   
 ---
-Step 2. Deploy a signing serivce via Signing Service Operator
+## Step 2. Deploy a signing serivce via Signing Service Operator
 
-This documentation assume a signing service is deployed to create signatures.
-See documentation [here](docs/README_INSTALL_SIGNING_SERVICE.md)
+   This documentation assume a signing service is deployed to create signatures.
+   See documentation [here](docs/README_INSTALL_SIGNING_SERVICE.md)
 
 ---
 
