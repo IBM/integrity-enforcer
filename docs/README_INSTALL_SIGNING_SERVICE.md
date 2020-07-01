@@ -1,5 +1,5 @@
 # Signing Service
-We build a signing service for demo purpose. This is a handy toolto be used for creating signature for resources to be deployed on a cluster while integrity enforcement is enabled. 
+We build a signing service for demo purpose. This is a handy tool to create signatures for resources to be deployed on a cluster while integrity enforcement is enabled. 
 
 This document describe the steps for deploying signing service an OCP cluster.
 
@@ -10,7 +10,7 @@ This document describe the steps for deploying signing service an OCP cluster.
 First, clone this repository and moved to integrity-enforcer directory
 
 ```
-git clone git@github.ibm.com:mutation-advisor/integrity-enforcer.git
+git clone git@github.com:IBM/integrity-enforcer.git
 cd integrity-enforcer
 ```
 
@@ -21,7 +21,7 @@ Note: if `integrity-enforcer` is already deployed on a cluster in namespace `int
 oc create ns integrity-enforcer-ns
 ```
 
-Change label
+Change label (if not exist).
 
 ```
 oc label namespace integrity-enforcer-ns integrity-enforced=true
@@ -35,10 +35,6 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 2. Do the following commands to deploy signing service operator   
 
     ```
-    # Create secret for pulling images from IKS registry
-
-    oc create -f operator/deploy/mappregkey.yaml
-
     cd develop/signservice/signservice-operator/
     
     # Create CRDs
