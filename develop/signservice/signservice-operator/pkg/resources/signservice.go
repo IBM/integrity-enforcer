@@ -120,33 +120,45 @@ func BuildSignServiceServiceAccount(cr *researchv1alpha1.SignService) *corev1.Se
 }
 
 //role
-func BuildSignServiceRole(cr *researchv1alpha1.SignService) *rbacv1.Role {
+func BuildSignServiceRole(cr *researchv1alpha1.SignService) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "operator",
 		"role":                         "security",
 	}
-	role := &rbacv1.Role{
+	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
-		Rules: []rbacv1.PolicyRule{},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{
+					"*",
+				},
+				Resources: []string{
+					"*",
+				},
+				Verbs: []string{
+					"get", "create",
+				},
+			},
+		},
 	}
 	return role
 }
 
 //role-binding
-func BuildSignServiceRoleBinding(cr *researchv1alpha1.SignService) *rbacv1.RoleBinding {
+func BuildSignServiceRoleBinding(cr *researchv1alpha1.SignService) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
 		"app.kubernetes.io/managed-by": "operator",
 		"role":                         "security",
 	}
-	rolebinding := &rbacv1.RoleBinding{
+	rolebinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
@@ -161,7 +173,7 @@ func BuildSignServiceRoleBinding(cr *researchv1alpha1.SignService) *rbacv1.RoleB
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
+			Kind:     "ClusterRole",
 			Name:     cr.Name,
 		},
 	}

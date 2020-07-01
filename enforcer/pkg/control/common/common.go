@@ -20,6 +20,13 @@ import (
 	"strconv"
 )
 
+const (
+	SignatureCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	SignatureCustomResourceKind       = "ResourceSignature"
+	PolicyCustomResourceAPIVersion    = "research.ibm.com/v1alpha1"
+	PolicyCustomResourceKind          = "EnforcePolicy"
+)
+
 /**********************************************
 
 				ResourceRef

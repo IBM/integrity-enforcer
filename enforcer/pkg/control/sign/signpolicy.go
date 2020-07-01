@@ -42,6 +42,7 @@ type SignPolicy interface {
 
 type ConcreteSignPolicy struct {
 	EnforcerNamespace string
+	PolicyNamespace   string
 	Patterns          []policy.SignerMatchPattern
 }
 
@@ -136,6 +137,34 @@ func (self *EnforceRuleList) Eval(reqc *common.ReqContext, signer *common.Signer
 
 func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolicyEvalResult, error) {
 
+	if reqc.IsEnforcePolicyRequest() {
+		var polObj *epolpkg.EnforcePolicy
+		json.Unmarshal(reqc.RawObject, &polObj)
+		if ok, reasonFail := polObj.Spec.Policy.Validate(reqc, self.EnforcerNamespace, self.PolicyNamespace); !ok {
+			return &common.SignPolicyEvalResult{
+				Allow:   false,
+				Checked: true,
+				Error: &common.CheckError{
+					Reason: fmt.Sprintf("Schema Error for %s; %s", common.PolicyCustomResourceKind, reasonFail),
+				},
+			}, nil
+		}
+	}
+
+	if reqc.IsResourceSignatureRequest() {
+		var rsigObj *rsigpkg.ResourceSignature
+		json.Unmarshal(reqc.RawObject, &rsigObj)
+		if ok, reasonFail := rsigObj.Validate(); !ok {
+			return &common.SignPolicyEvalResult{
+				Allow:   false,
+				Checked: true,
+				Error: &common.CheckError{
+					Reason: fmt.Sprintf("Schema Error for %s; %s", common.SignatureCustomResourceKind, reasonFail),
+				},
+			}, nil
+		}
+	}
+
 	// eval sign policy
 	ref := reqc.ResourceRef()
 
@@ -216,9 +245,8 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 
 func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext {
 	var err error
-	apiVersionInReqc := reqc.GroupVersion()
-	isEnforcePolicy := (apiVersionInReqc == epolpkg.SchemeGroupVersion.String() && reqc.Kind == epolpkg.KindName)
-	isResourceSignature := (apiVersionInReqc == rsigpkg.SchemeGroupVersion.String() && reqc.Kind == rsigpkg.KindName)
+	isEnforcePolicy := reqc.IsEnforcePolicyRequest()
+	isResourceSignature := reqc.IsResourceSignatureRequest()
 
 	if !isEnforcePolicy && !isResourceSignature {
 		return reqc
@@ -249,7 +277,7 @@ func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext 
 			if rsigObj.Spec.Data[0].Metadata.Namespace != "" {
 				reqcForEval.Namespace = rsigObj.Spec.Data[0].Metadata.Namespace
 			}
-			isResourceSignatureForEnforcePolicy := (rsigObj.Spec.Data[0].ApiVersion == epolpkg.SchemeGroupVersion.String() && rsigObj.Spec.Data[0].Kind == epolpkg.KindName)
+			isResourceSignatureForEnforcePolicy := (rsigObj.Spec.Data[0].ApiVersion == common.PolicyCustomResourceAPIVersion && rsigObj.Spec.Data[0].Kind == common.PolicyCustomResourceKind)
 			if isResourceSignatureForEnforcePolicy {
 				var epolObj *epolpkg.EnforcePolicy
 				rawEpolBytes := []byte(base64decode(rsigObj.Spec.Data[0].Message))
@@ -293,9 +321,10 @@ type Rule struct {
 	Subject  Subject            `json:"subject,omitempty"`
 }
 
-func NewSignPolicy(enforcerNamespace string, patterns []policy.SignerMatchPattern) (SignPolicy, error) {
+func NewSignPolicy(enforcerNamespace, policyNamespace string, patterns []policy.SignerMatchPattern) (SignPolicy, error) {
 	return &ConcreteSignPolicy{
 		EnforcerNamespace: enforcerNamespace,
+		PolicyNamespace:   policyNamespace,
 		Patterns:          patterns,
 	}, nil
 }

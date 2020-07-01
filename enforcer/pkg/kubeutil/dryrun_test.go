@@ -32,3 +32,16 @@ func TestSimulator(t *testing.T) {
 	}
 	t.Log(string(simObj))
 }
+
+func TestGetApplyPatchBytes(t *testing.T) {
+	testObj, err := ioutil.ReadFile("testdata/sample_configmap_after.yaml")
+	if err != nil {
+		t.Error(err)
+	}
+	patch, simObj, err := GetApplyPatchBytes(testObj, "default")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("patch: ", string(patch))
+	t.Log("patchedObject: ", string(simObj))
+}

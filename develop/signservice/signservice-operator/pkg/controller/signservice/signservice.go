@@ -202,7 +202,7 @@ func (r *ReconcileSignService) createOrUpdateServiceAccount(instance *researchv1
 func (r *ReconcileSignService) createOrUpdateRole(instance *researchv1alpha1.SignService) (reconcile.Result, error) {
 
 	expected := res.BuildSignServiceRole(instance)
-	found := &rbacv1.Role{}
+	found := &rbacv1.ClusterRole{}
 
 	reqLogger := log.WithValues(
 		"Namespace", instance.Namespace,
@@ -217,7 +217,7 @@ func (r *ReconcileSignService) createOrUpdateRole(instance *researchv1alpha1.Sig
 	}
 
 	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name}, found)
 
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new resource")
@@ -252,7 +252,7 @@ func (r *ReconcileSignService) createOrUpdateRole(instance *researchv1alpha1.Sig
 func (r *ReconcileSignService) createOrUpdateRoleBinding(instance *researchv1alpha1.SignService) (reconcile.Result, error) {
 
 	expected := res.BuildSignServiceRoleBinding(instance)
-	found := &rbacv1.RoleBinding{}
+	found := &rbacv1.ClusterRoleBinding{}
 
 	reqLogger := log.WithValues(
 		"Namespace", instance.Namespace,
@@ -267,7 +267,7 @@ func (r *ReconcileSignService) createOrUpdateRoleBinding(instance *researchv1alp
 	}
 
 	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name}, found)
 
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new resource")
