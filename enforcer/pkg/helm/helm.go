@@ -201,13 +201,13 @@ func getChartFiles(pkgFileUrl, pkgProvUrl, pkgFilePath, pkgProvPath string) (boo
 	return true, nil
 }
 
-func FindReleaseSecret(namespace, kind, name string, rawObj []byte, isReleaseSecret bool) ([]byte, error) {
+func FindReleaseSecret(namespace, kind, name string, rawObj []byte) ([]byte, error) {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return nil, err
 	}
 	var rsec *v1.Secret
-	if isReleaseSecret {
+	if IsReleaseSecret(kind, name) {
 		err = json.Unmarshal(rawObj, &rsec)
 		if err != nil {
 			return nil, err
