@@ -133,19 +133,7 @@ func BuildSignServiceRole(cr *researchv1alpha1.SignService) *rbacv1.Role {
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{
-					"*",
-				},
-				Resources: []string{
-					"*",
-				},
-				Verbs: []string{
-					"get", "create",
-				},
-			},
-		},
+		Rules: []rbacv1.PolicyRule{},
 	}
 	return role
 }

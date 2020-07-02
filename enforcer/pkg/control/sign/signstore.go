@@ -180,24 +180,32 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 	}
 
 	if sig.option["scopedSignature"] {
-		isValidPatch := false
-		patchDenyMsg := ""
-		if reqc.OrgMetadata.Annotations.IntegrityVerified() {
-			scope, _ := sig.data["scope"]
-			diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope)
-			if diffIsInMessageScope {
-				isValidPatch = true
+		isValidScopeSignature := false
+		scopeDenyMsg := ""
+		if reqc.IsCreateRequest() {
+			// for CREATE request, this boolean flag will be true.
+			// because signature verification will work as value check in the case of scopedSignature.
+			isValidScopeSignature = true
+		} else if reqc.IsUpdateRequest() {
+			// for UPDATE request, IE will confirm that no value is modified except attributes in `scope`.
+			// if there is any modification, the request will be denied.
+			if reqc.OrgMetadata.Annotations.IntegrityVerified() {
+				scope, _ := sig.data["scope"]
+				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope)
+				if diffIsInMessageScope {
+					isValidScopeSignature = true
+				} else {
+					scopeDenyMsg = "messageScope of the signature does not cover all changed attributes in this update"
+				}
 			} else {
-				patchDenyMsg = "messageScope of the signature does not cover all changed attributes in this update"
+				scopeDenyMsg = "Original object must be integrityVerified to allow UPDATE request with scope signature"
 			}
-		} else {
-			patchDenyMsg = "Original object must be integrityVerified to allow request with patch signature"
 		}
-		if !isValidPatch {
+		if !isValidScopeSignature {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
-					Msg:    patchDenyMsg,
-					Reason: patchDenyMsg,
+					Msg:    scopeDenyMsg,
+					Reason: scopeDenyMsg,
 					Error:  nil,
 				},
 				Signer: nil,
