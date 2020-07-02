@@ -229,36 +229,16 @@ func (self *ResourceVerifier) MatchMessage(sig *ResourceSignature, reqObj []byte
 func getMaskDef(kind string) []string {
 	maskDefBytes := []byte(`
 		{
-			"*": [
-				"metadata.annotations.integrityVerified",
-				"metadata.annotations.integrityUnverified",
-				"metadata.annotations.ie-createdBy",
-				"metadata.annotations.sigOwnerApiVersion",
-				"metadata.annotations.sigOwnerKind",
-				"metadata.annotations.sigOwnerName",
-				"metadata.annotations.signOwnerRefType",
-				"metadata.annotations.resourceSignatureName",
-				"metadata.annotations.signature",
-				"metadata.annotations.signPaths",
-				"metadata.annotations.namespace",
-				"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
-				"metadata.managedFields",
-				"metadata.creationTimestamp",
-				"metadata.generation",
-				"metadata.namespace",
-				"metadata.resourceVersion",
-				"metadata.selfLink",
-				"metadata.uid"
-			]
 		}
 	`)
-
 	var maskDef map[string][]string
 	err := json.Unmarshal(maskDefBytes, &maskDef)
 	if err != nil {
 		logger.Error(err)
 		return []string{}
 	}
+	maskDef["*"] = common.CommonMessageMask
+
 	masks := []string{}
 	masks = append(masks, maskDef["*"]...)
 	maskForKind, ok := maskDef[kind]

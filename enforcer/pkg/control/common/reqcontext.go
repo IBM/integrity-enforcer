@@ -17,13 +17,16 @@
 package common
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -43,26 +46,27 @@ type ObjectMetadata struct {
 }
 
 type ReqContext struct {
-	RawObject       []byte             `json:"-"`
-	RawOldObject    []byte             `json:"-"`
-	RequestJsonStr  string             `json:"request"`
-	RequestUid      string             `json:"requestUid"`
-	Namespace       string             `json:"namespace"`
-	Name            string             `json:"name"`
-	ApiGroup        string             `json:"apiGroup"`
-	ApiVersion      string             `json:"apiVersion"`
-	Kind            string             `json:"kind"`
-	Operation       string             `json:"operation"`
-	IntegrityValue  *IntegrityValue    `json:"integrityValues"`
-	OrgMetadata     *ObjectMetadata    `json:"orgMetadata"`
-	ClaimedMetadata *ObjectMetadata    `json:"claimedMetadata"`
-	UserInfo        string             `json:"userInfo"`
-	ObjLabels       string             `json:"objLabels"`
-	ObjMetaName     string             `json:"objMetaName"`
-	UserName        string             `json:"userName"`
-	UserGroups      []string           `json:"userGroups"`
-	Type            string             `json:"Type"`
-	ServiceAccount  *v1.ServiceAccount `json:"serviceAccount"`
+	RawObject        []byte             `json:"-"`
+	RawOldObject     []byte             `json:"-"`
+	RequestJsonStr   string             `json:"request"`
+	RequestUid       string             `json:"requestUid"`
+	Namespace        string             `json:"namespace"`
+	Name             string             `json:"name"`
+	ApiGroup         string             `json:"apiGroup"`
+	ApiVersion       string             `json:"apiVersion"`
+	Kind             string             `json:"kind"`
+	Operation        string             `json:"operation"`
+	IntegrityValue   *IntegrityValue    `json:"integrityValues"`
+	OrgMetadata      *ObjectMetadata    `json:"orgMetadata"`
+	ClaimedMetadata  *ObjectMetadata    `json:"claimedMetadata"`
+	UserInfo         string             `json:"userInfo"`
+	ObjLabels        string             `json:"objLabels"`
+	ObjMetaName      string             `json:"objMetaName"`
+	UserName         string             `json:"userName"`
+	UserGroups       []string           `json:"userGroups"`
+	Type             string             `json:"Type"`
+	ServiceAccount   *v1.ServiceAccount `json:"serviceAccount"`
+	MaskedObjectHash string             `json:"maskedMessageHash"`
 }
 
 func (reqc *ReqContext) OwnerRef() *ResourceRef {
@@ -222,28 +226,55 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		},
 	}
 
+	objNode, _ := mapnode.NewFromBytes(req.Object.Raw)
+	maskedObject := objNode.Mask(CommonMessageMask).ToJson()
+	maskedObjectHash := fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
+
 	rc := &ReqContext{
-		RawObject:       req.Object.Raw,
-		RawOldObject:    req.OldObject.Raw,
-		RequestUid:      pr.UID,
-		RequestJsonStr:  pr.JsonStr,
-		Name:            name,
-		Operation:       pr.getValue("operation"),
-		IntegrityValue:  integrityValues,
-		ApiGroup:        pr.getValue("kind.group"),
-		ApiVersion:      pr.getValue("kind.version"),
-		Kind:            pr.getValue("kind.kind"),
-		Namespace:       namespace,
-		UserInfo:        pr.getValue("userInfo"),
-		ObjLabels:       pr.getValue("object.metadata.labels"),
-		ObjMetaName:     pr.getValue("object.metadata.name"),
-		UserName:        pr.getValue("userInfo.username"),
-		UserGroups:      pr.getArrayValue("userInfo.groups"),
-		Type:            pr.getValue("object.type"),
-		OrgMetadata:     orgMetadata,
-		ClaimedMetadata: claimedMetadata,
+		RawObject:        req.Object.Raw,
+		RawOldObject:     req.OldObject.Raw,
+		RequestUid:       pr.UID,
+		RequestJsonStr:   pr.JsonStr,
+		Name:             name,
+		Operation:        pr.getValue("operation"),
+		IntegrityValue:   integrityValues,
+		ApiGroup:         pr.getValue("kind.group"),
+		ApiVersion:       pr.getValue("kind.version"),
+		Kind:             pr.getValue("kind.kind"),
+		Namespace:        namespace,
+		UserInfo:         pr.getValue("userInfo"),
+		ObjLabels:        pr.getValue("object.metadata.labels"),
+		ObjMetaName:      pr.getValue("object.metadata.name"),
+		UserName:         pr.getValue("userInfo.username"),
+		UserGroups:       pr.getArrayValue("userInfo.groups"),
+		Type:             pr.getValue("object.type"),
+		OrgMetadata:      orgMetadata,
+		ClaimedMetadata:  claimedMetadata,
+		MaskedObjectHash: maskedObjectHash,
 	}
 
 	return rc
 
+}
+
+var CommonMessageMask = []string{
+	"metadata.annotations.integrityVerified",
+	"metadata.annotations.integrityUnverified",
+	"metadata.annotations.ie-createdBy",
+	"metadata.annotations.sigOwnerApiVersion",
+	"metadata.annotations.sigOwnerKind",
+	"metadata.annotations.sigOwnerName",
+	"metadata.annotations.signOwnerRefType",
+	"metadata.annotations.resourceSignatureName",
+	"metadata.annotations.signature",
+	"metadata.annotations.signPaths",
+	"metadata.annotations.namespace",
+	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
+	"metadata.managedFields",
+	"metadata.creationTimestamp",
+	"metadata.generation",
+	"metadata.namespace",
+	"metadata.resourceVersion",
+	"metadata.selfLink",
+	"metadata.uid",
 }
