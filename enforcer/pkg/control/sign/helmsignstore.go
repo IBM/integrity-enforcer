@@ -50,8 +50,7 @@ func (self *HelmSignStore) GetResourceSignature(ref *common.ResourceRef, reqc *c
 		return nil
 	}
 
-	isReleaseSecret := helm.IsReleaseSecret(reqc.Kind, reqc.Name)
-	rsecBytes, err := helm.FindReleaseSecret(reqc.Namespace, reqc.Kind, reqc.Name, reqc.RawObject, isReleaseSecret)
+	rsecBytes, err := helm.FindReleaseSecret(reqc.Namespace, reqc.Kind, reqc.Name, reqc.RawObject)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error occured in finding helm release secret; %s", err.Error()))
 		return nil
