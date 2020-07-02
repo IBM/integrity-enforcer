@@ -45,7 +45,6 @@ type CheckContext struct {
 	ReqC       *common.ReqContext `json:"-"`
 	DryRun     bool               `json:"dryRun"`
 	Unverified bool               `json:"unverified"`
-	ByPassed   bool               `json:"byPassed"`
 
 	Result *CheckResult `json:"result"`
 

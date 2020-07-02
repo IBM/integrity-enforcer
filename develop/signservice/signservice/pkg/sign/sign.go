@@ -37,6 +37,7 @@ type SignMode string
 const (
 	DefaultSign SignMode = ""
 	ApplySign   SignMode = "apply"
+	PatchSign   SignMode = "patch"
 )
 
 const publicKeyPath = "/keyring/pubring.gpg"
@@ -114,6 +115,8 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	signType := rsig.SignatureTypeResource
 
 	if mode == ApplySign {
+		signType = rsig.SignatureTypeApplyingResource
+	} else if mode == PatchSign {
 		patchBytes, _, err := kubeutil.GetApplyPatchBytes([]byte(yamlBytes), namespace)
 		if err != nil {
 			return "", errors.New(fmt.Sprintf("Error in calculating patch; %s", err.Error()))

@@ -19,7 +19,7 @@ fi
 if [ "$#" -lt 3 ]; then
     echo 'Error: 3 arguments are required.' >&2
     echo ""
-    echo 'Usage: ./create-signature.sh  <filepath>  <namespace>  <signer>  [<scope>]' >&2
+    echo 'Usage: ./create-apply-signature.sh  <filepath>  <namespace>  <signer>  [<scope>]' >&2
     echo ""
     echo '<filepath>  : path to yaml file which will be signed (e.g. ./sample-configmap.yaml)' >&2
     echo '<namespace> : namespace in which the resource will be created (e.g. default)' >&2

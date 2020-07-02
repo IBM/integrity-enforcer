@@ -27,8 +27,9 @@ const (
 	MatchByKnownFilter  string = "useKnownFilter"
 	MatchByCustomFilter string = "customFilter"
 
-	SignatureTypeResource string = "resource"
-	SignatureTypePatch    string = "patch"
+	SignatureTypeResource         string = "resource"
+	SignatureTypeApplyingResource string = "applyingResource"
+	SignatureTypePatch            string = "patch"
 	// SignatureTypeHelm string = "helm"
 )
 

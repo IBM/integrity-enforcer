@@ -126,6 +126,10 @@ func ApplySignToResourceSignature(w http.ResponseWriter, r *http.Request) {
 	signToResourceSignature(w, r, sign.ApplySign)
 }
 
+func PatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.PatchSign)
+}
+
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	mode := "all"
 
@@ -151,6 +155,7 @@ func main() {
 	r.HandleFunc("/", ServeHTTP)
 	r.HandleFunc("/sign", SignToResourceSignature)
 	r.HandleFunc("/sign/apply", ApplySignToResourceSignature)
+	r.HandleFunc("/sign/patch", PatchSignToResourceSignature)
 	r.HandleFunc("/sign/annotation", SignToAnnotation)
 	r.HandleFunc("/list/users", ListUsers)
 	r.Schemes("https")
