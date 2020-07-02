@@ -561,6 +561,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 	if self.config.Log.IncludeRequest && !reqc.IsSecret() {
 		logRecord["request.dump"] = reqc.RequestJsonStr
 	}
+	logRecord["request.maskedObjectHash"] = reqc.MaskedObjectHash
 
 	logRecord["sessionTrace"] = logger.GetSessionTraceString()
 
