@@ -25,7 +25,6 @@ import (
 
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	iectlsign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
-	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	iesign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	"github.com/ghodss/yaml"
@@ -117,15 +116,6 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	if mode == ApplySign {
 		signType = rsig.SignatureTypeApplyingResource
 	} else if mode == PatchSign {
-		patchBytes, _, err := kubeutil.GetApplyPatchBytes([]byte(yamlBytes), namespace)
-		if err != nil {
-			return "", errors.New(fmt.Sprintf("Error in calculating patch; %s", err.Error()))
-		}
-		yamlBytesB, _ := yaml.JSONToYAML(patchBytes)
-		yamlBytes = string(yamlBytesB)
-		jsonBytes, _ = yaml.YAMLToJSON([]byte(yamlBytes))
-		node, _ = mapnode.NewFromBytes(jsonBytes)
-
 		signType = rsig.SignatureTypePatch
 	}
 
