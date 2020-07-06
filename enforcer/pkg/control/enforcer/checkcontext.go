@@ -439,6 +439,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"request.uid":  reqc.RequestUid,
 		"type":         reqc.Type,
 		"request.dump": "",
+		"creator":      reqc.OrgMetadata.Annotations.CreatedBy(),
 
 		//context
 		"enfored":     self.Enforced,

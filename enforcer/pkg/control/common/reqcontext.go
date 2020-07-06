@@ -34,8 +34,9 @@ import (
 )
 
 const (
-	HashTypeDefault = "default"
-	HashTypeHelm    = "helm"
+	HashTypeDefault      = "default"
+	HashTypeHelmSecret   = "helmSecret"
+	HashTypeHelmResource = "helmResource"
 )
 
 type IntegrityValue struct {
@@ -243,7 +244,11 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		maskedObject := objNode.Mask(CommonMessageMask).ToJson()
 		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
 	} else {
-		hashType = HashTypeHelm
+		if helm.IsReleaseSecret(kind, name) {
+			hashType = HashTypeHelmSecret
+		} else {
+			hashType = HashTypeHelmResource
+		}
 		maskedObject := getMaskedReleaseSecretString(releaseSecretBytes)
 		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
 	}
