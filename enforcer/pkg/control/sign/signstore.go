@@ -318,27 +318,6 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNames
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 		matched = matchContents(simPatchedObj, reqObj, mask)
 		if matched {
-			logger.Debug("matched by GetApplyPatchBytes()")
-		}
-	}
-	if !matched && signType == SignatureTypePatch {
-		reqNode, err := mapnode.NewFromBytes(reqObj)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
-			return false
-		}
-		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
-		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
-		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
-			return false
-		}
-		mask = getMaskDef("")
-		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
-		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched = matchContents(simPatchedObj, reqObj, mask)
-		if matched {
 			logger.Debug("matched by StrategicMergePatch()")
 		}
 	}
