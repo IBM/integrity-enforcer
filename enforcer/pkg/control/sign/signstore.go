@@ -333,15 +333,6 @@ func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope s
 	return matched
 }
 
-func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string) bool {
-	var mask []string
-	mask = getMaskDef("")
-	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
-	mask = append(mask, scopeKeys...)
-	matched := matchContents(orgObj, rawObj, mask)
-	return matched
-}
-
 func getMaskDef(kind string) []string {
 	maskDefBytes := []byte(`
 		{
