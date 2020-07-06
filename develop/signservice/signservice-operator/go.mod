@@ -9,9 +9,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/IBM/integrity-enforcer/enforcer v0.0.0-20200526092602-9fe2166392e1
 	github.com/IBM/integrity-enforcer/operator v0.0.0-20200602121605-c0fa868d3900
-	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
-	k8s.io/api v0.18.0
-	k8s.io/apimachinery v0.18.0
+	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
+	k8s.io/api v0.18.2
+	k8s.io/apimachinery v0.18.2
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.5.2
 )
@@ -21,6 +21,7 @@ replace (
 	github.com/IBM/integrity-enforcer/enforcer => ../../../enforcer
 	github.com/IBM/integrity-enforcer/operator => ../../../operator
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.4-0.20200207053602-7439e774c9e9+incompatible
+	github.com/IBM/integrity-enforcer/enforcer => ../../../enforcer
 	k8s.io/api => k8s.io/api v0.16.5-beta.1
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.5-beta.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.16.5-beta.1

@@ -120,6 +120,14 @@ func (rc *ReqContext) IsCreator() bool {
 	return rc.UserName != "" && rc.UserName == rc.OrgMetadata.Annotations.CreatedBy()
 }
 
+func (rc *ReqContext) IsEnforcePolicyRequest() bool {
+	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsResourceSignatureRequest() bool {
+	return rc.GroupVersion() == SignatureCustomResourceAPIVersion && rc.Kind == SignatureCustomResourceKind
+}
+
 func (rc *ReqContext) IsSecret() bool {
 	return rc.Kind == "Secret" && rc.GroupVersion() == "v1"
 }

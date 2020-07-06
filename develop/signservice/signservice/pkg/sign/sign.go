@@ -31,6 +31,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type SignMode string
+
+const (
+	DefaultSign SignMode = ""
+	ApplySign   SignMode = "apply"
+	PatchSign   SignMode = "patch"
+)
+
 const publicKeyPath = "/keyring/pubring.gpg"
 const privateKeyPath = "/private-keyring/secring.gpg"
 
@@ -81,7 +89,7 @@ func SignYaml(yamlBytes string, scopeKeys string, signer string) (string, error)
 	return signedYaml, nil
 }
 
-func CreateResourceSignature(yamlBytes, signer, namespaceInQuery string) (string, error) {
+func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, mode SignMode) (string, error) {
 
 	jsonBytes, err := yaml.YAMLToJSON([]byte(yamlBytes))
 	if err != nil {
@@ -103,31 +111,67 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery string) (string
 		return "", errors.New(fmt.Sprintf("required value is empty; apiVersion: %s, kind: %s, metadata.name: %s, metadata.namespace: %s", apiVersion, kind, name, namespace))
 	}
 
-	msgB64 := base64.StdEncoding.EncodeToString([]byte(yamlBytes))
+	signType := rsig.SignatureTypeResource
 
-	sig, reasonFail, err := iesign.DetachSign(privateKeyPath, yamlBytes, signer)
-	if err != nil || reasonFail != "" {
-		return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
-	}
-	if sig == "" {
-		return "", errors.New("generated signature is empty")
-	}
-	sigB64 := base64.StdEncoding.EncodeToString([]byte(sig))
-	matchMethod := rsig.MatchByExactMatch
-	if useKnownFilterKinds[kind] {
-		matchMethod = rsig.MatchByKnownFilter
+	if mode == ApplySign {
+		signType = rsig.SignatureTypeApplyingResource
+	} else if mode == PatchSign {
+		signType = rsig.SignatureTypePatch
 	}
 
-	si := rsig.SignItem{
-		ApiVersion: apiVersion,
-		Kind:       kind,
-		Metadata: rsig.SignItemMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Message:     msgB64,
-		Signature:   sigB64,
-		MatchMethod: matchMethod,
+	var signItem rsig.SignItem
+	if scope == "" {
+		msgB64 := base64.StdEncoding.EncodeToString([]byte(yamlBytes))
+
+		sig, reasonFail, err := iesign.DetachSign(privateKeyPath, yamlBytes, signer)
+		if err != nil || reasonFail != "" {
+			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+		}
+		if sig == "" {
+			return "", errors.New("generated signature is empty")
+		}
+		sigB64 := base64.StdEncoding.EncodeToString([]byte(sig))
+
+		signItem = rsig.SignItem{
+			ApiVersion: apiVersion,
+			Kind:       kind,
+			Metadata: rsig.SignItemMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Message:   msgB64,
+			Signature: sigB64,
+			Type:      signType,
+		}
+	} else {
+		scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
+		message := ""
+		for _, k := range scopeKeys {
+			subNodeList := node.MultipleSubNode(k)
+			for _, subNode := range subNodeList {
+				message += subNode.ToJson() + "\n"
+			}
+		}
+		sig, reasonFail, err := iesign.DetachSign(privateKeyPath, message, signer)
+		if err != nil || reasonFail != "" {
+			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+		}
+		if sig == "" {
+			return "", errors.New("generated signature is empty")
+		}
+		sigB64 := base64.StdEncoding.EncodeToString([]byte(sig))
+		signItem = rsig.SignItem{
+			ApiVersion: apiVersion,
+			Kind:       kind,
+			Metadata: rsig.SignItemMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			MessageScope: scope,
+			Signature:    sigB64,
+			Type:         signType,
+		}
+
 	}
 
 	rsName := fmt.Sprintf("rsig-%s-%s-%s", namespace, strings.ToLower(kind), name)
@@ -137,7 +181,7 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery string) (string
 		},
 		Spec: rsig.ResourceSignatureSpec{
 			Data: []rsig.SignItem{
-				si,
+				signItem,
 			},
 		},
 	}

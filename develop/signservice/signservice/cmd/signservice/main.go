@@ -34,6 +34,15 @@ func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
+func getParamInRequest(r *http.Request, key, defaultValue string) string {
+	params, ok := r.URL.Query()[key]
+	param := params[0]
+	if !ok {
+		param = defaultValue
+	}
+	return param
+}
+
 func readFileInRequest(r *http.Request, key string) (string, error) {
 	yamlFile, _, err := r.FormFile(key)
 	defer yamlFile.Close()
@@ -61,11 +70,7 @@ func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
 	}
 	scopeKeys := scopeConcatKey[0]
 
-	signers, ok := r.URL.Query()["signer"]
-	signer := signers[0]
-	if !ok {
-		signer = ""
-	}
+	signer := getParamInRequest(r, "signer", "")
 
 	yamlStr, err := readFileInRequest(r, "yaml")
 	if err != nil {
@@ -83,18 +88,10 @@ func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, sig)
 }
 
-func SignToResourceSignature(w http.ResponseWriter, r *http.Request) {
-	signers, ok := r.URL.Query()["signer"]
-	signer := signers[0]
-	if !ok {
-		signer = ""
-	}
-
-	namespaces, _ := r.URL.Query()["namespace"]
-	namespace := ""
-	if len(namespaces) > 0 {
-		namespace = namespaces[0]
-	}
+func signToResourceSignature(w http.ResponseWriter, r *http.Request, mode sign.SignMode) {
+	signer := getParamInRequest(r, "signer", "")
+	namespace := getParamInRequest(r, "namespace", "")
+	scope := getParamInRequest(r, "scope", "")
 
 	yamlStr, err := readFileInRequest(r, "yaml")
 	if err != nil {
@@ -104,7 +101,7 @@ func SignToResourceSignature(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rsig, err := sign.CreateResourceSignature(yamlStr, signer, namespace)
+	rsig, err := sign.CreateResourceSignature(yamlStr, signer, namespace, scope, mode)
 	if err != nil {
 		msg := err.Error()
 		log.Error(msg)
@@ -119,6 +116,18 @@ func SignToResourceSignature(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, sig)
+}
+
+func SignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.DefaultSign)
+}
+
+func ApplySignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.ApplySign)
+}
+
+func PatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.PatchSign)
 }
 
 func ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -145,6 +154,8 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", ServeHTTP)
 	r.HandleFunc("/sign", SignToResourceSignature)
+	r.HandleFunc("/sign/apply", ApplySignToResourceSignature)
+	r.HandleFunc("/sign/patch", PatchSignToResourceSignature)
 	r.HandleFunc("/sign/annotation", SignToAnnotation)
 	r.HandleFunc("/list/users", ListUsers)
 	r.Schemes("https")

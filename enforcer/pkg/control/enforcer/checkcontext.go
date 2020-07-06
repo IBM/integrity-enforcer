@@ -18,7 +18,6 @@ package enforcer
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -41,14 +40,11 @@ import (
 
 type CheckContext struct {
 	// request context
-	config               *config.EnforcerConfig
-	policy               *policy.Policy
-	ReqC                 *common.ReqContext `json:"-"`
-	DryRun               bool               `json:"dryRun"`
-	Unverified           bool               `json:"unverified"`
-	PolicyReq            bool               `json:"policyReq"`
-	invalidPolicy        bool               `json:"invalidPolicy"`
-	invalidPolicyMessage string             `json:"invalidPolicyMessage"`
+	config     *config.EnforcerConfig
+	policy     *policy.Policy
+	ReqC       *common.ReqContext `json:"-"`
+	DryRun     bool               `json:"dryRun"`
+	Unverified bool               `json:"unverified"`
 
 	Result *CheckResult `json:"result"`
 
@@ -123,16 +119,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	reqc := common.NewReqContext(req)
 	logger.InitSessionLogger(reqc.Namespace, reqc.Name, reqc.ResourceRef().ApiVersion, reqc.Kind, reqc.Operation)
 	self.ReqC = reqc
-
-	self.PolicyReq = isPolicyReq(self.ReqC)
-	if self.PolicyReq {
-		polValidator := NewPolicyValidator(self.ReqC, self.config.Namespace, self.config.PolicyNamespace)
-		if ok, errMsg := polValidator.Validate(); !ok {
-			self.invalidPolicy = true
-			self.invalidPolicyMessage = errMsg
-			return self.createAdmissionResponse()
-		}
-	}
 
 	policyChecker := policy.NewPolicyChecker(self.policy, self.ReqC)
 
@@ -313,14 +299,6 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			}}
 	}
 
-	if self.invalidPolicy {
-		return &v1beta1.AdmissionResponse{
-			Allowed: false,
-			Result: &metav1.Status{
-				Message: fmt.Sprintf("Policy format check failed; %s", self.invalidPolicyMessage),
-			}}
-	}
-
 	allowed := self.Allow
 	msg := self.Message
 
@@ -383,7 +361,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 
 func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.policy.AllowedSigner); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.AllowedSigner); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)

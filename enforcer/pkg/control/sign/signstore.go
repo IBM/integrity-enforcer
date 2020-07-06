@@ -38,9 +38,11 @@ import (
 type SignatureType string
 
 const (
-	SignatureTypeUnknown  SignatureType = ""
-	SignatureTypeResource SignatureType = "Resource"
-	SignatureTypeHelm     SignatureType = "Helm"
+	SignatureTypeUnknown          SignatureType = ""
+	SignatureTypeResource         SignatureType = "Resource"
+	SignatureTypeApplyingResource SignatureType = "ApplyingResource"
+	SignatureTypePatch            SignatureType = "Patch"
+	SignatureTypeHelm             SignatureType = "Helm"
 )
 
 type SignStore interface {
@@ -87,7 +89,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 		return &ResourceSignature{
 			SignType:    SignatureTypeResource,
 			keyringPath: self.config.KeyringPath,
-			data:        map[string]string{"signature": signature, "message": message, "matchMethod": ""},
+			data:        map[string]string{"signature": signature, "message": message},
 			option:      map[string]bool{"matchRequired": false},
 		}
 	}
@@ -102,11 +104,24 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 		if found {
 			signature := base64decode(si.Signature)
 			message := base64decode(si.Message)
+			matchRequired := true
+			scopedSignature := false
+			if si.Message == "" && si.MessageScope != "" {
+				message = GenerateMessageFromRawObj(reqc.RawObject, si.MessageScope, "")
+				matchRequired = false  // skip matching because the message is generated from Requested Object
+				scopedSignature = true // enable checking if the signature is for patch
+			}
+			signType := SignatureTypeResource
+			if si.Type == rsig.SignatureTypeApplyingResource {
+				signType = SignatureTypeApplyingResource
+			} else if si.Type == rsig.SignatureTypePatch {
+				signType = SignatureTypePatch
+			}
 			return &ResourceSignature{
-				SignType:    SignatureTypeResource,
+				SignType:    signType,
 				keyringPath: self.config.KeyringPath,
-				data:        map[string]string{"signature": signature, "message": message, "matchMethod": si.MatchMethod},
-				option:      map[string]bool{"matchRequired": true},
+				data:        map[string]string{"signature": signature, "message": message, "scope": si.MessageScope},
+				option:      map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
 	}
@@ -136,7 +151,7 @@ type ResourceVerifier struct {
 }
 
 func NewVerifier(signType SignatureType, enforcerNamespace string) VerifierInterface {
-	if signType == SignatureTypeResource {
+	if signType == SignatureTypeResource || signType == SignatureTypeApplyingResource || signType == SignatureTypePatch {
 		return &ResourceVerifier{Namespace: enforcerNamespace}
 	} else if signType == SignatureTypeHelm {
 		return &HelmVerifier{Namespace: enforcerNamespace}
@@ -150,12 +165,47 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 	var retErr error
 
 	if sig.option["matchRequired"] {
-		matched := self.MatchMessage(sig, reqc.RawObject, reqc.Kind, self.Namespace)
+		message, _ := sig.data["message"]
+		matched := self.MatchMessage([]byte(message), reqc.RawObject, self.Namespace, sig.SignType)
 		if !matched {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
 					Msg:    "Message in ResourceSignature is not identical with the requested object",
 					Reason: "Message in ResourceSignature is not identical with the requested object",
+					Error:  nil,
+				},
+				Signer: nil,
+			}, nil
+		}
+	}
+
+	if sig.option["scopedSignature"] {
+		isValidScopeSignature := false
+		scopeDenyMsg := ""
+		if reqc.IsCreateRequest() {
+			// for CREATE request, this boolean flag will be true.
+			// because signature verification will work as value check in the case of scopedSignature.
+			isValidScopeSignature = true
+		} else if reqc.IsUpdateRequest() {
+			// for UPDATE request, IE will confirm that no value is modified except attributes in `scope`.
+			// if there is any modification, the request will be denied.
+			if reqc.OrgMetadata.Annotations.IntegrityVerified() {
+				scope, _ := sig.data["scope"]
+				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope)
+				if diffIsInMessageScope {
+					isValidScopeSignature = true
+				} else {
+					scopeDenyMsg = "messageScope of the signature does not cover all changed attributes in this update"
+				}
+			} else {
+				scopeDenyMsg = "Original object must be integrityVerified to allow UPDATE request with scope signature"
+			}
+		}
+		if !isValidScopeSignature {
+			return &SigVerifyResult{
+				Error: &common.CheckError{
+					Msg:    scopeDenyMsg,
+					Reason: scopeDenyMsg,
 					Error:  nil,
 				},
 				Signer: nil,
@@ -197,17 +247,16 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(sig *ResourceSignature, reqObj []byte, kind, enforcerNamespace string) bool {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNamespace string, signType SignatureType) bool {
 	var mask []string
-	matchMethod, _ := sig.data["matchMethod"]
-	if matchMethod == rsig.MatchByExactMatch {
-		mask = getMaskDef("")
-	} else if matchMethod == rsig.MatchByKnownFilter {
-		mask = getMaskDef(kind)
-	}
-	orgObj := []byte(sig.data["message"])
+	mask = getMaskDef("")
+
+	orgObj := []byte(message)
 	matched := matchContents(orgObj, reqObj, mask)
-	if !matched {
+	if matched {
+		logger.Debug("matched directly")
+	}
+	if !matched && signType == SignatureTypeResource {
 		orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in loading orgNode: %s", err.Error()))
@@ -221,8 +270,75 @@ func (self *ResourceVerifier) MatchMessage(sig *ResourceSignature, reqObj []byte
 		}
 		mask = getMaskDef("")
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 		matched = matchContents(simObj, reqObj, mask)
+		if matched {
+			logger.Debug("matched by DryRunCreate()")
+		}
 	}
+	if !matched && signType == SignatureTypeApplyingResource {
+
+		reqNode, _ := mapnode.NewFromBytes(reqObj)
+		reqNamespace := reqNode.GetString("metadata.namespace")
+		_, patchedBytes, err := kubeutil.GetApplyPatchBytes(orgObj, reqNamespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
+			return false
+		}
+		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
+		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
+			return false
+		}
+		mask = getMaskDef("")
+		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+		matched = matchContents(simPatchedObj, reqObj, mask)
+		if matched {
+			logger.Debug("matched by GetApplyPatchBytes()")
+		}
+	}
+	if !matched && signType == SignatureTypePatch {
+		patchedBytes, err := kubeutil.StrategicMergePatch(reqObj, orgObj, "")
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
+			return false
+		}
+		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
+		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
+			return false
+		}
+		mask = getMaskDef("")
+		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+		matched = matchContents(simPatchedObj, reqObj, mask)
+		if matched {
+			logger.Debug("matched by StrategicMergePatch()")
+		}
+	}
+	return matched
+}
+
+func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string) bool {
+	var mask []string
+	mask = getMaskDef("")
+	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
+	mask = append(mask, scopeKeys...)
+	matched := matchContents(orgObj, rawObj, mask)
+	return matched
+}
+
+func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string) bool {
+	var mask []string
+	mask = getMaskDef("")
+	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
+	mask = append(mask, scopeKeys...)
+	matched := matchContents(orgObj, rawObj, mask)
 	return matched
 }
 
@@ -316,11 +432,7 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, ignoreAttrs string) string
 	if filter == "" {
 		message = node.ToJson() + "\n"
 	} else {
-		filter = strings.ReplaceAll(filter, "\n", "")
-		filterKeys := strings.Split(filter, ",")
-		for i := range filterKeys {
-			filterKeys[i] = strings.Trim(filterKeys[i], " ")
-		}
+		filterKeys := mapnode.SplitCommaSeparatedKeys(filter)
 		for _, k := range filterKeys {
 			subNodeList := node.MultipleSubNode(k)
 			for _, subNode := range subNodeList {
