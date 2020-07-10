@@ -124,9 +124,9 @@ func (r *ReconcileSignService) Reconcile(request reconcile.Request) (reconcile.R
 			return recResult, recErr
 		}
 
-		//SignService Secret
-		// public and private keyring secrets are created at the same time
-		recResult, recErr = r.createOrUpdateKeyringSecret(instance)
+		//SignService Secret & IECertPool Secret
+		// 2 signer secrets are created at the same time
+		recResult, recErr = r.createOrUpdateSignerCertSecret(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}

@@ -12,7 +12,7 @@ spec:
     - request:
         namespace: '*'
       subject:
-        email: cluster_signer@signer.com
+        email: "AdminCA"
     enforce:
     - namespace: '*'
     ignoreRequest: []
@@ -34,10 +34,10 @@ spec:
   enforcerConfigCrName: ie-config
   globalConfig: {}
   imagePullSecrets: []
-  keyRingConfig:
+  certPoolConfig:
     createIfNotExist: false
     keyValue: test
-    name: keyring-secret
+    name: ie-certpool-secret
   labels:
     app: ie-server
   logger:

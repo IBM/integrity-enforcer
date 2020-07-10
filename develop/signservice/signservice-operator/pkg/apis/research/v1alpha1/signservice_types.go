@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	pkix "github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/pkix"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,14 +30,14 @@ type SignServiceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	Enabled                  bool                      `json:"enabled,omitempty"`
-	KeyRingSecretName        string                    `json:"keyRingSecretName,omitempty"`
-	PrivateKeyRingSecretName string                    `json:"PrivateKeyRingSecretName,omitempty"`
-	ImagePullSecrets         []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	ServiceAccountName       string                    `json:"serviceAccountName,omitempty"`
-	SignService              SignServiceContainer      `json:"signService,omitempty"`
-	Signers                  []string                  `json:"signers,omitempty"`
-	InvalidSigners           []string                  `json:"invalidSigners,omitempty"`
+	Enabled               bool                      `json:"enabled,omitempty"`
+	SignServiceSecretName string                    `json:"signServiceSecretName,omitempty"`
+	IECertPoolSecretName  string                    `json:"ieCertPoolSecretName,omitempty"`
+	ImagePullSecrets      []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	ServiceAccountName    string                    `json:"serviceAccountName,omitempty"`
+	SignService           SignServiceContainer      `json:"signService,omitempty"`
+	Signers               []pkix.SignerCertName     `json:"signers,omitempty"`
+	InvalidSigners        []pkix.SignerCertName     `json:"invalidSigners,omitempty"`
 }
 
 type SignServiceContainer struct {

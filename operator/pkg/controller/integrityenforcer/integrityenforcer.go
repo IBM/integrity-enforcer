@@ -691,7 +691,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateKeyringSecret(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
 	expected := res.BuildKeyringSecretForIEFromValue(instance)
 	pubkeyName := pgpkey.GetPublicKeyringName()
-	expected.Data[pubkeyName] = instance.Spec.KeyRing.KeyValue
+	expected.Data[pubkeyName] = instance.Spec.CertPool.KeyValue
 	return r.createOrUpdateSecret(instance, expected)
 }
 

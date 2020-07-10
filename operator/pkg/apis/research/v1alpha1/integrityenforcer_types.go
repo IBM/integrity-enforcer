@@ -43,7 +43,7 @@ type IntegrityEnforcerSpec struct {
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Security     SecurityConfig  `json:"security,omitempty"`
-	KeyRing      KeyRingConfig   `json:"keyRingConfig,omitempty"`
+	CertPool     CertPoolConfig  `json:"certPoolConfig,omitempty"`
 	Server       ServerContainer `json:"server,omitempty"`
 	Logger       LoggerContainer `json:"logger,omitempty"`
 	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
@@ -85,7 +85,7 @@ type RegKeySecret struct {
 	Value []byte `json:"value,omitempty"`
 }
 
-type KeyRingConfig struct {
+type CertPoolConfig struct {
 	Name             string `json:"name,omitempty"`
 	CreateIfNotExist bool   `json:"createIfNotExist,omitempty"`
 	KeyValue         []byte `json:"keyValue,omitempty"`

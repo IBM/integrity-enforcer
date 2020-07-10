@@ -31,7 +31,7 @@ import (
 	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
-	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
+	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -86,11 +86,12 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 		ignoreAttrs := sigAnnotations.IgnoreAttrs
 		message := GenerateMessageFromRawObj(reqc.RawObject, messageScope, ignoreAttrs)
 		signature := base64decode(sigAnnotations.Signature)
+		certificate := base64decode(sigAnnotations.Certificate)
 		return &ResourceSignature{
-			SignType:    SignatureTypeResource,
-			keyringPath: self.config.KeyringPath,
-			data:        map[string]string{"signature": signature, "message": message},
-			option:      map[string]bool{"matchRequired": false},
+			SignType:     SignatureTypeResource,
+			certPoolPath: self.config.CertPoolPath,
+			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate},
+			option:       map[string]bool{"matchRequired": false},
 		}
 	}
 
@@ -103,6 +104,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 		si, _, found := rsCR.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
 		if found {
 			signature := base64decode(si.Signature)
+			certificate := base64decode(si.Certificate)
 			message := base64decode(si.Message)
 			matchRequired := true
 			scopedSignature := false
@@ -118,10 +120,10 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 				signType = SignatureTypePatch
 			}
 			return &ResourceSignature{
-				SignType:    signType,
-				keyringPath: self.config.KeyringPath,
-				data:        map[string]string{"signature": signature, "message": message, "scope": si.MessageScope},
-				option:      map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
+				SignType:     signType,
+				certPoolPath: self.config.CertPoolPath,
+				data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": si.MessageScope},
+				option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
 	}
@@ -136,10 +138,11 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 }
 
 type ResourceSignature struct {
-	SignType    SignatureType
-	keyringPath string
-	data        map[string]string
-	option      map[string]bool
+	SignType     SignatureType
+	certPoolPath string
+	keyringPath  string // TODO: remove this after support cert verification for helm case
+	data         map[string]string
+	option       map[string]bool
 }
 
 type VerifierInterface interface {
@@ -213,31 +216,55 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 		}
 	}
 
-	sigOk, reasonFail, signer, err := sign.VerifySignature(sig.keyringPath, sig.data["message"], sig.data["signature"])
+	certificate := []byte(sig.data["certificate"])
+	certOk, reasonFail, err := pkix.VerifyCertificate(certificate, sig.certPoolPath)
 	if err != nil {
 		vcerr = &common.CheckError{
-			Msg:    "Error occured in signature verification",
+			Msg:    "Error occured in certificate verification",
 			Reason: reasonFail,
 			Error:  err,
 		}
 		vsinfo = nil
 		retErr = err
-	} else if sigOk {
-		vcerr = nil
-		vsinfo = &common.SignerInfo{
-			Email:   signer.Email,
-			Name:    signer.Name,
-			Comment: signer.Comment,
-		}
-		retErr = nil
-	} else {
+	} else if !certOk {
 		vcerr = &common.CheckError{
-			Msg:    "Failed to verify signature",
+			Msg:    "Failed to verify certificate",
 			Reason: reasonFail,
 			Error:  nil,
 		}
 		vsinfo = nil
 		retErr = nil
+	} else {
+		certDN, _ := pkix.GetSubjectFromCertificate(certificate)
+		pubKeyBytes, _ := pkix.GetPublicKeyFromCertificate(certificate)
+		message := []byte(sig.data["message"])
+		signature := []byte(sig.data["signature"])
+		sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in signature verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if sigOk {
+			vcerr = nil
+			vsinfo = &common.SignerInfo{
+				Email:   certDN.CommonName,
+				Name:    certDN.CommonName,
+				Comment: certDN.CommonName,
+			}
+			retErr = nil
+		} else {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify signature",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		}
 	}
 
 	svresult := &SigVerifyResult{

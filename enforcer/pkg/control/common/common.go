@@ -92,6 +92,7 @@ func NewResourceAnnotation(values map[string]string) *ResourceAnnotation {
 type SignatureAnnotation struct {
 	ResourceSignatureName string
 	Signature             string
+	Certificate           string
 	MessageScope          string
 	IgnoreAttrs           string
 }
@@ -100,6 +101,7 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
 		ResourceSignatureName: self.getString("resourceSignatureName"),
 		Signature:             self.getString("signature"),
+		Certificate:           self.getString("certificate"),
 		MessageScope:          self.getString("messageScope"),
 		IgnoreAttrs:           self.getString("ignoreAttrs"),
 	}

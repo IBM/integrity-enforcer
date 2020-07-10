@@ -30,11 +30,10 @@ import (
 const SignServiceServiceName = "ie-signservice"
 const SignServiceServerCertName = "ie-signservice-cert"
 
-//server-secret.yaml
-func BuildKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
+func BuildSignServiceSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
 	metaLabels := map[string]string{
 		"app":                    cr.Name,
-		"app.kubernetes.io/name": cr.Spec.KeyRingSecretName,
+		"app.kubernetes.io/name": cr.Spec.SignServiceSecretName,
 		// "app.kubernetes.io/component":  instance.ReleaseName(),
 		"app.kubernetes.io/managed-by": "operator",
 		// "app.kubernetes.io/instance":   instance.ReleaseName(),
@@ -43,7 +42,7 @@ func BuildKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
 	}
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.KeyRingSecretName,
+			Name:      cr.Spec.SignServiceSecretName,
 			Namespace: cr.Namespace,
 			Labels:    metaLabels,
 		},
@@ -53,10 +52,10 @@ func BuildKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
 	return sec
 }
 
-func BuildPrivateKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
+func BuildIECertPoolSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
 	metaLabels := map[string]string{
 		"app":                    cr.Name,
-		"app.kubernetes.io/name": cr.Spec.PrivateKeyRingSecretName,
+		"app.kubernetes.io/name": cr.Spec.IECertPoolSecretName,
 		// "app.kubernetes.io/component":  instance.ReleaseName(),
 		"app.kubernetes.io/managed-by": "operator",
 		// "app.kubernetes.io/instance":   instance.ReleaseName(),
@@ -65,7 +64,7 @@ func BuildPrivateKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Se
 	}
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.PrivateKeyRingSecretName,
+			Name:      cr.Spec.IECertPoolSecretName,
 			Namespace: cr.Namespace,
 			Labels:    metaLabels,
 		},
@@ -186,12 +185,12 @@ func BuildSignServiceDeploymentForCR(cr *researchv1alpha1.SignService) *appsv1.D
 		},
 		VolumeMounts: []v1.VolumeMount{
 			{
-				MountPath: "/keyring",
-				Name:      "ie-keyring-secret",
+				MountPath: "/signservice-secret",
+				Name:      "signservice-secret",
 			},
 			{
-				MountPath: "/private-keyring",
-				Name:      "ie-private-keyring-secret",
+				MountPath: "/ie-certpool-secret",
+				Name:      "ie-certpool-secret",
 			},
 			{
 				MountPath: "/certs",
@@ -226,8 +225,8 @@ func BuildSignServiceDeploymentForCR(cr *researchv1alpha1.SignService) *appsv1.D
 					Containers:         containers,
 
 					Volumes: []v1.Volume{
-						SecretVolume("ie-keyring-secret", cr.Spec.KeyRingSecretName),
-						SecretVolume("ie-private-keyring-secret", cr.Spec.PrivateKeyRingSecretName),
+						SecretVolume("signservice-secret", cr.Spec.SignServiceSecretName),
+						SecretVolume("ie-certpool-secret", cr.Spec.IECertPoolSecretName),
 						SecretVolume("ie-server-cert", SignServiceServerCertName),
 					},
 				},

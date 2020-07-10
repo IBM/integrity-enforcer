@@ -41,7 +41,7 @@ func BuildRegKeySecretForCR(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Secr
 func BuildKeyringSecretForIEFromValue(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	metaLabels := map[string]string{
 		"app":                    cr.Name,
-		"app.kubernetes.io/name": cr.Spec.KeyRing.Name,
+		"app.kubernetes.io/name": cr.Spec.CertPool.Name,
 		// "app.kubernetes.io/component":  instance.ReleaseName(),
 		"app.kubernetes.io/managed-by": "operator",
 		// "app.kubernetes.io/instance":   instance.ReleaseName(),
@@ -50,7 +50,7 @@ func BuildKeyringSecretForIEFromValue(cr *researchv1alpha1.IntegrityEnforcer) *c
 	}
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.KeyRing.Name,
+			Name:      cr.Spec.CertPool.Name,
 			Namespace: cr.Namespace,
 			Labels:    metaLabels,
 		},

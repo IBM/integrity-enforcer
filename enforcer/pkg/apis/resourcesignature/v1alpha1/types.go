@@ -230,6 +230,7 @@ type SignItem struct {
 	Message      string       `json:"message,omitempty"`
 	MessageScope string       `json:"messageScope,omitempty"`
 	Signature    string       `json:"signature"`
+	Certificate  string       `json:"certificate"`
 	MatchMethod  string       `json:"matchMethod"`
 	Type         string       `json:"type"`
 	CustomFilter []string     `json:"customFilter,omitempty"`
