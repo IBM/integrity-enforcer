@@ -21,20 +21,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	v1cli "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -328,53 +324,4 @@ func getMaskedReleaseSecretString(releaseSecretBytes []byte) string {
 	}
 	maskedObject = maskedObject + release.Manifest
 	return maskedObject
-}
-
-func (rc *ReqContext) IsVerifiedServiceAccount() bool {
-	// get sa
-	var sa *v1.ServiceAccount
-	if rc.ServiceAccount != nil {
-		sa = rc.ServiceAccount
-	} else {
-		if strings.HasPrefix(rc.UserName, "system:") || strings.Contains(rc.UserName, ":") {
-			name := strings.Split(rc.UserName, ":")
-			saName := name[len(name)-1]
-			namespace := name[len(name)-2]
-			serviceAccount, err := GetServiceAccount(saName, namespace)
-			if err != nil {
-				return false
-			}
-			rc.ServiceAccount = sa
-			sa = serviceAccount
-		}
-	}
-	if sa == nil {
-		return false
-	}
-	// sa has integrity verified
-	if rc.Namespace != sa.ObjectMeta.Namespace {
-		return false
-	}
-	if s, ok := sa.Annotations["integrityVerified"]; ok {
-		if b, err := strconv.ParseBool(s); err != nil {
-			return false
-		} else {
-			return b
-		}
-	}
-	return false
-}
-
-func GetServiceAccount(name, namespace string) (*v1.ServiceAccount, error) {
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return nil, err
-	}
-	v1client := v1cli.NewForConfigOrDie(config)
-
-	serviceAccount, err := v1client.ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return serviceAccount, nil
 }

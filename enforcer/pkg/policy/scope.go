@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	v1 "k8s.io/api/core/v1"
 )
 
 /**********************************************
@@ -145,22 +144,9 @@ func (self *concretePolicyChecker) isAuthorizedServiceAccount(patterns []Allowed
 			}
 		}
 		if p.AllowChangesBySignedServiceAccount {
-			var sa *v1.ServiceAccount
-			if self.reqc.ServiceAccount == nil {
-				if !strings.HasPrefix(self.reqc.UserName, "system:") || !strings.Contains(self.reqc.UserName, ":") {
-					continue
-				}
-				name := strings.Split(self.reqc.UserName, ":")
-				saName := name[len(name)-1]
-				namespace := name[len(name)-2]
-				serviceAccount, err := common.GetServiceAccount(saName, namespace)
-				if err != nil {
-					continue
-				}
-				sa = serviceAccount
-				self.reqc.ServiceAccount = serviceAccount
-			} else {
-				sa = self.reqc.ServiceAccount
+			sa, err := common.GetServiceAccount(self.reqc)
+			if err != nil || sa == nil {
+				continue
 			}
 			if s, ok := sa.Annotations["integrityVerified"]; ok {
 				if b, err := strconv.ParseBool(s); err != nil {

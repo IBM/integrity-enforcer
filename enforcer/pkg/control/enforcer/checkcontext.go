@@ -129,7 +129,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
 	self.Result.AllowedByRule = policyChecker.IsAllowedByRule()
 	self.Result.PermitIfVerifiedOwner = policyChecker.PermitIfVerifiedOwner()
-	self.Result.PermitIfVerifiedServiceAccount = self.ReqC.IsVerifiedServiceAccount()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -200,9 +199,10 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	}
 
 	//check verified user
-	if !self.Aborted && !allowed && self.ReqC.ObjectHashType != common.HashTypeHelmSecret && self.Result.PermitIfVerifiedServiceAccount {
+	if !self.Aborted && !allowed && self.ReqC.IsVerifiedServiceAccount() {
+		self.Result.PermitIfVerifiedServiceAccount = true
 		allowed = true
-		evalReason = common.REASON_VERIFIED_USER
+		evalReason = common.REASON_VERIFIED_SA
 	}
 
 	//check mutation
@@ -314,7 +314,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			self.Result.ResolveOwnerResult.Verified {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
-		} else if self.ReqC.IsCreateRequest() && self.Result.PermitIfVerifiedServiceAccount {
+		} else if self.Result.PermitIfVerifiedServiceAccount {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else {
