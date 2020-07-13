@@ -17,7 +17,6 @@
 package policy
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
@@ -36,6 +35,7 @@ type PolicyChecker interface {
 	IsAllowedForInternalRequest() bool
 	IsAllowedByRule() bool
 	PermitIfVerifiedOwner() bool
+	PermitIfVerifiedServiceAccount() bool
 }
 
 func NewPolicyChecker(policy *Policy, reqc *common.ReqContext) PolicyChecker {
@@ -115,60 +115,56 @@ func (self *concretePolicyChecker) IsAllowedByRule() bool {
 
 func (self *concretePolicyChecker) PermitIfVerifiedOwner() bool {
 	if self.policy != nil && self.policy.PermitIfVerifiedOwner != nil {
-		return self.isAuthorizedServiceAccount(self.policy.PermitIfVerifiedOwner)
+		patterns := self.policy.PermitIfVerifiedOwner
+
+		for _, p := range patterns {
+			request := p.Request.Match(self.reqc)
+			if !request {
+				continue
+			}
+
+			//check if sa is included in the list.
+			if len(p.AuthorizedServiceAccount) != 0 {
+				for _, au := range p.AuthorizedServiceAccount {
+					userName := self.reqc.UserName
+					if strings.Contains(userName, ":") {
+						name := strings.Split(userName, ":")
+						userName = name[len(name)-1]
+					}
+					result := MatchPattern(au, userName)
+					if result {
+						return result
+					}
+				}
+			}
+		}
+		return false
 	} else {
 		return false
 	}
 }
 
-func (self *concretePolicyChecker) isAuthorizedServiceAccount(patterns []AllowedUserPattern) bool {
-	if patterns == nil {
-		return false
-	}
-	for _, p := range patterns {
-		request := p.Request.Match(self.reqc)
-		if !request {
-			continue
-		}
-		if len(p.AuthorizedServiceAccount) != 0 {
-			for _, au := range p.AuthorizedServiceAccount {
-				userName := self.reqc.UserName
-				if strings.Contains(userName, ":") {
-					name := strings.Split(userName, ":")
-					userName = name[len(name)-1]
-				}
-				result := MatchPattern(au, userName)
-				if result {
-					return result
-				}
-			}
-		}
-		if p.AllowChangesBySignedServiceAccount {
-			sa, err := common.GetServiceAccount(self.reqc)
-			if err != nil || sa == nil {
+func (self *concretePolicyChecker) PermitIfVerifiedServiceAccount() bool {
+
+	if self.policy != nil && self.policy.PermitIfVerifiedOwner != nil {
+		patterns := self.policy.PermitIfVerifiedOwner
+
+		for _, p := range patterns {
+			request := p.Request.Match(self.reqc)
+			if !request {
 				continue
 			}
-			if s, ok := sa.Annotations["integrityVerified"]; ok {
-				if b, err := strconv.ParseBool(s); err != nil {
-					continue
-				} else {
-					if b {
-						return b
-					}
-				}
-			}
-			if s, ok := sa.Annotations["integrityUnverified"]; ok {
-				if b, err := strconv.ParseBool(s); err != nil {
-					continue
-				} else {
-					if b {
-						return b
-					}
-				}
+			//check if sa is verified.
+			if p.AllowChangesBySignedServiceAccount {
+				return true
 			}
 		}
+		return false
+
+	} else {
+		return false
 	}
-	return false
+
 }
 
 /**********************************************
