@@ -12,6 +12,10 @@ spec:
     - request:
         namespace: '*'
       subject:
+        email: "AdminCA"
+    - request:
+        namespace: '*'
+      subject:
         email: cluster_signer@signer.com
     enforce:
     - namespace: '*'

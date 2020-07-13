@@ -31,6 +31,17 @@ spec:
         spec:
           description: SignServiceSpec defines the desired state of SignService
           properties:
+            certSigners:
+              items:
+                properties:
+                  isCA:
+                    type: boolean
+                  issuerName:
+                    type: string
+                  name:
+                    type: string
+                type: object
+              type: array
             enabled:
               description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                 Important: Run "operator-sdk generate k8s" to regenerate code after
@@ -52,15 +63,12 @@ spec:
               type: array
             invalidSigners:
               items:
-                properties:
-                  isCA:
-                    type: boolean
-                  issuerName:
-                    type: string
-                  name:
-                    type: string
-                type: object
+                type: string
               type: array
+            keyRingSecretName:
+              type: string
+            privateKeyRingSecretName:
+              type: string
             serviceAccountName:
               type: string
             signService:
@@ -86,7 +94,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        # x-kubernetes-int-or-string: true
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
@@ -96,7 +104,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        # x-kubernetes-int-or-string: true
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -108,14 +116,7 @@ spec:
               type: string
             signers:
               items:
-                properties:
-                  isCA:
-                    type: boolean
-                  issuerName:
-                    type: string
-                  name:
-                    type: string
-                type: object
+                type: string
               type: array
           type: object
         status:

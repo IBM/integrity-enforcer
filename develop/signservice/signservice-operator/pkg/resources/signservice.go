@@ -74,6 +74,51 @@ func BuildIECertPoolSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret
 	return sec
 }
 
+//server-secret.yaml
+func BuildKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
+	metaLabels := map[string]string{
+		"app":                    cr.Name,
+		"app.kubernetes.io/name": cr.Spec.KeyRingSecretName,
+		// "app.kubernetes.io/component":  instance.ReleaseName(),
+		"app.kubernetes.io/managed-by": "operator",
+		// "app.kubernetes.io/instance":   instance.ReleaseName(),
+		// "release":                      instance.ReleaseName(),
+		"role": "security",
+	}
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.KeyRingSecretName,
+			Namespace: cr.Namespace,
+			Labels:    metaLabels,
+		},
+		Data: make(map[string][]byte),
+		Type: corev1.SecretTypeOpaque,
+	}
+	return sec
+}
+
+func BuildPrivateKeyringSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
+	metaLabels := map[string]string{
+		"app":                    cr.Name,
+		"app.kubernetes.io/name": cr.Spec.PrivateKeyRingSecretName,
+		// "app.kubernetes.io/component":  instance.ReleaseName(),
+		"app.kubernetes.io/managed-by": "operator",
+		// "app.kubernetes.io/instance":   instance.ReleaseName(),
+		// "release":                      instance.ReleaseName(),
+		"role": "security",
+	}
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.PrivateKeyRingSecretName,
+			Namespace: cr.Namespace,
+			Labels:    metaLabels,
+		},
+		Data: make(map[string][]byte),
+		Type: corev1.SecretTypeOpaque,
+	}
+	return sec
+}
+
 func BuildServerCertSecretForIE(cr *researchv1alpha1.SignService) *corev1.Secret {
 	metaLabels := map[string]string{
 		"app":                    cr.Name,

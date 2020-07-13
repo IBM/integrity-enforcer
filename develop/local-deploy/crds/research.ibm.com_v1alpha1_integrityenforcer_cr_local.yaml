@@ -13,6 +13,10 @@ spec:
         namespace: '*'
       subject:
         email: "AdminCA"
+    - request:
+        namespace: '*'
+      subject:
+        email: "cluster_signer@signer.com"
     enforce:
     - namespace: '*'
     ignoreRequest: []
@@ -38,6 +42,10 @@ spec:
     createIfNotExist: false
     keyValue: test
     name: ie-certpool-secret
+  keyRingConfig:
+    createIfNotExist: false
+    keyValue: test
+    name: keyring-secret
   labels:
     app: ie-server
   logger:

@@ -4,11 +4,13 @@ metadata:
   name: signservice
 spec:
   enabled: true
+  keyRingSecretName: keyring-secret
+  privateKeyRingSecretName: private-keyring-secret
   signServiceSecretName: signservice-secret
   ieCertPoolSecretName: ie-certpool-secret
   serviceAccountName: signservice-sa
   imagePullSecrets: []
-  signers:
+  certSigners:
   - name: "RootCA"
     isCA: true
   - name: "AdminCA"
@@ -17,7 +19,10 @@ spec:
   - name: "ServiceCert"
     issuerName: "AdminCA"
     isCA: false
-  invalidSigners: []
+  signers:
+  - cluster_signer@signer.com
+  invalidSigners:
+  - invalid_signer@invalid.signer.com
   signService:
     image: integrityenforcer/ie-signservice:0.0.1
     imagePullPolicy: Always

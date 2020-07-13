@@ -21,6 +21,7 @@ import (
 	"time"
 
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/apis/research/v1alpha1"
+	"github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/pgpkey"
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/pkix"
 	res "github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/resources"
 	"github.com/IBM/integrity-enforcer/operator/pkg/cert"
@@ -95,7 +96,7 @@ func (r *ReconcileSignService) createOrUpdateSignerCertSecret(
 		"Instance.Name", instance.Name,
 		"Secret.Name", expected.Name)
 
-	keyBoxList, err := pkix.CreateKeyBoxListFromSignerChain(instance.Spec.Signers)
+	keyBoxList, err := pkix.CreateKeyBoxListFromSignerChain(instance.Spec.CertSigners)
 	if err != nil {
 		reqLogger.Error(err, "Failed to generate keyring.")
 		return reconcile.Result{}, err
@@ -111,6 +112,36 @@ func (r *ReconcileSignService) createOrUpdateSignerCertSecret(
 	// ie-certpool-secret
 	expected2 := res.BuildIECertPoolSecretForIE(instance)
 	expected2.Data = keyBoxList.ToCertPoolData()
+	return r.createOrUpdateSecret(instance, expected2)
+}
+
+// create public and private keyring secret at the same time
+func (r *ReconcileSignService) createOrUpdateKeyringSecret(
+	instance *researchv1alpha1.SignService) (reconcile.Result, error) {
+
+	// public keyring
+	expected := res.BuildKeyringSecretForIE(instance)
+
+	reqLogger := log.WithValues(
+		"Instance.Name", instance.Name,
+		"Secret.Name", expected.Name)
+
+	keyring, err := pgpkey.GenerateKeyring(instance.Spec.Signers, instance.Spec.InvalidSigners)
+	if err != nil {
+		reqLogger.Error(err, "Failed to generate keyring.")
+		return reconcile.Result{}, err
+	}
+
+	expected.Data = keyring.Public
+	recResult, err := r.createOrUpdateSecret(instance, expected)
+	if err != nil {
+		reqLogger.Error(err, "Failed to generate keyring.")
+		return recResult, err
+	}
+
+	// private keyring
+	expected2 := res.BuildPrivateKeyringSecretForIE(instance)
+	expected2.Data = keyring.Private
 	return r.createOrUpdateSecret(instance, expected2)
 }
 

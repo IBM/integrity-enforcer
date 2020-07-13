@@ -40,7 +40,7 @@ func NewHelmSignStore(ssconfig *config.SignStoreConfig) *HelmSignStore {
 		config: &HelmSignStoreConfig{
 			ChartDir:    ssconfig.ChartDir,
 			ChartRepo:   ssconfig.ChartRepo,
-			KeyringPath: ssconfig.CertPoolPath,
+			KeyringPath: ssconfig.KeyringPath,
 		},
 	}
 }

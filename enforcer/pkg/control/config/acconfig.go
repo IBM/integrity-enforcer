@@ -168,6 +168,10 @@ func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
 	if certPoolPath == "" {
 		certPoolPath = "/ie-certpool-secret/" // default value
 	}
+	keyringPath := os.Getenv("KEYRING_PATH")
+	if keyringPath == "" {
+		keyringPath = "/keyring/pubring.gpg" // default value
+	}
 	chartDir := os.Getenv("CHART_DIR")
 	if chartDir == "" {
 		chartDir = "/tmp/"
@@ -178,6 +182,7 @@ func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
 	}
 	ssconfig := &cfg.SignStoreConfig{
 		CertPoolPath:       certPoolPath,
+		KeyringPath:        keyringPath,
 		ChartDir:           chartDir,
 		ChartRepo:          chartRepo,
 		SignatureNamespace: signatureNs,

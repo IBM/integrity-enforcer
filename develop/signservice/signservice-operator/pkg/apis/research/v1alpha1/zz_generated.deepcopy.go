@@ -99,11 +99,16 @@ func (in *SignServiceSpec) DeepCopyInto(out *SignServiceSpec) {
 	in.SignService.DeepCopyInto(&out.SignService)
 	if in.Signers != nil {
 		in, out := &in.Signers, &out.Signers
-		*out = make([]pkix.SignerCertName, len(*in))
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	if in.InvalidSigners != nil {
 		in, out := &in.InvalidSigners, &out.InvalidSigners
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.CertSigners != nil {
+		in, out := &in.CertSigners, &out.CertSigners
 		*out = make([]pkix.SignerCertName, len(*in))
 		copy(*out, *in)
 	}
