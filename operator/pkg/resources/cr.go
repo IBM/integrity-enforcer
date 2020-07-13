@@ -61,7 +61,7 @@ func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *epol
 			AllowedSigner: []policy.SignerMatchPattern{
 				{
 					Request: policy.RequestMatchPattern{Namespace: "sample"},
-					Subject: policy.SubjectMatchPattern{Email: "sample"},
+					Subject: policy.SubjectMatchPattern{CommonName: "sample"},
 				},
 			},
 			PolicyType: policy.SignerPolicy,

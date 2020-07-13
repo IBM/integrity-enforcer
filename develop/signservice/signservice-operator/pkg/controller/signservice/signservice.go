@@ -22,6 +22,7 @@ import (
 
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/pgpkey"
+	"github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/pkix"
 	res "github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/resources"
 	"github.com/IBM/integrity-enforcer/operator/pkg/cert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -82,6 +83,36 @@ func (r *ReconcileSignService) createOrUpdateSecret(instance *researchv1alpha1.S
 	// No reconcile was necessary
 	return reconcile.Result{}, nil
 
+}
+
+// create 2 signer secrets for signservice and for ie at the same time
+func (r *ReconcileSignService) createOrUpdateSignerCertSecret(
+	instance *researchv1alpha1.SignService) (reconcile.Result, error) {
+
+	// signservice-secret
+	expected := res.BuildSignServiceSecretForIE(instance)
+
+	reqLogger := log.WithValues(
+		"Instance.Name", instance.Name,
+		"Secret.Name", expected.Name)
+
+	keyBoxList, err := pkix.CreateKeyBoxListFromSignerChain(instance.Spec.CertSigners)
+	if err != nil {
+		reqLogger.Error(err, "Failed to generate keyring.")
+		return reconcile.Result{}, err
+	}
+
+	expected.Data = keyBoxList.ToSecretData()
+	recResult, err := r.createOrUpdateSecret(instance, expected)
+	if err != nil {
+		reqLogger.Error(err, "Failed to generate keyring.")
+		return recResult, err
+	}
+
+	// ie-certpool-secret
+	expected2 := res.BuildIECertPoolSecretForIE(instance)
+	expected2.Data = keyBoxList.ToCertPoolData()
+	return r.createOrUpdateSecret(instance, expected2)
 }
 
 // create public and private keyring secret at the same time

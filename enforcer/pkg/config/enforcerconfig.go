@@ -27,6 +27,7 @@ type PatchConfig struct {
 }
 
 type SignStoreConfig struct {
+	CertPoolPath       string `json:"certPoolPath"`
 	KeyringPath        string `json:"keyringPath"`
 	ChartDir           string `json:"chartPath"`
 	ChartRepo          string `json:"chartRepo"`

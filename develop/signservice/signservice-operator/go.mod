@@ -21,7 +21,6 @@ replace (
 	github.com/IBM/integrity-enforcer/enforcer => ../../../enforcer
 	github.com/IBM/integrity-enforcer/operator => ../../../operator
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.4-0.20200207053602-7439e774c9e9+incompatible
-	github.com/IBM/integrity-enforcer/enforcer => ../../../enforcer
 	k8s.io/api => k8s.io/api v0.16.5-beta.1
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.5-beta.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.16.5-beta.1

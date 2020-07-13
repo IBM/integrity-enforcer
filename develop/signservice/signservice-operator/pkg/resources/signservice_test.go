@@ -112,19 +112,19 @@ func loadTestSignServiceCR(t *testing.T) *researchv1alpha1.SignService {
 }
 
 //cr
-func TestSignServiceKeyringSecret(t *testing.T) {
-	instance := loadTestSignServiceCR(t)
-	obj := BuildKeyringSecretForIE(instance)
-	yamlPath := "./testdata/signservice_keyring.yaml"
-	testObjAndYaml(t, obj, yamlPath)
-}
+// func TestSignServiceKeyringSecret(t *testing.T) {
+// 	instance := loadTestSignServiceCR(t)
+// 	obj := BuildKeyringSecretForIE(instance)
+// 	yamlPath := "./testdata/signservice_keyring.yaml"
+// 	testObjAndYaml(t, obj, yamlPath)
+// }
 
-func TestSignServicePrivateKeyringSecret(t *testing.T) {
-	instance := loadTestSignServiceCR(t)
-	obj := BuildPrivateKeyringSecretForIE(instance)
-	yamlPath := "./testdata/signservice_private_keyring.yaml"
-	testObjAndYaml(t, obj, yamlPath)
-}
+// func TestSignServicePrivateKeyringSecret(t *testing.T) {
+// 	instance := loadTestSignServiceCR(t)
+// 	obj := BuildPrivateKeyringSecretForIE(instance)
+// 	yamlPath := "./testdata/signservice_private_keyring.yaml"
+// 	testObjAndYaml(t, obj, yamlPath)
+// }
 
 func TestSingServiceServerCertSecret(t *testing.T) {
 	instance := loadTestSignServiceCR(t)

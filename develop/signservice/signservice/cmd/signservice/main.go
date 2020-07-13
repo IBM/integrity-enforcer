@@ -61,16 +61,15 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
-	scopeConcatKey, ok := r.URL.Query()["scope"]
-	if !ok {
-		msg := "param `scope` is required.  e.g.) /sign/annotation?scope=spec"
-		log.Error(msg)
-		fmt.Fprint(w, msg)
-		return
-	}
-	scopeKeys := scopeConcatKey[0]
-
 	signer := getParamInRequest(r, "signer", "")
+	scope := getParamInRequest(r, "scope", "")
+	modeStr := getParamInRequest(r, "mode", "apply")
+	mode := sign.DefaultSign
+	if modeStr == "apply" {
+		mode = sign.ApplySign
+	} else if modeStr == "patch" {
+		mode = sign.PatchSign
+	}
 
 	yamlStr, err := readFileInRequest(r, "yaml")
 	if err != nil {
@@ -80,7 +79,7 @@ func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sig, err := sign.SignYaml(yamlStr, scopeKeys, signer)
+	sig, err := sign.SignYaml(yamlStr, scope, signer, mode)
 	if err != nil {
 		log.Error(err)
 		return
@@ -108,7 +107,7 @@ func signToResourceSignature(w http.ResponseWriter, r *http.Request, mode sign.S
 		fmt.Fprint(w, msg)
 		return
 	}
-	sig, err := sign.SignYaml(rsig, "spec", signer)
+	sig, err := sign.SignYaml(rsig, "spec", signer, sign.DefaultSign)
 	if err != nil {
 		msg := err.Error()
 		log.Error(msg)

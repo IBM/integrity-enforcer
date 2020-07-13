@@ -64,6 +64,7 @@ github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/GoogleCloudPlatform/k8s-cloud-provider v0.0.0-20190822182118-27a4ced34534/go.mod h1:iroGtC8B3tQiqtds1l+mgk/BBOrxbqjH+eUfFQYRc14=
 github.com/IBM/integrity-enforcer v0.0.0-20200602121605-c0fa868d3900 h1:oAVE0J7k3c9vpux3RcbUz+bRX685eP++ZOWXT9lOiCU=
+github.com/IBM/integrity-enforcer v0.0.0-20200629083539-d7f76e65d8ac h1:MkZ13HjGkxhClkHHSlVemcWdkqLVRXl1oonWgrLwrDw=
 github.com/IBM/integrity-enforcer/operator v0.0.0-20200602121605-c0fa868d3900 h1:1t4sod4GyNSuVWc8EL0nc3QZWlsmGI45LY1Rc1xaNCA=
 github.com/IBM/integrity-enforcer/operator v0.0.0-20200602121605-c0fa868d3900/go.mod h1:yOulHMTF8y/Lo9IimqaBEdlaXZ29sj5OZiqXmAzlSWM=
 github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab/go.mod h1:3VYc5hodBMJ5+l/7J4xAyMeuM2PNuepvHlGs8yilUCA=

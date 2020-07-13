@@ -5,9 +5,23 @@ metadata:
 spec:
   enabled: true
   keyRingSecretName: keyring-secret
-  PrivateKeyRingSecretName: private-keyring-secret
+  privateKeyRingSecretName: private-keyring-secret
+  signServiceSecretName: signservice-secret
+  ieCertPoolSecretName: ie-certpool-secret
   serviceAccountName: signservice-sa
   imagePullSecrets: []
+  certSigners:
+  - name: "Root CA"
+    isCA: true
+  - name: "Intermediate CA"
+    issuerName: "Root CA"
+    isCA: true
+  - name: "Cluster Admin"
+    issuerName: "Intermediate CA"
+    isCA: false
+  - name: "Service Team Admin A"
+    issuerName: "Intermediate CA"
+    isCA: false
   signers:
   - cluster_signer@signer.com
   invalidSigners:
