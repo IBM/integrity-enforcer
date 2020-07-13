@@ -19,7 +19,7 @@ package resources
 import (
 	"fmt"
 	"strconv"
-
+	"reflect"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -62,6 +62,17 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		SecurityContext: cr.Spec.Server.SecurityContext,
 		Image:           cr.Spec.Server.Image,
 		ImagePullPolicy: cr.Spec.Server.ImagePullPolicy,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 30,
+			PeriodSeconds:       30,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{
+						"ls",
+					},
+				},
+			},
+		},
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "ac-api",
@@ -203,7 +214,12 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-
+			Strategy: appsv1.DeploymentStrategy{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge: cr.Spec.MaxSurge,
+					MaxUnavailable: cr.Spec.MaxUnavailable,
+				},
+			},
 			Replicas: cr.Spec.ReplicaCount,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: cr.Spec.SelectorLabels,
@@ -226,4 +242,77 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			},
 		},
 	}
+}
+
+// EqualDeployments returns a Boolean
+func EqualDeployments(expected *appsv1.Deployment, found *appsv1.Deployment) bool {
+	if !EqualLabels(found.ObjectMeta.Labels, expected.ObjectMeta.Labels) {
+		return false
+	}
+	if !EqualPods(expected.Spec.Template, found.Spec.Template) {
+		return false
+	}
+	return true
+}
+
+// EqualPods returns a Boolean
+func EqualPods(expected v1.PodTemplateSpec, found v1.PodTemplateSpec) bool {
+	if !EqualLabels(found.ObjectMeta.Labels, expected.ObjectMeta.Labels) {
+		return false
+	}
+	if !EqualAnnotations(found.ObjectMeta.Annotations, expected.ObjectMeta.Annotations) {
+		return false
+	}
+	if !reflect.DeepEqual(found.Spec.ServiceAccountName, expected.Spec.ServiceAccountName) {
+		return false
+	}
+	if len(found.Spec.Containers) != len(expected.Spec.Containers) {
+		return false
+	}
+	if !EqualContainers(expected.Spec.Containers[0], found.Spec.Containers[0]) {
+		return false
+	}
+	return true
+}
+// EqualContainers returns a Boolean
+func EqualContainers(expected v1.Container, found v1.Container) bool {
+	if !reflect.DeepEqual(found.Name, expected.Name) {
+		return false
+	}
+	if !reflect.DeepEqual(found.Image, expected.Image) {
+		return false
+	}
+	if !reflect.DeepEqual(found.ImagePullPolicy, expected.ImagePullPolicy) {
+		return false
+	}
+	if !reflect.DeepEqual(found.VolumeMounts, expected.VolumeMounts) {
+		return false
+	}
+	if !reflect.DeepEqual(found.SecurityContext, expected.SecurityContext) {
+		return false
+	}
+	if !reflect.DeepEqual(found.Ports, expected.Ports) {
+		return false
+	}
+	if !reflect.DeepEqual(found.Args, expected.Args) {
+		return false
+	}
+	if !reflect.DeepEqual(found.Env, expected.Env) {
+		return false
+	}
+	return true
+}
+
+func EqualLabels(found map[string]string, expected map[string]string) bool {
+	if !reflect.DeepEqual(found, expected) {
+		return false
+	}
+	return true
+}
+
+func EqualAnnotations(found map[string]string, expected map[string]string) bool {
+	if !reflect.DeepEqual(found, expected) {
+		return false
+	}
+	return true
 }

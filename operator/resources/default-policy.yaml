@@ -17,6 +17,7 @@ spec:
       request: {}
     allowedForInternalRequest:
     - username: system:admin
+    - username: system:serviceaccount:integrity-enforcer-ns:integrity-enforcer-operator
     - username: system:serviceaccount:openshift-marketplace:marketplace-operator
     - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
     - username: system:serviceaccount:openshift-network-operator:default
