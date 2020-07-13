@@ -17,6 +17,8 @@ spec:
       request: {}
     allowedForInternalRequest:
     - username: system:admin
+    - username: system:apiserver
+    - username: system:kube-scheduler
     - username: system:serviceaccount:integrity-enforcer-ns:integrity-enforcer-operator
     - username: system:serviceaccount:openshift-marketplace:marketplace-operator
     - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
@@ -44,6 +46,7 @@ spec:
     - username: system:serviceaccount:kube-system:resourcequota-controller
     - username: system:serviceaccount:kube-system:service-account-controller
     - username: system:serviceaccount:kube-system:statefulset-controller
+    - username: system:serviceaccount:ibm-common-services:cert-manager
     - kind: ControllerRevision, Pod
       username: system:serviceaccount:kube-system:daemon-set-controller
     - kind: ConfigMap
@@ -69,7 +72,7 @@ spec:
       username: system:serviceaccount:openshift-service-catalog-apiserver-operator:openshift-service-catalog-apiserver-operator
     - namespace: openshift-operator-lifecycle-manager
       username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
-    - kind: Pod
+    - kind: Pod, PersistentVolumeClaim
       username: system:serviceaccount:kube-system:persistent-volume-binder
     - kind: ConfigMap,DaemonSet
       namespace: openshift-cluster-node-tuning-operator
@@ -123,10 +126,6 @@ spec:
     - kind: SelfSubjectAccessReview
     - namespace: '-'
     permitIfVerifiedOwner:
-    - request:
-        namespace: '*'
-        operation: CREATE
-      allowChangesBySignedServiceAccount: true
     - allowChangesBySignedServiceAccount: true
       authorizedServiceAccount:
         - olm-operator-serviceaccount
@@ -134,9 +133,4 @@ spec:
         kind: ServiceAccount
         namespace: '*'
         operation: CREATE
-    permitIfCreator:
-    - request:
-        namespace: '*'
-        operation: UPDATE
-      allowChangesBySignedServiceAccount: true
 

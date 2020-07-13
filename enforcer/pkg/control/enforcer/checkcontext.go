@@ -29,6 +29,7 @@ import (
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,11 +41,12 @@ import (
 
 type CheckContext struct {
 	// request context
-	config     *config.EnforcerConfig
-	policy     *policy.Policy
-	ReqC       *common.ReqContext `json:"-"`
-	DryRun     bool               `json:"dryRun"`
-	Unverified bool               `json:"unverified"`
+	config         *config.EnforcerConfig
+	policy         *policy.Policy
+	ReqC           *common.ReqContext `json:"-"`
+	ServiceAccount *v1.ServiceAccount `json:"serviceAccount"`
+	DryRun         bool               `json:"dryRun"`
+	Unverified     bool               `json:"unverified"`
 
 	Result *CheckResult `json:"result"`
 
@@ -63,13 +65,14 @@ type CheckContext struct {
 }
 
 type CheckResult struct {
-	InternalRequest       bool                         `json:"internal"`
-	AllowedByRule         bool                         `json:"allowedByRule"`
-	PermitIfVerifiedOwner bool                         `json:"permitIfVerifiedOwner"`
-	PermitIfFirstUser     bool                         `json:"permitIfFirstUser"`
-	SignPolicyEvalResult  *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult    *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult    *common.MutationEvalResult   `json:"mutation"`
+	InternalRequest                bool                         `json:"internal"`
+	AllowedByRule                  bool                         `json:"allowedByRule"`
+	PermitIfVerifiedOwner          bool                         `json:"permitIfVerifiedOwner"`
+	PermitIfFirstUser              bool                         `json:"permitIfFirstUser"`
+	PermitIfVerifiedServiceAccount bool                         `json:"permitIfVerifiedServiceAccount"`
+	SignPolicyEvalResult           *common.SignPolicyEvalResult `json:"signpolicy"`
+	ResolveOwnerResult             *common.ResolveOwnerResult   `json:"owner"`
+	MutationEvalResult             *common.MutationEvalResult   `json:"mutation"`
 }
 
 func NewCheckContext(config *config.EnforcerConfig, policy *policy.Policy) *CheckContext {
@@ -128,7 +131,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
 	self.Result.AllowedByRule = policyChecker.IsAllowedByRule()
 	self.Result.PermitIfVerifiedOwner = policyChecker.PermitIfVerifiedOwner()
-	self.Result.PermitIfFirstUser = policyChecker.PermitIfCreator()
+	self.Result.PermitIfVerifiedServiceAccount = policyChecker.PermitIfVerifiedServiceAccount()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -185,23 +188,26 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	}
 
 	//resolve owner
-	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() {
+	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() && self.ReqC.IsServiceAccount() {
 		if r, err := self.resolveOwner(); err != nil {
 			self.abort("Error when resolving owner", err)
 		} else {
 			self.Result.ResolveOwnerResult = r
 			if self.Result.PermitIfVerifiedOwner &&
-				r.Checked && r.Verified {
+				r.Checked && r.Verified &&
+				self.IsVerifiedServiceAccount() {
 				allowed = true
 				evalReason = common.REASON_VERIFIED_OWNER
 			}
 		}
 	}
 
-	//update by first user
-	if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() && self.Result.PermitIfFirstUser {
+	//check verified user
+	if !self.Aborted && !allowed &&
+		self.Result.PermitIfVerifiedServiceAccount &&
+		self.IsVerifiedServiceAccount() {
 		allowed = true
-		evalReason = common.REASON_UPDATE_BY_SA
+		evalReason = common.REASON_VERIFIED_SA
 	}
 
 	//check mutation
@@ -310,7 +316,12 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
-			self.Result.ResolveOwnerResult.Verified {
+			self.Result.ResolveOwnerResult.Verified &&
+			self.IsVerifiedServiceAccount() {
+			annotations["integrityVerified"] = "true"
+			deleteKeys = append(deleteKeys, "integrityUnverified")
+		} else if self.Result.PermitIfVerifiedServiceAccount &&
+			self.IsVerifiedServiceAccount() {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else {
@@ -375,6 +386,30 @@ func (self *CheckContext) resolveOwner() (*common.ResolveOwnerResult, error) {
 	} else {
 		return resolver.Find(reqc)
 	}
+}
+
+func (self *CheckContext) IsVerifiedServiceAccount() bool {
+
+	sa := self.ServiceAccount
+	if sa == nil {
+		v, err := GetServiceAccount(self.ReqC.UserName)
+		if err != nil || v == nil {
+			return false
+		}
+		sa = v
+	}
+
+	if self.ReqC.Namespace != sa.ObjectMeta.Namespace {
+		return false
+	}
+	if s, ok := sa.Annotations["integrityVerified"]; ok {
+		if b, err := strconv.ParseBool(s); err != nil {
+			return false
+		} else {
+			return b
+		}
+	}
+	return false
 }
 
 func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {

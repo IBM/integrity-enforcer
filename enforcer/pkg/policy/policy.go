@@ -49,7 +49,6 @@ type Policy struct {
 	AllowedByRule             []RequestMatchPattern      `json:"allowedByRule,omitempty"`
 	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
 	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
-	PermitIfCreator           []AllowedUserPattern       `json:"permitIfCreator,omitempty"`
 	Namespace                 string                     `json:"namespace,omitempty"`
 	PolicyType                PolicyType                 `json:"policyType,omitempty"`
 }
@@ -75,8 +74,7 @@ func (self *Policy) CheckFormat() (bool, string) {
 		hasAllowRule := len(self.AllowedByRule) > 0
 		hasAllowChange := len(self.AllowedChange) > 0
 		hasVOwner := len(self.PermitIfVerifiedOwner) > 0
-		hasFUser := len(self.PermitIfCreator) > 0
-		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner || hasFUser {
+		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner {
 			return false, fmt.Sprintf("%s must contain only AllowedSigner rule", pType)
 		}
 	}
@@ -197,7 +195,6 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 		AllowedByRule:             append(p.AllowedByRule, p2.AllowedByRule...),
 		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
 		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
-		PermitIfCreator:           append(p.PermitIfCreator, p2.PermitIfCreator...),
 		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
 	}
 }
