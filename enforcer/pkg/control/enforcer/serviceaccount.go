@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-package common
+package enforcer
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
@@ -26,34 +25,9 @@ import (
 	v1cli "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-func (rc *ReqContext) IsVerifiedServiceAccount() bool {
-	// get sa
-	sa, err := GetServiceAccount(rc)
-	if err != nil || sa == nil {
-		return false
-	}
+func GetServiceAccount(userName string) (*v1.ServiceAccount, error) {
 
-	// sa has integrity verified
-	if rc.Namespace != sa.ObjectMeta.Namespace {
-		return false
-	}
-	if s, ok := sa.Annotations["integrityVerified"]; ok {
-		if b, err := strconv.ParseBool(s); err != nil {
-			return false
-		} else {
-			return b
-		}
-	}
-	return false
-}
-
-func GetServiceAccount(rc *ReqContext) (*v1.ServiceAccount, error) {
-
-	if rc.ServiceAccount != nil {
-		return rc.ServiceAccount, nil
-	}
-
-	if !strings.HasPrefix(rc.UserName, "system:") {
+	if !strings.HasPrefix(userName, "system:") {
 		return nil, nil
 	}
 
@@ -63,14 +37,10 @@ func GetServiceAccount(rc *ReqContext) (*v1.ServiceAccount, error) {
 	}
 	v1client := v1cli.NewForConfigOrDie(config)
 
-	name := strings.Split(rc.UserName, ":")
+	name := strings.Split(userName, ":")
 	saName := name[len(name)-1]
 	namespace := name[len(name)-2]
 
-	serviceAccount, err := v1client.ServiceAccounts(namespace).Get(saName, metav1.GetOptions{})
-	rc.ServiceAccount = serviceAccount
-	if err != nil {
-		return nil, err
-	}
-	return rc.ServiceAccount, nil
+	return v1client.ServiceAccounts(namespace).Get(saName, metav1.GetOptions{})
+
 }

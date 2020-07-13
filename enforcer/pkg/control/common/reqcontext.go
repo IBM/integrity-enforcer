@@ -29,7 +29,6 @@ import (
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -53,28 +52,27 @@ type ObjectMetadata struct {
 }
 
 type ReqContext struct {
-	RawObject       []byte             `json:"-"`
-	RawOldObject    []byte             `json:"-"`
-	RequestJsonStr  string             `json:"request"`
-	RequestUid      string             `json:"requestUid"`
-	Namespace       string             `json:"namespace"`
-	Name            string             `json:"name"`
-	ApiGroup        string             `json:"apiGroup"`
-	ApiVersion      string             `json:"apiVersion"`
-	Kind            string             `json:"kind"`
-	Operation       string             `json:"operation"`
-	IntegrityValue  *IntegrityValue    `json:"integrityValues"`
-	OrgMetadata     *ObjectMetadata    `json:"orgMetadata"`
-	ClaimedMetadata *ObjectMetadata    `json:"claimedMetadata"`
-	UserInfo        string             `json:"userInfo"`
-	ObjLabels       string             `json:"objLabels"`
-	ObjMetaName     string             `json:"objMetaName"`
-	UserName        string             `json:"userName"`
-	UserGroups      []string           `json:"userGroups"`
-	Type            string             `json:"Type"`
-	ServiceAccount  *v1.ServiceAccount `json:"serviceAccount"`
-	ObjectHashType  string             `json:"objectHashType"`
-	ObjectHash      string             `json:"objectHash"`
+	RawObject       []byte          `json:"-"`
+	RawOldObject    []byte          `json:"-"`
+	RequestJsonStr  string          `json:"request"`
+	RequestUid      string          `json:"requestUid"`
+	Namespace       string          `json:"namespace"`
+	Name            string          `json:"name"`
+	ApiGroup        string          `json:"apiGroup"`
+	ApiVersion      string          `json:"apiVersion"`
+	Kind            string          `json:"kind"`
+	Operation       string          `json:"operation"`
+	IntegrityValue  *IntegrityValue `json:"integrityValues"`
+	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
+	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
+	UserInfo        string          `json:"userInfo"`
+	ObjLabels       string          `json:"objLabels"`
+	ObjMetaName     string          `json:"objMetaName"`
+	UserName        string          `json:"userName"`
+	UserGroups      []string        `json:"userGroups"`
+	Type            string          `json:"Type"`
+	ObjectHashType  string          `json:"objectHashType"`
+	ObjectHash      string          `json:"objectHash"`
 }
 
 func (reqc *ReqContext) OwnerRef() *ResourceRef {
