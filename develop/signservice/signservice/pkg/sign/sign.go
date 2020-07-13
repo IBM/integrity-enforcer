@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pkix"
+
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	iectlsign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
@@ -51,29 +53,41 @@ type User struct {
 	Valid  bool           `json:"valid"`
 }
 
-func SignYaml(yamlBytes string, scopeKeys string, signer string) (string, error) {
+func SignYaml(yamlBytes, scopeKeys, signer string, mode SignMode) (string, error) {
 
 	jsonBytes, err := yaml.YAMLToJSON([]byte(yamlBytes))
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Error in loading yaml to json; %s", err.Error()))
 	}
-	msg := iectlsign.GenerateMessageFromRawObj(jsonBytes, scopeKeys, "")
+	msg := ""
+	if scopeKeys == "" {
+		msg = yamlBytes
+	} else {
+		msg = iectlsign.GenerateMessageFromRawObj(jsonBytes, scopeKeys, "")
+	}
 
-	sig, reasonFail, err := iesign.DetachSign(privateKeyPath, msg, signer)
-	if err != nil || reasonFail != "" {
+	sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
+	if err != nil {
 		return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
 	}
-	if sig == "" {
-		return "", errors.New("generated signature is empty")
+	if sig == nil {
+		return "", errors.New("generated signature is null")
 	}
-	sigB64 := base64.StdEncoding.EncodeToString([]byte(sig))
+	msgB64 := base64.StdEncoding.EncodeToString([]byte(msg))
+	sigB64 := base64.StdEncoding.EncodeToString(sig)
+	certB64 := base64.StdEncoding.EncodeToString(certPemBytes)
 
 	node, err := mapnode.NewFromBytes(jsonBytes)
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Error in loading yaml to mapnode; %s", err.Error()))
 	}
 
-	sigNodeStr := fmt.Sprintf("{\"metadata\":{\"annotations\":{\"messageScope\":\"%s\",\"signature\":\"%s\"}}}", scopeKeys, sigB64)
+	sigNodeStr := ""
+	if scopeKeys == "" {
+		sigNodeStr = fmt.Sprintf("{\"metadata\":{\"annotations\":{\"message\":\"%s\",\"signature\":\"%s\",\"certificate\":\"%s\"}}}", msgB64, sigB64, certB64)
+	} else {
+		sigNodeStr = fmt.Sprintf("{\"metadata\":{\"annotations\":{\"messageScope\":\"%s\",\"signature\":\"%s\",\"certificate\":\"%s\"}}}", scopeKeys, sigB64, certB64)
+	}
 	sigNodeBytes := []byte(sigNodeStr)
 	sigNode, err := mapnode.NewFromBytes(sigNodeBytes)
 	if err != nil {
@@ -123,14 +137,15 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	if scope == "" {
 		msgB64 := base64.StdEncoding.EncodeToString([]byte(yamlBytes))
 
-		sig, reasonFail, err := iesign.DetachSign(privateKeyPath, yamlBytes, signer)
-		if err != nil || reasonFail != "" {
+		sig, certPemBytes, err := pkix.GenerateSignature([]byte(yamlBytes), signer)
+		if err != nil {
 			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
 		}
-		if sig == "" {
-			return "", errors.New("generated signature is empty")
+		if sig == nil {
+			return "", errors.New("generated signature is null")
 		}
-		sigB64 := base64.StdEncoding.EncodeToString([]byte(sig))
+		sigB64 := base64.StdEncoding.EncodeToString(sig)
+		certB64 := base64.StdEncoding.EncodeToString(certPemBytes)
 
 		signItem = rsig.SignItem{
 			ApiVersion: apiVersion,
@@ -139,9 +154,10 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 				Name:      name,
 				Namespace: namespace,
 			},
-			Message:   msgB64,
-			Signature: sigB64,
-			Type:      signType,
+			Message:     msgB64,
+			Signature:   sigB64,
+			Certificate: certB64,
+			Type:        signType,
 		}
 	} else {
 		scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
@@ -152,14 +168,15 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 				message += subNode.ToJson() + "\n"
 			}
 		}
-		sig, reasonFail, err := iesign.DetachSign(privateKeyPath, message, signer)
-		if err != nil || reasonFail != "" {
+		sig, certBytes, err := pkix.GenerateSignature([]byte(message), signer)
+		if err != nil {
 			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
 		}
-		if sig == "" {
-			return "", errors.New("generated signature is empty")
+		if sig == nil {
+			return "", errors.New("generated signature is null")
 		}
-		sigB64 := base64.StdEncoding.EncodeToString([]byte(sig))
+		sigB64 := base64.StdEncoding.EncodeToString(sig)
+		certB64 := base64.StdEncoding.EncodeToString(certBytes)
 		signItem = rsig.SignItem{
 			ApiVersion: apiVersion,
 			Kind:       kind,
@@ -169,6 +186,7 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 			},
 			MessageScope: scope,
 			Signature:    sigB64,
+			Certificate:  certB64,
 			Type:         signType,
 		}
 

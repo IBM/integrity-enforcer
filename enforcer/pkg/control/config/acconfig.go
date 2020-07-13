@@ -164,6 +164,10 @@ func (ac *AdmissionControlConfig) HelmIntegrityEnabled() bool {
 }
 
 func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
+	certPoolPath := os.Getenv("CERT_POOL_PATH")
+	if certPoolPath == "" {
+		certPoolPath = "/ie-certpool-secret/" // default value
+	}
 	keyringPath := os.Getenv("KEYRING_PATH")
 	if keyringPath == "" {
 		keyringPath = "/keyring/pubring.gpg" // default value
@@ -177,6 +181,7 @@ func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
 		chartRepo = ""
 	}
 	ssconfig := &cfg.SignStoreConfig{
+		CertPoolPath:       certPoolPath,
 		KeyringPath:        keyringPath,
 		ChartDir:           chartDir,
 		ChartRepo:          chartRepo,

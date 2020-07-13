@@ -17,6 +17,7 @@
 package common
 
 import (
+	"crypto/x509/pkix"
 	"strconv"
 )
 
@@ -91,7 +92,10 @@ func NewResourceAnnotation(values map[string]string) *ResourceAnnotation {
 
 type SignatureAnnotation struct {
 	ResourceSignatureName string
+	SignatureType         string
 	Signature             string
+	Certificate           string
+	Message               string
 	MessageScope          string
 	IgnoreAttrs           string
 }
@@ -100,6 +104,9 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
 		ResourceSignatureName: self.getString("resourceSignatureName"),
 		Signature:             self.getString("signature"),
+		SignatureType:         self.getString("signatureType"),
+		Certificate:           self.getString("certificate"),
+		Message:               self.getString("message"),
 		MessageScope:          self.getString("messageScope"),
 		IgnoreAttrs:           self.getString("ignoreAttrs"),
 	}
@@ -151,9 +158,52 @@ type SignPolicyEvalResult struct {
 }
 
 type SignerInfo struct {
-	Email   string
-	Name    string
-	Comment string
+	Email              string
+	Name               string
+	Comment            string
+	Uid                string
+	Country            string
+	Organization       string
+	OrganizationalUnit string
+	Locality           string
+	Province           string
+	StreetAddress      string
+	PostalCode         string
+	CommonName         string
+	SerialNumber       string
+}
+
+func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
+	si := &SignerInfo{}
+
+	if dn.Country != nil {
+		si.Country = dn.Country[0]
+	}
+	if dn.Organization != nil {
+		si.Organization = dn.Organization[0]
+	}
+	if dn.OrganizationalUnit != nil {
+		si.OrganizationalUnit = dn.OrganizationalUnit[0]
+	}
+	if dn.Locality != nil {
+		si.Locality = dn.Locality[0]
+	}
+	if dn.Province != nil {
+		si.Province = dn.Province[0]
+	}
+	if dn.StreetAddress != nil {
+		si.StreetAddress = dn.StreetAddress[0]
+	}
+	if dn.PostalCode != nil {
+		si.PostalCode = dn.PostalCode[0]
+	}
+	if dn.CommonName != "" {
+		si.CommonName = dn.CommonName
+	}
+	if dn.SerialNumber != "" {
+		si.SerialNumber = dn.SerialNumber
+	}
+	return si
 }
 
 type ResolveOwnerResult struct {

@@ -270,9 +270,13 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 	}
 
 	if err := info.Get(); err != nil {
-		return nil, nil, fmt.Errorf("Failed to get object from server; %s", err)
+		if errors.IsNotFound(err) {
+			// creating a new resource by apply command.
+			// pass
+		} else {
+			return nil, nil, fmt.Errorf("Failed to get object from server; %s", err)
+		}
 	}
-	// TODO: need to handle in case of apply for create
 
 	errout := bytes.NewBufferString("")
 

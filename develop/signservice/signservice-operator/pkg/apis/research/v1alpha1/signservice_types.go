@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	pkix "github.com/IBM/integrity-enforcer/develop/signservice/signservice-operator/pkg/pkix"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,12 +32,15 @@ type SignServiceSpec struct {
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 	Enabled                  bool                      `json:"enabled,omitempty"`
 	KeyRingSecretName        string                    `json:"keyRingSecretName,omitempty"`
-	PrivateKeyRingSecretName string                    `json:"PrivateKeyRingSecretName,omitempty"`
+	PrivateKeyRingSecretName string                    `json:"privateKeyRingSecretName,omitempty"`
+	SignServiceSecretName    string                    `json:"signServiceSecretName,omitempty"`
+	IECertPoolSecretName     string                    `json:"ieCertPoolSecretName,omitempty"`
 	ImagePullSecrets         []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	ServiceAccountName       string                    `json:"serviceAccountName,omitempty"`
 	SignService              SignServiceContainer      `json:"signService,omitempty"`
 	Signers                  []string                  `json:"signers,omitempty"`
 	InvalidSigners           []string                  `json:"invalidSigners,omitempty"`
+	CertSigners              []pkix.SignerCertName     `json:"certSigners,omitempty"`
 }
 
 type SignServiceContainer struct {
