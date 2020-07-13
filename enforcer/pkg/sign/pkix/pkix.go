@@ -278,6 +278,12 @@ func VerifyCertificate(certBytes []byte, certDir string) (bool, string, error) {
 		reasonFail = fmt.Sprintf("failed to verify certificate: %s", err.Error())
 		return false, reasonFail, nil
 	}
+	// for _, c := range chains {
+	// 	for _, ci := range c {
+	// 		ciB, _ := json.Marshal(ci)
+	// 		fmt.Println(string(ciB))
+	// 	}
+	// }
 
 	return true, "", nil
 }

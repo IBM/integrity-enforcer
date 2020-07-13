@@ -250,11 +250,7 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 			retErr = err
 		} else if sigOk {
 			vcerr = nil
-			vsinfo = &common.SignerInfo{
-				Email:   certDN.CommonName,
-				Name:    certDN.CommonName,
-				Comment: certDN.CommonName,
-			}
+			vsinfo = common.NewSignerInfoFromPKIXName(certDN)
 			retErr = nil
 		} else {
 			vcerr = &common.CheckError{

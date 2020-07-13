@@ -12,7 +12,7 @@ spec:
     - request:
         namespace: '*'
       subject:
-        email: "AdminCA"
+        commonName: "Cluster Admin"
     - request:
         namespace: '*'
       subject:

@@ -119,8 +119,17 @@ type OwnerMatchCondition struct {
 }
 
 type SubjectMatchPattern struct {
-	Email string `json:"email,omitempty"`
-	Uid   string `json:"uid,omitempty"`
+	Email              string `json:"email,omitempty"`
+	Uid                string `json:"uid,omitempty"`
+	Country            string `json:"country,omitempty"`
+	Organization       string `json:"organization,omitempty"`
+	OrganizationalUnit string `json:"organizationalUnit,omitempty"`
+	Locality           string `json:"locality,omitempty"`
+	Province           string `json:"province,omitempty"`
+	StreetAddress      string `json:"streetAddress,omitempty"`
+	PostalCode         string `json:"postalCode,omitempty"`
+	CommonName         string `json:"commonName,omitempty"`
+	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
 type AllowUnverifiedCondition struct {

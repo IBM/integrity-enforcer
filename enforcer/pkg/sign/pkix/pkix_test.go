@@ -24,15 +24,15 @@ import (
 
 func TestEndToEndCAVerification(t *testing.T) {
 
-	rootCert, rootPrvKeyBytes, _, err := CreateCertificate("DegiCert Root CA", nil, nil)
+	rootCert, rootPrvKeyBytes, _, err := CreateCertificate("Root CA", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	adminCertificate, adminPrvKeyBytes, _, err := CreateCertificate("CISO CSS Certificate", rootCert, rootPrvKeyBytes)
+	adminCertificate, adminPrvKeyBytes, _, err := CreateCertificate("Intermediate CA", rootCert, rootPrvKeyBytes)
 	if err != nil {
 		t.Error(err)
 	}
-	serviceCertificate, servicePrvKeyBytes, servicePubKeyBytes, err := CreateCertificate("Services Team HSM partition Certificate", adminCertificate, adminPrvKeyBytes)
+	serviceCertificate, servicePrvKeyBytes, servicePubKeyBytes, err := CreateCertificate("Service Team Admin A", adminCertificate, adminPrvKeyBytes)
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,13 +41,13 @@ func TestEndToEndCAVerification(t *testing.T) {
 	testPublicKeyPath := "./test-ie-public.key"
 	testCertPoolDir := "./"
 	testRootCert := testCertPoolDir + "test-root.crt"
-	testAdminCert := testCertPoolDir + "test-admin.crt"
+	testInterCert := testCertPoolDir + "test-inter.crt"
 	testServiceCert := testCertPoolDir + "test-service.crt"
 
 	ioutil.WriteFile(testPrivateKeyPath, servicePrvKeyBytes, 0644)
 	ioutil.WriteFile(testPublicKeyPath, servicePubKeyBytes, 0644)
 	ioutil.WriteFile(testRootCert, rootCert, 0644)
-	ioutil.WriteFile(testAdminCert, adminCertificate, 0644)
+	ioutil.WriteFile(testInterCert, adminCertificate, 0644)
 	ioutil.WriteFile(testServiceCert, serviceCertificate, 0644)
 
 	msg := []byte("abc")
@@ -61,17 +61,17 @@ func TestEndToEndCAVerification(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log("signature verification result: %s", sigOk)
+	t.Log("signature verification result:", sigOk)
 
-	certOk, _, err = VerifyCertificate(serviceCertificate, testCertPoolDir)
+	certOk, _, err := VerifyCertificate(serviceCertificate, testCertPoolDir)
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log("certificate verification result: %s", certOk)
+	t.Log("certificate verification result:", certOk)
 
 	os.Remove(testPrivateKeyPath)
 	os.Remove(testPublicKeyPath)
 	os.Remove(testRootCert)
-	os.Remove(testAdminCert)
+	os.Remove(testInterCert)
 	os.Remove(testServiceCert)
 }
