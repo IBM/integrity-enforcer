@@ -39,6 +39,10 @@ spec:
   globalConfig:
     openShift: true
   imagePullSecrets: []
+  certPoolConfig:
+    createIfNotExist: false
+    keyValue: test
+    name: ie-certpool-secret
   keyRingConfig:
     createIfNotExist: false
     keyValue: test
