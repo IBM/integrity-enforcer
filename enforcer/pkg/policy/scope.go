@@ -21,10 +21,7 @@ import (
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1cli "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 /**********************************************
@@ -40,7 +37,6 @@ type PolicyChecker interface {
 	IsAllowedForInternalRequest() bool
 	IsAllowedByRule() bool
 	PermitIfVerifiedOwner() bool
-	PermitIfCreator() bool
 }
 
 func NewPolicyChecker(policy *Policy, reqc *common.ReqContext) PolicyChecker {
@@ -118,18 +114,6 @@ func (self *concretePolicyChecker) IsAllowedByRule() bool {
 	}
 }
 
-func (self *concretePolicyChecker) PermitIfCreator() bool {
-	if self.reqc.IsCreator() {
-		if self.policy != nil && self.policy.PermitIfCreator != nil {
-			return self.isAuthorizedServiceAccount(self.policy.PermitIfCreator)
-		} else {
-			return false
-		}
-	} else {
-		return false
-	}
-}
-
 func (self *concretePolicyChecker) PermitIfVerifiedOwner() bool {
 	if self.policy != nil && self.policy.PermitIfVerifiedOwner != nil {
 		return self.isAuthorizedServiceAccount(self.policy.PermitIfVerifiedOwner)
@@ -169,7 +153,7 @@ func (self *concretePolicyChecker) isAuthorizedServiceAccount(patterns []Allowed
 				name := strings.Split(self.reqc.UserName, ":")
 				saName := name[len(name)-1]
 				namespace := name[len(name)-2]
-				serviceAccount, err := GetServiceAccount(saName, namespace)
+				serviceAccount, err := common.GetServiceAccount(saName, namespace)
 				if err != nil {
 					continue
 				}
@@ -253,18 +237,4 @@ func SplitRule(rules string) []string {
 		result = append(result, rule)
 	}
 	return result
-}
-
-func GetServiceAccount(name, namespace string) (*v1.ServiceAccount, error) {
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return nil, err
-	}
-	v1client := v1cli.NewForConfigOrDie(config)
-
-	serviceAccount, err := v1client.ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return serviceAccount, nil
 }

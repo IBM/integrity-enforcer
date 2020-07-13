@@ -223,6 +223,7 @@ const (
 	REASON_VALID_SIG
 	REASON_VERIFIED_OWNER
 	REASON_UPDATE_BY_SA
+	REASON_VERIFIED_USER
 	REASON_NO_MUTATION
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
@@ -255,6 +256,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_UPDATE_BY_SA: {
 		Message: "updated by creator",
 		Code:    "updated-by-sa",
+	},
+	REASON_VERIFIED_USER: {
+		Message: "operated by verified user",
+		Code:    "verified-user",
 	},
 	REASON_NO_MUTATION: {
 		Message: "allowed because no mutation found",

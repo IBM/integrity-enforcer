@@ -63,13 +63,14 @@ type CheckContext struct {
 }
 
 type CheckResult struct {
-	InternalRequest       bool                         `json:"internal"`
-	AllowedByRule         bool                         `json:"allowedByRule"`
-	PermitIfVerifiedOwner bool                         `json:"permitIfVerifiedOwner"`
-	PermitIfFirstUser     bool                         `json:"permitIfFirstUser"`
-	SignPolicyEvalResult  *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult    *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult    *common.MutationEvalResult   `json:"mutation"`
+	InternalRequest                bool                         `json:"internal"`
+	AllowedByRule                  bool                         `json:"allowedByRule"`
+	PermitIfVerifiedOwner          bool                         `json:"permitIfVerifiedOwner"`
+	PermitIfFirstUser              bool                         `json:"permitIfFirstUser"`
+	PermitIfVerifiedServiceAccount bool                         `json:"permitIfVerifiedServiceAccount"`
+	SignPolicyEvalResult           *common.SignPolicyEvalResult `json:"signpolicy"`
+	ResolveOwnerResult             *common.ResolveOwnerResult   `json:"owner"`
+	MutationEvalResult             *common.MutationEvalResult   `json:"mutation"`
 }
 
 func NewCheckContext(config *config.EnforcerConfig, policy *policy.Policy) *CheckContext {
@@ -128,7 +129,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
 	self.Result.AllowedByRule = policyChecker.IsAllowedByRule()
 	self.Result.PermitIfVerifiedOwner = policyChecker.PermitIfVerifiedOwner()
-	self.Result.PermitIfFirstUser = policyChecker.PermitIfCreator()
+	self.Result.PermitIfVerifiedServiceAccount = self.ReqC.IsVerifiedServiceAccount()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -185,7 +186,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	}
 
 	//resolve owner
-	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() {
+	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() && self.ReqC.IsServiceAccount() {
 		if r, err := self.resolveOwner(); err != nil {
 			self.abort("Error when resolving owner", err)
 		} else {
@@ -198,10 +199,10 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		}
 	}
 
-	//update by first user
-	if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() && self.Result.PermitIfFirstUser {
+	//check verified user
+	if !self.Aborted && !allowed && self.ReqC.ObjectHashType != common.HashTypeHelmSecret && self.Result.PermitIfVerifiedServiceAccount {
 		allowed = true
-		evalReason = common.REASON_UPDATE_BY_SA
+		evalReason = common.REASON_VERIFIED_USER
 	}
 
 	//check mutation
@@ -311,6 +312,9 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
 			self.Result.ResolveOwnerResult.Verified {
+			annotations["integrityVerified"] = "true"
+			deleteKeys = append(deleteKeys, "integrityUnverified")
+		} else if self.ReqC.IsCreateRequest() && self.Result.PermitIfVerifiedServiceAccount {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else {
