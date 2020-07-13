@@ -740,6 +740,18 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateDeployment(instance *research
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
+	} else if !res.EqualDeployments(expected, found) {
+		// If spec is incorrect, update it and requeue
+		found.ObjectMeta.Labels = expected.ObjectMeta.Labels
+		found.Spec = expected.Spec
+		err = r.client.Update(context.TODO(), found)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update Deployment", "Namespace", instance.Namespace, "Name", found.Name)
+			return reconcile.Result{}, err
+		}
+		reqLogger.Info("Updating IntegrityEnforcer Controller Deployment", "Deployment.Name", found.Name)
+		// Spec updated - return and requeue
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// No extra validation

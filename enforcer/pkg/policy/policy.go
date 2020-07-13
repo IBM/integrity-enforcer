@@ -95,22 +95,14 @@ func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs strin
 		return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
 	}
 	ns := reqc.Namespace
-	ieNs := enforcerNs
+
 	polNs := policyNs
 	pType := self.PolicyType
-	if ns != ieNs && ns != polNs {
-		return false, fmt.Sprintf("Policy must be created in namespace \"%s\" or \"%s\", but requested in \"%s\"", ieNs, polNs, ns)
-	}
-	if (pType == DefaultPolicy || pType == IEPolicy || pType == SignerPolicy) && ns != ieNs {
-		return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, ieNs, ns)
-	}
+
 	if pType == CustomPolicy && ns != polNs {
 		return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
 	}
-	// op := self.Operation
-	// if op == "UPDATE" && (pType == policy.DefaultPolicy || pType == policy.IEPolicy) {
-	// 	return false, fmt.Sprintf("%s cannot be updated", pType)
-	// }
+
 	return true, ""
 }
 

@@ -21,6 +21,7 @@ import (
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -31,6 +32,8 @@ type IntegrityEnforcerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	MaxSurge         *intstr.IntOrString       `json:"maxSurge,omitempty"`
+	MaxUnavailable   *intstr.IntOrString       `json:"maxUnavailable,omitempty"`
 	ReplicaCount     *int32                    `json:"replicaCount,omitempty"`
 	MetaLabels       map[string]string         `json:"labels,omitempty"`
 	SelectorLabels   map[string]string         `json:"selector,omitempty"`
