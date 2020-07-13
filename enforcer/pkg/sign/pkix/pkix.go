@@ -26,12 +26,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
-	"os"
 	"path"
 	"time"
 )
 
 var startTimeInt int64
+
+const (
+	PEMTypePrivateKey  string = "RSA PRIVATE KEY"
+	PEMTypePublicKey   string = "PUBLIC KEY"
+	PEMTypeCertificate string = "CERTIFICATE"
+)
 
 func init() {
 	startTimeInt = time.Now().UTC().UnixNano()
@@ -46,7 +51,7 @@ func GenerateKeyPair() (*rsa.PrivateKey, crypto.PublicKey, error) {
 	return privateCaKey, publicCaKey, nil
 }
 
-func CreateCertificate(caName string, parentCertBytes, parentPrivateKeyBytes []byte) ([]byte, []byte, []byte, error) {
+func CreateCertificate(caName string, parentCertPemBytes, parentPrivateKeyPemBytes []byte) ([]byte, []byte, []byte, error) {
 	privateKey, publicCaKey, err := GenerateKeyPair()
 	if err != nil {
 		return nil, nil, nil, err
@@ -75,11 +80,13 @@ func CreateCertificate(caName string, parentCertBytes, parentPrivateKeyBytes []b
 
 	// if parent data is given, create new cert using it.
 	// otherwise, create self-signed cert
-	if parentCertBytes != nil && parentPrivateKeyBytes != nil {
+	if parentCertPemBytes != nil && parentPrivateKeyPemBytes != nil {
+		parentCertBytes := PEMDecode(parentCertPemBytes, PEMTypeCertificate)
 		parentCa, err = x509.ParseCertificate(parentCertBytes)
 		if err != nil {
 			return nil, nil, nil, err
 		}
+		parentPrivateKeyBytes := PEMDecode(parentPrivateKeyPemBytes, PEMTypePrivateKey)
 		parentPrivateKey, err = x509.ParsePKCS1PrivateKey(parentPrivateKeyBytes)
 		if err != nil {
 			return nil, nil, nil, err
@@ -93,31 +100,33 @@ func CreateCertificate(caName string, parentCertBytes, parentPrivateKeyBytes []b
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return caCertificate, prvKeyBytes, pubKeyBytes, nil
+	certPem := PEMEncode(caCertificate, PEMTypeCertificate)
+	prvKeyPem := PEMEncode(prvKeyBytes, PEMTypePrivateKey)
+	pubKeyPem := PEMEncode(pubKeyBytes, PEMTypePublicKey)
+	return certPem, prvKeyPem, pubKeyPem, nil
 }
 
-func SaveCertificatePEM(fpath string, certificate []byte) error {
-	var f *os.File
-	f, err := os.Create(fpath)
-	if err != nil {
-		return err
+func PEMEncode(content []byte, mode string) []byte {
+	if mode != PEMTypePrivateKey && mode != PEMTypePublicKey && mode != PEMTypeCertificate {
+		return nil
 	}
-	err = pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: certificate})
-	if err != nil {
-		return err
+	return pem.EncodeToMemory(&pem.Block{Type: mode, Bytes: content})
+}
+
+func PEMDecode(pemBytes []byte, mode string) []byte {
+	if mode != PEMTypePrivateKey && mode != PEMTypePublicKey && mode != PEMTypeCertificate {
+		return nil
 	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	p, _ := pem.Decode(pemBytes)
+	return p.Bytes
 }
 
 func loadPrivateKey(fpath string) (*rsa.PrivateKey, error) {
-	keyBytes, err := ioutil.ReadFile(fpath)
+	keyPemBytes, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		return nil, err
 	}
+	keyBytes := PEMDecode(keyPemBytes, PEMTypePrivateKey)
 	private, err := x509.ParsePKCS1PrivateKey(keyBytes)
 	if err != nil {
 		return nil, err
@@ -126,10 +135,11 @@ func loadPrivateKey(fpath string) (*rsa.PrivateKey, error) {
 }
 
 func loadPublicKey(fpath string) (*rsa.PublicKey, error) {
-	keyBytes, err := ioutil.ReadFile(fpath)
+	keyPemBytes, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		return nil, err
 	}
+	keyBytes := PEMDecode(keyPemBytes, PEMTypePublicKey)
 	public, err := x509.ParsePKIXPublicKey(keyBytes)
 	if err != nil {
 		return nil, err
@@ -138,35 +148,20 @@ func loadPublicKey(fpath string) (*rsa.PublicKey, error) {
 }
 
 func loadCertificate(fpath string) (*x509.Certificate, error) {
-	content, err := ioutil.ReadFile(fpath)
+	certPemBytes, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		return nil, err
 	}
-	cert, err := x509.ParseCertificate(content)
+	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)
+	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		return nil, err
 	}
 	return cert, nil
 }
 
-func saveCertificate(fpath string, certificate []byte) error {
-	var f *os.File
-	f, err := os.Create(fpath)
-	if err != nil {
-		return err
-	}
-	err = pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: certificate})
-	if err != nil {
-		return err
-	}
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetPublicKeyFromCertificate(certBytes []byte) ([]byte, error) {
+func GetPublicKeyFromCertificate(certPemBytes []byte) ([]byte, error) {
+	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)
 	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		return nil, err
@@ -178,7 +173,8 @@ func GetPublicKeyFromCertificate(certBytes []byte) ([]byte, error) {
 	return pubKeyBytes, nil
 }
 
-func GetSubjectFromCertificate(certBytes []byte) (pkix.Name, error) {
+func GetSubjectFromCertificate(certPemBytes []byte) (pkix.Name, error) {
+	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)
 	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		return pkix.Name{}, err
@@ -186,7 +182,8 @@ func GetSubjectFromCertificate(certBytes []byte) (pkix.Name, error) {
 	return cert.Subject, nil
 }
 
-func GenerateSignature(msg, prvKeyBytes []byte) ([]byte, error) {
+func GenerateSignature(msg, prvKeyPemBytes []byte) ([]byte, error) {
+	prvKeyBytes := PEMDecode(prvKeyPemBytes, PEMTypePrivateKey)
 	prvKey, err := x509.ParsePKCS1PrivateKey(prvKeyBytes)
 	if err != nil {
 		return nil, err
@@ -203,7 +200,7 @@ func GenerateSignature(msg, prvKeyBytes []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func VerifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
+func VerifySignature(msg, sig, pubKeyPemBytes []byte) (bool, string, error) {
 	var reasonFail string
 	var err error
 	if msg == nil {
@@ -218,6 +215,7 @@ func VerifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
 	h := crypto.Hash.New(crypto.SHA256)
 	h.Write([]byte(msg))
 	msgHash := h.Sum(nil)
+	pubKeyBytes := PEMDecode(pubKeyPemBytes, PEMTypePublicKey)
 	pubKey, err := x509.ParsePKIXPublicKey(pubKeyBytes)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error when loading public key; %s", err.Error())
@@ -250,9 +248,10 @@ func loadCertDir(certDir string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func VerifyCertificate(certBytes []byte, certDir string) (bool, string, error) {
+func VerifyCertificate(certPemBytes []byte, certDir string) (bool, string, error) {
 	var reasonFail string
 	var err error
+	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)
 	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		reasonFail = fmt.Sprintf("failed to parse certificate: %s", err.Error())

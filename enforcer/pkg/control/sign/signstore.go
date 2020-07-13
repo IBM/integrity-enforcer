@@ -82,16 +82,29 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 
 	//1. pick ResourceSignature from metadata.annotation if available
 	if sigAnnotations.Signature != "" {
+		message := base64decode(sigAnnotations.Message)
 		messageScope := sigAnnotations.MessageScope
 		ignoreAttrs := sigAnnotations.IgnoreAttrs
-		message := GenerateMessageFromRawObj(reqc.RawObject, messageScope, ignoreAttrs)
+		matchRequired := true
+		scopedSignature := false
+		if message == "" && messageScope != "" {
+			message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, ignoreAttrs)
+			matchRequired = false  // skip matching because the message is generated from Requested Object
+			scopedSignature = true // enable checking if the signature is for patch
+		}
 		signature := base64decode(sigAnnotations.Signature)
 		certificate := base64decode(sigAnnotations.Certificate)
+		signType := SignatureTypeResource
+		if sigAnnotations.SignatureType == rsig.SignatureTypeApplyingResource {
+			signType = SignatureTypeApplyingResource
+		} else if sigAnnotations.SignatureType == rsig.SignatureTypePatch {
+			signType = SignatureTypePatch
+		}
 		return &ResourceSignature{
-			SignType:     SignatureTypeResource,
+			SignType:     signType,
 			certPoolPath: self.config.CertPoolPath,
-			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate},
-			option:       map[string]bool{"matchRequired": false},
+			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope},
+			option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 		}
 	}
 

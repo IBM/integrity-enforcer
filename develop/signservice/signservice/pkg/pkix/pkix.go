@@ -33,8 +33,8 @@ func findKeyCertPair(name string) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to get files from mounted secret dir; %s" + err.Error())
 	}
-	var certBytes []byte
-	var prvKeyBytes []byte
+	var certPemBytes []byte
+	var prvKeyPemBytes []byte
 	for _, f := range files {
 		if !f.IsDir() {
 			fname := f.Name()
@@ -43,10 +43,11 @@ func findKeyCertPair(name string) ([]byte, []byte, error) {
 				continue
 			}
 			fpath := path.Join(signserviceSecretPath, fname)
-			certBytes, err = ioutil.ReadFile(fpath)
+			certPemBytes, err = ioutil.ReadFile(fpath)
 			if err != nil {
 				return nil, nil, fmt.Errorf("Failed to read certificate file; %s", err.Error())
 			}
+			certBytes := iepkix.PEMDecode(certPemBytes, iepkix.PEMTypeCertificate)
 			cert, err := x509.ParseCertificate(certBytes)
 			if err != nil {
 				return nil, nil, fmt.Errorf("Failed to load certificate; %s", err.Error())
@@ -57,33 +58,33 @@ func findKeyCertPair(name string) ([]byte, []byte, error) {
 			prvKeyFName := strings.Replace(fname, "certificate-", "privatekey-", 1)
 			prvKeyFPath := path.Join(signserviceSecretPath, prvKeyFName)
 
-			prvKeyBytes, err = ioutil.ReadFile(prvKeyFPath)
+			prvKeyPemBytes, err = ioutil.ReadFile(prvKeyFPath)
 			if err != nil {
 				return nil, nil, fmt.Errorf("Failed to load privatekey; %s", err.Error())
 			}
 			break
 		}
 	}
-	if prvKeyBytes == nil {
+	if prvKeyPemBytes == nil {
 		return nil, nil, fmt.Errorf("There is no privatekey with corresponding CA name: %s", name)
 	}
-	if certBytes == nil {
+	if certPemBytes == nil {
 		return nil, nil, fmt.Errorf("There is no certificate with corresponding CA name: %s", name)
 	}
-	return prvKeyBytes, certBytes, nil
+	return prvKeyPemBytes, certPemBytes, nil
 }
 
 func GenerateSignature(msg []byte, name string) ([]byte, []byte, error) {
 	if msg == nil {
 		return nil, nil, fmt.Errorf("Message to be signed must not be null")
 	}
-	prvKeyBytes, certBytes, err := findKeyCertPair(name)
+	prvKeyPemBytes, certPemBytes, err := findKeyCertPair(name)
 	if err != nil {
 		return nil, nil, err
 	}
-	sig, err := iepkix.GenerateSignature(msg, prvKeyBytes)
+	sig, err := iepkix.GenerateSignature(msg, prvKeyPemBytes)
 	if err != nil {
 		return nil, nil, err
 	}
-	return sig, certBytes, nil
+	return sig, certPemBytes, nil
 }
