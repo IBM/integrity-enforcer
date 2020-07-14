@@ -100,6 +100,12 @@ func (ss *ResourceSignature) FindSignature(apiVersion, kind, name, namespace str
 }
 
 func (ss *ResourceSignature) Validate() (bool, string) {
+	if ss == nil {
+		return false, "ResourceSignature Validation failed. ss is nil."
+	}
+	if ss.Spec.Data == nil {
+		return false, "ResourceSignature Validation failed. ss.Spec.Data is nil."
+	}
 	for _, sii := range ss.Spec.Data {
 		apiVerOk := (sii.ApiVersion != "")
 		kindOk := (sii.Kind != "")

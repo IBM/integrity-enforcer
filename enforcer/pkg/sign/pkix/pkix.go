@@ -118,6 +118,9 @@ func PEMDecode(pemBytes []byte, mode string) []byte {
 		return nil
 	}
 	p, _ := pem.Decode(pemBytes)
+	if p == nil {
+		return nil
+	}
 	return p.Bytes
 }
 
@@ -200,7 +203,7 @@ func GenerateSignature(msg, prvKeyPemBytes []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func VerifySignature(msg, sig, pubKeyPemBytes []byte) (bool, string, error) {
+func VerifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
 	var reasonFail string
 	var err error
 	if msg == nil {
@@ -215,7 +218,6 @@ func VerifySignature(msg, sig, pubKeyPemBytes []byte) (bool, string, error) {
 	h := crypto.Hash.New(crypto.SHA256)
 	h.Write([]byte(msg))
 	msgHash := h.Sum(nil)
-	pubKeyBytes := PEMDecode(pubKeyPemBytes, PEMTypePublicKey)
 	pubKey, err := x509.ParsePKIXPublicKey(pubKeyBytes)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error when loading public key; %s", err.Error())
