@@ -162,6 +162,14 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		evalReason = common.REASON_RULE_MATCH
 	}
 
+	//check verified user
+	if !self.Aborted && !allowed &&
+		self.Result.PermitIfVerifiedServiceAccount &&
+		self.IsVerifiedServiceAccount() {
+		allowed = true
+		evalReason = common.REASON_VERIFIED_SA
+	}
+
 	//evaluate sign policy
 	if !self.Aborted && !allowed {
 		if r, err := self.evalSignPolicy(); err != nil {
@@ -200,14 +208,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 				evalReason = common.REASON_VERIFIED_OWNER
 			}
 		}
-	}
-
-	//check verified user
-	if !self.Aborted && !allowed &&
-		self.Result.PermitIfVerifiedServiceAccount &&
-		self.IsVerifiedServiceAccount() {
-		allowed = true
-		evalReason = common.REASON_VERIFIED_SA
 	}
 
 	//check mutation

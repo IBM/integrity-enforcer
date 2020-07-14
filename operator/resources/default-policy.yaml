@@ -126,11 +126,12 @@ spec:
     - kind: SelfSubjectAccessReview
     - namespace: '-'
     permitIfVerifiedOwner:
-    - allowChangesBySignedServiceAccount: true
-      authorizedServiceAccount:
+    - authorizedServiceAccount:
         - olm-operator-serviceaccount
       request:
         kind: ServiceAccount
         namespace: '*'
         operation: CREATE
-
+    - allowChangesBySignedServiceAccount: true
+      request:
+        namespace: '*'
