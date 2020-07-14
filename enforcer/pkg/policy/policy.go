@@ -176,6 +176,13 @@ func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
 
 }
 
+func (v *AllowUnverifiedCondition) Match(reqc *common.ReqContext) bool {
+	if v.Namespace == reqc.Namespace || v.Namespace == "*" {
+		return true
+	}
+	return false
+}
+
 func (p *Policy) DeepCopyInto(p2 *Policy) {
 	copier.Copy(&p2, &p)
 }

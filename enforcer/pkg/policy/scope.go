@@ -68,7 +68,7 @@ func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() bool {
 
 	if self.policy != nil && self.policy.AllowUnverified != nil {
 		for _, pattern := range self.policy.AllowUnverified {
-			if pattern.Namespace == self.reqc.Namespace {
+			if pattern.Match(self.reqc) {
 				return true
 			}
 		}
