@@ -248,8 +248,14 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 		vsinfo = nil
 		retErr = nil
 	} else {
-		certDN, _ := pkix.GetSubjectFromCertificate(certificate)
-		pubKeyBytes, _ := pkix.GetPublicKeyFromCertificate(certificate)
+		certDN, err := pkix.GetSubjectFromCertificate(certificate)
+		if err != nil {
+			logger.Error("Failed to get subject from certificate; ", err)
+		}
+		pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
+		if err != nil {
+			logger.Error("Failed to get public key from certificate; ", err)
+		}
 		message := []byte(sig.data["message"])
 		signature := []byte(sig.data["signature"])
 		sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
