@@ -173,6 +173,19 @@ type SignerInfo struct {
 	SerialNumber       string
 }
 
+func (self *SignerInfo) GetName() string {
+	if self.CommonName != "" {
+		return self.CommonName
+	}
+	if self.Email != "" {
+		return self.Email
+	}
+	if self.Name != "" {
+		return self.Name
+	}
+	return ""
+}
+
 func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
 	si := &SignerInfo{}
 

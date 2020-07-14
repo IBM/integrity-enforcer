@@ -510,6 +510,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
 			logRecord["sig.signer.comment"] = r.Signer.Comment
+			logRecord["sig.signer.displayName"] = r.Signer.GetName()
 		}
 		logRecord["sig.allow"] = r.Allow
 		if r.Error != nil {

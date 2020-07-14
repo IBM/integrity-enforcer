@@ -35,4 +35,4 @@ if [ -z "$IE_SERVER_POD" ]; then
     exit 1
 fi
 
-kubectl logs -f --tail 20 -n ${IE_NS} ${IE_SERVER_POD} -c forwarder | grep --line-buffered ' fw.events: ' | awk '{sub(/^.* fw.events: /, "", $0);print $0;fflush()}' | jq --unbuffered -r '. | [.namespace, .allowed, .kind, .name, .operation, .userName, ."sig.signer.email", .msg] | @tsv' 
+kubectl logs -f --tail 20 -n ${IE_NS} ${IE_SERVER_POD} -c forwarder | grep --line-buffered ' fw.events: ' | awk '{sub(/^.* fw.events: /, "", $0);print $0;fflush()}' | jq --unbuffered -r '. | [.namespace, .allowed, .kind, .name, .operation, .userName, ."sig.signer.displayName", .msg] | @tsv' 

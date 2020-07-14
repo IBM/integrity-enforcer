@@ -22,8 +22,18 @@ spec:
   - name: "Service Team Admin A"
     issuerName: "Intermediate CA"
     isCA: false
+  - name: "Service Team Admin B"
+    issuerName: "Intermediate CA"
+    isCA: false
+  - name: "Service Team Admin C"
+    issuerName: "Intermediate CA"
+    isCA: false
+  - name: "Service Team Admin D"
+    issuerName: "Intermediate CA"
+    isCA: false
   signers:
   - cluster_signer@signer.com
+  - app_signer@signer.com
   invalidSigners:
   - invalid_signer@invalid.signer.com
   signService:
