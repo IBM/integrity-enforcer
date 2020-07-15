@@ -202,8 +202,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		} else {
 			self.Result.ResolveOwnerResult = r
 			if self.Result.PermitIfVerifiedOwner &&
-				r.Checked && r.Verified &&
-				self.IsVerifiedServiceAccount() {
+				r.Checked && r.Verified {
 				allowed = true
 				evalReason = common.REASON_VERIFIED_OWNER
 			}
@@ -316,8 +315,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
-			self.Result.ResolveOwnerResult.Verified &&
-			self.IsVerifiedServiceAccount() {
+			self.Result.ResolveOwnerResult.Verified {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedServiceAccount &&
