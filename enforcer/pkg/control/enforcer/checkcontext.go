@@ -202,8 +202,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		} else {
 			self.Result.ResolveOwnerResult = r
 			if self.Result.PermitIfVerifiedOwner &&
-				r.Checked && r.Verified &&
-				self.IsVerifiedServiceAccount() {
+				r.Checked && r.Verified {
 				allowed = true
 				evalReason = common.REASON_VERIFIED_OWNER
 			}
