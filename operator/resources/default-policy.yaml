@@ -47,6 +47,23 @@ spec:
     - username: system:serviceaccount:kube-system:service-account-controller
     - username: system:serviceaccount:kube-system:statefulset-controller
     - username: system:serviceaccount:ibm-common-services:cert-manager
+    - username: system:serviceaccount:openshift-cloud-credential-operator:default
+    - username: system:serviceaccount:openshift-machine-config-operator:default
+    - username: system:kube-controller-manager
+    - username: system:serviceaccount:openshift-infra:namespace-security-allocation-controller
+    - username: system:serviceaccount:openshift-cluster-version:default
+    - username: system:serviceaccount:openshift-authentication-operator:authentication-operator
+    - username: system:serviceaccount:openshift-apiserver-operator:openshift-apiserver-operator
+    - username: system:serviceaccount:openshift-kube-scheduler-operator:openshift-kube-scheduler-operator
+    - username: system:serviceaccount:openshift-kube-controller-manager-operator:kube-controller-manager-operator
+    - username: system:serviceaccount:openshift-controller-manager:openshift-controller-manager-sa
+    - username: system:serviceaccount:openshift-controller-manager-operator:openshift-controller-manager-operator
+    - username: system:serviceaccount:openshift-kube-apiserver-operator:kube-apiserver-operator
+    - username: system:serviceaccount:openshift-sdn:sdn-controller
+    - username: system:serviceaccount:openshift-machine-api:cluster-autoscaler-operator
+    - username: system:serviceaccount:openshift-machine-api:machine-api-operator
+    - username: system:serviceaccount:openshift-machine-config-operator:machine-config-controller
+    - username: system:serviceaccount:openshift-machine-api:machine-api-controllers
     - kind: ControllerRevision, Pod
       username: system:serviceaccount:kube-system:daemon-set-controller
     - kind: ConfigMap
