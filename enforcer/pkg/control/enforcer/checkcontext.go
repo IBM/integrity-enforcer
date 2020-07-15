@@ -315,8 +315,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
-			self.Result.ResolveOwnerResult.Verified &&
-			self.IsVerifiedServiceAccount() {
+			self.Result.ResolveOwnerResult.Verified {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedServiceAccount &&
