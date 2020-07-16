@@ -1,8 +1,8 @@
 # Deploy integrity-enforcer on ROKS
 
 This document is described for supporting evaluation of Integrity Enforcer (IE) on your RedHat OpenShift cluster including ROKS. The steps in this document include 
-- Step 1. Deploy signing serivce via Signing Service Operator
-- Step 2. Deploy admission webhook via Integrity Enforcer operator
+- Step 1. Deploy admission webhook via Integrity Enforcer operator
+- Step 2. Deploy signing serivce via Signing Service Operator
 - Step 3. Create signer policy
 - Step 4. Try to deploy resources with signature
 - Step 5. Change the resource after deploy
@@ -11,7 +11,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
 - How to check why IE allowed/denied the requests in detail
 - How to Delete Integrity Enforcer from cluster
 
-## Prerequeistes
+## Prerequisites
 - ROKS or RedHat OpenShift 4.3 cluster
 - admin access to the cluster to use `oc` command
 - create three namespaces for IE. all resources for IE are deployed there. 
@@ -21,78 +21,28 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
 - All requests to namespaces with label `integrity-enforced=true` are processed by IE. 
 
 ---
-## Step.1 Deploy a signing serivce via Signing Service Operator
-
-First, clone this repository and moved to integrity-enforcer directory
-
-```
-git clone git@github.com:IBM/integrity-enforcer.git
-cd integrity-enforcer
-```
-
-Create a namespace
-
-```
-oc create ns integrity-enforcer-ns
-```
-
-Change label
-
-```
-oc label namespace integrity-enforcer-ns integrity-enforced=true
-```
-
-1. Switch to enforcer namespace
-    ```
-    oc project integrity-enforcer-ns
-    ```
-2. Do the following commands to deploy signing service operator   
-    ```
-    
-    cd develop/signservice/signservice-operator/
-    
-    # Create CRDs
-    
-    oc create -f deploy/crds/research.ibm.com_signservices_crd.yaml  
-    
-    # Deploy `sign-service-enforcer operator`    
-
-    oc create -f deploy/service_account.yaml 
-    oc create -f deploy/role.yaml 
-    oc create -f deploy/role_binding.yaml 
-    oc create -f deploy/operator.yaml
-    
-    ```
-3. Confirm if signing service operator is running properly. 
-    ```
-    $ oc get pod | grep signservice-operator
-    signservice-operator-6b4dd5cd47-4vmvt         1/1     Running   0          35
-    ```
-    
-4. Add a signer to signservice cr
-   Edit `deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml`
-   
-   ```
-    signers:
-    - cluster_signer@signer.com
-    - secure_ns_signer@signer.com
-   ```
-5. After successfully installing the operator, create a signing service.
-    deploy signing service `signservice` by creating custom resource for singingservice by
-   ```
-    oc create -f deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml
-   ```
-    
-    Check if the pods are running properly. 
-   ```
-    $ oc get pod | grep 'signservice'
-    signservice-775695d84d-s8qbp            1/1       Running   0          5s
-    signservice-operator-6b4dd5cd47-z4lg4   1/1       Running   0          3m8s
-   ```
----
-## Step.2 Deploy admission webhook via Integrity Enforcer operator
+## Step.1 Deploy admission webhook via Integrity Enforcer operator
   
   Install `integrity-enforcer-operator` on ROKS as follows.
+
+  First, clone this repository and moved to integrity-enforcer directory
+
+  ```
+  git clone git@github.com:IBM/integrity-enforcer.git
+  cd integrity-enforcer
+  ```
+
+  Create a namespace
+
+  ```
+  oc create ns integrity-enforcer-ns
+  ```
+
+  Change label
+
+  ```
+  oc label namespace integrity-enforcer-ns integrity-enforced=true
+  ```
 
 1. Switch to enforcer namespace
     ```
@@ -147,7 +97,12 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     oc label ns ie-policy integrity-enforced=true    
     ```   
 ---
+## Step 2. Deploy a signing serivce via Signing Service Operator
 
+   This documentation assume a signing service is deployed to create signatures.
+   See documentation [here](README_INSTALL_SIGNING_SERVICE.md)
+
+---
 
 ## Step.3 Create signer policy
     
@@ -167,7 +122,7 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
         - request:
             namespace: secure-ns
           subject:
-            email: secure_ns_signer@signer.com
+            commonName: ServiceTeamAdminA
     -------
    ```
    
@@ -196,7 +151,7 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
         - request:
             namespace: secure-ns
           subject:
-            email: secure_ns_signer@signer.com
+            commonName: ServiceTeamAdminA
     status: {}
      
    ```
@@ -207,17 +162,23 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
    
   oc port-forward deployment.apps/signservice 8180:8180 --namespace integrity-enforcer-ns
 
-  curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' 'https://localhost:8180/sign?signer=cluster_signer@signer.com&namespace=integrity-enforcer-ns' > /tmp/signer-policy-rsig.yaml
-   
-
+  ```
+  
+  The following command would create resource signature for the 
+  ```
+  curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' \
+                      'https://localhost:8180/sign/apply?signer=ClusterAdmin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
+  ``` 
+  ```
   # confirm signature is generated correctly
-
+  
   $ head /tmp/signer-policy-rsig.yaml
   apiVersion: research.ibm.com/v1alpha1
   kind: ResourceSignature
   metadata:
     annotations:
-      messageScope: spec
+      certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0t ....
+      messageScope: spec  
       signature: LS0tLS1 ... 0tLQ==
     name: rsig-integrity-enforcer-ns-enforcepolicy-signer-policy
   spec:
@@ -261,43 +222,14 @@ Error from server: admission webhook "ac-server.ie-operator.svc" denied the requ
 ```
 
 Use the signer setup in Step 3. 
-- `secure_ns_signer@signer.com` (authorized) 
+- `ServiceTeamAdminA` (authorized signer for namespace `secure-ns`) 
 
-```
-$ curl -sk -X GET 'https://localhost:8180/list/users'  | jq . 
-[
-    {
-    "signer": {
-        "email": "cluster_signer@signer.com",
-        "name": "cluster_signer@signer.com",
-        "comment": "cluster_signer@signer.com"
-    },
-    "valid": true
-    },
-    {
-    "signer": {
-        "email": "secure_ns_signer@signer.com",
-        "name": "secure_ns_signer@signer.com",
-        "comment": "secure_ns_signer@signer.com"
-    },
-    "valid": true
-    },
-    {
-    "signer": {
-        "email": "invalid_signer@invalid.enterprise.com",
-        "name": "invalid_signer@invalid.enterprise.com",
-        "comment": "invalid_signer@invalid.enterprise.com"
-    },
-    "valid": false
-    }
-]
-```
+The following generates a signature for a given resource file (e.g. `test-cm.yaml`) to be deployed on a target namespace (e.g. `secure-ns`) using key of a given signer (e.g. `ServiceTeamAdminA`)
 
-The following generates a signature for a given resource file (e.g. `test-cm.yaml`) to be deployed on a target namespace (e.g. `secure-ns`) using key of a given signer (e.g. `secure_ns_signer@signer.com`)
 ```
 curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
-        'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=secure-ns' > /tmp/rsign_cm.yaml
-
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
+             
 ```
         
 The signature is included. 
@@ -307,6 +239,7 @@ apiVersion: research.ibm.com/v1alpha1
 kind: ResourceSignature
 metadata:
 annotations:
+    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1 ....
     messageScope: spec
     signature: LS0tLS1CRUdJTiBQ...
 name: rsig-secure-ns-configmap-test-cm
@@ -355,8 +288,8 @@ for: "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" den
 Regenerate and register signature again. Now change can be applied. 
 ```
 $ curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
-        'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=secure-ns' > /tmp/rsign_cm.yaml
-
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
+                      
 $ oc apply -f /tmp/rsign_cm.yaml -n ie-sign
 resourcesignature.research.ibm.com/rsig-ac-go-configmap-test-cm configured
 
@@ -406,10 +339,11 @@ $ oc create -f /tmp/custom-policy.yaml -n ie-policy
 Error from server: error when creating "/tmp/custom-policy.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
 
 # generate signature 
-$ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' 'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=ie-policy' > rsig_custom-policy.yaml
-
+$ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' \
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=ie-policy&scope=' > /tmp/rsig_custom-policy.yaml
+                      
 # create signature
-$ oc create -f rsig_custom-policy.yaml -n ie-sign
+$ oc create -f /tmp/rsig_custom-policy.yaml -n ie-sign
 resourcesignature.research.ibm.com/rsig-ie-policy-enforcepolicy-custom-policy created
 
 # create custome policy
@@ -460,8 +394,8 @@ Executing `watch_events.sh` in `scripts` dir, it would show detail events logs l
 ```
 $ ./watch_events.sh
 secure-ns false ConfigMap           test-cm                                      UPDATE  (username)                                   Failed to verify signature; Message in ResourceSignature is not identical with the requested object
-ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
-ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
+ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)                                   allowed by valid signer's signature
+ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)                                   allowed by valid signer's signature
 secure-ns true  ConfigMap           test-cm                                      UPDATE  (username)                                   allowed because no mutation found
 ```
 
@@ -486,16 +420,4 @@ oc delete -f deploy/operator.yaml
 # Delete CRD
 oc delete -f deploy/crds/research.ibm.com_integrityenforcers_crd.yaml
 
-# Delete CR `signingservice` 
-cd ../develop/signservice/signservice-operator
-oc delete -f deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml 
-
-# Delete SignService Operator    
-oc delete -f deploy/service_account.yaml
-oc delete -f deploy/role.yaml
-oc delete -f deploy/role_binding.yaml
-oc delete -f deploy/operator.yaml
-
-# Delete CRD
-oc delete -f deploy/crds/research.ibm.com_signservices_crd.yaml
 ```
