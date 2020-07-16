@@ -55,8 +55,25 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     $ oc get pod | grep signservice-operator
     signservice-operator-6b4dd5cd47-4vmvt         1/1     Running   0          35
     ```
-    
-4. Add a signer to signservice cr
+4. Add a `certSigner` to signservice cr (e.g. `'Service Team Admin A'`) as shown below.
+
+   Edit `deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml`
+   
+   ```
+    certSigners:
+    - name: "Root CA"
+      isCA: true
+    - name: "Intermediate CA"
+      issuerName: "Root CA"
+      isCA: true
+    - name: "Cluster Admin"
+      issuerName: "Intermediate CA"
+      isCA: false
+    - name: "Service Team Admin A"
+      issuerName: "Intermediate CA"
+      isCA: false
+   ```
+5. Add a `signer` to signservice cr as shown below
 
    Edit `deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml`
    
