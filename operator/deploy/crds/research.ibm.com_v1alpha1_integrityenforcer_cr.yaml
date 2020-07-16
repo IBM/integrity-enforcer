@@ -12,7 +12,7 @@ spec:
     - request:
         namespace: '*'
       subject:
-        commonName: "Cluster Admin"
+        commonName: "ClusterAdmin"
     - request:
         namespace: '*'
       subject:

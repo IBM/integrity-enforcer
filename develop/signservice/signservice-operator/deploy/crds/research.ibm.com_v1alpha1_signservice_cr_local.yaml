@@ -11,25 +11,25 @@ spec:
   serviceAccountName: signservice-sa
   imagePullSecrets: []
   certSigners:
-  - name: "Root CA"
+  - name: "RootCA"
     isCA: true
-  - name: "Intermediate CA"
-    issuerName: "Root CA"
+  - name: "IntermediateCA"
+    issuerName: "RootCA"
     isCA: true
-  - name: "Cluster Admin"
-    issuerName: "Intermediate CA"
+  - name: "ClusterAdmin"
+    issuerName: "IntermediateCA"
     isCA: false
-  - name: "Service Team Admin A"
-    issuerName: "Intermediate CA"
+  - name: "ServiceTeamAdminA"
+    issuerName: "IntermediateCA"
     isCA: false
-  - name: "Service Team Admin B"
-    issuerName: "Intermediate CA"
+  - name: "ServiceTeamAdminB"
+    issuerName: "IntermediateCA"
     isCA: false
-  - name: "Service Team Admin C"
-    issuerName: "Intermediate CA"
+  - name: "ServiceTeamAdminC"
+    issuerName: "IntermediateCA"
     isCA: false
-  - name: "Service Team Admin D"
-    issuerName: "Intermediate CA"
+  - name: "ServiceTeamAdminD"
+    issuerName: "IntermediateCA"
     isCA: false
   signers:
   - cluster_signer@signer.com
