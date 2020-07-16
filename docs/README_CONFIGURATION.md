@@ -74,7 +74,7 @@ This document describes a set of confiuration required for IE to enable integrit
         - request:
             namespace: secure-ns
           subject:
-            email: Service Team Admin A
+            commonName: Service Team Admin A
     status: {}
      
    ```
