@@ -6,12 +6,19 @@
   "directories": {
     "doc": "docs"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
     "gitbook-cli": "^2.3.2",
     "rimraf": "^2.4.4",
-    "svgexport": "^0.3.2"
+    "svgexport": "^0.3.2",
+    "npm": "^6.14.6",
+    "npmi": "^4.0.0",
+    "cryptiles": ">=4.1.2",
+    "lodash": ">=4.17.19",
+    "hoek": ">=4.2.1",
+    "ssri": ">=5.2.2",
+    "minimist": ">=0.2.1"
   },
-  "devDependencies": {},
   "scripts": {
     "docs:prepare": "gitbook install",
     "docs:clean": "rimraf _book",
