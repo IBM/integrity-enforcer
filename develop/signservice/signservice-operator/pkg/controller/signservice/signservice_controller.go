@@ -124,26 +124,33 @@ func (r *ReconcileSignService) Reconcile(request reconcile.Request) (reconcile.R
 			return recResult, recErr
 		}
 
-		//SignService Secret
-		// public and private keyring secrets are created at the same time
+		//SignService Secret & IECertPool Secret
+		// 2 signer secrets are created at the same time
+		recResult, recErr = r.createOrUpdateSignerCertSecret(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//SignService gpg keyring Secret
+		// public and private secrets are created at the same time
 		recResult, recErr = r.createOrUpdateKeyringSecret(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
 
-		//SignService Deployment
+		//SignService ServiceAccount
 		recResult, recErr = r.createOrUpdateServiceAccount(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
 
-		//SignService Deployment
+		//SignService Role
 		recResult, recErr = r.createOrUpdateRole(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
 
-		//SignService Deployment
+		//SignService RoleBinding
 		recResult, recErr = r.createOrUpdateRoleBinding(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr

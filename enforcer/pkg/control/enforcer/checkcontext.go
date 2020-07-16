@@ -18,7 +18,6 @@ package enforcer
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +29,7 @@ import (
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,14 +41,12 @@ import (
 
 type CheckContext struct {
 	// request context
-	config               *config.EnforcerConfig
-	policy               *policy.Policy
-	ReqC                 *common.ReqContext `json:"-"`
-	DryRun               bool               `json:"dryRun"`
-	Unverified           bool               `json:"unverified"`
-	PolicyReq            bool               `json:"policyReq"`
-	invalidPolicy        bool               `json:"invalidPolicy"`
-	invalidPolicyMessage string             `json:"invalidPolicyMessage"`
+	config         *config.EnforcerConfig
+	policy         *policy.Policy
+	ReqC           *common.ReqContext `json:"-"`
+	ServiceAccount *v1.ServiceAccount `json:"serviceAccount"`
+	DryRun         bool               `json:"dryRun"`
+	Unverified     bool               `json:"unverified"`
 
 	Result *CheckResult `json:"result"`
 
@@ -67,13 +65,14 @@ type CheckContext struct {
 }
 
 type CheckResult struct {
-	InternalRequest       bool                         `json:"internal"`
-	AllowedByRule         bool                         `json:"allowedByRule"`
-	PermitIfVerifiedOwner bool                         `json:"permitIfVerifiedOwner"`
-	PermitIfFirstUser     bool                         `json:"permitIfFirstUser"`
-	SignPolicyEvalResult  *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult    *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult    *common.MutationEvalResult   `json:"mutation"`
+	InternalRequest                bool                         `json:"internal"`
+	AllowedByRule                  bool                         `json:"allowedByRule"`
+	PermitIfVerifiedOwner          bool                         `json:"permitIfVerifiedOwner"`
+	PermitIfFirstUser              bool                         `json:"permitIfFirstUser"`
+	PermitIfVerifiedServiceAccount bool                         `json:"permitIfVerifiedServiceAccount"`
+	SignPolicyEvalResult           *common.SignPolicyEvalResult `json:"signpolicy"`
+	ResolveOwnerResult             *common.ResolveOwnerResult   `json:"owner"`
+	MutationEvalResult             *common.MutationEvalResult   `json:"mutation"`
 }
 
 func NewCheckContext(config *config.EnforcerConfig, policy *policy.Policy) *CheckContext {
@@ -124,16 +123,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	logger.InitSessionLogger(reqc.Namespace, reqc.Name, reqc.ResourceRef().ApiVersion, reqc.Kind, reqc.Operation)
 	self.ReqC = reqc
 
-	self.PolicyReq = isPolicyReq(self.ReqC)
-	if self.PolicyReq {
-		polValidator := NewPolicyValidator(self.ReqC, self.config.Namespace, self.config.PolicyNamespace)
-		if ok, errMsg := polValidator.Validate(); !ok {
-			self.invalidPolicy = true
-			self.invalidPolicyMessage = errMsg
-			return self.createAdmissionResponse()
-		}
-	}
-
 	policyChecker := policy.NewPolicyChecker(self.policy, self.ReqC)
 
 	self.Unverified = policyChecker.IsTrustStateEnforcementDisabled()
@@ -142,7 +131,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
 	self.Result.AllowedByRule = policyChecker.IsAllowedByRule()
 	self.Result.PermitIfVerifiedOwner = policyChecker.PermitIfVerifiedOwner()
-	self.Result.PermitIfFirstUser = policyChecker.PermitIfCreator()
+	self.Result.PermitIfVerifiedServiceAccount = policyChecker.PermitIfVerifiedServiceAccount()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -173,6 +162,14 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		evalReason = common.REASON_RULE_MATCH
 	}
 
+	//check verified user
+	if !self.Aborted && !allowed &&
+		self.Result.PermitIfVerifiedServiceAccount &&
+		self.IsVerifiedServiceAccount() {
+		allowed = true
+		evalReason = common.REASON_VERIFIED_SA
+	}
+
 	//evaluate sign policy
 	if !self.Aborted && !allowed {
 		if r, err := self.evalSignPolicy(); err != nil {
@@ -199,7 +196,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	}
 
 	//resolve owner
-	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() {
+	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() && self.ReqC.IsServiceAccount() {
 		if r, err := self.resolveOwner(); err != nil {
 			self.abort("Error when resolving owner", err)
 		} else {
@@ -210,12 +207,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 				evalReason = common.REASON_VERIFIED_OWNER
 			}
 		}
-	}
-
-	//update by first user
-	if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() && self.Result.PermitIfFirstUser {
-		allowed = true
-		evalReason = common.REASON_UPDATE_BY_SA
 	}
 
 	//check mutation
@@ -313,14 +304,6 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			}}
 	}
 
-	if self.invalidPolicy {
-		return &v1beta1.AdmissionResponse{
-			Allowed: false,
-			Result: &metav1.Status{
-				Message: fmt.Sprintf("Policy format check failed; %s", self.invalidPolicyMessage),
-			}}
-	}
-
 	allowed := self.Allow
 	msg := self.Message
 
@@ -333,6 +316,10 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
 			self.Result.ResolveOwnerResult.Verified {
+			annotations["integrityVerified"] = "true"
+			deleteKeys = append(deleteKeys, "integrityUnverified")
+		} else if self.Result.PermitIfVerifiedServiceAccount &&
+			self.IsVerifiedServiceAccount() {
 			annotations["integrityVerified"] = "true"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else {
@@ -383,7 +370,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 
 func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.policy.AllowedSigner); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.AllowedSigner); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
@@ -397,6 +384,30 @@ func (self *CheckContext) resolveOwner() (*common.ResolveOwnerResult, error) {
 	} else {
 		return resolver.Find(reqc)
 	}
+}
+
+func (self *CheckContext) IsVerifiedServiceAccount() bool {
+
+	sa := self.ServiceAccount
+	if sa == nil {
+		v, err := GetServiceAccount(self.ReqC.UserName)
+		if err != nil || v == nil {
+			return false
+		}
+		sa = v
+	}
+
+	if self.ReqC.Namespace != sa.ObjectMeta.Namespace {
+		return false
+	}
+	if s, ok := sa.Annotations["integrityVerified"]; ok {
+		if b, err := strconv.ParseBool(s); err != nil {
+			return false
+		} else {
+			return b
+		}
+	}
+	return false
 }
 
 func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
@@ -439,6 +450,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"request.uid":  reqc.RequestUid,
 		"type":         reqc.Type,
 		"request.dump": "",
+		"creator":      reqc.OrgMetadata.Annotations.CreatedBy(),
 
 		//context
 		"enfored":     self.Enforced,
@@ -496,6 +508,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
 			logRecord["sig.signer.comment"] = r.Signer.Comment
+			logRecord["sig.signer.displayName"] = r.Signer.GetName()
 		}
 		logRecord["sig.allow"] = r.Allow
 		if r.Error != nil {
@@ -561,6 +574,8 @@ func (self *CheckContext) convertToLogBytes() []byte {
 	if self.config.Log.IncludeRequest && !reqc.IsSecret() {
 		logRecord["request.dump"] = reqc.RequestJsonStr
 	}
+	logRecord["request.objectHashType"] = reqc.ObjectHashType
+	logRecord["request.objectHash"] = reqc.ObjectHash
 
 	logRecord["sessionTrace"] = logger.GetSessionTraceString()
 

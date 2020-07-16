@@ -28,9 +28,19 @@ import (
 )
 
 type Signer struct {
-	Email   string `json:"email,omitempty"`
-	Name    string `json:"name,omitempty"`
-	Comment string `json:"comment,omitempty"`
+	Email              string `json:"email,omitempty"`
+	Name               string `json:"name,omitempty"`
+	Comment            string `json:"comment,omitempty"`
+	Uid                string `json:"uid,omitempty"`
+	Country            string `json:"country,omitempty"`
+	Organization       string `json:"organization,omitempty"`
+	OrganizationalUnit string `json:"organizationalUnit,omitempty"`
+	Locality           string `json:"locality,omitempty"`
+	Province           string `json:"province,omitempty"`
+	StreetAddress      string `json:"streetAddress,omitempty"`
+	PostalCode         string `json:"postalCode,omitempty"`
+	CommonName         string `json:"commonName,omitempty"`
+	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
 func NewSignerFromUserId(uid *packet.UserId) *Signer {

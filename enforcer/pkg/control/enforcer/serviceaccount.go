@@ -14,34 +14,33 @@
 // limitations under the License.
 //
 
-package kubeutil
+package enforcer
 
 import (
-	"io/ioutil"
-	"testing"
+	"strings"
+
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1cli "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-func TestSimulator(t *testing.T) {
-	testObj, err := ioutil.ReadFile("testdata/sample_configmap.yaml")
-	if err != nil {
-		t.Error(err)
-	}
-	simObj, err := DryRunCreate(testObj, "default")
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(string(simObj))
-}
+func GetServiceAccount(userName string) (*v1.ServiceAccount, error) {
 
-func TestGetApplyPatchBytes(t *testing.T) {
-	testObj, err := ioutil.ReadFile("testdata/sample_configmap_after.yaml")
-	if err != nil {
-		t.Error(err)
+	if !strings.HasPrefix(userName, "system:") {
+		return nil, nil
 	}
-	patch, simObj, err := GetApplyPatchBytes(testObj, "default")
+
+	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
-		t.Error(err)
+		return nil, err
 	}
-	t.Log("patch: ", string(patch))
-	t.Log("patchedObject: ", string(simObj))
+	v1client := v1cli.NewForConfigOrDie(config)
+
+	name := strings.Split(userName, ":")
+	saName := name[len(name)-1]
+	namespace := name[len(name)-2]
+
+	return v1client.ServiceAccounts(namespace).Get(saName, metav1.GetOptions{})
+
 }

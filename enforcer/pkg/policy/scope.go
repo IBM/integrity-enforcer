@@ -17,14 +17,9 @@
 package policy
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1cli "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 /**********************************************
@@ -40,7 +35,7 @@ type PolicyChecker interface {
 	IsAllowedForInternalRequest() bool
 	IsAllowedByRule() bool
 	PermitIfVerifiedOwner() bool
-	PermitIfCreator() bool
+	PermitIfVerifiedServiceAccount() bool
 }
 
 func NewPolicyChecker(policy *Policy, reqc *common.ReqContext) PolicyChecker {
@@ -73,7 +68,7 @@ func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() bool {
 
 	if self.policy != nil && self.policy.AllowUnverified != nil {
 		for _, pattern := range self.policy.AllowUnverified {
-			if pattern.Namespace == self.reqc.Namespace {
+			if pattern.Match(self.reqc) {
 				return true
 			}
 		}
@@ -118,87 +113,58 @@ func (self *concretePolicyChecker) IsAllowedByRule() bool {
 	}
 }
 
-func (self *concretePolicyChecker) PermitIfCreator() bool {
-	if self.reqc.IsCreator() {
-		if self.policy != nil && self.policy.PermitIfCreator != nil {
-			return self.isAuthorizedServiceAccount(self.policy.PermitIfCreator)
-		} else {
-			return false
-		}
-	} else {
-		return false
-	}
-}
-
 func (self *concretePolicyChecker) PermitIfVerifiedOwner() bool {
 	if self.policy != nil && self.policy.PermitIfVerifiedOwner != nil {
-		return self.isAuthorizedServiceAccount(self.policy.PermitIfVerifiedOwner)
+		patterns := self.policy.PermitIfVerifiedOwner
+
+		for _, p := range patterns {
+			request := p.Request.Match(self.reqc)
+			if !request {
+				continue
+			}
+
+			//check if sa is included in the list.
+			if len(p.AuthorizedServiceAccount) != 0 {
+				for _, au := range p.AuthorizedServiceAccount {
+					userName := self.reqc.UserName
+					if strings.Contains(userName, ":") {
+						name := strings.Split(userName, ":")
+						userName = name[len(name)-1]
+					}
+					result := MatchPattern(au, userName)
+					if result {
+						return result
+					}
+				}
+			}
+		}
+		return false
 	} else {
 		return false
 	}
 }
 
-func (self *concretePolicyChecker) isAuthorizedServiceAccount(patterns []AllowedUserPattern) bool {
-	if patterns == nil {
+func (self *concretePolicyChecker) PermitIfVerifiedServiceAccount() bool {
+
+	if self.policy != nil && self.policy.PermitIfVerifiedOwner != nil {
+		patterns := self.policy.PermitIfVerifiedOwner
+
+		for _, p := range patterns {
+			request := p.Request.Match(self.reqc)
+			if !request {
+				continue
+			}
+			//check if sa is verified.
+			if p.AllowChangesBySignedServiceAccount {
+				return true
+			}
+		}
+		return false
+
+	} else {
 		return false
 	}
-	for _, p := range patterns {
-		request := p.Request.Match(self.reqc)
-		if !request {
-			continue
-		}
-		if len(p.AuthorizedServiceAccount) != 0 {
-			for _, au := range p.AuthorizedServiceAccount {
-				userName := self.reqc.UserName
-				if strings.Contains(userName, ":") {
-					name := strings.Split(userName, ":")
-					userName = name[len(name)-1]
-				}
-				result := MatchPattern(au, userName)
-				if result {
-					return result
-				}
-			}
-		}
-		if p.AllowChangesBySignedServiceAccount {
-			var sa *v1.ServiceAccount
-			if self.reqc.ServiceAccount == nil {
-				if !strings.HasPrefix(self.reqc.UserName, "system:") || !strings.Contains(self.reqc.UserName, ":") {
-					continue
-				}
-				name := strings.Split(self.reqc.UserName, ":")
-				saName := name[len(name)-1]
-				namespace := name[len(name)-2]
-				serviceAccount, err := GetServiceAccount(saName, namespace)
-				if err != nil {
-					continue
-				}
-				sa = serviceAccount
-				self.reqc.ServiceAccount = serviceAccount
-			} else {
-				sa = self.reqc.ServiceAccount
-			}
-			if s, ok := sa.Annotations["integrityVerified"]; ok {
-				if b, err := strconv.ParseBool(s); err != nil {
-					continue
-				} else {
-					if b {
-						return b
-					}
-				}
-			}
-			if s, ok := sa.Annotations["integrityUnverified"]; ok {
-				if b, err := strconv.ParseBool(s); err != nil {
-					continue
-				} else {
-					if b {
-						return b
-					}
-				}
-			}
-		}
-	}
-	return false
+
 }
 
 /**********************************************
@@ -253,18 +219,4 @@ func SplitRule(rules string) []string {
 		result = append(result, rule)
 	}
 	return result
-}
-
-func GetServiceAccount(name, namespace string) (*v1.ServiceAccount, error) {
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return nil, err
-	}
-	v1client := v1cli.NewForConfigOrDie(config)
-
-	serviceAccount, err := v1client.ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return serviceAccount, nil
 }

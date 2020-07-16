@@ -17,7 +17,15 @@
 package common
 
 import (
+	"crypto/x509/pkix"
 	"strconv"
+)
+
+const (
+	SignatureCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	SignatureCustomResourceKind       = "ResourceSignature"
+	PolicyCustomResourceAPIVersion    = "research.ibm.com/v1alpha1"
+	PolicyCustomResourceKind          = "EnforcePolicy"
 )
 
 /**********************************************
@@ -84,7 +92,10 @@ func NewResourceAnnotation(values map[string]string) *ResourceAnnotation {
 
 type SignatureAnnotation struct {
 	ResourceSignatureName string
+	SignatureType         string
 	Signature             string
+	Certificate           string
+	Message               string
 	MessageScope          string
 	IgnoreAttrs           string
 }
@@ -93,6 +104,9 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
 		ResourceSignatureName: self.getString("resourceSignatureName"),
 		Signature:             self.getString("signature"),
+		SignatureType:         self.getString("signatureType"),
+		Certificate:           self.getString("certificate"),
+		Message:               self.getString("message"),
 		MessageScope:          self.getString("messageScope"),
 		IgnoreAttrs:           self.getString("ignoreAttrs"),
 	}
@@ -144,9 +158,65 @@ type SignPolicyEvalResult struct {
 }
 
 type SignerInfo struct {
-	Email   string
-	Name    string
-	Comment string
+	Email              string
+	Name               string
+	Comment            string
+	Uid                string
+	Country            string
+	Organization       string
+	OrganizationalUnit string
+	Locality           string
+	Province           string
+	StreetAddress      string
+	PostalCode         string
+	CommonName         string
+	SerialNumber       string
+}
+
+func (self *SignerInfo) GetName() string {
+	if self.CommonName != "" {
+		return self.CommonName
+	}
+	if self.Email != "" {
+		return self.Email
+	}
+	if self.Name != "" {
+		return self.Name
+	}
+	return ""
+}
+
+func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
+	si := &SignerInfo{}
+
+	if dn.Country != nil {
+		si.Country = dn.Country[0]
+	}
+	if dn.Organization != nil {
+		si.Organization = dn.Organization[0]
+	}
+	if dn.OrganizationalUnit != nil {
+		si.OrganizationalUnit = dn.OrganizationalUnit[0]
+	}
+	if dn.Locality != nil {
+		si.Locality = dn.Locality[0]
+	}
+	if dn.Province != nil {
+		si.Province = dn.Province[0]
+	}
+	if dn.StreetAddress != nil {
+		si.StreetAddress = dn.StreetAddress[0]
+	}
+	if dn.PostalCode != nil {
+		si.PostalCode = dn.PostalCode[0]
+	}
+	if dn.CommonName != "" {
+		si.CommonName = dn.CommonName
+	}
+	if dn.SerialNumber != "" {
+		si.SerialNumber = dn.SerialNumber
+	}
+	return si
 }
 
 type ResolveOwnerResult struct {
@@ -216,6 +286,7 @@ const (
 	REASON_VALID_SIG
 	REASON_VERIFIED_OWNER
 	REASON_UPDATE_BY_SA
+	REASON_VERIFIED_SA
 	REASON_NO_MUTATION
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
@@ -248,6 +319,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_UPDATE_BY_SA: {
 		Message: "updated by creator",
 		Code:    "updated-by-sa",
+	},
+	REASON_VERIFIED_SA: {
+		Message: "operated by verified sa",
+		Code:    "verified-sa",
 	},
 	REASON_NO_MUTATION: {
 		Message: "allowed because no mutation found",

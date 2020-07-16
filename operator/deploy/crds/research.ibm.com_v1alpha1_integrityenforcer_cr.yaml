@@ -12,6 +12,10 @@ spec:
     - request:
         namespace: '*'
       subject:
+        commonName: "ClusterAdmin"
+    - request:
+        namespace: '*'
+      subject:
         email: cluster_signer@signer.com
     enforce:
     - namespace: '*'
@@ -35,6 +39,10 @@ spec:
   globalConfig:
     openShift: true
   imagePullSecrets: []
+  certPoolConfig:
+    createIfNotExist: false
+    keyValue: test
+    name: ie-certpool-secret
   keyRingConfig:
     createIfNotExist: false
     keyValue: test
@@ -65,6 +73,8 @@ spec:
       runAsUser: 1000
     stdOutput: true
   replicaCount: 1
+  maxSurge: 1
+  maxUnavailable: 0
   security:
     clusterRole: ie-cluster-role
     clusterRoleBinding: ie-cluster-role-binding

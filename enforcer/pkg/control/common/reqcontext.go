@@ -17,16 +17,25 @@
 package common
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+const (
+	HashTypeDefault      = "default"
+	HashTypeHelmSecret   = "helmSecret"
+	HashTypeHelmResource = "helmResource"
 )
 
 type IntegrityValue struct {
@@ -43,26 +52,27 @@ type ObjectMetadata struct {
 }
 
 type ReqContext struct {
-	RawObject       []byte             `json:"-"`
-	RawOldObject    []byte             `json:"-"`
-	RequestJsonStr  string             `json:"request"`
-	RequestUid      string             `json:"requestUid"`
-	Namespace       string             `json:"namespace"`
-	Name            string             `json:"name"`
-	ApiGroup        string             `json:"apiGroup"`
-	ApiVersion      string             `json:"apiVersion"`
-	Kind            string             `json:"kind"`
-	Operation       string             `json:"operation"`
-	IntegrityValue  *IntegrityValue    `json:"integrityValues"`
-	OrgMetadata     *ObjectMetadata    `json:"orgMetadata"`
-	ClaimedMetadata *ObjectMetadata    `json:"claimedMetadata"`
-	UserInfo        string             `json:"userInfo"`
-	ObjLabels       string             `json:"objLabels"`
-	ObjMetaName     string             `json:"objMetaName"`
-	UserName        string             `json:"userName"`
-	UserGroups      []string           `json:"userGroups"`
-	Type            string             `json:"Type"`
-	ServiceAccount  *v1.ServiceAccount `json:"serviceAccount"`
+	RawObject       []byte          `json:"-"`
+	RawOldObject    []byte          `json:"-"`
+	RequestJsonStr  string          `json:"request"`
+	RequestUid      string          `json:"requestUid"`
+	Namespace       string          `json:"namespace"`
+	Name            string          `json:"name"`
+	ApiGroup        string          `json:"apiGroup"`
+	ApiVersion      string          `json:"apiVersion"`
+	Kind            string          `json:"kind"`
+	Operation       string          `json:"operation"`
+	IntegrityValue  *IntegrityValue `json:"integrityValues"`
+	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
+	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
+	UserInfo        string          `json:"userInfo"`
+	ObjLabels       string          `json:"objLabels"`
+	ObjMetaName     string          `json:"objMetaName"`
+	UserName        string          `json:"userName"`
+	UserGroups      []string        `json:"userGroups"`
+	Type            string          `json:"Type"`
+	ObjectHashType  string          `json:"objectHashType"`
+	ObjectHash      string          `json:"objectHash"`
 }
 
 func (reqc *ReqContext) OwnerRef() *ResourceRef {
@@ -108,8 +118,20 @@ func (rc *ReqContext) IsCreator() bool {
 	return rc.UserName != "" && rc.UserName == rc.OrgMetadata.Annotations.CreatedBy()
 }
 
+func (rc *ReqContext) IsEnforcePolicyRequest() bool {
+	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsResourceSignatureRequest() bool {
+	return rc.GroupVersion() == SignatureCustomResourceAPIVersion && rc.Kind == SignatureCustomResourceKind
+}
+
 func (rc *ReqContext) IsSecret() bool {
 	return rc.Kind == "Secret" && rc.GroupVersion() == "v1"
+}
+
+func (rc *ReqContext) IsServiceAccount() bool {
+	return rc.Kind == "ServiceAccount" && rc.GroupVersion() == "v1"
 }
 
 type ParsedRequest struct {
@@ -222,6 +244,25 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		},
 	}
 
+	kind := pr.getValue("kind.kind")
+
+	hashType := ""
+	hashValue := ""
+	if releaseSecretBytes, _ := helm.FindReleaseSecret(namespace, kind, name, req.Object.Raw); releaseSecretBytes == nil {
+		hashType = HashTypeDefault
+		objNode, _ := mapnode.NewFromBytes(req.Object.Raw)
+		maskedObject := objNode.Mask(CommonMessageMask).ToJson()
+		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
+	} else {
+		if helm.IsReleaseSecret(kind, name) {
+			hashType = HashTypeHelmSecret
+		} else {
+			hashType = HashTypeHelmResource
+		}
+		maskedObject := getMaskedReleaseSecretString(releaseSecretBytes)
+		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
+	}
+
 	rc := &ReqContext{
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
@@ -232,7 +273,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		IntegrityValue:  integrityValues,
 		ApiGroup:        pr.getValue("kind.group"),
 		ApiVersion:      pr.getValue("kind.version"),
-		Kind:            pr.getValue("kind.kind"),
+		Kind:            kind,
 		Namespace:       namespace,
 		UserInfo:        pr.getValue("userInfo"),
 		ObjLabels:       pr.getValue("object.metadata.labels"),
@@ -242,8 +283,45 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		Type:            pr.getValue("object.type"),
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
+		ObjectHashType:  hashType,
+		ObjectHash:      hashValue,
 	}
 
 	return rc
 
+}
+
+var CommonMessageMask = []string{
+	"metadata.annotations.integrityVerified",
+	"metadata.annotations.integrityUnverified",
+	"metadata.annotations.ie-createdBy",
+	"metadata.annotations.sigOwnerApiVersion",
+	"metadata.annotations.sigOwnerKind",
+	"metadata.annotations.sigOwnerName",
+	"metadata.annotations.signOwnerRefType",
+	"metadata.annotations.resourceSignatureName",
+	"metadata.annotations.message",
+	"metadata.annotations.signature",
+	"metadata.annotations.certificate",
+	"metadata.annotations.signPaths",
+	"metadata.annotations.namespace",
+	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
+	"metadata.managedFields",
+	"metadata.creationTimestamp",
+	"metadata.generation",
+	"metadata.namespace",
+	"metadata.resourceVersion",
+	"metadata.selfLink",
+	"metadata.uid",
+}
+
+func getMaskedReleaseSecretString(releaseSecretBytes []byte) string {
+	release := helm.DecodeReleaseSecretFromRawBytes(releaseSecretBytes).Data
+	maskedObject := ""
+	for _, tmp := range release.Chart.Templates {
+		tmpB, _ := json.Marshal(tmp)
+		maskedObject = maskedObject + string(tmpB) + "\n"
+	}
+	maskedObject = maskedObject + release.Manifest
+	return maskedObject
 }

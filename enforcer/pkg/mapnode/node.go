@@ -866,3 +866,12 @@ func GetValueByLongKey(m map[string]interface{}, longKey string) (interface{}, e
 	}
 	return val, nil
 }
+
+func SplitCommaSeparatedKeys(key string) []string {
+	key = strings.ReplaceAll(key, "\n", "")
+	keys := strings.Split(key, ",")
+	for i := range keys {
+		keys[i] = strings.Trim(keys[i], " ")
+	}
+	return keys
+}

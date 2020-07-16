@@ -42,6 +42,7 @@ type SignPolicy interface {
 
 type ConcreteSignPolicy struct {
 	EnforcerNamespace string
+	PolicyNamespace   string
 	Patterns          []policy.SignerMatchPattern
 }
 
@@ -63,7 +64,7 @@ func (self *EnforceRuleStoreFromPolicy) Find(reqc *common.ReqContext) *EnforceRu
 	eRules := []EnforceRule{}
 	for _, p := range self.Patterns {
 		r := ToPolicyRule(p)
-		if _, resMatched := MatchSigner(r, reqc.GroupVersion(), reqc.Kind, reqc.Name, reqc.Namespace, ""); !resMatched {
+		if _, resMatched := MatchSigner(r, reqc.GroupVersion(), reqc.Kind, reqc.Name, reqc.Namespace, nil); !resMatched {
 			continue
 		}
 		er := &EnforceRuleFromCR{Instance: r}
@@ -91,8 +92,7 @@ func (self *EnforceRuleFromCR) Eval(reqc *common.ReqContext, signer *common.Sign
 	kind := reqc.Kind
 	name := reqc.Name
 	namespace := reqc.Namespace
-	signerEmail := signer.Email
-	ruleOk, _ := MatchSigner(self.Instance, apiVersion, kind, name, namespace, signerEmail)
+	ruleOk, _ := MatchSigner(self.Instance, apiVersion, kind, name, namespace, signer)
 	result := &EnforceRuleEvalResult{
 		Signer:  signer,
 		Checked: true,
@@ -135,6 +135,34 @@ func (self *EnforceRuleList) Eval(reqc *common.ReqContext, signer *common.Signer
 }
 
 func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolicyEvalResult, error) {
+
+	if reqc.IsEnforcePolicyRequest() {
+		var polObj *epolpkg.EnforcePolicy
+		json.Unmarshal(reqc.RawObject, &polObj)
+		if ok, reasonFail := polObj.Spec.Policy.Validate(reqc, self.EnforcerNamespace, self.PolicyNamespace); !ok {
+			return &common.SignPolicyEvalResult{
+				Allow:   false,
+				Checked: true,
+				Error: &common.CheckError{
+					Reason: fmt.Sprintf("Schema Error for %s; %s", common.PolicyCustomResourceKind, reasonFail),
+				},
+			}, nil
+		}
+	}
+
+	if reqc.IsResourceSignatureRequest() {
+		var rsigObj *rsigpkg.ResourceSignature
+		json.Unmarshal(reqc.RawObject, &rsigObj)
+		if ok, reasonFail := rsigObj.Validate(); !ok {
+			return &common.SignPolicyEvalResult{
+				Allow:   false,
+				Checked: true,
+				Error: &common.CheckError{
+					Reason: fmt.Sprintf("Schema Error for %s; %s", common.SignatureCustomResourceKind, reasonFail),
+				},
+			}, nil
+		}
+	}
 
 	// eval sign policy
 	ref := reqc.ResourceRef()
@@ -216,9 +244,8 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 
 func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext {
 	var err error
-	apiVersionInReqc := reqc.GroupVersion()
-	isEnforcePolicy := (apiVersionInReqc == epolpkg.SchemeGroupVersion.String() && reqc.Kind == epolpkg.KindName)
-	isResourceSignature := (apiVersionInReqc == rsigpkg.SchemeGroupVersion.String() && reqc.Kind == rsigpkg.KindName)
+	isEnforcePolicy := reqc.IsEnforcePolicyRequest()
+	isResourceSignature := reqc.IsResourceSignatureRequest()
 
 	if !isEnforcePolicy && !isResourceSignature {
 		return reqc
@@ -249,7 +276,7 @@ func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext 
 			if rsigObj.Spec.Data[0].Metadata.Namespace != "" {
 				reqcForEval.Namespace = rsigObj.Spec.Data[0].Metadata.Namespace
 			}
-			isResourceSignatureForEnforcePolicy := (rsigObj.Spec.Data[0].ApiVersion == epolpkg.SchemeGroupVersion.String() && rsigObj.Spec.Data[0].Kind == epolpkg.KindName)
+			isResourceSignatureForEnforcePolicy := (rsigObj.Spec.Data[0].ApiVersion == common.PolicyCustomResourceAPIVersion && rsigObj.Spec.Data[0].Kind == common.PolicyCustomResourceKind)
 			if isResourceSignatureForEnforcePolicy {
 				var epolObj *epolpkg.EnforcePolicy
 				rawEpolBytes := []byte(base64decode(rsigObj.Spec.Data[0].Message))
@@ -276,8 +303,35 @@ const (
 )
 
 type Subject struct {
-	Email string `json:"email,omitempty"`
-	Uid   string `json:"uid,omitempty"`
+	Email              string `json:"email,omitempty"`
+	Uid                string `json:"uid,omitempty"`
+	Country            string `json:"country,omitempty"`
+	Organization       string `json:"organization,omitempty"`
+	OrganizationalUnit string `json:"organizationalUnit,omitempty"`
+	Locality           string `json:"locality,omitempty"`
+	Province           string `json:"province,omitempty"`
+	StreetAddress      string `json:"streetAddress,omitempty"`
+	PostalCode         string `json:"postalCode,omitempty"`
+	CommonName         string `json:"commonName,omitempty"`
+	SerialNumber       string `json:"serialNumber,omitempty"`
+}
+
+func (v *Subject) Match(signer *common.SignerInfo) bool {
+	if signer == nil {
+		return false
+	}
+
+	return policy.MatchPattern(v.Email, signer.Email) &&
+		policy.MatchPattern(v.Uid, signer.Uid) &&
+		policy.MatchPattern(v.Country, signer.Country) &&
+		policy.MatchPattern(v.Organization, signer.Organization) &&
+		policy.MatchPattern(v.OrganizationalUnit, signer.OrganizationalUnit) &&
+		policy.MatchPattern(v.Locality, signer.Locality) &&
+		policy.MatchPattern(v.Province, signer.Province) &&
+		policy.MatchPattern(v.StreetAddress, signer.StreetAddress) &&
+		policy.MatchPattern(v.PostalCode, signer.PostalCode) &&
+		policy.MatchPattern(v.CommonName, signer.CommonName) &&
+		policy.MatchPattern(v.SerialNumber, signer.SerialNumber)
 }
 
 type Resource struct {
@@ -293,9 +347,10 @@ type Rule struct {
 	Subject  Subject            `json:"subject,omitempty"`
 }
 
-func NewSignPolicy(enforcerNamespace string, patterns []policy.SignerMatchPattern) (SignPolicy, error) {
+func NewSignPolicy(enforcerNamespace, policyNamespace string, patterns []policy.SignerMatchPattern) (SignPolicy, error) {
 	return &ConcreteSignPolicy{
 		EnforcerNamespace: enforcerNamespace,
+		PolicyNamespace:   policyNamespace,
 		Patterns:          patterns,
 	}, nil
 }
@@ -310,13 +365,22 @@ func ToPolicyRule(self policy.SignerMatchPattern) *Rule {
 			Namespace:  self.Request.Namespace,
 		},
 		Subject: Subject{
-			Email: self.Subject.Email,
-			Uid:   self.Subject.Uid,
+			Email:              self.Subject.Email,
+			Uid:                self.Subject.Uid,
+			Country:            self.Subject.Country,
+			Organization:       self.Subject.Organization,
+			OrganizationalUnit: self.Subject.OrganizationalUnit,
+			Locality:           self.Subject.Locality,
+			Province:           self.Subject.Province,
+			StreetAddress:      self.Subject.StreetAddress,
+			PostalCode:         self.Subject.PostalCode,
+			CommonName:         self.Subject.CommonName,
+			SerialNumber:       self.Subject.SerialNumber,
 		},
 	}
 }
 
-func MatchSigner(r *Rule, apiVersion, kind, name, namespace, signer string) (bool, bool) {
+func MatchSigner(r *Rule, apiVersion, kind, name, namespace string, signer *common.SignerInfo) (bool, bool) {
 	apiVersionOk := policy.MatchPattern(r.Resource.ApiVersion, apiVersion)
 	kindOk := policy.MatchPattern(r.Resource.Kind, kind)
 	nameOk := policy.MatchPattern(r.Resource.Name, name)
@@ -326,7 +390,7 @@ func MatchSigner(r *Rule, apiVersion, kind, name, namespace, signer string) (boo
 		resourceMatched = true
 	}
 	if resourceMatched {
-		if policy.MatchPattern(r.Subject.Email, signer) {
+		if r.Subject.Match(signer) {
 			return true, resourceMatched
 		} else {
 			return false, resourceMatched

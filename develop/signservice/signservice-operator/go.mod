@@ -9,9 +9,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/IBM/integrity-enforcer/enforcer v0.0.0-20200526092602-9fe2166392e1
 	github.com/IBM/integrity-enforcer/operator v0.0.0-20200602121605-c0fa868d3900
-	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
-	k8s.io/api v0.18.0
-	k8s.io/apimachinery v0.18.0
+	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
+	k8s.io/api v0.18.2
+	k8s.io/apimachinery v0.18.2
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.5.2
 )

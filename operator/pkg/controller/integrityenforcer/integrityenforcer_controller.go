@@ -163,7 +163,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	//Secret
-	if instance.Spec.KeyRing.CreateIfNotExist {
+	if instance.Spec.CertPool.CreateIfNotExist {
 		recResult, recErr = r.createOrUpdateKeyringSecret(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr

@@ -49,7 +49,6 @@ type Policy struct {
 	AllowedByRule             []RequestMatchPattern      `json:"allowedByRule,omitempty"`
 	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
 	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
-	PermitIfCreator           []AllowedUserPattern       `json:"permitIfCreator,omitempty"`
 	Namespace                 string                     `json:"namespace,omitempty"`
 	PolicyType                PolicyType                 `json:"policyType,omitempty"`
 }
@@ -75,8 +74,7 @@ func (self *Policy) CheckFormat() (bool, string) {
 		hasAllowRule := len(self.AllowedByRule) > 0
 		hasAllowChange := len(self.AllowedChange) > 0
 		hasVOwner := len(self.PermitIfVerifiedOwner) > 0
-		hasFUser := len(self.PermitIfCreator) > 0
-		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner || hasFUser {
+		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner {
 			return false, fmt.Sprintf("%s must contain only AllowedSigner rule", pType)
 		}
 	}
@@ -86,6 +84,23 @@ func (self *Policy) CheckFormat() (bool, string) {
 			return false, fmt.Sprintf("%s must not contain AllowedSigner rule", pType)
 		}
 	}
+	return true, ""
+}
+
+func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs string) (bool, string) {
+	ok, errMsg := self.CheckFormat()
+	if !ok {
+		return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
+	}
+	ns := reqc.Namespace
+
+	polNs := policyNs
+	pType := self.PolicyType
+
+	if pType == CustomPolicy && ns != polNs {
+		return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
+	}
+
 	return true, ""
 }
 
@@ -102,8 +117,17 @@ type OwnerMatchCondition struct {
 }
 
 type SubjectMatchPattern struct {
-	Email string `json:"email,omitempty"`
-	Uid   string `json:"uid,omitempty"`
+	Email              string `json:"email,omitempty"`
+	Uid                string `json:"uid,omitempty"`
+	Country            string `json:"country,omitempty"`
+	Organization       string `json:"organization,omitempty"`
+	OrganizationalUnit string `json:"organizationalUnit,omitempty"`
+	Locality           string `json:"locality,omitempty"`
+	Province           string `json:"province,omitempty"`
+	StreetAddress      string `json:"streetAddress,omitempty"`
+	PostalCode         string `json:"postalCode,omitempty"`
+	CommonName         string `json:"commonName,omitempty"`
+	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
 type AllowUnverifiedCondition struct {
@@ -152,6 +176,13 @@ func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
 
 }
 
+func (v *AllowUnverifiedCondition) Match(reqc *common.ReqContext) bool {
+	if v.Namespace == reqc.Namespace || v.Namespace == "*" {
+		return true
+	}
+	return false
+}
+
 func (p *Policy) DeepCopyInto(p2 *Policy) {
 	copier.Copy(&p2, &p)
 }
@@ -171,7 +202,6 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 		AllowedByRule:             append(p.AllowedByRule, p2.AllowedByRule...),
 		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
 		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
-		PermitIfCreator:           append(p.PermitIfCreator, p2.PermitIfCreator...),
 		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
 	}
 }

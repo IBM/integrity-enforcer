@@ -17,6 +17,8 @@
 package v1alpha1
 
 import (
+	"encoding/base64"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,6 +26,11 @@ const (
 	MatchByExactMatch   string = "exactMatch"
 	MatchByKnownFilter  string = "useKnownFilter"
 	MatchByCustomFilter string = "customFilter"
+
+	SignatureTypeResource         string = "resource"
+	SignatureTypeApplyingResource string = "applyingResource"
+	SignatureTypePatch            string = "patch"
+	// SignatureTypeHelm string = "helm"
 )
 
 const (
@@ -90,6 +97,47 @@ func (ss *ResourceSignature) FindSignature(apiVersion, kind, name, namespace str
 		}
 	}
 	return signature, found
+}
+
+func (ss *ResourceSignature) Validate() (bool, string) {
+	if ss == nil {
+		return false, "ResourceSignature Validation failed. ss is nil."
+	}
+	if ss.Spec.Data == nil {
+		return false, "ResourceSignature Validation failed. ss.Spec.Data is nil."
+	}
+	for _, sii := range ss.Spec.Data {
+		apiVerOk := (sii.ApiVersion != "")
+		kindOk := (sii.Kind != "")
+		nameOk := (sii.Metadata.Name != "")
+		// nsOk := (sii.Metadata.Namespace != "")
+		sigOk := (sii.Signature != "" && base64decode(sii.Signature) != "")
+		msgOk := (sii.Message != "" && base64decode(sii.Message) != "")
+		scopeOk := (sii.MessageScope != "")
+		if apiVerOk && kindOk && nameOk && sigOk && (msgOk || scopeOk) {
+			continue
+		} else {
+			msg := ""
+			if !apiVerOk {
+				msg += "apiVersion, "
+			}
+			if !kindOk {
+				msg += "kind, "
+			}
+			if !nameOk {
+				msg += "metadata.name, "
+			}
+			if !sigOk {
+				msg += "signature (base64 encoded), "
+			}
+			if !msgOk && !scopeOk {
+				msg += "message (base64 encoded) or messageScope, "
+			}
+			msg += "is required."
+			return false, msg
+		}
+	}
+	return true, ""
 }
 
 // ResourceSignatureSpec is a desired state description of ResourceSignature.
@@ -188,11 +236,22 @@ type SignItem struct {
 	Message      string       `json:"message,omitempty"`
 	MessageScope string       `json:"messageScope,omitempty"`
 	Signature    string       `json:"signature"`
+	Certificate  string       `json:"certificate"`
 	MatchMethod  string       `json:"matchMethod"`
+	Type         string       `json:"type"`
 	CustomFilter []string     `json:"customFilter,omitempty"`
 }
 
 type SignItemMeta struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace,omitempty"`
+}
+
+func base64decode(str string) string {
+	decBytes, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return ""
+	}
+	dec := string(decBytes)
+	return dec
 }
