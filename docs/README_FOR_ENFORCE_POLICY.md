@@ -66,7 +66,7 @@ You can set signer by `commonName`
     - request:
         namespace: secure-ns
       subject:
-        commonName: Service Team Admin A
+        commonName: ServiceTeamAdminA
 ```
 
 ## allowedForInternalRequest
