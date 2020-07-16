@@ -100,10 +100,10 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 ---
 
 ## Delete a signing serivce via Signing Service Operator
-   To delete signing serivce from cluster, run the following commands.
-    
-    ```
-    # Delete CR `signingservice` 
+  
+   run the following commands to delete signing serivce from cluster
+   ```
+   # Delete CR `signingservice` 
     cd ../develop/signservice/signservice-operator
     oc delete -f /develop/deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml 
 
@@ -115,4 +115,8 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 
     # Delete CRD
     oc delete -f deploy/crds/research.ibm.com_signservices_crd.yaml
-    ```
+   ``` 
+   
+   
+   
+   
