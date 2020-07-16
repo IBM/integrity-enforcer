@@ -45,7 +45,7 @@ This document describes a set of confiuration required for IE to enable integrit
         - request:
             namespace: secure-ns
           subject:
-            email: secure_ns_signer@signer.com
+            commonName: Service Team Admin A
     -------
    ```
    
@@ -74,7 +74,7 @@ This document describes a set of confiuration required for IE to enable integrit
         - request:
             namespace: secure-ns
           subject:
-            email: secure_ns_signer@signer.com
+            email: Service Team Admin A
     status: {}
      
    ```
@@ -88,8 +88,10 @@ This document describes a set of confiuration required for IE to enable integrit
    
    oc port-forward deployment.apps/signservice 8180:8180 --namespace integrity-enforcer-ns
 
-   curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' 'https://localhost:8180/sign?signer=cluster_signer@signer.com&namespace=integrity-enforcer-ns' > /tmp/signer-policy-rsig.yaml
-   
+   curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' \
+                    'https://localhost:8180/sign/apply?signer=Cluster Admin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
+                    
+ 
 
    # confirm signature is generated correctly 
    $ head /tmp/signer-policy-rsig.yaml
@@ -97,6 +99,7 @@ This document describes a set of confiuration required for IE to enable integrit
    kind: ResourceSignature
    metadata:
      annotations:
+       certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0t ....
        messageScope: spec
        signature: LS0tLS1 ... 0tLQ==
      name: rsig-integrity-enforcer-ns-enforcepolicy-signer-policy
