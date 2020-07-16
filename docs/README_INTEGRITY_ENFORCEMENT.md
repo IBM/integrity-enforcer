@@ -122,7 +122,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
         - request:
             namespace: secure-ns
           subject:
-            commonName: Service Team Admin A
+            commonName: ServiceTeamAdminA
     -------
    ```
    
@@ -151,7 +151,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
         - request:
             namespace: secure-ns
           subject:
-            commonName: Service Team Admin A
+            commonName: ServiceTeamAdminA
     status: {}
      
    ```
@@ -167,7 +167,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
   The following command would create resource signature for the 
   ```
   curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' \
-                      'https://localhost:8180/sign/apply?signer=Cluster Admin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
+                      'https://localhost:8180/sign/apply?signer=ClusterAdmin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
   ``` 
   ```
   # confirm signature is generated correctly
@@ -228,7 +228,7 @@ The following generates a signature for a given resource file (e.g. `test-cm.yam
 
 ```
 curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
-                      'https://localhost:8180/sign/apply?signer=Service Team Admin A&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
              
 ```
         
@@ -288,7 +288,7 @@ for: "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" den
 Regenerate and register signature again. Now change can be applied. 
 ```
 $ curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
-                      'https://localhost:8180/sign/apply?signer=Service Team Admin A&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
                       
 $ oc apply -f /tmp/rsign_cm.yaml -n ie-sign
 resourcesignature.research.ibm.com/rsig-ac-go-configmap-test-cm configured
@@ -340,7 +340,7 @@ Error from server: error when creating "/tmp/custom-policy.yaml": admission webh
 
 # generate signature 
 $ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' \
-                      'https://localhost:8180/sign/apply?signer=Service Team Admin A&namespace=ie-policy&scope=' > /tmp/rsig_custom-policy.yaml
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=ie-policy&scope=' > /tmp/rsig_custom-policy.yaml
                       
 # create signature
 $ oc create -f /tmp/rsig_custom-policy.yaml -n ie-sign
@@ -394,8 +394,8 @@ Executing `watch_events.sh` in `scripts` dir, it would show detail events logs l
 ```
 $ ./watch_events.sh
 secure-ns false ConfigMap           test-cm                                      UPDATE  (username)                                   Failed to verify signature; Message in ResourceSignature is not identical with the requested object
-ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
-ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
+ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)                                   allowed by valid signer's signature
+ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)                                   allowed by valid signer's signature
 secure-ns true  ConfigMap           test-cm                                      UPDATE  (username)                                   allowed because no mutation found
 ```
 
