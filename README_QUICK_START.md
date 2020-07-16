@@ -28,36 +28,38 @@ The following prerequisites must be satisfied to deploy IE on a cluster.
   - Signatures are stored in `ie-sign` namespace. 
   - Policied are stored in `ie-policy` namespace. 
 - All requests to namespaces with label `integrity-enforced=true` are processed by IE. 
-- Key-ring secret should be setup for enabling signature verification by IE
+- `ie-certpool-secret` secret should be setup for enabling signature verification by IE
 
-## Setting up a key-ring secret
-IE requires a key-ring secret to be available for enabling signature verification as part of integrity enforcement. See [here](operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml)
+## Setting up a `ie-certpool-secret` secret
+IE requires a `ie-certpool-secret` secret to be available for enabling signature verification as part of integrity enforcement. See [here](operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml)
 
 ```
-    keyRingConfig:
+   certPoolConfig:
     createIfNotExist: false
     keyValue: test
-    name: keyring-secret
+    name: ie-certpool-secret
 ```
-The following section shows how to setup a key-ring secret.
+The following section shows how to setup a `ie-certpool-secret` secret.
 
-e.g. key-ring.yaml
+e.g. ie-certpool-secret.yaml
 ```
 apiVersion: v1
 kind: Secret
 metadata:
-  name: keyring-secret
+  name: ie-certpool-secret
+  namespace: integrity-enforcer-ns
 type: Opaque
 data:
-  keyring.gpg: <fill in encoded key ring>
+  certificate-0.crt: <fill in encoded certificate>
+  certificate-1.crt: <fill in encoded certificate>
 ```
 
-Create key-ring secret in the namespace `integrity-enforce-ns` where `integrity-enforce` to be deployed
+Create `ie-certpool-secret`  secret in the namespace `integrity-enforce-ns` where `integrity-enforce` to be deployed
 ```
-oc create -n integrity-enforce-ns -f key-ring.yaml
+oc create -n integrity-enforce-ns -f ie-certpool-secret.yaml
 ```
 
-Note:  Alternatively, a signing service can be deployed for creating signatures and setting up key-ring secret automatically.  
+Note:  Alternatively, a signing service can be deployed for creating signatures and setting up `ie-certpool-secret` secret automatically.  
        see documentation [here](docs/README_INSTALL_SIGNING_SERVICE.md)
 
 ## Installation via CLI
