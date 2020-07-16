@@ -60,7 +60,7 @@ oc create -n integrity-enforce-ns -f ie-certpool-secret.yaml
 ```
 
 Note:  Alternatively, a signing service can be deployed for creating signatures and setting up `ie-certpool-secret` secret automatically.  
-       see documentation [here](docs/README_INSTALL_SIGNING_SERVICE.md)
+       see documentation [here](README_INSTALL_SIGNING_SERVICE.md)
 
 ## Installation via CLI
 
@@ -117,7 +117,7 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 
 4. After successfully installing the operator, create a `integrity-enforcer` server.
     
-    Note: check [configuration](docs/README_CONFIGURATION.md)
+    Note: check [configuration](README_CONFIGURATION.md)
     
     deploy webhook server `integrity-enforcer-server` by creating custom resource for IE by
     ```     
