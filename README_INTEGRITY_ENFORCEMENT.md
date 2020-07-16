@@ -339,10 +339,11 @@ $ oc create -f /tmp/custom-policy.yaml -n ie-policy
 Error from server: error when creating "/tmp/custom-policy.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
 
 # generate signature 
-$ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' 'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=ie-policy' > rsig_custom-policy.yaml
-
+$ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' \
+                      'https://localhost:8180/sign/apply?signer=Service Team Admin A&namespace=ie-policy&scope=' > /tmp/rsig_custom-policy.yaml
+                      
 # create signature
-$ oc create -f rsig_custom-policy.yaml -n ie-sign
+$ oc create -f /tmp/rsig_custom-policy.yaml -n ie-sign
 resourcesignature.research.ibm.com/rsig-ie-policy-enforcepolicy-custom-policy created
 
 # create custome policy
