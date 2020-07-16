@@ -222,9 +222,9 @@ Error from server: admission webhook "ac-server.ie-operator.svc" denied the requ
 ```
 
 Use the signer setup in Step 3. 
-- `Service Team Admin A` (authorized signer for namespace `secure-ns`) 
+- `ServiceTeamAdminA` (authorized signer for namespace `secure-ns`) 
 
-The following generates a signature for a given resource file (e.g. `test-cm.yaml`) to be deployed on a target namespace (e.g. `secure-ns`) using key of a given signer (e.g. `Service Team Admin A`)
+The following generates a signature for a given resource file (e.g. `test-cm.yaml`) to be deployed on a target namespace (e.g. `secure-ns`) using key of a given signer (e.g. `ServiceTeamAdminA`)
 
 ```
 curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
