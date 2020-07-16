@@ -31,7 +31,7 @@ The following prerequisites must be satisfied to deploy IE on a cluster.
 - `ie-certpool-secret` secret should be setup for enabling signature verification by IE
 
 ## Setting up a `ie-certpool-secret` secret
-IE requires a `ie-certpool-secret` secret to be available for enabling signature verification as part of integrity enforcement. See [here](operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml)
+IE requires a `ie-certpool-secret` secret to be available for enabling signature verification as part of integrity enforcement. See [here](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml)
 
 ```
    certPoolConfig:
