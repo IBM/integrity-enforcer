@@ -24,15 +24,15 @@ import (
 
 func TestEndToEndCAVerification(t *testing.T) {
 
-	rootCert, rootPrvKeyBytes, _, err := CreateCertificate("Root CA", nil, nil)
+	rootCert, rootPrvKeyBytes, _, err := CreateCertificate("RootCA", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	adminCertificate, adminPrvKeyBytes, _, err := CreateCertificate("Intermediate CA", rootCert, rootPrvKeyBytes)
+	adminCertificate, adminPrvKeyBytes, _, err := CreateCertificate("IntermediateCA", rootCert, rootPrvKeyBytes)
 	if err != nil {
 		t.Error(err)
 	}
-	serviceCertificate, servicePrvKeyBytes, servicePubKeyBytes, err := CreateCertificate("Service Team Admin A", adminCertificate, adminPrvKeyBytes)
+	serviceCertificate, servicePrvKeyBytes, servicePubKeyBytes, err := CreateCertificate("ServiceTeamAdminA", adminCertificate, adminPrvKeyBytes)
 	if err != nil {
 		t.Error(err)
 	}
