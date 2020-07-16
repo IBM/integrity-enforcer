@@ -58,7 +58,7 @@ Request has `name`, `operation`, `namespace` and `kind` field.
 In each field, values can be listed with "__,__" and "__*__" can be used as a wildcard.
 
 ### subject
-You can set signer by `email` and `uid`.
+You can set signer by `commonName`
 
 ### example
 ```
@@ -66,7 +66,7 @@ You can set signer by `email` and `uid`.
     - request:
         namespace: secure-ns
       subject:
-        email:secure_ns_signer@signer.com
+        commonName: ServiceTeamAdminA
 ```
 
 ## allowedForInternalRequest

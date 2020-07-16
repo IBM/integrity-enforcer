@@ -100,7 +100,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
 ## Step 2. Deploy a signing serivce via Signing Service Operator
 
    This documentation assume a signing service is deployed to create signatures.
-   See documentation [here](docs/README_INSTALL_SIGNING_SERVICE.md)
+   See documentation [here](README_INSTALL_SIGNING_SERVICE.md)
 
 ---
 
@@ -122,7 +122,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
         - request:
             namespace: secure-ns
           subject:
-            email: secure_ns_signer@signer.com
+            commonName: ServiceTeamAdminA
     -------
    ```
    
@@ -151,7 +151,7 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
         - request:
             namespace: secure-ns
           subject:
-            email: secure_ns_signer@signer.com
+            commonName: ServiceTeamAdminA
     status: {}
      
    ```
@@ -162,17 +162,23 @@ This document is described for supporting evaluation of Integrity Enforcer (IE) 
    
   oc port-forward deployment.apps/signservice 8180:8180 --namespace integrity-enforcer-ns
 
-  curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' 'https://localhost:8180/sign?signer=cluster_signer@signer.com&namespace=integrity-enforcer-ns' > /tmp/signer-policy-rsig.yaml
-   
-
+  ```
+  
+  The following command would create resource signature for the 
+  ```
+  curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' \
+                      'https://localhost:8180/sign/apply?signer=ClusterAdmin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
+  ``` 
+  ```
   # confirm signature is generated correctly
-
+  
   $ head /tmp/signer-policy-rsig.yaml
   apiVersion: research.ibm.com/v1alpha1
   kind: ResourceSignature
   metadata:
     annotations:
-      messageScope: spec
+      certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0t ....
+      messageScope: spec  
       signature: LS0tLS1 ... 0tLQ==
     name: rsig-integrity-enforcer-ns-enforcepolicy-signer-policy
   spec:
@@ -216,43 +222,14 @@ Error from server: admission webhook "ac-server.ie-operator.svc" denied the requ
 ```
 
 Use the signer setup in Step 3. 
-- `secure_ns_signer@signer.com` (authorized) 
+- `ServiceTeamAdminA` (authorized signer for namespace `secure-ns`) 
 
-```
-$ curl -sk -X GET 'https://localhost:8180/list/users'  | jq . 
-[
-    {
-    "signer": {
-        "email": "cluster_signer@signer.com",
-        "name": "cluster_signer@signer.com",
-        "comment": "cluster_signer@signer.com"
-    },
-    "valid": true
-    },
-    {
-    "signer": {
-        "email": "secure_ns_signer@signer.com",
-        "name": "secure_ns_signer@signer.com",
-        "comment": "secure_ns_signer@signer.com"
-    },
-    "valid": true
-    },
-    {
-    "signer": {
-        "email": "invalid_signer@invalid.enterprise.com",
-        "name": "invalid_signer@invalid.enterprise.com",
-        "comment": "invalid_signer@invalid.enterprise.com"
-    },
-    "valid": false
-    }
-]
-```
+The following generates a signature for a given resource file (e.g. `test-cm.yaml`) to be deployed on a target namespace (e.g. `secure-ns`) using key of a given signer (e.g. `ServiceTeamAdminA`)
 
-The following generates a signature for a given resource file (e.g. `test-cm.yaml`) to be deployed on a target namespace (e.g. `secure-ns`) using key of a given signer (e.g. `secure_ns_signer@signer.com`)
 ```
 curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
-        'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=secure-ns' > /tmp/rsign_cm.yaml
-
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
+             
 ```
         
 The signature is included. 
@@ -262,6 +239,7 @@ apiVersion: research.ibm.com/v1alpha1
 kind: ResourceSignature
 metadata:
 annotations:
+    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1 ....
     messageScope: spec
     signature: LS0tLS1CRUdJTiBQ...
 name: rsig-secure-ns-configmap-test-cm
@@ -310,8 +288,8 @@ for: "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" den
 Regenerate and register signature again. Now change can be applied. 
 ```
 $ curl -sk -X POST -F 'yaml=@/tmp/test-cm.yaml' \
-        'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=secure-ns' > /tmp/rsign_cm.yaml
-
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=secure-ns&scope=' > /tmp/rsign_cm.yaml
+                      
 $ oc apply -f /tmp/rsign_cm.yaml -n ie-sign
 resourcesignature.research.ibm.com/rsig-ac-go-configmap-test-cm configured
 
@@ -361,10 +339,11 @@ $ oc create -f /tmp/custom-policy.yaml -n ie-policy
 Error from server: error when creating "/tmp/custom-policy.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
 
 # generate signature 
-$ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' 'https://localhost:8180/sign?signer=secure_ns_signer@signer.com&namespace=ie-policy' > rsig_custom-policy.yaml
-
+$ curl -sk -X POST -F 'yaml=@/tmp/custom-policy.yaml' \
+                      'https://localhost:8180/sign/apply?signer=ServiceTeamAdminA&namespace=ie-policy&scope=' > /tmp/rsig_custom-policy.yaml
+                      
 # create signature
-$ oc create -f rsig_custom-policy.yaml -n ie-sign
+$ oc create -f /tmp/rsig_custom-policy.yaml -n ie-sign
 resourcesignature.research.ibm.com/rsig-ie-policy-enforcepolicy-custom-policy created
 
 # create custome policy
@@ -415,8 +394,8 @@ Executing `watch_events.sh` in `scripts` dir, it would show detail events logs l
 ```
 $ ./watch_events.sh
 secure-ns false ConfigMap           test-cm                                      UPDATE  (username)                                   Failed to verify signature; Message in ResourceSignature is not identical with the requested object
-ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
-ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)   secure_ns_signer@signer.com     allowed by valid signer's signature
+ie-sign   true  ResourceSignature   rsig-ie-policy-enforcepolicy-custom-policy   CREATE  (username)                                   allowed by valid signer's signature
+ie-policy true  EnforcePolicy       custom-policy                                CREATE  (username)                                   allowed by valid signer's signature
 secure-ns true  ConfigMap           test-cm                                      UPDATE  (username)                                   allowed because no mutation found
 ```
 

@@ -55,8 +55,25 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
     $ oc get pod | grep signservice-operator
     signservice-operator-6b4dd5cd47-4vmvt         1/1     Running   0          35
     ```
-    
-4. Add a signer to signservice cr
+4. Add a `certSigner` to signservice cr (e.g. `'ServiceTeamAdminA'`) as shown below.
+
+   Edit `deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml`
+   
+   ```
+    certSigners:
+    - name: "RootCA"
+      isCA: true
+    - name: "IntermediateCA"
+      issuerName: "RootCA"
+      isCA: true
+    - name: "ClusterAdmin"
+      issuerName: "IntermediateCA"
+      isCA: false
+    - name: "ServiceTeamAdminA"
+      issuerName: "IntermediateCA"
+      isCA: false
+   ```
+5. Add a `signer` to signservice cr as shown below
 
    Edit `deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml`
    
@@ -83,10 +100,10 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 ---
 
 ## Delete a signing serivce via Signing Service Operator
-   To delete signing serivce from cluster, run the following commands.
-    
-    ```
-    # Delete CR `signingservice` 
+  
+   run the following commands to delete signing serivce from cluster
+   ```
+   # Delete CR `signingservice` 
     cd ../develop/signservice/signservice-operator
     oc delete -f /develop/deploy/crds/research.ibm.com_v1alpha1_signservice_cr.yaml 
 
@@ -98,4 +115,8 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
 
     # Delete CRD
     oc delete -f deploy/crds/research.ibm.com_signservices_crd.yaml
-    ```
+   ``` 
+   
+   
+   
+   
