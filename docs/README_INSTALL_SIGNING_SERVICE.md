@@ -61,16 +61,16 @@ oc label namespace integrity-enforcer-ns integrity-enforced=true
    
    ```
     certSigners:
-    - name: "Root CA"
+    - name: "RootCA"
       isCA: true
-    - name: "Intermediate CA"
-      issuerName: "Root CA"
+    - name: "IntermediateCA"
+      issuerName: "RootCA"
       isCA: true
-    - name: "Cluster Admin"
-      issuerName: "Intermediate CA"
+    - name: "ClusterAdmin"
+      issuerName: "IntermediateCA"
       isCA: false
-    - name: "Service Team Admin A"
-      issuerName: "Intermediate CA"
+    - name: "ServiceTeamAdminA"
+      issuerName: "IntermediateCA"
       isCA: false
    ```
 5. Add a `signer` to signservice cr as shown below
