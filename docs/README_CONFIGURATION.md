@@ -35,7 +35,7 @@ This document describes a set of confiuration required for IE to enable integrit
    
   2. Edit the signer policy by adding the following snipet to `/tmp/signer-policy.yaml`
    
-   The following shows adding signer `secure_ns_signer@signer.com` to a namespace `secure-ns`. This enables `secure_ns_signer@signer.com` to sign any resources to be created or updated on `secure-ns`.
+   The following shows adding signer `ServiceTeamAdminA` to a namespace `secure-ns`. This enables `ServiceTeamAdminA` to sign any resources to be created or updated on `secure-ns`.
    
    ```
     -------
@@ -45,7 +45,7 @@ This document describes a set of confiuration required for IE to enable integrit
         - request:
             namespace: secure-ns
           subject:
-            commonName: Service Team Admin A
+            commonName: ServiceTeamAdminA
     -------
    ```
    
@@ -74,14 +74,14 @@ This document describes a set of confiuration required for IE to enable integrit
         - request:
             namespace: secure-ns
           subject:
-            commonName: Service Team Admin A
+            commonName: ServiceTeamAdminA
     status: {}
      
    ```
    
   3. Apply signature for signer policy
 
-   Note that `cluster_signer@signer.com` is used for signing a signer policy.  `cluster_signer@signer.com` is a cluster wide signer.
+   Note that `ClusterAdmin` is used for signing a signer policy.  `ClusterAdmin` is a common name of the cluster wide signer.
   
    ```
    # generate signature by using sign service API. To access the service, need port-forward.  
@@ -89,7 +89,7 @@ This document describes a set of confiuration required for IE to enable integrit
    oc port-forward deployment.apps/signservice 8180:8180 --namespace integrity-enforcer-ns
 
    curl -sk -X POST -F 'yaml=@/tmp/signer-policy.yaml' \
-                    'https://localhost:8180/sign/apply?signer=Cluster Admin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
+                    'https://localhost:8180/sign/apply?signer=ClusterAdmin&namespace=integrity-enforcer-ns&scope=' > /tmp/signer-policy-rsig.yaml
                     
  
 
