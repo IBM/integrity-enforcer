@@ -312,18 +312,22 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	if allowed {
 		if self.Result.SignPolicyEvalResult.Allow {
 			annotations["integrityVerified"] = "true"
+			annotations["integrityVerifiedReason"] = "valid-sig"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
 			self.Result.ResolveOwnerResult.Verified {
 			annotations["integrityVerified"] = "true"
+			annotations["integrityVerifiedReason"] = "verified-owner"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else if self.Result.PermitIfVerifiedServiceAccount &&
 			self.IsVerifiedServiceAccount() {
 			annotations["integrityVerified"] = "true"
+			annotations["integrityVerifiedReason"] = "verified-sa"
 			deleteKeys = append(deleteKeys, "integrityUnverified")
 		} else {
 			deleteKeys = append(deleteKeys, "integrityVerified")
+			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
 		}
 		if !self.Result.InternalRequest {
 			annotations["ie-createdBy"] = self.ReqC.UserName
@@ -340,6 +344,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			annotations["integrityVerified"] = "false"
 			annotations["ie-createdBy"] = self.ReqC.UserName
 			annotations["integrityUnverified"] = "true"
+			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
 		}
 	}
 
