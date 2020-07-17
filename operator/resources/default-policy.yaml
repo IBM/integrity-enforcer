@@ -76,7 +76,7 @@ spec:
       namespace: openshift-service-catalog-controller-manager-operator
       username: system:serviceaccount:openshift-service-catalog-controller-manager-operator:openshift-service-catalog-controller-manager-operator
     - kind: ConfigMap
-      namespace: openshift-console-operator
+      namespace: openshift-console-operator, openshift-console
       username: system:serviceaccount:openshift-console-operator:console-operator
     - kind: ConfigMap
       namespace: openshift-service-ca
