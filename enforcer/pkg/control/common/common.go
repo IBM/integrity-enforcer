@@ -76,6 +76,54 @@ func (self *CheckError) MakeMessage() string {
 
 /**********************************************
 
+				ResourceLabel
+
+***********************************************/
+
+type ResourceLabel struct {
+	values map[string]string
+}
+
+func NewResourceLabel(values map[string]string) *ResourceLabel {
+	return &ResourceLabel{
+		values: values,
+	}
+}
+
+func (self *ResourceLabel) IntegrityVerified() bool {
+	return self.getBool("integrityVerified", false)
+}
+
+func (self *ResourceLabel) CreatedBy() string {
+	return self.getString("ie-createdBy")
+}
+
+func (self *ResourceLabel) getString(key string) string {
+	if s, ok := self.values[key]; ok {
+		return s
+	} else {
+		return ""
+	}
+}
+
+func (self *ResourceLabel) getBool(key string, defaultValue bool) bool {
+	if s, ok := self.values[key]; ok {
+		if b, err := strconv.ParseBool(s); err != nil {
+			return defaultValue
+		} else {
+			return b
+		}
+	}
+	return defaultValue
+}
+
+func (self *ResourceLabel) isDefined(key string) bool {
+	_, ok := self.values[key]
+	return ok
+}
+
+/**********************************************
+
 				ResourceAnnotation
 
 ***********************************************/
@@ -239,10 +287,11 @@ type Owner struct {
 	Ref        *ResourceRef
 	OwnerRef   *ResourceRef
 	Annotation *ResourceAnnotation
+	Label      *ResourceLabel
 }
 
 func (self *Owner) IsIntegrityVerified() bool {
-	return self.Annotation.IntegrityVerified()
+	return self.Label.IntegrityVerified()
 }
 
 type OwnerList struct {

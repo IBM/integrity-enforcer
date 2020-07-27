@@ -205,7 +205,7 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 		} else if reqc.IsUpdateRequest() {
 			// for UPDATE request, IE will confirm that no value is modified except attributes in `scope`.
 			// if there is any modification, the request will be denied.
-			if reqc.OrgMetadata.Annotations.IntegrityVerified() {
+			if reqc.OrgMetadata.Labels.IntegrityVerified() {
 				scope, _ := sig.data["scope"]
 				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope)
 				if diffIsInMessageScope {

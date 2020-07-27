@@ -28,30 +28,30 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func createPatch(name, reqJson string, annotations map[string]string, deleteKeys []string) []byte {
+func createPatch(name, reqJson string, labels map[string]string, deleteKeys []string) []byte {
 
 	var patch []PatchOperation
 
-	if len(annotations) > 0 {
+	if len(labels) > 0 {
 
 		if gjson.Get(reqJson, "object.metadata").Exists() {
 
-			annotationsData := gjson.Get(reqJson, "object.metadata.annotations")
+			labelsData := gjson.Get(reqJson, "object.metadata.labels")
 
-			if annotationsData.Exists() {
+			if labelsData.Exists() {
 
 				for _, key := range deleteKeys {
-					if annotationsData.Get(key).Exists() {
+					if labelsData.Get(key).Exists() {
 						patch = append(patch, PatchOperation{
 							Op:   "remove",
-							Path: "/metadata/annotations/" + key,
+							Path: "/metadata/labels/" + key,
 						})
 					}
 				}
 
 				addMap := make(map[string]string)
-				for key, value := range annotations {
-					if !annotationsData.Get(key).Exists() {
+				for key, value := range labels {
+					if !labelsData.Get(key).Exists() {
 						addMap[key] = value
 					}
 				}
@@ -59,7 +59,7 @@ func createPatch(name, reqJson string, annotations map[string]string, deleteKeys
 				if len(addMap) > 0 {
 					patch = append(patch, PatchOperation{
 						Op:    "add",
-						Path:  "/metadata/annotations",
+						Path:  "/metadata/labels",
 						Value: addMap,
 					})
 				}
@@ -67,8 +67,8 @@ func createPatch(name, reqJson string, annotations map[string]string, deleteKeys
 			} else {
 				patch = append(patch, PatchOperation{
 					Op:    "add",
-					Path:  "/metadata/annotations",
-					Value: annotations,
+					Path:  "/metadata/labels",
+					Value: labels,
 				})
 
 			}
@@ -83,8 +83,8 @@ func createPatch(name, reqJson string, annotations map[string]string, deleteKeys
 
 			patch = append(patch, PatchOperation{
 				Op:    "add",
-				Path:  "/metadata/annotations",
-				Value: annotations,
+				Path:  "/metadata/labels",
+				Value: labels,
 			})
 
 		}
