@@ -49,6 +49,7 @@ type ObjectMetadata struct {
 	K8sServiceAccountUid  string              `json:"k8sServiceAccountUid"`
 	OwnerRef              *ResourceRef        `json:"ownerRef"`
 	Annotations           *ResourceAnnotation `json:"annotations"`
+	Labels                *ResourceLabel      `json:"labels"`
 }
 
 type ReqContext struct {
@@ -187,6 +188,20 @@ func (pr *ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	}
 }
 
+func (pr *ParsedRequest) getLabels(path string) *ResourceLabel {
+	var r map[string]string = map[string]string{}
+	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
+		m := w.Map()
+		for k := range m {
+			v := m[k]
+			r[k] = v.String()
+		}
+	}
+	return &ResourceLabel{
+		values: r,
+	}
+}
+
 func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v := w.String()
@@ -226,6 +241,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		K8sServiceAccountName: pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.name"),
 		K8sServiceAccountUid:  pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.uid"),
 		Annotations:           pr.getAnnotations("oldObject.metadata.annotations"),
+		Labels:                pr.getLabels("oldObject.metadata.labels"),
 		OwnerRef: &ResourceRef{
 			Kind:       pr.getValue("oldObject.metadata.ownerReferences.0.kind"),
 			Name:       pr.getValue("oldObject.metadata.ownerReferences.0.name"),
@@ -236,6 +252,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 
 	claimedMetadata := &ObjectMetadata{
 		Annotations: pr.getAnnotations("object.metadata.annotations"),
+		Labels:      pr.getLabels("object.metadata.labels"),
 		OwnerRef: &ResourceRef{
 			Kind:       pr.getValue("object.metadata.ownerReferences.0.kind"),
 			Name:       pr.getValue("object.metadata.ownerReferences.0.name"),
@@ -292,9 +309,9 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 }
 
 var CommonMessageMask = []string{
-	"metadata.annotations.integrityVerified",
-	"metadata.annotations.integrityUnverified",
-	"metadata.annotations.ie-createdBy",
+	"metadata.labels.integrityVerified",
+	"metadata.labels.integrityUnverified",
+	"metadata.labels.ie-createdBy",
 	"metadata.annotations.sigOwnerApiVersion",
 	"metadata.annotations.sigOwnerKind",
 	"metadata.annotations.sigOwnerName",
