@@ -308,31 +308,30 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	msg := self.Message
 
 	labels := map[string]string{}
+	annotations := map[string]string{}
 	deleteKeys := []string{}
+	deleteAnnotationKeys := []string{}
 	if allowed {
 		if self.Result.SignPolicyEvalResult.Allow {
-			labels["integrityVerified"] = "true"
-			labels["integrityVerifiedReason"] = "valid-sig"
-			deleteKeys = append(deleteKeys, "integrityUnverified")
+			labels["resourceIntegrity"] = "verified"
+			labels["reason"] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
 			self.Result.ResolveOwnerResult.Verified {
-			labels["integrityVerified"] = "true"
-			labels["integrityVerifiedReason"] = "verified-owner"
-			deleteKeys = append(deleteKeys, "integrityUnverified")
+			labels["resourceIntegrity"] = "verified"
+			labels["reason"] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else if self.Result.PermitIfVerifiedServiceAccount &&
 			self.IsVerifiedServiceAccount() {
-			labels["integrityVerified"] = "true"
-			labels["integrityVerifiedReason"] = "verified-sa"
-			deleteKeys = append(deleteKeys, "integrityUnverified")
+			labels["resourceIntegrity"] = "verified"
+			labels["reason"] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else {
-			deleteKeys = append(deleteKeys, "integrityVerified")
-			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
+			deleteKeys = append(deleteKeys, "resourceIntegrity")
+			deleteKeys = append(deleteKeys, "reason")
 		}
 		if !self.Result.InternalRequest {
-			labels["ie-createdBy"] = self.ReqC.UserName
+			annotations["ie-createdBy"] = self.ReqC.UserName
 		} else {
-			deleteKeys = append(deleteKeys, "ie-createdBy")
+			deleteAnnotationKeys = append(deleteKeys, "ie-createdBy")
 		}
 	} else {
 		if self.Unverified {
@@ -341,10 +340,9 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
 			self.ReasonCode = common.REASON_UNVERIFIED
 			msg = self.Message
-			labels["integrityVerified"] = "false"
-			labels["ie-createdBy"] = self.ReqC.UserName
-			labels["integrityUnverified"] = "true"
-			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
+			labels["resourceIntegrity"] = "unverified"
+			labels["reason"] = common.ReasonCodeMap[self.ReasonCode].Code
+			annotations["ie-createdBy"] = self.ReqC.UserName
 		}
 	}
 
@@ -353,7 +351,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 		name := self.ReqC.Name
 		reqJson := self.ReqC.RequestJsonStr
 		if self.config.PatchEnabled() {
-			patch = createPatch(name, reqJson, labels, deleteKeys)
+			patch = createPatch(name, reqJson, labels, annotations, deleteKeys, deleteAnnotationKeys)
 		}
 	}
 
@@ -405,11 +403,11 @@ func (self *CheckContext) IsVerifiedServiceAccount() bool {
 	if self.ReqC.Namespace != sa.ObjectMeta.Namespace {
 		return false
 	}
-	if s, ok := sa.Labels["integrityVerified"]; ok {
-		if b, err := strconv.ParseBool(s); err != nil {
-			return false
+	if s, ok := sa.Labels["resourceIntegrity"]; ok {
+		if s == "verified" {
+			return true
 		} else {
-			return b
+			return false
 		}
 	}
 	return false

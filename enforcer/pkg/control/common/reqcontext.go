@@ -309,8 +309,8 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 }
 
 var CommonMessageMask = []string{
-	"metadata.labels.integrityVerified",
-	"metadata.labels.integrityUnverified",
+	"metadata.labels.resourceIntegrity",
+	"metadata.labels.reason",
 	"metadata.labels.ie-createdBy",
 	"metadata.annotations.sigOwnerApiVersion",
 	"metadata.annotations.sigOwnerKind",

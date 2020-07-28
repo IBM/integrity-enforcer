@@ -91,7 +91,7 @@ func NewResourceLabel(values map[string]string) *ResourceLabel {
 }
 
 func (self *ResourceLabel) IntegrityVerified() bool {
-	return self.getBool("integrityVerified", false)
+	return self.getString("resourceIntegrity") == "verified"
 }
 
 func (self *ResourceLabel) CreatedBy() string {
