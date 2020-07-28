@@ -37,7 +37,7 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []poli
 		"metadata.annotations.namespace",
 		"metadata.labels.resourceIntegrity",
 		"metadata.labels.reason",
-		"metadata.labels.ie-createdBy",
+		"metadata.annotations.ie-createdBy",
 		"metadata.annotations.sigOwnerKind",
 		"metadata.annotations.sigOwnerApiVersion",
 		"metadata.annotations.sigOwnerName",
