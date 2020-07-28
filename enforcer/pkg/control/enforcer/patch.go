@@ -28,7 +28,7 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func createPatch(name, reqJson string, labels map[string]string, annotations map[string]string, deleteKeys []string, deleteAnnotationKeys []string) []byte {
+func createPatch(name, reqJson string, labels map[string]string, deleteKeys []string) []byte {
 
 	var patch []PatchOperation
 
@@ -90,57 +90,6 @@ func createPatch(name, reqJson string, labels map[string]string, annotations map
 		}
 	}
 
-	if len(annotations) > 0 {
-
-		if gjson.Get(reqJson, "object.metadata").Exists() {
-
-			annotationsData := gjson.Get(reqJson, "object.metadata.annotations")
-
-			if annotationsData.Exists() {
-
-				for _, key := range deleteAnnotationKeys {
-					if annotationsData.Get(key).Exists() {
-						patch = append(patch, PatchOperation{
-							Op:   "remove",
-							Path: "/metadata/annotations/" + key,
-						})
-					}
-				}
-
-				addMap := make(map[string]string)
-				for key, value := range annotations {
-					if !annotationsData.Get(key).Exists() {
-						addMap[key] = value
-					}
-				}
-
-				if len(addMap) > 0 {
-					patch = append(patch, PatchOperation{
-						Op:    "add",
-						Path:  "/metadata/annotations",
-						Value: addMap,
-					})
-				}
-
-			} else {
-				patch = append(patch, PatchOperation{
-					Op:    "add",
-					Path:  "/metadata/annotations",
-					Value: annotations,
-				})
-
-			}
-
-		} else {
-
-			patch = append(patch, PatchOperation{
-				Op:    "add",
-				Path:  "/metadata/annotations",
-				Value: annotations,
-			})
-
-		}
-	}
 	if len(patch) > 0 {
 		patchBytes, _ := json.Marshal(patch)
 		return patchBytes

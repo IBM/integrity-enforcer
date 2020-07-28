@@ -35,8 +35,8 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []poli
 
 	mask := []string{
 		"metadata.annotations.namespace",
-		"metadata.labels.resourceIntegrity",
-		"metadata.labels.reason",
+		"metadata.labels.integrity-enforcer.ibm.com/resourceIntegrity",
+		"metadata.labels.integrity-enforcer.ibm.com/reason",
 		"metadata.annotations.ie-createdBy",
 		"metadata.annotations.sigOwnerKind",
 		"metadata.annotations.sigOwnerApiVersion",
