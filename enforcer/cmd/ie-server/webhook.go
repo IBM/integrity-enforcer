@@ -63,10 +63,8 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 		logger.InitServerLogger(acConfig.LoggerConfig)
 	}
 
-	enforcePolicy := acConfig.LoadEnforcePolicy()
-
 	//create context
-	cc := enforcer.NewCheckContext(acConfig.EnforcerConfig, enforcePolicy)
+	cc := enforcer.NewCheckContext(acConfig)
 
 	//process request
 	admissionResponse := cc.ProcessRequest(admissionReviewReq.Request)

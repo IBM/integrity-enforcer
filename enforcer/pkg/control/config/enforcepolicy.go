@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func LoadEnforcePolicy(namespace, policyNamespace string) *policy.Policy {
+func LoadEnforcePolicy(requestNamespace, enforcerNamespace, policyNamespace string) *policy.Policy {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -37,23 +37,75 @@ func LoadEnforcePolicy(namespace, policyNamespace string) *policy.Policy {
 		log.Fatal(err)
 		return nil
 	}
-	epolList, err := clientset.EnforcePolicies(namespace).List(metav1.ListOptions{})
+	epolList, err := clientset.EnforcePolicies(enforcerNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		log.Fatalln("failed to get EnforcePolicy:", err)
 		return nil
 	}
-	perNsEpolList, err := clientset.EnforcePolicies(policyNamespace).List(metav1.ListOptions{})
+	perNsEpolList, err := clientset.EnforcePolicies(requestNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		log.Fatalln("failed to get EnforcePolicy:", err)
 		return nil
 	}
-	pol := &policy.Policy{}
+	polNsEpolList, err := clientset.EnforcePolicies(policyNamespace).List(metav1.ListOptions{})
+	if err != nil {
+		log.Fatalln("failed to get EnforcePolicy:", err)
+		return nil
+	}
+
+	allPolicies := []*policy.Policy{}
 	for _, epol := range epolList.Items {
-		pol = pol.Merge(epol.Spec.Policy)
+		allPolicies = append(allPolicies, epol.Spec.Policy)
 	}
 	for _, epol := range perNsEpolList.Items {
-		pol = pol.Merge(epol.Spec.Policy)
+		allPolicies = append(allPolicies, epol.Spec.Policy)
+
 	}
+	for _, epol := range polNsEpolList.Items {
+		allPolicies = append(allPolicies, epol.Spec.Policy)
+
+	}
+
+	orderedPolicyMap := map[string]*policy.Policy{
+		"signer":     {},
+		"filter":     {},
+		"whitelist":  {},
+		"unverified": {},
+		"mode":       {}, // TODO: design & implement mode policy (enforce/detection)
+		"ignore":     {},
+	}
+
+	for _, pol := range allPolicies {
+		if pol.PolicyType == policy.SignerPolicy {
+			orderedPolicyMap["signer"] = orderedPolicyMap["signer"].Merge(pol)
+			orderedPolicyMap["unverified"] = orderedPolicyMap["unverified"].Merge(pol)
+		}
+		if pol.PolicyType == policy.IEPolicy {
+			orderedPolicyMap["filter"] = orderedPolicyMap["filter"].Merge(pol)
+			orderedPolicyMap["whitelist"] = orderedPolicyMap["whitelist"].Merge(pol)
+			orderedPolicyMap["mode"] = orderedPolicyMap["mode"].Merge(pol)
+			orderedPolicyMap["ignore"] = orderedPolicyMap["ignore"].Merge(pol)
+		}
+		if pol.PolicyType == policy.DefaultPolicy {
+			orderedPolicyMap["filter"] = orderedPolicyMap["filter"].Merge(pol)
+			orderedPolicyMap["whitelist"] = orderedPolicyMap["whitelist"].Merge(pol)
+		}
+		if pol.PolicyType == policy.CustomPolicy {
+			orderedPolicyMap["signer"] = orderedPolicyMap["signer"].Merge(pol)
+			orderedPolicyMap["filter"] = orderedPolicyMap["filter"].Merge(pol)
+			orderedPolicyMap["whitelist"] = orderedPolicyMap["whitelist"].Merge(pol)
+		}
+
+	}
+
+	pol := &policy.Policy{
+		AllowUnverified:           orderedPolicyMap["unverified"].AllowUnverified,
+		IgnoreRequest:             orderedPolicyMap["ignore"].IgnoreRequest,
+		AllowedSigner:             orderedPolicyMap["signer"].AllowedSigner,
+		AllowedForInternalRequest: orderedPolicyMap["filter"].AllowedForInternalRequest,
+		AllowedChange:             orderedPolicyMap["whitelist"].AllowedChange,
+	}
+
 	return pol
 
 }

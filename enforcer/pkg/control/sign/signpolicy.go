@@ -244,30 +244,14 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 
 func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext {
 	var err error
-	isEnforcePolicy := reqc.IsEnforcePolicyRequest()
 	isResourceSignature := reqc.IsResourceSignatureRequest()
 
-	if !isEnforcePolicy && !isResourceSignature {
+	if !isResourceSignature {
 		return reqc
 	}
 
 	reqcForEval := &common.ReqContext{}
 	copier.Copy(&reqcForEval, &reqc)
-
-	if isEnforcePolicy {
-		var epolObj *epolpkg.EnforcePolicy
-		err = json.Unmarshal(rawObj, &epolObj)
-		if err == nil {
-			// Master policies (e.g. ie-policy) do not have `Namespace` in policy spec.
-			// Normal sign policy evaluation would be done in the case.
-			// Other per-ns policy must have `Namespace` field.
-			if epolObj.Spec.Policy.Namespace != "" {
-				reqcForEval.Namespace = epolObj.Spec.Policy.Namespace
-			}
-		} else {
-			logger.Error(err)
-		}
-	}
 
 	if isResourceSignature {
 		var rsigObj *rsigpkg.ResourceSignature

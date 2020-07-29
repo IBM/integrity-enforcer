@@ -19,7 +19,14 @@ spec:
         email: cluster_signer@signer.com
     enforce:
     - namespace: '*'
-    ignoreRequest: []
+    ignoreRequest:
+    - kind: Event
+    - kind: Lease
+    - kind: Endpoints
+    - kind: TokenReview
+    - kind: SubjectAccessReview
+    - kind: SelfSubjectAccessReview
+    - namespace: '-'
     permitIfCreator: []
     permitIfVerifiedOwner: []
   enforcerConfig:

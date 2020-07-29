@@ -134,21 +134,5 @@ spec:
     - kind: InstallPlan, Role, RoleBinding, Deployment
       operation: CREATE
       username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
-    ignoreRequest:
-    - kind: Event
-    - kind: Lease
-    - kind: Endpoints
-    - kind: TokenReview
-    - kind: SubjectAccessReview
-    - kind: SelfSubjectAccessReview
-    - namespace: '-'
-    permitIfVerifiedOwner:
-    - authorizedServiceAccount:
-        - olm-operator-serviceaccount
-      request:
-        kind: ServiceAccount
-        namespace: '*'
-        operation: CREATE
-    - allowChangesBySignedServiceAccount: true
-      request:
-        namespace: '*'
+    ignoreRequest: []
+    permitIfVerifiedOwner: []

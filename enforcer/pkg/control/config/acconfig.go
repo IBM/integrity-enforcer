@@ -76,7 +76,7 @@ func NewAdmissionControlConfig() *AdmissionControlConfig {
 	return acConfig
 }
 
-func (ac *AdmissionControlConfig) LoadEnforcePolicy() *policy.Policy {
+func (ac *AdmissionControlConfig) LoadEnforcePolicy(requestNamespace string) *policy.Policy {
 
 	renew := false
 	t := time.Now()
@@ -98,9 +98,10 @@ func (ac *AdmissionControlConfig) LoadEnforcePolicy() *policy.Policy {
 	}
 
 	if renew {
-		enforcerNs := os.Getenv("ENFORCER_NS")
-		policyNs := os.Getenv("POLICY_NS")
-		enforcePolicy := LoadEnforcePolicy(enforcerNs, policyNs)
+		reqNs := requestNamespace
+		enforcerNs := ac.EnforcerConfig.Namespace
+		policyNs := ac.EnforcerConfig.PolicyNamespace
+		enforcePolicy := LoadEnforcePolicy(reqNs, enforcerNs, policyNs)
 
 		if enforcePolicy != nil {
 			changed := reflect.DeepEqual(enforcePolicy, ac.enforcePolicy)
