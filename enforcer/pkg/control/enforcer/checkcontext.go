@@ -65,14 +65,10 @@ type CheckContext struct {
 }
 
 type CheckResult struct {
-	InternalRequest                bool                         `json:"internal"`
-	AllowedByRule                  bool                         `json:"allowedByRule"`
-	PermitIfVerifiedOwner          bool                         `json:"permitIfVerifiedOwner"`
-	PermitIfFirstUser              bool                         `json:"permitIfFirstUser"`
-	PermitIfVerifiedServiceAccount bool                         `json:"permitIfVerifiedServiceAccount"`
-	SignPolicyEvalResult           *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult             *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult             *common.MutationEvalResult   `json:"mutation"`
+	InternalRequest      bool                         `json:"internal"`
+	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
+	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
+	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
 func NewCheckContext(acConfig *ctlconfig.AdmissionControlConfig) *CheckContext {
@@ -83,10 +79,7 @@ func NewCheckContext(acConfig *ctlconfig.AdmissionControlConfig) *CheckContext {
 		Aborted:  false,
 		Allow:    false,
 		Result: &CheckResult{
-			InternalRequest:       false,
-			AllowedByRule:         false,
-			PermitIfVerifiedOwner: false,
-			PermitIfFirstUser:     false,
+			InternalRequest: false,
 			SignPolicyEvalResult: &common.SignPolicyEvalResult{
 				Allow:   false,
 				Checked: false,
@@ -293,15 +286,6 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 		} else if self.Result.SignPolicyEvalResult.Allow {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
 			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
-		} else if self.Result.PermitIfVerifiedOwner &&
-			self.Result.ResolveOwnerResult.Checked &&
-			self.Result.ResolveOwnerResult.Verified {
-			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
-			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
-		} else if self.Result.PermitIfVerifiedServiceAccount &&
-			self.IsVerifiedServiceAccount() {
-			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
-			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else {
 			deleteKeys = append(deleteKeys, common.ResourceIntegrityLabelKey)
 			deleteKeys = append(deleteKeys, common.ReasonLabelKey)
@@ -342,46 +326,9 @@ func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error)
 	}
 }
 
-func (self *CheckContext) resolveOwner() (*common.ResolveOwnerResult, error) {
-	reqc := self.ReqC
-	if resolver, err := NewOwnerResolver(); err != nil {
-		return nil, err
-	} else {
-		return resolver.Find(reqc)
-	}
-}
-
-func (self *CheckContext) IsVerifiedServiceAccount() bool {
-
-	sa := self.ServiceAccount
-	if sa == nil {
-		v, err := GetServiceAccount(self.ReqC.UserName)
-		if err != nil || v == nil {
-			return false
-		}
-		sa = v
-	}
-
-	if self.ReqC.Namespace != sa.ObjectMeta.Namespace {
-		return false
-	}
-	if s, ok := sa.Labels[common.ResourceIntegrityLabelKey]; ok {
-		if s == common.LabelValueVerified {
-			return true
-		} else {
-			return false
-		}
-	}
-	return false
-}
-
 func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	reqc := self.ReqC
-	r := self.Result.ResolveOwnerResult
-	var owners []*common.Owner
-	if r != nil && r.Owners != nil {
-		owners = r.Owners.VerifiedOwners()
-	}
+	owners := []*common.Owner{}
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
@@ -461,9 +408,6 @@ func (self *CheckContext) convertToLogBytes() []byte {
 
 	if self.Result != nil {
 		logRecord["internal"] = self.Result.InternalRequest
-		logRecord["allowedByRule"] = self.Result.AllowedByRule
-		logRecord["permitIfVerifiedOwner"] = self.Result.PermitIfVerifiedOwner
-		logRecord["permitIfFirstUser"] = self.Result.PermitIfFirstUser
 	}
 
 	//context from sign policy eval

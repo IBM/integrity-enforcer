@@ -88,18 +88,18 @@ func (self *Policy) CheckFormat() (bool, string) {
 }
 
 func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs string) (bool, string) {
-	ok, errMsg := self.CheckFormat()
-	if !ok {
-		return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
-	}
-	ns := reqc.Namespace
+	// ok, errMsg := self.CheckFormat()
+	// if !ok {
+	// 	return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
+	// }
+	// ns := reqc.Namespace
 
-	polNs := policyNs
-	pType := self.PolicyType
+	// polNs := policyNs
+	// pType := self.PolicyType
 
-	if pType == CustomPolicy && ns != polNs {
-		return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
-	}
+	// if pType == CustomPolicy && ns != polNs {
+	// 	return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
+	// }
 
 	return true, ""
 }

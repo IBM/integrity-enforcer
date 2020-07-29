@@ -53,17 +53,23 @@ func LoadEnforcePolicy(requestNamespace, enforcerNamespace, policyNamespace stri
 		return nil
 	}
 
-	allPolicies := []*policy.Policy{}
+	policyMap := map[policy.PolicyType]*policy.Policy{}
+	policyMap[policy.IEPolicy] = &policy.Policy{}
+	policyMap[policy.DefaultPolicy] = &policy.Policy{}
+	policyMap[policy.SignerPolicy] = &policy.Policy{}
+	policyMap[policy.CustomPolicy] = &policy.Policy{}
+
 	for _, epol := range epolList.Items {
-		allPolicies = append(allPolicies, epol.Spec.Policy)
+		pType := epol.Spec.Policy.PolicyType
+		policyMap[pType] = policyMap[pType].Merge(epol.Spec.Policy)
 	}
 	for _, epol := range perNsEpolList.Items {
-		allPolicies = append(allPolicies, epol.Spec.Policy)
-
+		pType := epol.Spec.Policy.PolicyType
+		policyMap[pType] = policyMap[pType].Merge(epol.Spec.Policy)
 	}
 	for _, epol := range polNsEpolList.Items {
-		allPolicies = append(allPolicies, epol.Spec.Policy)
-
+		pType := epol.Spec.Policy.PolicyType
+		policyMap[pType] = policyMap[pType].Merge(epol.Spec.Policy)
 	}
 
 	orderedPolicyMap := map[string]*policy.Policy{
@@ -75,27 +81,26 @@ func LoadEnforcePolicy(requestNamespace, enforcerNamespace, policyNamespace stri
 		"ignore":     {},
 	}
 
-	for _, pol := range allPolicies {
-		if pol.PolicyType == policy.SignerPolicy {
-			orderedPolicyMap["signer"] = orderedPolicyMap["signer"].Merge(pol)
-			orderedPolicyMap["unverified"] = orderedPolicyMap["unverified"].Merge(pol)
+	for key, pol := range orderedPolicyMap {
+		if key == "signer" {
+			pol = pol.Merge(policyMap[policy.SignerPolicy])
+			pol = pol.Merge(policyMap[policy.CustomPolicy])
+		} else if key == "filter" {
+			pol = pol.Merge(policyMap[policy.IEPolicy])
+			pol = pol.Merge(policyMap[policy.DefaultPolicy])
+			pol = pol.Merge(policyMap[policy.CustomPolicy])
+		} else if key == "whitelist" {
+			pol = pol.Merge(policyMap[policy.IEPolicy])
+			pol = pol.Merge(policyMap[policy.DefaultPolicy])
+			pol = pol.Merge(policyMap[policy.CustomPolicy])
+		} else if key == "unverified" {
+			pol = pol.Merge(policyMap[policy.SignerPolicy])
+		} else if key == "mode" {
+			pol = pol.Merge(policyMap[policy.IEPolicy])
+		} else if key == "ignore" {
+			pol = pol.Merge(policyMap[policy.IEPolicy])
 		}
-		if pol.PolicyType == policy.IEPolicy {
-			orderedPolicyMap["filter"] = orderedPolicyMap["filter"].Merge(pol)
-			orderedPolicyMap["whitelist"] = orderedPolicyMap["whitelist"].Merge(pol)
-			orderedPolicyMap["mode"] = orderedPolicyMap["mode"].Merge(pol)
-			orderedPolicyMap["ignore"] = orderedPolicyMap["ignore"].Merge(pol)
-		}
-		if pol.PolicyType == policy.DefaultPolicy {
-			orderedPolicyMap["filter"] = orderedPolicyMap["filter"].Merge(pol)
-			orderedPolicyMap["whitelist"] = orderedPolicyMap["whitelist"].Merge(pol)
-		}
-		if pol.PolicyType == policy.CustomPolicy {
-			orderedPolicyMap["signer"] = orderedPolicyMap["signer"].Merge(pol)
-			orderedPolicyMap["filter"] = orderedPolicyMap["filter"].Merge(pol)
-			orderedPolicyMap["whitelist"] = orderedPolicyMap["whitelist"].Merge(pol)
-		}
-
+		orderedPolicyMap[key] = pol
 	}
 
 	pol := &policy.Policy{
