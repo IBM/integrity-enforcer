@@ -288,24 +288,23 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	if allowed {
 
 		if self.ReasonCode == common.REASON_UNVERIFIED {
-			labels["integrity-enforcer.ibm.com/resourceIntegrity"] = "unverified"
-			labels["integrity-enforcer.ibm.com/reason"] = common.ReasonCodeMap[self.ReasonCode].Code
-			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
+			labels[common.ResourceIntegrityLabelKey] = common.LabelValueUnverified
+			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else if self.Result.SignPolicyEvalResult.Allow {
-			labels["integrity-enforcer.ibm.com/resourceIntegrity"] = "verified"
-			labels["integrity-enforcer.ibm.com/reason"] = common.ReasonCodeMap[self.ReasonCode].Code
+			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
+			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else if self.Result.PermitIfVerifiedOwner &&
 			self.Result.ResolveOwnerResult.Checked &&
 			self.Result.ResolveOwnerResult.Verified {
-			labels["integrity-enforcer.ibm.com/resourceIntegrity"] = "verified"
-			labels["integrity-enforcer.ibm.com/reason"] = common.ReasonCodeMap[self.ReasonCode].Code
+			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
+			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else if self.Result.PermitIfVerifiedServiceAccount &&
 			self.IsVerifiedServiceAccount() {
-			labels["integrity-enforcer.ibm.com/resourceIntegrity"] = "verified"
-			labels["integrity-enforcer.ibm.com/reason"] = common.ReasonCodeMap[self.ReasonCode].Code
+			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
+			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else {
-			deleteKeys = append(deleteKeys, "integrity-enforcer.ibm.com/resourceIntegrity")
-			deleteKeys = append(deleteKeys, "integrity-enforcer.ibm.com/reason")
+			deleteKeys = append(deleteKeys, common.ResourceIntegrityLabelKey)
+			deleteKeys = append(deleteKeys, common.ReasonLabelKey)
 		}
 	}
 
@@ -366,8 +365,8 @@ func (self *CheckContext) IsVerifiedServiceAccount() bool {
 	if self.ReqC.Namespace != sa.ObjectMeta.Namespace {
 		return false
 	}
-	if s, ok := sa.Labels["integrity-enforcer.ibm.com/resourceIntegrity"]; ok {
-		if s == "verified" {
+	if s, ok := sa.Labels[common.ResourceIntegrityLabelKey]; ok {
+		if s == common.LabelValueVerified {
 			return true
 		} else {
 			return false

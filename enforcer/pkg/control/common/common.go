@@ -28,6 +28,14 @@ const (
 	PolicyCustomResourceKind          = "EnforcePolicy"
 )
 
+const (
+	ResourceIntegrityLabelKey = "integrity-enforcer.ibm.com/resourceIntegrity"
+	ReasonLabelKey            = "integrity-enforcer.ibm.com/reason"
+
+	LabelValueVerified   = "verified"
+	LabelValueUnverified = "unverified"
+)
+
 /**********************************************
 
 				ResourceRef
@@ -91,7 +99,7 @@ func NewResourceLabel(values map[string]string) *ResourceLabel {
 }
 
 func (self *ResourceLabel) IntegrityVerified() bool {
-	return self.getString("integrity-enforcer.ibm.com/resourceIntegrity") == "verified"
+	return self.getString(ResourceIntegrityLabelKey) == LabelValueVerified
 }
 
 func (self *ResourceLabel) CreatedBy() string {

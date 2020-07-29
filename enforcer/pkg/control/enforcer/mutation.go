@@ -34,9 +34,9 @@ type ConcreteMutationChecker struct {
 func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []policy.AllowedChangeCondition) (*common.MutationEvalResult, error) {
 
 	mask := []string{
+		common.ResourceIntegrityLabelKey,
+		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
-		"metadata.labels.integrity-enforcer.ibm.com/resourceIntegrity",
-		"metadata.labels.integrity-enforcer.ibm.com/reason",
 		"metadata.annotations.sigOwnerKind",
 		"metadata.annotations.sigOwnerApiVersion",
 		"metadata.annotations.sigOwnerName",

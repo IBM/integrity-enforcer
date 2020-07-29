@@ -309,8 +309,8 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 }
 
 var CommonMessageMask = []string{
-	"metadata.labels.integrity-enforcer.ibm.com/resourceIntegrity",
-	"metadata.labels.integrity-enforcer.ibm.com/reason",
+	ResourceIntegrityLabelKey,
+	ReasonLabelKey,
 	"metadata.annotations.sigOwnerApiVersion",
 	"metadata.annotations.sigOwnerKind",
 	"metadata.annotations.sigOwnerName",
