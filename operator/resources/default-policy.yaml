@@ -134,5 +134,3 @@ spec:
     - kind: InstallPlan, Role, RoleBinding, Deployment
       operation: CREATE
       username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
-    ignoreRequest: []
-    permitIfVerifiedOwner: []

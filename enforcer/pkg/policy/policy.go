@@ -53,6 +53,32 @@ type Policy struct {
 	PolicyType                PolicyType                 `json:"policyType,omitempty"`
 }
 
+type IEDefaultPolicy struct {
+	AllowedForInternalRequest []RequestMatchPattern    `json:"allowedForInternalRequest,omitempty"`
+	AllowedChange             []AllowedChangeCondition `json:"allowedChange,omitempty"`
+	PolicyType                PolicyType               `json:"policyType,omitempty"`
+}
+
+type AppEnforcePolicy struct {
+	AllowedForInternalRequest []RequestMatchPattern    `json:"allowedForInternalRequest,omitempty"`
+	AllowedChange             []AllowedChangeCondition `json:"allowedChange,omitempty"`
+	AllowedSigner             []SignerMatchPattern     `json:"allowedSigner,omitempty"`
+	PolicyType                PolicyType               `json:"policyType,omitempty"`
+}
+
+type IntegrityEnforcerPolicy struct {
+	AllowedSigner []SignerMatchPattern  `json:"allowedSigner,omitempty"`
+	IgnoreRequest []RequestMatchPattern `json:"ignoreRequest,omitempty"`
+	Mode          string                `json:"mode,omitempty"`
+	PolicyType    PolicyType            `json:"policyType,omitempty"`
+}
+
+type IESignerPolicy struct {
+	AllowedSigner   []SignerMatchPattern       `json:"allowedSigner,omitempty"`
+	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
+	PolicyType      PolicyType                 `json:"policyType,omitempty"`
+}
+
 func (self *Policy) CheckFormat() (bool, string) {
 	pType := self.PolicyType
 	ns := self.Namespace
@@ -189,6 +215,46 @@ func (p *Policy) DeepCopyInto(p2 *Policy) {
 
 func (p *Policy) DeepCopy() *Policy {
 	p2 := &Policy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *AppEnforcePolicy) DeepCopyInto(p2 *AppEnforcePolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *AppEnforcePolicy) DeepCopy() *AppEnforcePolicy {
+	p2 := &AppEnforcePolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *IESignerPolicy) DeepCopyInto(p2 *IESignerPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *IESignerPolicy) DeepCopy() *IESignerPolicy {
+	p2 := &IESignerPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *IntegrityEnforcerPolicy) DeepCopyInto(p2 *IntegrityEnforcerPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *IntegrityEnforcerPolicy) DeepCopy() *IntegrityEnforcerPolicy {
+	p2 := &IntegrityEnforcerPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *IEDefaultPolicy) DeepCopyInto(p2 *IEDefaultPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *IEDefaultPolicy) DeepCopy() *IEDefaultPolicy {
+	p2 := &IEDefaultPolicy{}
 	p.DeepCopyInto(p2)
 	return p2
 }
