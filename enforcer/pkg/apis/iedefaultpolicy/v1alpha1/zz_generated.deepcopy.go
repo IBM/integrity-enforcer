@@ -21,7 +21,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -91,8 +90,7 @@ func (in *IEDefaultPolicySpec) DeepCopyInto(out *IEDefaultPolicySpec) {
 	*out = *in
 	if in.IEDefaultPolicy != nil {
 		in, out := &in.IEDefaultPolicy, &out.IEDefaultPolicy
-		*out = new(policy.IEDefaultPolicy)
-		(*in).DeepCopyInto(*out)
+		*out = (*in).DeepCopy()
 	}
 	return
 }

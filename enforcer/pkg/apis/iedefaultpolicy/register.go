@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package enforcepolicy
+package iedefaultpolicy
 
 const (
 	GroupName = "research.ibm.com"

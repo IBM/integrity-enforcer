@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package enforcepolicy
+package iesignerpolicy
 
 const (
 	GroupName = "research.ibm.com"
