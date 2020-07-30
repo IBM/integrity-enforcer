@@ -17,15 +17,11 @@
 package config
 
 import (
-	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"time"
 
 	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 )
 
 /**********************************************
@@ -35,85 +31,13 @@ import (
 ***********************************************/
 
 type AdmissionControlConfig struct {
-	LoggerConfig        logger.LoggerConfig
-	ContextLoggerConfig logger.ContextLoggerConfig
-	EnforcerConfig      *cfg.EnforcerConfig
-	enforcePolicy       *policy.Policy
-	lastUpdated         time.Time
-	lastPolicyUpdated   time.Time
+	EnforcerConfig *cfg.EnforcerConfig
+	lastUpdated    time.Time
 }
 
 func NewAdmissionControlConfig() *AdmissionControlConfig {
-
-	cxLogEnabled, err := strconv.ParseBool(os.Getenv("CX_LOG_ENABLED"))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	cxLogFile := os.Getenv("CX_LOG_FILE")
-	if cxLogFile == "" {
-		cxLogFile = "/ie-app/public/events.txt"
-	}
-
-	cxLimitSizeStr := os.Getenv("CX_FILE_LIMIT_SIZE")
-	if cxLimitSizeStr == "" {
-		cxLimitSizeStr = "10485760" // == 10MB
-	}
-	cxLimitSize, err := strconv.Atoi(cxLimitSizeStr)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	cxLoggerConfig := logger.ContextLoggerConfig{Enabled: cxLogEnabled, File: cxLogFile, LimitSize: int64(cxLimitSize)}
-
-	if err != nil {
-		fmt.Println("Could not get env includeRequest")
-	}
-
-	acConfig := &AdmissionControlConfig{
-		ContextLoggerConfig: cxLoggerConfig,
-	}
-
+	acConfig := &AdmissionControlConfig{}
 	return acConfig
-}
-
-func (ac *AdmissionControlConfig) LoadEnforcePolicy(requestNamespace string) *policy.Policy {
-
-	renew := false
-	t := time.Now()
-	if ac.enforcePolicy != nil {
-
-		interval := 10
-		if s := os.Getenv("ENFORCE_POLICY_RELOAD_SEC"); s != "" {
-			if v, err := strconv.Atoi(s); err != nil {
-				interval = v
-			}
-		}
-
-		duration := t.Sub(ac.lastPolicyUpdated)
-		if int(duration.Seconds()) > interval {
-			renew = true
-		}
-	} else {
-		renew = true
-	}
-
-	if renew {
-		reqNs := requestNamespace
-		enforcerNs := ac.EnforcerConfig.Namespace
-		policyNs := ac.EnforcerConfig.PolicyNamespace
-		enforcePolicy := LoadEnforcePolicy(reqNs, enforcerNs, policyNs)
-
-		if enforcePolicy != nil {
-			changed := reflect.DeepEqual(enforcePolicy, ac.enforcePolicy)
-			if changed {
-				logger.Info("Enforce Policy update reloaded")
-			}
-			ac.enforcePolicy = enforcePolicy
-			ac.lastPolicyUpdated = t
-		}
-	}
-
-	return ac.enforcePolicy
 }
 
 func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
@@ -152,8 +76,6 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 			enforcerConfig.PolicyNamespace = policyNs
 			ac.EnforcerConfig = enforcerConfig
 			ac.lastUpdated = t
-			logLevel := enforcerConfig.LogConfig().LogLevel
-			ac.LoggerConfig = logger.LoggerConfig{Level: logLevel, Format: "json"}
 		}
 	}
 

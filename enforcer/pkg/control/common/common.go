@@ -26,6 +26,15 @@ const (
 	SignatureCustomResourceKind       = "ResourceSignature"
 	PolicyCustomResourceAPIVersion    = "research.ibm.com/v1alpha1"
 	PolicyCustomResourceKind          = "EnforcePolicy"
+
+	IEPolicyCustomResourceAPIVersion      = "research.ibm.com/v1alpha1"
+	IEPolicyCustomResourceKind            = "IntegrityEnforcerPolicy"
+	DefaultPolicyCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
+	SignerPolicyCustomResourceAPIVersion  = "research.ibm.com/v1alpha1"
+	SignerPolicyCustomResourceKind        = "IESignerPolicy"
+	AppPolicyCustomResourceAPIVersion     = "research.ibm.com/v1alpha1"
+	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
 )
 
 const (
@@ -349,6 +358,7 @@ const (
 	REASON_SKIP_DELETE
 	REASON_ABORTED
 	REASON_UNVERIFIED
+	REASON_DETECTION
 	REASON_INVALID_SIG
 	REASON_NO_SIG
 	REASON_NO_POLICY
@@ -400,6 +410,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_UNVERIFIED: {
 		Message: "allowed by allowUnverified policy",
 		Code:    "unverified",
+	},
+	REASON_DETECTION: {
+		Message: "allowed by detection mode",
+		Code:    "detection",
 	},
 	REASON_INVALID_SIG: {
 		Message: "Failed to verify signature",

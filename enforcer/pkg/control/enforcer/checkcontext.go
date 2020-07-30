@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
 	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
@@ -41,18 +42,20 @@ import (
 
 type CheckContext struct {
 	// request context
-	config         *ctlconfig.AdmissionControlConfig
-	policy         *policy.Policy
-	ReqC           *common.ReqContext `json:"-"`
-	ServiceAccount *v1.ServiceAccount `json:"serviceAccount"`
-	DryRun         bool               `json:"dryRun"`
-	Unverified     bool               `json:"unverified"`
+	config                *config.EnforcerConfig
+	policy                *ctlconfig.PolicyLoader
+	ReqC                  *common.ReqContext `json:"-"`
+	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
+	DryRun                bool               `json:"dryRun"`
+	DetectionModeEnabled  bool               `json:"detectionModeEnabled"`
+	UnverifiedModeEnabled bool               `json:"unverifiedModeEnabled"`
 
 	Result *CheckResult `json:"result"`
 
 	Enforced    bool   `json:"enforced"`
 	Ignored     bool   `json:"ignored"`
 	Allow       bool   `json:"allow"`
+	Verified    bool   `json:"verified"`
 	Aborted     bool   `json:"aborted"`
 	AbortReason string `json:"abortReason"`
 	Error       error  `json:"error"`
@@ -62,6 +65,9 @@ type CheckContext struct {
 	ContextLogEnabled bool `json:"-"`
 
 	ReasonCode int `json:"reasonCode"`
+
+	AllowByUnverifiedMode bool `json:"allowByUnverifiedMode"`
+	AllowByDetectionMode  bool `json:"allowByDetectionMode"`
 }
 
 type CheckResult struct {
@@ -71,13 +77,15 @@ type CheckResult struct {
 	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
-func NewCheckContext(acConfig *ctlconfig.AdmissionControlConfig) *CheckContext {
+func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *CheckContext {
 	cc := &CheckContext{
-		config:   acConfig,
+		config:   config,
+		policy:   policy,
 		Enforced: true,
 		Ignored:  false,
 		Aborted:  false,
 		Allow:    false,
+		Verified: false,
 		Result: &CheckResult{
 			InternalRequest: false,
 			SignPolicyEvalResult: &common.SignPolicyEvalResult{
@@ -108,26 +116,27 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	annotationStoreInstance = &ConcreteAnnotationStore{}
 
 	//init sign store (singleton)
-	sign.InitSignStore(self.config.EnforcerConfig.SignStore)
+	sign.InitSignStore(self.config.SignStore)
 
 	//load req context
 	reqc := common.NewReqContext(req)
 	logger.InitSessionLogger(reqc.Namespace, reqc.Name, reqc.ResourceRef().ApiVersion, reqc.Kind, reqc.Operation)
 	self.ReqC = reqc
 
-	self.policy = self.config.LoadEnforcePolicy(self.ReqC.Namespace)
+	self.policy.Load(self.ReqC.Namespace)
 
-	policyChecker := policy.NewPolicyChecker(self.policy, self.ReqC)
+	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
 
-	self.Unverified = policyChecker.IsTrustStateEnforcementDisabled()
+	self.DetectionModeEnabled = policyChecker.IsDetectionModeEnabled()
+	self.UnverifiedModeEnabled = policyChecker.IsTrustStateEnforcementDisabled()
 	self.Ignored = policyChecker.IsIgnoreRequest()
 	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
 
-	if !self.Ignored && self.config.EnforcerConfig.Log.ConsoleLog.IsInScope(self.ReqC) {
+	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
 	}
 
-	if !self.Ignored && self.config.EnforcerConfig.Log.ContextLog.IsInScope(self.ReqC) {
+	if !self.Ignored && self.config.Log.ContextLog.IsInScope(self.ReqC) {
 		self.ContextLogEnabled = true
 	}
 
@@ -187,28 +196,41 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	if !self.Enforced {
 		self.Allow = true
+		self.Verified = true
 		self.ReasonCode = common.REASON_NOT_ENFORCED
 		self.Message = common.ReasonCodeMap[common.REASON_NOT_ENFORCED].Message
 	} else if self.ReqC.IsDeleteRequest() {
 		self.Allow = true
+		self.Verified = true
 		self.ReasonCode = common.REASON_SKIP_DELETE
 		self.Message = common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message
 	} else if self.Aborted {
 		self.Allow = false
+		self.Verified = false
 		self.Message = self.AbortReason
 		self.ReasonCode = common.REASON_ABORTED
 	} else if allowed {
 		self.Allow = true
+		self.Verified = true
 		self.ReasonCode = evalReason
 		self.Message = common.ReasonCodeMap[evalReason].Message
 	} else {
 		self.Allow = false
+		self.Verified = false
 		self.Message = errMsg
 		self.ReasonCode = evalReason
 	}
 
-	if !self.Allow && self.Unverified {
+	if !self.Allow && self.DetectionModeEnabled {
 		self.Allow = true
+		self.Verified = false
+		self.AllowByDetectionMode = true
+		self.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
+		self.ReasonCode = common.REASON_DETECTION
+	} else if !self.Allow && self.UnverifiedModeEnabled {
+		self.Allow = true
+		self.Verified = false
+		self.AllowByUnverifiedMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
 		self.ReasonCode = common.REASON_UNVERIFIED
 	}
@@ -280,7 +302,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	deleteKeys := []string{}
 	if allowed {
 
-		if self.ReasonCode == common.REASON_UNVERIFIED {
+		if !self.Verified {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueUnverified
 			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else if self.Result.SignPolicyEvalResult.Allow {
@@ -296,7 +318,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	if allowed {
 		name := self.ReqC.Name
 		reqJson := self.ReqC.RequestJsonStr
-		if self.config.EnforcerConfig.PatchEnabled() {
+		if self.config.PatchEnabled() {
 			patch = createPatch(name, reqJson, labels, deleteKeys)
 		}
 	}
@@ -319,7 +341,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 
 func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.EnforcerConfig.Namespace, self.config.EnforcerConfig.PolicyNamespace, self.policy.AllowedSigner); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy.AllowedSigner); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
@@ -332,7 +354,7 @@ func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, self.policy.AllowedChange)
+		return checker.Eval(reqc, self.policy.Policy.AllowedChange)
 	}
 }
 
@@ -368,6 +390,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"enfored":     self.Enforced,
 		"ignored":     self.Ignored,
 		"allowed":     self.Allow,
+		"verified":    self.Verified,
 		"aborted":     self.Aborted,
 		"abortReason": self.AbortReason,
 		"msg":         self.Message,
@@ -480,7 +503,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 
 	}
 
-	if self.config.EnforcerConfig.Log.IncludeRequest && !reqc.IsSecret() {
+	if self.config.Log.IncludeRequest && !reqc.IsSecret() {
 		logRecord["request.dump"] = reqc.RequestJsonStr
 	}
 	logRecord["request.objectHashType"] = reqc.ObjectHashType

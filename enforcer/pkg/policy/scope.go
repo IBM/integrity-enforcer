@@ -30,6 +30,7 @@ import (
 
 type PolicyChecker interface {
 	IsTrustStateEnforcementDisabled() bool
+	IsDetectionModeEnabled() bool
 	IsEnforceResult() bool
 	IsIgnoreRequest() bool
 	IsAllowedForInternalRequest() bool
@@ -62,6 +63,24 @@ func (self *concretePolicyChecker) check(patterns []RequestMatchPattern) bool {
 		}
 	}
 	return isInScope
+}
+
+func (self *concretePolicyChecker) IsDetectionModeEnabled() bool {
+
+	if self.policy != nil {
+		ieMode := self.policy.Mode
+		if ieMode == UnknownMode {
+			ieMode = defaultIntegrityEnforcerMode
+		}
+		if ieMode == DetectionMode {
+			return true
+		} else {
+			return false
+		}
+	} else {
+		return false
+	}
+
 }
 
 func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() bool {

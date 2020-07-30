@@ -34,6 +34,16 @@ const (
 	CustomPolicy  PolicyType = "CustomPolicy"
 )
 
+type IntegrityEnforcerMode string
+
+const (
+	UnknownMode     IntegrityEnforcerMode = ""
+	EnforcementMode IntegrityEnforcerMode = "enforcement"
+	DetectionMode   IntegrityEnforcerMode = "detection"
+)
+
+const defaultIntegrityEnforcerMode = EnforcementMode
+
 /**********************************************
 
 					Policy
@@ -50,6 +60,7 @@ type Policy struct {
 	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
 	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
 	Namespace                 string                     `json:"namespace,omitempty"`
+	Mode                      IntegrityEnforcerMode      `json:"mode,omitempty"`
 	PolicyType                PolicyType                 `json:"policyType,omitempty"`
 }
 
@@ -59,6 +70,14 @@ type IEDefaultPolicy struct {
 	PolicyType                PolicyType               `json:"policyType,omitempty"`
 }
 
+func (self *IEDefaultPolicy) Policy() *Policy {
+	return &Policy{
+		AllowedForInternalRequest: self.AllowedForInternalRequest,
+		AllowedChange:             self.AllowedChange,
+		PolicyType:                self.PolicyType,
+	}
+}
+
 type AppEnforcePolicy struct {
 	AllowedForInternalRequest []RequestMatchPattern    `json:"allowedForInternalRequest,omitempty"`
 	AllowedChange             []AllowedChangeCondition `json:"allowedChange,omitempty"`
@@ -66,17 +85,43 @@ type AppEnforcePolicy struct {
 	PolicyType                PolicyType               `json:"policyType,omitempty"`
 }
 
+func (self *AppEnforcePolicy) Policy() *Policy {
+	return &Policy{
+		AllowedForInternalRequest: self.AllowedForInternalRequest,
+		AllowedChange:             self.AllowedChange,
+		AllowedSigner:             self.AllowedSigner,
+		PolicyType:                self.PolicyType,
+	}
+}
+
 type IntegrityEnforcerPolicy struct {
 	AllowedSigner []SignerMatchPattern  `json:"allowedSigner,omitempty"`
 	IgnoreRequest []RequestMatchPattern `json:"ignoreRequest,omitempty"`
-	Mode          string                `json:"mode,omitempty"`
+	Mode          IntegrityEnforcerMode `json:"mode,omitempty"`
 	PolicyType    PolicyType            `json:"policyType,omitempty"`
+}
+
+func (self *IntegrityEnforcerPolicy) Policy() *Policy {
+	return &Policy{
+		AllowedSigner: self.AllowedSigner,
+		IgnoreRequest: self.IgnoreRequest,
+		Mode:          self.Mode,
+		PolicyType:    self.PolicyType,
+	}
 }
 
 type IESignerPolicy struct {
 	AllowedSigner   []SignerMatchPattern       `json:"allowedSigner,omitempty"`
 	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
 	PolicyType      PolicyType                 `json:"policyType,omitempty"`
+}
+
+func (self *IESignerPolicy) Policy() *Policy {
+	return &Policy{
+		AllowedSigner:   self.AllowedSigner,
+		AllowUnverified: self.AllowUnverified,
+		PolicyType:      self.PolicyType,
+	}
 }
 
 func (self *Policy) CheckFormat() (bool, string) {
@@ -260,6 +305,10 @@ func (p *IEDefaultPolicy) DeepCopy() *IEDefaultPolicy {
 }
 
 func (p *Policy) Merge(p2 *Policy) *Policy {
+	mode := p.Mode
+	if p2.Mode != UnknownMode {
+		mode = p2.Mode
+	}
 	return &Policy{
 		Enforce:                   append(p.Enforce, p2.Enforce...),
 		IgnoreRequest:             append(p.IgnoreRequest, p2.IgnoreRequest...),
@@ -269,5 +318,6 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
 		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
 		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
+		Mode:                      mode,
 	}
 }

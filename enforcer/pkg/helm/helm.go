@@ -184,7 +184,7 @@ func getChartFiles(pkgFileUrl, pkgProvUrl, pkgFilePath, pkgProvPath string) (boo
 			logger.Error(err)
 			return false, err
 		}
-		cache.Set(pkgFileUrl, pkgFilePath)
+		cache.Set(pkgFileUrl, pkgFilePath, nil)
 	}
 
 	provCached := (cache.GetString(pkgProvUrl) == pkgProvPath)
@@ -196,7 +196,7 @@ func getChartFiles(pkgFileUrl, pkgProvUrl, pkgFilePath, pkgProvPath string) (boo
 			logger.Error(err)
 			return false, err
 		}
-		cache.Set(pkgProvUrl, pkgProvPath)
+		cache.Set(pkgProvUrl, pkgProvPath, nil)
 	}
 	return true, nil
 }
