@@ -19,8 +19,10 @@ package resources
 import (
 	"io/ioutil"
 
-	epol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcepolicy/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
+	iedpol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/iedefaultpolicy/v1alpha1"
+	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/iesignerpolicy/v1alpha1"
+	iepol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/integrityenforcerpolicy/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
@@ -47,17 +49,17 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 	return ecc
 }
 
-//enforce policy cr
-func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *epol.EnforcePolicy {
-	var signerPolicy *policy.Policy
+//signer enforce policy cr
+func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.IESignerPolicy {
+	var signerPolicy *policy.IESignerPolicy
 
 	if cr.Spec.SignerPolicy != nil {
-		signerPolicy = &policy.Policy{
+		signerPolicy = &policy.IESignerPolicy{
 			AllowedSigner: cr.Spec.SignerPolicy.AllowedSigner,
 			PolicyType:    policy.SignerPolicy,
 		}
 	} else {
-		signerPolicy = &policy.Policy{
+		signerPolicy = &policy.IESignerPolicy{
 			AllowedSigner: []policy.SignerMatchPattern{
 				{
 					Request: policy.RequestMatchPattern{Namespace: "sample"},
@@ -67,27 +69,27 @@ func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *epol
 			PolicyType: policy.SignerPolicy,
 		}
 	}
-	epcr := &epol.EnforcePolicy{
+	epcr := &iespol.IESignerPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      signerPolicyName,
 			Namespace: cr.Namespace,
 		},
-		Spec: epol.EnforcePolicySpec{
-			Policy: signerPolicy,
+		Spec: iespol.IESignerPolicySpec{
+			IESignerPolicy: signerPolicy,
 		},
 	}
 	return epcr
 }
 
-//enforce policy cr
-func BuildDefaultEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *epol.EnforcePolicy {
-	var defaultPolicy *epol.EnforcePolicy
+//default enforce policy cr
+func BuildDefaultEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iedpol.IEDefaultPolicy {
+	var defaultPolicy *iedpol.IEDefaultPolicy
 	if cr.Spec.DefaultPolicy != nil {
 		defPolInCR := cr.Spec.DefaultPolicy
 		defPolInCR.PolicyType = policy.DefaultPolicy
-		defaultPolicy = &epol.EnforcePolicy{
-			Spec: epol.EnforcePolicySpec{
-				Policy: defPolInCR,
+		defaultPolicy = &iedpol.IEDefaultPolicy{
+			Spec: iedpol.IEDefaultPolicySpec{
+				IEDefaultPolicy: defPolInCR,
 			},
 		}
 	} else {
@@ -106,16 +108,17 @@ func BuildDefaultEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *epo
 	return defaultPolicy
 }
 
-func BuildIntegrityEnforcerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *epol.EnforcePolicy {
+// ie policy cr
+func BuildIntegrityEnforcerPolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iepol.IntegrityEnforcerPolicy {
 	pol := &cr.Spec.EnforcePolicy
 	pol.PolicyType = policy.IEPolicy
-	epcr := &epol.EnforcePolicy{
+	epcr := &iepol.IntegrityEnforcerPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      iePolicyName,
 			Namespace: cr.Namespace,
 		},
-		Spec: epol.EnforcePolicySpec{
-			Policy: pol,
+		Spec: iepol.IntegrityEnforcerPolicySpec{
+			IntegrityEnforcerPolicy: pol,
 		},
 	}
 	return epcr
