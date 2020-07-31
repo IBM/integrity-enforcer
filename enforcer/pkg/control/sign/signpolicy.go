@@ -26,7 +26,6 @@ import (
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	"github.com/ghodss/yaml"
 	"github.com/jinzhu/copier"
 )
 
@@ -259,17 +258,6 @@ func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext 
 		if err == nil {
 			if rsigObj.Spec.Data[0].Metadata.Namespace != "" {
 				reqcForEval.Namespace = rsigObj.Spec.Data[0].Metadata.Namespace
-			}
-			isResourceSignatureForEnforcePolicy := (rsigObj.Spec.Data[0].ApiVersion == common.PolicyCustomResourceAPIVersion && rsigObj.Spec.Data[0].Kind == common.PolicyCustomResourceKind)
-			if isResourceSignatureForEnforcePolicy {
-				var epolObj *epolpkg.EnforcePolicy
-				rawEpolBytes := []byte(base64decode(rsigObj.Spec.Data[0].Message))
-				err = yaml.Unmarshal(rawEpolBytes, &epolObj)
-				if err == nil {
-					reqcForEval.Namespace = epolObj.Spec.Policy.Namespace
-				} else {
-					logger.Error(err)
-				}
 			}
 		} else {
 			logger.Error(err)

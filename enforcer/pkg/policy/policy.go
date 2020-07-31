@@ -60,6 +60,52 @@ type Policy struct {
 	Description     string                     `json:"description,omitempty"`
 }
 
+type PolicyList struct {
+	Items []*Policy `json:"items,omitempty"`
+}
+
+func (self *PolicyList) Add(pol *Policy) {
+	self.Items = append(self.Items, pol)
+}
+
+func (self *PolicyList) Get(pTypeList []PolicyType) *PolicyList {
+	isListed := map[PolicyType]bool{}
+	for _, pType := range pTypeList {
+		isListed[pType] = true
+	}
+	items := []*Policy{}
+	for _, pol := range self.Items {
+		if isListed[pol.PolicyType] {
+			items = append(items, pol)
+		}
+	}
+	return &PolicyList{
+		Items: items,
+	}
+}
+
+func (self *PolicyList) Policy() *Policy {
+	pol := &Policy{}
+	for _, iPol := range self.Items {
+		pol = pol.Merge(iPol)
+	}
+	return pol
+}
+
+func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
+	mode := defaultIntegrityEnforcerMode
+	var matchedPolicy *Policy
+	// priority := 0
+	iePolicyList := self.Get([]PolicyType{IEPolicy})
+	for _, pol := range iePolicyList.Items {
+		if pol.Mode != UnknownMode {
+			mode = pol.Mode
+			matchedPolicy = pol
+		}
+	}
+	return mode, matchedPolicy
+}
+
 type IEDefaultPolicy struct {
 	Allow       AllowRequestCondition `json:"allowe,omitempty"`
 	PolicyType  PolicyType            `json:"policyType,omitempty"`
@@ -176,6 +222,13 @@ func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs strin
 type AllowRequestCondition struct {
 	Request []RequestMatchPattern    `json:"request,omitempty"`
 	Change  []AllowedChangeCondition `json:"change,omitempty"`
+}
+
+func (arc1 AllowRequestCondition) Merge(arc2 AllowRequestCondition) AllowRequestCondition {
+	return AllowRequestCondition{
+		Request: append(arc1.Request, arc2.Request...),
+		Change:  append(arc1.Change, arc2.Change...),
+	}
 }
 
 type AllowedChangeCondition struct {
@@ -305,10 +358,11 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 	if p2.Mode != UnknownMode {
 		mode = p2.Mode
 	}
+	allow := p.Allow.Merge(p2.Allow)
 	return &Policy{
 		Ignore:          append(p.Ignore, p2.Ignore...),
 		Signer:          append(p.Signer, p2.Signer...),
-		Allow:           append(p.Allow, p2.Allow...),
+		Allow:           allow,
 		AllowUnverified: append(p.AllowUnverified, p2.AllowUnverified...),
 		Mode:            mode,
 	}

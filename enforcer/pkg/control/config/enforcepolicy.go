@@ -48,7 +48,7 @@ type PolicyLoader struct {
 	ieSignerPolicyClient   *iespolclient.ResearchV1alpha1Client
 	appEnforcePolicyClient *apppolclient.ResearchV1alpha1Client
 
-	Policy      *policy.Policy
+	Policy      *policy.PolicyList
 	lastUpdated time.Time
 }
 
@@ -106,7 +106,7 @@ func (self *PolicyLoader) Load(requestNamespace string) {
 	}
 }
 
-func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace, policyNamespace string) *policy.Policy {
+func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace, policyNamespace string) *policy.PolicyList {
 	var err error
 	var iePolList *iepol.IntegrityEnforcerPolicyList
 	var defPolList *iedpol.IEDefaultPolicyList
@@ -205,77 +205,27 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 		}
 	}
 
-	policyMap := map[policy.PolicyType]*policy.Policy{}
-	policyMap[policy.IEPolicy] = &policy.Policy{}
-	policyMap[policy.DefaultPolicy] = &policy.Policy{}
-	policyMap[policy.SignerPolicy] = &policy.Policy{}
-	policyMap[policy.CustomPolicy] = &policy.Policy{}
-
+	policyList := &policy.PolicyList{}
 	for _, epol := range iePolList.Items {
 		pol := epol.Spec.IntegrityEnforcerPolicy.Policy()
-		pType := pol.PolicyType
-		policyMap[pType] = policyMap[pType].Merge(pol)
+		policyList.Add(pol)
 	}
 	for _, epol := range defPolList.Items {
 		pol := epol.Spec.IEDefaultPolicy.Policy()
-		pType := pol.PolicyType
-		policyMap[pType] = policyMap[pType].Merge(pol)
+		policyList.Add(pol)
 	}
 	for _, epol := range sigPolList.Items {
 		pol := epol.Spec.IESignerPolicy.Policy()
-		pType := pol.PolicyType
-		policyMap[pType] = policyMap[pType].Merge(pol)
+		policyList.Add(pol)
 	}
 	for _, epol := range appPolList.Items {
 		pol := epol.Spec.AppEnforcePolicy.Policy()
-		pType := pol.PolicyType
-		policyMap[pType] = policyMap[pType].Merge(pol)
+		policyList.Add(pol)
 	}
 	for _, epol := range appPolList2.Items {
 		pol := epol.Spec.AppEnforcePolicy.Policy()
-		pType := pol.PolicyType
-		policyMap[pType] = policyMap[pType].Merge(pol)
+		policyList.Add(pol)
 	}
-
-	orderedPolicyMap := map[string]*policy.Policy{
-		"signer":     {},
-		"filter":     {},
-		"whitelist":  {},
-		"unverified": {},
-		"mode":       {},
-		"ignore":     {},
-	}
-
-	for key, pol := range orderedPolicyMap {
-		if key == "signer" {
-			pol = pol.Merge(policyMap[policy.SignerPolicy])
-			pol = pol.Merge(policyMap[policy.CustomPolicy])
-		} else if key == "filter" {
-			pol = pol.Merge(policyMap[policy.IEPolicy])
-			pol = pol.Merge(policyMap[policy.DefaultPolicy])
-			pol = pol.Merge(policyMap[policy.CustomPolicy])
-		} else if key == "whitelist" {
-			pol = pol.Merge(policyMap[policy.IEPolicy])
-			pol = pol.Merge(policyMap[policy.DefaultPolicy])
-			pol = pol.Merge(policyMap[policy.CustomPolicy])
-		} else if key == "unverified" {
-			pol = pol.Merge(policyMap[policy.SignerPolicy])
-		} else if key == "mode" {
-			pol = pol.Merge(policyMap[policy.IEPolicy])
-		} else if key == "ignore" {
-			pol = pol.Merge(policyMap[policy.IEPolicy])
-		}
-		orderedPolicyMap[key] = pol
-	}
-
-	pol := &policy.Policy{
-		AllowUnverified: orderedPolicyMap["unverified"].AllowUnverified,
-		Ignore:          orderedPolicyMap["ignore"].Ignore,
-		Signer:          orderedPolicyMap["signer"].Signer,
-		Allow:           orderedPolicyMap["filter"].Allow,
-		Mode:            orderedPolicyMap["mode"].Mode,
-	}
-
-	return pol
+	return policyList
 
 }

@@ -29,13 +29,13 @@ import (
 ***********************************************/
 
 type PolicyChecker interface {
-	IsTrustStateEnforcementDisabled() bool
-	IsDetectionModeEnabled() bool
-	IsIgnoreRequest() bool
-	IsAllowRequest() bool
+	IsTrustStateEnforcementDisabled() (bool, *Policy)
+	IsDetectionModeEnabled() (bool, *Policy)
+	IsIgnoreRequest() (bool, *Policy)
+	IsAllowRequest() (bool, *Policy)
 }
 
-func NewPolicyChecker(policy *Policy, reqc *common.ReqContext) PolicyChecker {
+func NewPolicyChecker(policy *PolicyList, reqc *common.ReqContext) PolicyChecker {
 	return &concretePolicyChecker{
 		policy: policy,
 		reqc:   reqc,
@@ -43,7 +43,7 @@ func NewPolicyChecker(policy *Policy, reqc *common.ReqContext) PolicyChecker {
 }
 
 type concretePolicyChecker struct {
-	policy *Policy
+	policy *PolicyList
 	reqc   *common.ReqContext
 }
 
@@ -61,53 +61,52 @@ func (self *concretePolicyChecker) check(patterns []RequestMatchPattern) bool {
 	return isInScope
 }
 
-func (self *concretePolicyChecker) IsDetectionModeEnabled() bool {
+func (self *concretePolicyChecker) IsDetectionModeEnabled() (bool, *Policy) {
 
 	if self.policy != nil {
-		ieMode := self.policy.Mode
-		if ieMode == UnknownMode {
-			ieMode = defaultIntegrityEnforcerMode
-		}
+		ieMode, pol := self.policy.GetMode()
 		if ieMode == DetectionMode {
-			return true
+			return true, pol
 		} else {
-			return false
+			return false, nil
 		}
 	} else {
-		return false
+		return false, nil
 	}
 
 }
 
-func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() bool {
+func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() (bool, *Policy) {
 
-	if self.policy != nil && self.policy.AllowUnverified != nil {
-		for _, pattern := range self.policy.AllowUnverified {
+	signerPolicyList := self.policy.Get([]PolicyType{SignerPolicy})
+	for _, signerPolicy := range signerPolicyList.Items {
+		for _, pattern := range signerPolicy.AllowUnverified {
 			if pattern.Match(self.reqc) {
-				return true
+				return true, signerPolicy
 			}
 		}
-		return false
-	} else {
-		return false
 	}
-
+	return false, nil
 }
 
-func (self *concretePolicyChecker) IsIgnoreRequest() bool {
-	if self.policy != nil && self.policy.Ignore != nil {
-		return self.check(self.policy.Ignore)
-	} else {
-		return false
+func (self *concretePolicyChecker) IsIgnoreRequest() (bool, *Policy) {
+	policyList := self.policy.Get([]PolicyType{IEPolicy})
+	for _, pol := range policyList.Items {
+		if self.check(pol.Ignore) {
+			return true, pol
+		}
 	}
+	return false, nil
 }
 
-func (self *concretePolicyChecker) IsAllowRequest() bool {
-	if self.policy != nil && self.policy.Allow.Request != nil {
-		return self.check(self.policy.Allow.Request)
-	} else {
-		return false
+func (self *concretePolicyChecker) IsAllowRequest() (bool, *Policy) {
+	policyList := self.policy.Get([]PolicyType{IEPolicy, DefaultPolicy, CustomPolicy})
+	for _, pol := range policyList.Items {
+		if self.check(pol.Allow.Request) {
+			return true, pol
+		}
 	}
+	return false, nil
 }
 
 /**********************************************
