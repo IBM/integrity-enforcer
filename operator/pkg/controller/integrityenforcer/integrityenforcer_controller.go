@@ -131,11 +131,6 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateEnforcePolicyCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
 	recResult, recErr = r.createOrUpdateAppEnforcePolicyCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr

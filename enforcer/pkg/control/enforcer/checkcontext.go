@@ -341,7 +341,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 
 func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy.AllowedSigner); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy.Signer); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
@@ -354,7 +354,7 @@ func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, self.policy.Policy.AllowedChange)
+		return checker.Eval(reqc, self.policy.Policy.Allow)
 	}
 }
 

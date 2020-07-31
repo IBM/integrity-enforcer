@@ -101,12 +101,6 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcePolicyCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildEnforcePolicyCRD(instance)
-	return r.createOrUpdateCRD(instance, expected)
-}
-
 func (r *ReconcileIntegrityEnforcer) createOrUpdateAppEnforcePolicyCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
 	expected := res.BuildAppEnforcePolicyCRD(instance)
