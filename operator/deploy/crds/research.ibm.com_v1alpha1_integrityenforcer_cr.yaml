@@ -5,7 +5,7 @@ metadata:
 spec:
   affinity: {}
   enforcePolicy:
-    allow: []
+    allow: {}
     signer:
     - request:
         namespace: '*'
