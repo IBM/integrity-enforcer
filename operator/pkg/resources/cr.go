@@ -55,12 +55,12 @@ func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iesp
 
 	if cr.Spec.SignerPolicy != nil {
 		signerPolicy = &policy.IESignerPolicy{
-			AllowedSigner: cr.Spec.SignerPolicy.AllowedSigner,
-			PolicyType:    policy.SignerPolicy,
+			Signer:     cr.Spec.SignerPolicy.Signer,
+			PolicyType: policy.SignerPolicy,
 		}
 	} else {
 		signerPolicy = &policy.IESignerPolicy{
-			AllowedSigner: []policy.SignerMatchPattern{
+			Signer: []policy.SignerMatchPattern{
 				{
 					Request: policy.RequestMatchPattern{Namespace: "sample"},
 					Subject: policy.SubjectMatchPattern{CommonName: "sample"},

@@ -189,16 +189,10 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	kind := ma4kInput.Kind
 	username := ma4kInput.UserName
 	userGroups := ma4kInput.UserGroups
-	var ownerKind, ownerApiVersion, ownerName string
-	if ma4kInput.IntegrityRef != nil {
-		ownerKind = ma4kInput.IntegrityRef.Kind
-		ownerApiVersion = ma4kInput.IntegrityRef.ApiVersion
-		ownerName = ma4kInput.IntegrityRef.Name
-	}
 
 	allWhitelist := whitelist.NewEPW()
 	allWhitelist.Rule = policy
-	allMaskKeys := allWhitelist.GenerateMaskKeys(namespace, name, kind, username, ownerKind, ownerApiVersion, ownerName, userGroups)
+	allMaskKeys := allWhitelist.GenerateMaskKeys(namespace, name, kind, username, userGroups)
 
 	// diff
 	dr := oldObject.Diff(newObject)

@@ -61,6 +61,13 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 		},
 	}
 
+	requestMatchConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: requestMatchCondition,
+		},
+	}
+
 	stringArray := &extv1.JSONSchemaProps{
 		Items: &extv1.JSONSchemaPropsOrArray{
 			Schema: &extv1.JSONSchemaProps{
@@ -70,24 +77,21 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 		Type: "array",
 	}
 
-	requestMatchConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: requestMatchCondition,
-		},
-	}
-
-	ownerMatchCondition := &extv1.JSONSchemaProps{
+	allowRequestCondition := &extv1.JSONSchemaProps{
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
-			"apiVersion": {
-				Type: "string",
-			},
-			"kind": {
-				Type: "string",
-			},
-			"name": {
-				Type: "string",
+			"request": *requestMatchConditionArray,
+			"change": {
+				Type: "array",
+				Items: &extv1.JSONSchemaPropsOrArray{
+					Schema: &extv1.JSONSchemaProps{
+						Type: "object",
+						Properties: map[string]extv1.JSONSchemaProps{
+							"key":     *stringArray,
+							"request": *requestMatchCondition,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -127,20 +131,13 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allowedChange": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"key":     *stringArray,
-												"owner":   *ownerMatchCondition,
-												"request": *requestMatchCondition,
-											},
-										},
-									},
+								"allow": *allowRequestCondition,
+								"policyType": {
+									Type: "string",
 								},
-								"allowedForInternalRequest": *requestMatchConditionArray,
+								"description": {
+									Type: "string",
+								},
 							},
 						},
 						"status": {
@@ -213,6 +210,41 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 		},
 	}
 
+	stringArray := &extv1.JSONSchemaProps{
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: &extv1.JSONSchemaProps{
+				Type: "string",
+			},
+		},
+		Type: "array",
+	}
+
+	requestMatchConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: requestMatchCondition,
+		},
+	}
+
+	allowRequestCondition := &extv1.JSONSchemaProps{
+		Type: "object",
+		Properties: map[string]extv1.JSONSchemaProps{
+			"request": *requestMatchConditionArray,
+			"change": {
+				Type: "array",
+				Items: &extv1.JSONSchemaPropsOrArray{
+					Schema: &extv1.JSONSchemaProps{
+						Type: "object",
+						Properties: map[string]extv1.JSONSchemaProps{
+							"key":     *stringArray,
+							"request": *requestMatchCondition,
+						},
+					},
+				},
+			},
+		},
+	}
+
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -248,7 +280,7 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allowedSigner": {
+								"signer": {
 									Type: "array",
 									Items: &extv1.JSONSchemaPropsOrArray{
 										Schema: &extv1.JSONSchemaProps{
@@ -260,7 +292,14 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 										},
 									},
 								},
+								"allow": *allowRequestCondition,
 								"mode": {
+									Type: "string",
+								},
+								"policyType": {
+									Type: "string",
+								},
+								"description": {
 									Type: "string",
 								},
 							},
@@ -370,7 +409,7 @@ func BuildIESingnerPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allowedSigner": {
+								"signer": {
 									Type: "array",
 									Items: &extv1.JSONSchemaPropsOrArray{
 										Schema: &extv1.JSONSchemaProps{
@@ -394,6 +433,12 @@ func BuildIESingnerPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 											},
 										},
 									},
+								},
+								"policyType": {
+									Type: "string",
+								},
+								"description": {
+									Type: "string",
 								},
 							},
 						},
@@ -455,18 +500,10 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 		},
 	}
 
-	ownerMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"apiVersion": {
-				Type: "string",
-			},
-			"kind": {
-				Type: "string",
-			},
-			"name": {
-				Type: "string",
-			},
+	requestMatchConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: requestMatchCondition,
 		},
 	}
 
@@ -479,10 +516,22 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 		Type: "array",
 	}
 
-	requestMatchConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: requestMatchCondition,
+	allowRequestCondition := &extv1.JSONSchemaProps{
+		Type: "object",
+		Properties: map[string]extv1.JSONSchemaProps{
+			"request": *requestMatchConditionArray,
+			"change": {
+				Type: "array",
+				Items: &extv1.JSONSchemaPropsOrArray{
+					Schema: &extv1.JSONSchemaProps{
+						Type: "object",
+						Properties: map[string]extv1.JSONSchemaProps{
+							"key":     *stringArray,
+							"request": *requestMatchCondition,
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -521,207 +570,13 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allowedChange": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"key":     *stringArray,
-												"owner":   *ownerMatchCondition,
-												"request": *requestMatchCondition,
-											},
-										},
-									},
+								"allow": *allowRequestCondition,
+								"policyType": {
+									Type: "string",
 								},
-								"allowedForInternalRequest": *requestMatchConditionArray,
-							},
-						},
-						"status": {
-							Type: "object",
-						},
-					},
-				},
-			},
-			Version: "v1alpha1",
-			Versions: []extv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1alpha1",
-					Served:  true,
-					Storage: true,
-				},
-			},
-		},
-	}
-	return newCRD
-}
-
-//enforce policy crd
-func BuildEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
-
-	requestMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"apiVersion": {
-				Type: "string",
-			},
-			"firstUser": {
-				Type: "boolean",
-			},
-			"k8screatedby": {
-				Type: "string",
-			},
-			"kind": {
-				Type: "string",
-			},
-			"name": {
-				Type: "string",
-			},
-			"namespace": {
-				Type: "string",
-			},
-			"operation": {
-				Type: "string",
-			},
-			"type": {
-				Type: "string",
-			},
-			"usergroup": {
-				Type: "string",
-			},
-			"username": {
-				Type: "string",
-			},
-		},
-	}
-
-	ownerMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"apiVersion": {
-				Type: "string",
-			},
-			"kind": {
-				Type: "string",
-			},
-			"name": {
-				Type: "string",
-			},
-		},
-	}
-
-	subjectMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"email": {
-				Type: "string",
-			},
-			"uid": {
-				Type: "string",
-			},
-		},
-	}
-
-	stringArray := &extv1.JSONSchemaProps{
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: &extv1.JSONSchemaProps{
-				Type: "string",
-			},
-		},
-		Type: "array",
-	}
-
-	requestMatchConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: requestMatchCondition,
-		},
-	}
-
-	allowedServiceAccountMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"authorizedServiceAccount": *stringArray,
-			"allowChangesBySignedServiceAccount": {
-				Type: "boolean",
-			},
-			"request": *requestMatchCondition,
-		},
-	}
-
-	allowedServiceAccountMatchConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: allowedServiceAccountMatchCondition,
-		},
-	}
-
-	newCRD := &extv1.CustomResourceDefinition{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "enforcepolicies.research.ibm.com",
-			Namespace: cr.Namespace,
-		},
-		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "research.ibm.com",
-			//Version: "v1beta1",
-			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "EnforcePolicy",
-				Plural:   "enforcepolicies",
-				ListKind: "EnforcePolicyList",
-				Singular: "enforcepolicy",
-			},
-			Scope: "Namespaced",
-			Validation: &extv1.CustomResourceValidation{
-				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type: "object",
-					Properties: map[string]extv1.JSONSchemaProps{
-						"apiVersion": {
-							Type: "string",
-						},
-						"kind": {
-							Type: "string",
-						},
-						"metadata": {
-							Type: "object",
-						},
-						"spec": {
-							Type: "object",
-							Properties: map[string]extv1.JSONSchemaProps{
-								"allowedByRule": *requestMatchConditionArray,
-								"allowedChange": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"key":     *stringArray,
-												"owner":   *ownerMatchCondition,
-												"request": *requestMatchCondition,
-											},
-										},
-									},
+								"description": {
+									Type: "string",
 								},
-								"allowedForInternalRequest": *requestMatchConditionArray,
-								"allowedSigner": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"subject": *subjectMatchCondition,
-												"request": *requestMatchCondition,
-											},
-										},
-									},
-								},
-								"enforce":               *requestMatchConditionArray,
-								"ignoreRequest":         *requestMatchConditionArray,
-								"permitIfCreator":       *allowedServiceAccountMatchConditionArray,
-								"permitIfVerifiedOwner": *allowedServiceAccountMatchConditionArray,
 							},
 						},
 						"status": {

@@ -269,12 +269,11 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 	}
 
 	pol := &policy.Policy{
-		AllowUnverified:           orderedPolicyMap["unverified"].AllowUnverified,
-		IgnoreRequest:             orderedPolicyMap["ignore"].IgnoreRequest,
-		AllowedSigner:             orderedPolicyMap["signer"].AllowedSigner,
-		AllowedForInternalRequest: orderedPolicyMap["filter"].AllowedForInternalRequest,
-		AllowedChange:             orderedPolicyMap["whitelist"].AllowedChange,
-		Mode:                      orderedPolicyMap["mode"].Mode,
+		AllowUnverified: orderedPolicyMap["unverified"].AllowUnverified,
+		Ignore:          orderedPolicyMap["ignore"].Ignore,
+		Signer:          orderedPolicyMap["signer"].Signer,
+		Allow:           orderedPolicyMap["filter"].Allow,
+		Mode:            orderedPolicyMap["mode"].Mode,
 	}
 
 	return pol

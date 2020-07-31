@@ -51,106 +51,104 @@ const defaultIntegrityEnforcerMode = EnforcementMode
 ***********************************************/
 
 type Policy struct {
-	Enforce                   []RequestMatchPattern      `json:"enforce,omitempty"`
-	AllowUnverified           []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
-	IgnoreRequest             []RequestMatchPattern      `json:"ignoreRequest,omitempty"`
-	AllowedSigner             []SignerMatchPattern       `json:"allowedSigner,omitempty"`
-	AllowedForInternalRequest []RequestMatchPattern      `json:"allowedForInternalRequest,omitempty"`
-	AllowedByRule             []RequestMatchPattern      `json:"allowedByRule,omitempty"`
-	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
-	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
-	Namespace                 string                     `json:"namespace,omitempty"`
-	Mode                      IntegrityEnforcerMode      `json:"mode,omitempty"`
-	PolicyType                PolicyType                 `json:"policyType,omitempty"`
+	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
+	Ignore          []RequestMatchPattern      `json:"ignore,omitempty"`
+	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
+	Allow           AllowRequestCondition      `json:"allow,omitempty"`
+	Mode            IntegrityEnforcerMode      `json:"mode,omitempty"`
+	PolicyType      PolicyType                 `json:"policyType,omitempty"`
+	Description     string                     `json:"description,omitempty"`
 }
 
 type IEDefaultPolicy struct {
-	AllowedForInternalRequest []RequestMatchPattern    `json:"allowedForInternalRequest,omitempty"`
-	AllowedChange             []AllowedChangeCondition `json:"allowedChange,omitempty"`
-	PolicyType                PolicyType               `json:"policyType,omitempty"`
+	Allow       AllowRequestCondition `json:"allowe,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 func (self *IEDefaultPolicy) Policy() *Policy {
 	return &Policy{
-		AllowedForInternalRequest: self.AllowedForInternalRequest,
-		AllowedChange:             self.AllowedChange,
-		PolicyType:                self.PolicyType,
+		Allow:       self.Allow,
+		PolicyType:  self.PolicyType,
+		Description: self.Description,
 	}
 }
 
 type AppEnforcePolicy struct {
-	AllowedForInternalRequest []RequestMatchPattern    `json:"allowedForInternalRequest,omitempty"`
-	AllowedChange             []AllowedChangeCondition `json:"allowedChange,omitempty"`
-	AllowedSigner             []SignerMatchPattern     `json:"allowedSigner,omitempty"`
-	PolicyType                PolicyType               `json:"policyType,omitempty"`
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 func (self *AppEnforcePolicy) Policy() *Policy {
 	return &Policy{
-		AllowedForInternalRequest: self.AllowedForInternalRequest,
-		AllowedChange:             self.AllowedChange,
-		AllowedSigner:             self.AllowedSigner,
-		PolicyType:                self.PolicyType,
+		Allow:       self.Allow,
+		Signer:      self.Signer,
+		PolicyType:  self.PolicyType,
+		Description: self.Description,
 	}
 }
 
 type IntegrityEnforcerPolicy struct {
-	AllowedSigner []SignerMatchPattern  `json:"allowedSigner,omitempty"`
-	IgnoreRequest []RequestMatchPattern `json:"ignoreRequest,omitempty"`
-	Mode          IntegrityEnforcerMode `json:"mode,omitempty"`
-	PolicyType    PolicyType            `json:"policyType,omitempty"`
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Signer      []SignerMatchPattern  `json:"allowedSigner,omitempty"`
+	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
+	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 func (self *IntegrityEnforcerPolicy) Policy() *Policy {
 	return &Policy{
-		AllowedSigner: self.AllowedSigner,
-		IgnoreRequest: self.IgnoreRequest,
-		Mode:          self.Mode,
-		PolicyType:    self.PolicyType,
+		Allow:       self.Allow,
+		Signer:      self.Signer,
+		Ignore:      self.Ignore,
+		Mode:        self.Mode,
+		PolicyType:  self.PolicyType,
+		Description: self.Description,
 	}
 }
 
 type IESignerPolicy struct {
-	AllowedSigner   []SignerMatchPattern       `json:"allowedSigner,omitempty"`
+	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
 	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
 	PolicyType      PolicyType                 `json:"policyType,omitempty"`
+	Description     string                     `json:"description,omitempty"`
 }
 
 func (self *IESignerPolicy) Policy() *Policy {
 	return &Policy{
-		AllowedSigner:   self.AllowedSigner,
+		Signer:          self.Signer,
 		AllowUnverified: self.AllowUnverified,
 		PolicyType:      self.PolicyType,
+		Description:     self.Description,
 	}
 }
 
 func (self *Policy) CheckFormat() (bool, string) {
 	pType := self.PolicyType
-	ns := self.Namespace
 
 	if pType == UnknownPolicy {
 		return false, "\"policyType\" must be set for any Policy"
 	}
 
-	if ns != "" && (pType == DefaultPolicy || pType == IEPolicy || pType == SignerPolicy) {
+	if pType == DefaultPolicy || pType == IEPolicy || pType == SignerPolicy {
 		return false, fmt.Sprintf("\"namespace\" must be empty for %s", pType)
 	}
-	if ns == "" && pType == CustomPolicy {
+	if pType == CustomPolicy {
 		return false, fmt.Sprintf("\"namespace\" must be specified for %s", pType)
 	}
 	if pType == SignerPolicy {
-		hasEnforce := len(self.Enforce) > 0
-		hasIgnore := len(self.IgnoreRequest) > 0
-		hasInternal := len(self.AllowedForInternalRequest) > 0
-		hasAllowRule := len(self.AllowedByRule) > 0
-		hasAllowChange := len(self.AllowedChange) > 0
-		hasVOwner := len(self.PermitIfVerifiedOwner) > 0
-		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner {
+		hasIgnore := len(self.Ignore) > 0
+		hasAllowChange := len(self.Allow.Change) > 0
+		hasAllowRequest := len(self.Allow.Request) > 0
+		if hasIgnore || hasAllowChange || hasAllowRequest {
 			return false, fmt.Sprintf("%s must contain only AllowedSigner rule", pType)
 		}
 	}
 	if pType == CustomPolicy {
-		hasSigner := len(self.AllowedSigner) > 0
+		hasSigner := len(self.Signer) > 0
 		if hasSigner {
 			return false, fmt.Sprintf("%s must not contain AllowedSigner rule", pType)
 		}
@@ -175,16 +173,14 @@ func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs strin
 	return true, ""
 }
 
+type AllowRequestCondition struct {
+	Request []RequestMatchPattern    `json:"request,omitempty"`
+	Change  []AllowedChangeCondition `json:"change,omitempty"`
+}
+
 type AllowedChangeCondition struct {
 	Request RequestMatchPattern `json:"request,omitempty"`
 	Key     []string            `json:"key,omitempty"`
-	Owner   OwnerMatchCondition `json:"owner,omitempty"`
-}
-
-type OwnerMatchCondition struct {
-	Kind       string `json:"kind,omitempty"`
-	ApiVersion string `json:"apiVersion,omitempty"`
-	Name       string `json:"name,omitempty"`
 }
 
 type SubjectMatchPattern struct {
@@ -310,14 +306,10 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 		mode = p2.Mode
 	}
 	return &Policy{
-		Enforce:                   append(p.Enforce, p2.Enforce...),
-		IgnoreRequest:             append(p.IgnoreRequest, p2.IgnoreRequest...),
-		AllowedSigner:             append(p.AllowedSigner, p2.AllowedSigner...),
-		AllowedForInternalRequest: append(p.AllowedForInternalRequest, p2.AllowedForInternalRequest...),
-		AllowedByRule:             append(p.AllowedByRule, p2.AllowedByRule...),
-		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
-		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
-		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
-		Mode:                      mode,
+		Ignore:          append(p.Ignore, p2.Ignore...),
+		Signer:          append(p.Signer, p2.Signer...),
+		Allow:           append(p.Allow, p2.Allow...),
+		AllowUnverified: append(p.AllowUnverified, p2.AllowUnverified...),
+		Mode:            mode,
 	}
 }
