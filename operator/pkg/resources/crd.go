@@ -61,6 +61,13 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 		},
 	}
 
+	requestMatchConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: requestMatchCondition,
+		},
+	}
+
 	stringArray := &extv1.JSONSchemaProps{
 		Items: &extv1.JSONSchemaPropsOrArray{
 			Schema: &extv1.JSONSchemaProps{
@@ -73,7 +80,7 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 	allowRequestCondition := &extv1.JSONSchemaProps{
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
-			"request": *requestMatchCondition,
+			"request": *requestMatchConditionArray,
 			"change": {
 				Type: "array",
 				Items: &extv1.JSONSchemaPropsOrArray{
@@ -86,13 +93,6 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 					},
 				},
 			},
-		},
-	}
-
-	allowRequestConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: allowRequestCondition,
 		},
 	}
 
@@ -131,7 +131,7 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allow": *allowRequestConditionArray,
+								"allow": *allowRequestCondition,
 								"policyType": {
 									Type: "string",
 								},
@@ -219,10 +219,17 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 		Type: "array",
 	}
 
+	requestMatchConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: requestMatchCondition,
+		},
+	}
+
 	allowRequestCondition := &extv1.JSONSchemaProps{
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
-			"request": *requestMatchCondition,
+			"request": *requestMatchConditionArray,
 			"change": {
 				Type: "array",
 				Items: &extv1.JSONSchemaPropsOrArray{
@@ -238,12 +245,6 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 		},
 	}
 
-	allowRequestConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: allowRequestCondition,
-		},
-	}
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -291,7 +292,7 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 										},
 									},
 								},
-								"allow": *allowRequestConditionArray,
+								"allow": *allowRequestCondition,
 								"mode": {
 									Type: "string",
 								},
@@ -499,6 +500,13 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 		},
 	}
 
+	requestMatchConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: requestMatchCondition,
+		},
+	}
+
 	stringArray := &extv1.JSONSchemaProps{
 		Items: &extv1.JSONSchemaPropsOrArray{
 			Schema: &extv1.JSONSchemaProps{
@@ -511,7 +519,7 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 	allowRequestCondition := &extv1.JSONSchemaProps{
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
-			"request": *requestMatchCondition,
+			"request": *requestMatchConditionArray,
 			"change": {
 				Type: "array",
 				Items: &extv1.JSONSchemaPropsOrArray{
@@ -527,12 +535,6 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 		},
 	}
 
-	allowRequestConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: allowRequestCondition,
-		},
-	}
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -568,7 +570,7 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allow": *allowRequestConditionArray,
+								"allow": *allowRequestCondition,
 								"policyType": {
 									Type: "string",
 								},

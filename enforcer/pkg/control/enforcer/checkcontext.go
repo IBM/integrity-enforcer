@@ -130,7 +130,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	self.DetectionModeEnabled = policyChecker.IsDetectionModeEnabled()
 	self.UnverifiedModeEnabled = policyChecker.IsTrustStateEnforcementDisabled()
 	self.Ignored = policyChecker.IsIgnoreRequest()
-	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
+	self.Result.InternalRequest = policyChecker.IsAllowRequest()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -354,7 +354,7 @@ func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, self.policy.Policy.Allow)
+		return checker.Eval(reqc, self.policy.Policy.Allow.Change)
 	}
 }
 

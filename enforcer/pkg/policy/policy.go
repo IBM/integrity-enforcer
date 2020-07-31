@@ -54,16 +54,16 @@ type Policy struct {
 	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
 	Ignore          []RequestMatchPattern      `json:"ignore,omitempty"`
 	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
-	Allow           []AllowRequestCondition    `json:"allow,omitempty"`
+	Allow           AllowRequestCondition      `json:"allow,omitempty"`
 	Mode            IntegrityEnforcerMode      `json:"mode,omitempty"`
 	PolicyType      PolicyType                 `json:"policyType,omitempty"`
 	Description     string                     `json:"description,omitempty"`
 }
 
 type IEDefaultPolicy struct {
-	Allow       []AllowRequestCondition `json:"allowe,omitempty"`
-	PolicyType  PolicyType              `json:"policyType,omitempty"`
-	Description string                  `json:"description,omitempty"`
+	Allow       AllowRequestCondition `json:"allowe,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 func (self *IEDefaultPolicy) Policy() *Policy {
@@ -75,10 +75,10 @@ func (self *IEDefaultPolicy) Policy() *Policy {
 }
 
 type AppEnforcePolicy struct {
-	Allow       []AllowRequestCondition `json:"allow,omitempty"`
-	Signer      []SignerMatchPattern    `json:"signer,omitempty"`
-	PolicyType  PolicyType              `json:"policyType,omitempty"`
-	Description string                  `json:"description,omitempty"`
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 func (self *AppEnforcePolicy) Policy() *Policy {
@@ -91,12 +91,12 @@ func (self *AppEnforcePolicy) Policy() *Policy {
 }
 
 type IntegrityEnforcerPolicy struct {
-	Allow       []AllowRequestCondition `json:"allow,omitempty"`
-	Signer      []SignerMatchPattern    `json:"allowedSigner,omitempty"`
-	Ignore      []RequestMatchPattern   `json:"ignore,omitempty"`
-	Mode        IntegrityEnforcerMode   `json:"mode,omitempty"`
-	PolicyType  PolicyType              `json:"policyType,omitempty"`
-	Description string                  `json:"description,omitempty"`
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Signer      []SignerMatchPattern  `json:"allowedSigner,omitempty"`
+	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
+	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 func (self *IntegrityEnforcerPolicy) Policy() *Policy {
@@ -141,8 +141,9 @@ func (self *Policy) CheckFormat() (bool, string) {
 	}
 	if pType == SignerPolicy {
 		hasIgnore := len(self.Ignore) > 0
-		hasAllow := len(self.Allow) > 0
-		if hasIgnore || hasAllow {
+		hasAllowChange := len(self.Allow.Change) > 0
+		hasAllowRequest := len(self.Allow.Request) > 0
+		if hasIgnore || hasAllowChange || hasAllowRequest {
 			return false, fmt.Sprintf("%s must contain only AllowedSigner rule", pType)
 		}
 	}
@@ -173,8 +174,8 @@ func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs strin
 }
 
 type AllowRequestCondition struct {
-	Request RequestMatchPattern    `json:"request,omitempty"`
-	Change  AllowedChangeCondition `json:"change,omitempty"`
+	Request []RequestMatchPattern    `json:"request,omitempty"`
+	Change  []AllowedChangeCondition `json:"change,omitempty"`
 }
 
 type AllowedChangeCondition struct {

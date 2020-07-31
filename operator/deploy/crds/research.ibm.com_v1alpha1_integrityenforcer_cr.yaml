@@ -5,10 +5,8 @@ metadata:
 spec:
   affinity: {}
   enforcePolicy:
-    allowedByRule: []
-    allowedChange: []
-    allowedForInternalRequest: []
-    allowedSigner:
+    allow: []
+    signer:
     - request:
         namespace: '*'
       subject:
@@ -17,8 +15,6 @@ spec:
         namespace: '*'
       subject:
         email: cluster_signer@signer.com
-    enforce:
-    - namespace: '*'
     ignoreRequest:
     - kind: Event
     - kind: Lease
@@ -27,8 +23,6 @@ spec:
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
     - namespace: '-'
-    permitIfCreator: []
-    permitIfVerifiedOwner: []
   enforcerConfig:
     log:
       consoleLog:

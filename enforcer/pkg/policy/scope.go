@@ -103,8 +103,8 @@ func (self *concretePolicyChecker) IsIgnoreRequest() bool {
 }
 
 func (self *concretePolicyChecker) IsAllowRequest() bool {
-	if self.policy != nil && self.policy.Allow != nil {
-		return self.check(self.policy.Allow)
+	if self.policy != nil && self.policy.Allow.Request != nil {
+		return self.check(self.policy.Allow.Request)
 	} else {
 		return false
 	}
