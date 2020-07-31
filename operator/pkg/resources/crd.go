@@ -131,7 +131,7 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"Allow": *allowRequestConditionArray,
+								"allow": *allowRequestConditionArray,
 								"policyType": {
 									Type: "string",
 								},
@@ -210,6 +210,40 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 		},
 	}
 
+	stringArray := &extv1.JSONSchemaProps{
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: &extv1.JSONSchemaProps{
+				Type: "string",
+			},
+		},
+		Type: "array",
+	}
+
+	allowRequestCondition := &extv1.JSONSchemaProps{
+		Type: "object",
+		Properties: map[string]extv1.JSONSchemaProps{
+			"request": *requestMatchCondition,
+			"change": {
+				Type: "array",
+				Items: &extv1.JSONSchemaPropsOrArray{
+					Schema: &extv1.JSONSchemaProps{
+						Type: "object",
+						Properties: map[string]extv1.JSONSchemaProps{
+							"key":     *stringArray,
+							"request": *requestMatchCondition,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	allowRequestConditionArray := &extv1.JSONSchemaProps{
+		Type: "array",
+		Items: &extv1.JSONSchemaPropsOrArray{
+			Schema: allowRequestCondition,
+		},
+	}
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -257,6 +291,7 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 										},
 									},
 								},
+								"allow": *allowRequestConditionArray,
 								"mode": {
 									Type: "string",
 								},
@@ -533,7 +568,7 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"Allow": *allowRequestConditionArray,
+								"allow": *allowRequestConditionArray,
 								"policyType": {
 									Type: "string",
 								},
