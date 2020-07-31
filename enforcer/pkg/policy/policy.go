@@ -106,6 +106,52 @@ func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
 	return mode, matchedPolicy
 }
 
+type PolicyList struct {
+	Items []*Policy `json:"items,omitempty"`
+}
+
+func (self *PolicyList) Add(pol *Policy) {
+	self.Items = append(self.Items, pol)
+}
+
+func (self *PolicyList) Get(pTypeList []PolicyType) *PolicyList {
+	isListed := map[PolicyType]bool{}
+	for _, pType := range pTypeList {
+		isListed[pType] = true
+	}
+	items := []*Policy{}
+	for _, pol := range self.Items {
+		if isListed[pol.PolicyType] {
+			items = append(items, pol)
+		}
+	}
+	return &PolicyList{
+		Items: items,
+	}
+}
+
+func (self *PolicyList) Policy() *Policy {
+	pol := &Policy{}
+	for _, iPol := range self.Items {
+		pol = pol.Merge(iPol)
+	}
+	return pol
+}
+
+func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
+	mode := defaultIntegrityEnforcerMode
+	var matchedPolicy *Policy
+	// priority := 0
+	iePolicyList := self.Get([]PolicyType{IEPolicy})
+	for _, pol := range iePolicyList.Items {
+		if pol.Mode != UnknownMode {
+			mode = pol.Mode
+			matchedPolicy = pol
+		}
+	}
+	return mode, matchedPolicy
+}
+
 type IEDefaultPolicy struct {
 	Allow       AllowRequestCondition `json:"allowe,omitempty"`
 	PolicyType  PolicyType            `json:"policyType,omitempty"`
