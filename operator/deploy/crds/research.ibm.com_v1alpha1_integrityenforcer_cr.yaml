@@ -9,13 +9,17 @@ spec:
     signer:
     - request:
         namespace: '*'
-      subject:
-        commonName: "ClusterAdmin"
+      condition:
+        name: ClusterSigner
+        subject:
+          commonName: "ClusterAdmin"
     - request:
         namespace: '*'
-      subject:
-        email: cluster_signer@signer.com
-    ignoreRequest:
+      condition:
+        name: HelmClusterSigner
+        subject:
+          email: cluster_signer@signer.com
+    ignore:
     - kind: Event
     - kind: Lease
     - kind: Endpoints

@@ -79,10 +79,10 @@ func (wl *EnforcePolicyWhitelist) GenerateMaskKeys(namespace, name, kind, userna
 	return maskKey
 }
 
-func FilterDiff(dr *mapnode.DiffResult, maskKeys []string) (*mapnode.DiffResult, *mapnode.DiffResult) {
+func FilterDiff(dr *mapnode.DiffResult, maskKeys []string) (*mapnode.DiffResult, *mapnode.DiffResult, []string) {
 	if dr == nil {
-		return &mapnode.DiffResult{}, &mapnode.DiffResult{}
+		return &mapnode.DiffResult{}, &mapnode.DiffResult{}, []string{}
 	}
-	filtered, unfiltered := dr.Filter(maskKeys)
-	return filtered, unfiltered
+	filtered, unfiltered, matchedKeys := dr.Filter(maskKeys)
+	return filtered, unfiltered, matchedKeys
 }

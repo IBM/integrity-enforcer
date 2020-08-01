@@ -29,10 +29,10 @@ import (
 ***********************************************/
 
 type PolicyChecker interface {
-	IsTrustStateEnforcementDisabled() (bool, *Policy)
-	IsDetectionModeEnabled() (bool, *Policy)
-	IsIgnoreRequest() (bool, *Policy)
-	IsAllowRequest() (bool, *Policy)
+	IsTrustStateEnforcementDisabled() (bool, string)
+	IsDetectionModeEnabled() (bool, string)
+	IsIgnoreRequest() (bool, string)
+	IsAllowRequest() (bool, string)
 }
 
 func NewPolicyChecker(policy *PolicyList, reqc *common.ReqContext) PolicyChecker {
@@ -61,52 +61,52 @@ func (self *concretePolicyChecker) check(patterns []RequestMatchPattern) bool {
 	return isInScope
 }
 
-func (self *concretePolicyChecker) IsDetectionModeEnabled() (bool, *Policy) {
+func (self *concretePolicyChecker) IsDetectionModeEnabled() (bool, string) {
 
 	if self.policy != nil {
 		ieMode, pol := self.policy.GetMode()
-		if ieMode == DetectionMode {
-			return true, pol
+		if ieMode == DetectMode {
+			return true, pol.String()
 		} else {
-			return false, nil
+			return false, ""
 		}
 	} else {
-		return false, nil
+		return false, ""
 	}
 
 }
 
-func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() (bool, *Policy) {
+func (self *concretePolicyChecker) IsTrustStateEnforcementDisabled() (bool, string) {
 
 	signerPolicyList := self.policy.Get([]PolicyType{SignerPolicy})
 	for _, signerPolicy := range signerPolicyList.Items {
 		for _, pattern := range signerPolicy.AllowUnverified {
 			if pattern.Match(self.reqc) {
-				return true, signerPolicy
+				return true, signerPolicy.String()
 			}
 		}
 	}
-	return false, nil
+	return false, ""
 }
 
-func (self *concretePolicyChecker) IsIgnoreRequest() (bool, *Policy) {
+func (self *concretePolicyChecker) IsIgnoreRequest() (bool, string) {
 	policyList := self.policy.Get([]PolicyType{IEPolicy})
 	for _, pol := range policyList.Items {
 		if self.check(pol.Ignore) {
-			return true, pol
+			return true, pol.String()
 		}
 	}
-	return false, nil
+	return false, ""
 }
 
-func (self *concretePolicyChecker) IsAllowRequest() (bool, *Policy) {
+func (self *concretePolicyChecker) IsAllowRequest() (bool, string) {
 	policyList := self.policy.Get([]PolicyType{IEPolicy, DefaultPolicy, CustomPolicy})
 	for _, pol := range policyList.Items {
 		if self.check(pol.Allow.Request) {
-			return true, pol
+			return true, pol.String()
 		}
 	}
-	return false, nil
+	return false, ""
 }
 
 /**********************************************

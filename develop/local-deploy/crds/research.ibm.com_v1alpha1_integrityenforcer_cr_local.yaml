@@ -5,21 +5,21 @@ metadata:
 spec:
   affinity: {}
   enforcePolicy:
-    allowedByRule: []
-    allowedChange: []
-    allowedForInternalRequest: []
-    allowedSigner:
+    allow: {}
+    signer:
     - request:
         namespace: '*'
-      subject:
-        commonName: "ClusterAdmin"
+      condition:
+        name: ClusterSigner
+        subject:
+          commonName: "ClusterAdmin"
     - request:
         namespace: '*'
-      subject:
-        email: "cluster_signer@signer.com"
-    enforce:
-    - namespace: '*'
-    ignoreRequest:
+      condition:
+        name: HelmClusterSigner
+        subject:
+          email: cluster_signer@signer.com
+    ignore:
     - kind: Event
     - kind: Lease
     - kind: Endpoints
@@ -27,8 +27,6 @@ spec:
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
     - namespace: '-'
-    permitIfCreator: []
-    permitIfVerifiedOwner: []
   enforcerConfig:
     log:
       consoleLog:

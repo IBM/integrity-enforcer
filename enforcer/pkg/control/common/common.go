@@ -17,6 +17,7 @@
 package common
 
 import (
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"strconv"
 )
@@ -216,10 +217,22 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 ***********************************************/
 
 type SignPolicyEvalResult struct {
-	Signer  *SignerInfo `json:"signer"`
-	Checked bool        `json:"checked"`
-	Allow   bool        `json:"allow"`
-	Error   *CheckError `json:"error"`
+	Signer        *SignerInfo `json:"signer"`
+	SignerName    string      `json:"signerName"`
+	Checked       bool        `json:"checked"`
+	Allow         bool        `json:"allow"`
+	MatchedPolicy string      `json:"matchedPolicy"`
+	Error         *CheckError `json:"error"`
+}
+
+func (self *SignPolicyEvalResult) GetSignerName() string {
+	if self.SignerName != "" {
+		return self.SignerName
+	}
+	if self.Signer != nil {
+		return self.Signer.GetName()
+	}
+	return ""
 }
 
 type SignerInfo struct {
@@ -251,6 +264,12 @@ func (self *SignerInfo) GetName() string {
 	return ""
 }
 
+func NewSignerInfoFromCert(cert *x509.Certificate) *SignerInfo {
+	si := NewSignerInfoFromPKIXName(cert.Subject)
+	si.SerialNumber = strconv.Itoa(int(cert.SerialNumber.Int64()))
+	return si
+}
+
 func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
 	si := &SignerInfo{}
 
@@ -278,9 +297,9 @@ func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
 	if dn.CommonName != "" {
 		si.CommonName = dn.CommonName
 	}
-	if dn.SerialNumber != "" {
-		si.SerialNumber = dn.SerialNumber
-	}
+	// if dn.SerialNumber != "" {
+	// 	si.SerialNumber = dn.SerialNumber
+	// }
 	return si
 }
 
@@ -334,11 +353,12 @@ func (self *OwnerList) VerifiedOwners() []*Owner {
 }
 
 type MutationEvalResult struct {
-	IsMutated bool        `json:"isMutated"`
-	Diff      string      `json:"diff"`
-	Filtered  string      `json:"filtered"`
-	Checked   bool        `json:"checked"`
-	Error     *CheckError `json:"error"`
+	IsMutated     bool        `json:"isMutated"`
+	Diff          string      `json:"diff"`
+	Filtered      string      `json:"filtered"`
+	Checked       bool        `json:"checked"`
+	MatchedPolicy string      `json:"matchedPolicy"`
+	Error         *CheckError `json:"error"`
 }
 
 type ReasonCode struct {

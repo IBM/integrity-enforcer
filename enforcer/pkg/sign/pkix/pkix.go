@@ -185,6 +185,15 @@ func GetSubjectFromCertificate(certPemBytes []byte) (pkix.Name, error) {
 	return cert.Subject, nil
 }
 
+func ParseCertificate(certPemBytes []byte) (*x509.Certificate, error) {
+	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)
+	cert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, err
+	}
+	return cert, nil
+}
+
 func GenerateSignature(msg, prvKeyPemBytes []byte) ([]byte, error) {
 	prvKeyBytes := PEMDecode(prvKeyPemBytes, PEMTypePrivateKey)
 	prvKey, err := x509.ParsePKCS1PrivateKey(prvKeyBytes)

@@ -42,7 +42,7 @@ type SignPolicy interface {
 type ConcreteSignPolicy struct {
 	EnforcerNamespace string
 	PolicyNamespace   string
-	Patterns          []policy.SignerMatchPattern
+	Policy            *policy.PolicyList
 }
 
 /**********************************************
@@ -69,6 +69,7 @@ func (self *EnforceRuleStoreFromPolicy) Find(reqc *common.ReqContext) *EnforceRu
 		er := &EnforceRuleFromCR{Instance: r}
 		eRules = append(eRules, er)
 	}
+	logger.Debug("DEBUG rules: ", eRules)
 	return &EnforceRuleList{Rules: eRules}
 }
 
@@ -91,21 +92,31 @@ func (self *EnforceRuleFromCR) Eval(reqc *common.ReqContext, signer *common.Sign
 	kind := reqc.Kind
 	name := reqc.Name
 	namespace := reqc.Namespace
+	var matchedRule *Rule
+	var signerName string
 	ruleOk, _ := MatchSigner(self.Instance, apiVersion, kind, name, namespace, signer)
+	if ruleOk {
+		matchedRule = self.Instance
+		signerName = matchedRule.Name
+	}
 	result := &EnforceRuleEvalResult{
-		Signer:  signer,
-		Checked: true,
-		Allow:   ruleOk,
-		Error:   nil,
+		Signer:      signer,
+		SignerName:  signerName,
+		Checked:     true,
+		Allow:       ruleOk,
+		MatchedRule: matchedRule,
+		Error:       nil,
 	}
 	return result, nil
 }
 
 type EnforceRuleEvalResult struct {
-	Signer  *common.SignerInfo
-	Checked bool
-	Allow   bool
-	Error   *common.CheckError
+	Signer      *common.SignerInfo
+	SignerName  string
+	Checked     bool
+	Allow       bool
+	MatchedRule *Rule
+	Error       *common.CheckError
 }
 
 type EnforceRuleList struct {
@@ -115,9 +126,10 @@ type EnforceRuleList struct {
 func (self *EnforceRuleList) Eval(reqc *common.ReqContext, signer *common.SignerInfo) (*EnforceRuleEvalResult, error) {
 	if len(self.Rules) == 0 {
 		return &EnforceRuleEvalResult{
-			Signer:  signer,
-			Allow:   true,
-			Checked: true,
+			Signer:     signer,
+			SignerName: "",
+			Allow:      true,
+			Checked:    true,
 		}, nil
 	}
 	for _, rule := range self.Rules {
@@ -212,8 +224,10 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 	// signer
 	signer := sigVerifyResult.Signer
 
+	signerPatterns := self.Policy.GetSigner()
+	logger.Debug("DEBUG patterns: ", signerPatterns)
 	// get enforce rule list
-	var ruleStore EnforceRuleStore = &EnforceRuleStoreFromPolicy{Patterns: self.Patterns}
+	var ruleStore EnforceRuleStore = &EnforceRuleStoreFromPolicy{Patterns: signerPatterns}
 
 	reqcForEval := makeReqcForEval(reqc, reqc.RawObject)
 
@@ -231,11 +245,23 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 			},
 		}, nil
 	} else {
+		matchedPolicyStr := ""
+		matchedRule := ruleEvalResult.MatchedRule
+		if matchedRule != nil {
+			logger.Debug("DEBUG matchedRule: ", matchedRule)
+			matchedPolicy := self.Policy.FindMatchedSignerPolicy(reqc, ToSignerMatchPattern(matchedRule))
+			logger.Debug("DEBUG matchedPolicy: ", matchedPolicy)
+			if matchedPolicy != nil {
+				matchedPolicyStr = matchedPolicy.String()
+			}
+		}
 		return &common.SignPolicyEvalResult{
-			Signer:  ruleEvalResult.Signer,
-			Allow:   ruleEvalResult.Allow,
-			Checked: ruleEvalResult.Checked,
-			Error:   ruleEvalResult.Error,
+			Signer:        ruleEvalResult.Signer,
+			SignerName:    ruleEvalResult.SignerName,
+			Allow:         ruleEvalResult.Allow,
+			Checked:       ruleEvalResult.Checked,
+			MatchedPolicy: matchedPolicyStr,
+			Error:         ruleEvalResult.Error,
 		}, nil
 	}
 
@@ -317,13 +343,14 @@ type Rule struct {
 	Type     EnforcerPolicyType `json:"type,omitempty"`
 	Resource Resource           `json:"resource,omitempty"`
 	Subject  Subject            `json:"subject,omitempty"`
+	Name     string             `json:"name,omitempty"`
 }
 
-func NewSignPolicy(enforcerNamespace, policyNamespace string, patterns []policy.SignerMatchPattern) (SignPolicy, error) {
+func NewSignPolicy(enforcerNamespace, policyNamespace string, policy *policy.PolicyList) (SignPolicy, error) {
 	return &ConcreteSignPolicy{
 		EnforcerNamespace: enforcerNamespace,
 		PolicyNamespace:   policyNamespace,
-		Patterns:          patterns,
+		Policy:            policy,
 	}, nil
 }
 
@@ -337,17 +364,45 @@ func ToPolicyRule(self policy.SignerMatchPattern) *Rule {
 			Namespace:  self.Request.Namespace,
 		},
 		Subject: Subject{
-			Email:              self.Subject.Email,
-			Uid:                self.Subject.Uid,
-			Country:            self.Subject.Country,
-			Organization:       self.Subject.Organization,
-			OrganizationalUnit: self.Subject.OrganizationalUnit,
-			Locality:           self.Subject.Locality,
-			Province:           self.Subject.Province,
-			StreetAddress:      self.Subject.StreetAddress,
-			PostalCode:         self.Subject.PostalCode,
-			CommonName:         self.Subject.CommonName,
-			SerialNumber:       self.Subject.SerialNumber,
+			Email:              self.Condition.Subject.Email,
+			Uid:                self.Condition.Subject.Uid,
+			Country:            self.Condition.Subject.Country,
+			Organization:       self.Condition.Subject.Organization,
+			OrganizationalUnit: self.Condition.Subject.OrganizationalUnit,
+			Locality:           self.Condition.Subject.Locality,
+			Province:           self.Condition.Subject.Province,
+			StreetAddress:      self.Condition.Subject.StreetAddress,
+			PostalCode:         self.Condition.Subject.PostalCode,
+			CommonName:         self.Condition.Subject.CommonName,
+			SerialNumber:       self.Condition.Subject.SerialNumber,
+		},
+		Name: self.Condition.Name,
+	}
+}
+
+func ToSignerMatchPattern(self *Rule) policy.SignerMatchPattern {
+	return policy.SignerMatchPattern{
+		Request: policy.RequestMatchPattern{
+			ApiVersion: self.Resource.ApiVersion,
+			Kind:       self.Resource.Kind,
+			Name:       self.Resource.Name,
+			Namespace:  self.Resource.Namespace,
+		},
+		Condition: policy.SubjectCondition{
+			Name: self.Name,
+			Subject: policy.SubjectMatchPattern{
+				Email:              self.Subject.Email,
+				Uid:                self.Subject.Uid,
+				Country:            self.Subject.Country,
+				Organization:       self.Subject.Organization,
+				OrganizationalUnit: self.Subject.OrganizationalUnit,
+				Locality:           self.Subject.Locality,
+				Province:           self.Subject.Province,
+				StreetAddress:      self.Subject.StreetAddress,
+				PostalCode:         self.Subject.PostalCode,
+				CommonName:         self.Subject.CommonName,
+				SerialNumber:       self.Subject.SerialNumber,
+			},
 		},
 	}
 }

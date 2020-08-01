@@ -248,9 +248,9 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 		vsinfo = nil
 		retErr = nil
 	} else {
-		certDN, err := pkix.GetSubjectFromCertificate(certificate)
+		cert, err := pkix.ParseCertificate(certificate)
 		if err != nil {
-			logger.Error("Failed to get subject from certificate; ", err)
+			logger.Error("Failed to parse certificate; ", err)
 		}
 		pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
 		if err != nil {
@@ -269,7 +269,7 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 			retErr = err
 		} else if sigOk {
 			vcerr = nil
-			vsinfo = common.NewSignerInfoFromPKIXName(certDN)
+			vsinfo = common.NewSignerInfoFromCert(cert)
 			retErr = nil
 		} else {
 			vcerr = &common.CheckError{

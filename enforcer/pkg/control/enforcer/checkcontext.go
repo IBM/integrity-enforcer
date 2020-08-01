@@ -52,14 +52,15 @@ type CheckContext struct {
 
 	Result *CheckResult `json:"result"`
 
-	Enforced    bool   `json:"enforced"`
-	Ignored     bool   `json:"ignored"`
-	Allow       bool   `json:"allow"`
-	Verified    bool   `json:"verified"`
-	Aborted     bool   `json:"aborted"`
-	AbortReason string `json:"abortReason"`
-	Error       error  `json:"error"`
-	Message     string `json:"msg"`
+	Enforced      bool   `json:"enforced"`
+	Ignored       bool   `json:"ignored"`
+	Allow         bool   `json:"allow"`
+	Verified      bool   `json:"verified"`
+	Aborted       bool   `json:"aborted"`
+	AbortReason   string `json:"abortReason"`
+	Error         error  `json:"error"`
+	Message       string `json:"msg"`
+	MatchedPolicy string `json:"matchedPolicy"`
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
@@ -68,6 +69,13 @@ type CheckContext struct {
 
 	AllowByUnverifiedMode bool `json:"allowByUnverifiedMode"`
 	AllowByDetectionMode  bool `json:"allowByDetectionMode"`
+
+	detectionMatchedPolicy  string `json:"-"`
+	unverifiedMatchedPolicy string `json:"-"`
+	ignoreMatchedPolicy     string `json:"-"`
+	allowMatchedPolicy      string `json:"-"`
+	mutationMatchedPolicy   string `json:"-"`
+	signerMatchedPolicy     string `json:"-"`
 }
 
 type CheckResult struct {
@@ -127,10 +135,10 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
 
-	self.DetectionModeEnabled = policyChecker.IsDetectionModeEnabled()
-	self.UnverifiedModeEnabled = policyChecker.IsTrustStateEnforcementDisabled()
-	self.Ignored = policyChecker.IsIgnoreRequest()
-	self.Result.InternalRequest = policyChecker.IsAllowRequest()
+	self.DetectionModeEnabled, self.detectionMatchedPolicy = policyChecker.IsDetectionModeEnabled()
+	self.UnverifiedModeEnabled, self.unverifiedMatchedPolicy = policyChecker.IsTrustStateEnforcementDisabled()
+	self.Ignored, self.ignoreMatchedPolicy = policyChecker.IsIgnoreRequest()
+	self.Result.InternalRequest, self.allowMatchedPolicy = policyChecker.IsAllowRequest()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -149,11 +157,13 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
+	matchedPolicy := ""
 	var errMsg string
 
 	if !allowed && self.Result.InternalRequest {
 		allowed = true
 		evalReason = common.REASON_INTERNAL
+		matchedPolicy = self.allowMatchedPolicy
 	}
 
 	//evaluate sign policy
@@ -165,6 +175,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 			if r.Checked && r.Allow {
 				allowed = true
 				evalReason = common.REASON_VALID_SIG
+				matchedPolicy = r.MatchedPolicy
 			}
 			if r.Error != nil {
 				errMsg = r.Error.MakeMessage()
@@ -190,6 +201,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 			if r.Checked && !r.IsMutated {
 				allowed = true
 				evalReason = common.REASON_NO_MUTATION
+				matchedPolicy = r.MatchedPolicy
 			}
 		}
 	}
@@ -214,6 +226,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		self.Verified = true
 		self.ReasonCode = evalReason
 		self.Message = common.ReasonCodeMap[evalReason].Message
+		self.MatchedPolicy = matchedPolicy
 	} else {
 		self.Allow = false
 		self.Verified = false
@@ -227,12 +240,14 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		self.AllowByDetectionMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		self.ReasonCode = common.REASON_DETECTION
+		self.MatchedPolicy = self.detectionMatchedPolicy
 	} else if !self.Allow && self.UnverifiedModeEnabled {
 		self.Allow = true
 		self.Verified = false
 		self.AllowByUnverifiedMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
 		self.ReasonCode = common.REASON_UNVERIFIED
+		self.MatchedPolicy = self.unverifiedMatchedPolicy
 	}
 
 	if evalReason == common.REASON_UNEXPECTED {
@@ -341,7 +356,7 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 
 func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy.Signer); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
@@ -354,7 +369,7 @@ func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, self.policy.Policy.Allow.Change)
+		return checker.Eval(reqc, self.policy.Policy)
 	}
 }
 
@@ -394,6 +409,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"aborted":     self.Aborted,
 		"abortReason": self.AbortReason,
 		"msg":         self.Message,
+		"policy":      self.MatchedPolicy,
 
 		//reason code
 		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
@@ -440,7 +456,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
 			logRecord["sig.signer.comment"] = r.Signer.Comment
-			logRecord["sig.signer.displayName"] = r.Signer.GetName()
+			logRecord["sig.signer.displayName"] = r.GetSignerName()
 		}
 		logRecord["sig.allow"] = r.Allow
 		if r.Error != nil {

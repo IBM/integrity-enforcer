@@ -63,7 +63,10 @@ func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iesp
 			Signer: []policy.SignerMatchPattern{
 				{
 					Request: policy.RequestMatchPattern{Namespace: "sample"},
-					Subject: policy.SubjectMatchPattern{CommonName: "sample"},
+					Condition: policy.SubjectCondition{
+						Name:    "SampleSigner",
+						Subject: policy.SubjectMatchPattern{CommonName: "sample"},
+					},
 				},
 			},
 			PolicyType: policy.SignerPolicy,

@@ -18,6 +18,8 @@ package policy
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/jinzhu/copier"
@@ -37,12 +39,12 @@ const (
 type IntegrityEnforcerMode string
 
 const (
-	UnknownMode     IntegrityEnforcerMode = ""
-	EnforcementMode IntegrityEnforcerMode = "enforcement"
-	DetectionMode   IntegrityEnforcerMode = "detection"
+	UnknownMode IntegrityEnforcerMode = ""
+	EnforceMode IntegrityEnforcerMode = "enforce"
+	DetectMode  IntegrityEnforcerMode = "detect"
 )
 
-const defaultIntegrityEnforcerMode = EnforcementMode
+const defaultIntegrityEnforcerMode = EnforceMode
 
 /**********************************************
 
@@ -106,54 +108,73 @@ func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
 	return mode, matchedPolicy
 }
 
-type PolicyList struct {
-	Items []*Policy `json:"items,omitempty"`
+func (self *PolicyList) GetAllowChange() []AllowedChangeCondition {
+	policyList := self.Get([]PolicyType{IEPolicy, DefaultPolicy, CustomPolicy})
+	policy := policyList.Policy()
+	return policy.Allow.Change
 }
 
-func (self *PolicyList) Add(pol *Policy) {
-	self.Items = append(self.Items, pol)
+func (self *PolicyList) GetSigner() []SignerMatchPattern {
+	policyList := self.Get([]PolicyType{IEPolicy, SignerPolicy, CustomPolicy})
+	policy := policyList.Policy()
+	return policy.Signer
 }
 
-func (self *PolicyList) Get(pTypeList []PolicyType) *PolicyList {
-	isListed := map[PolicyType]bool{}
-	for _, pType := range pTypeList {
-		isListed[pType] = true
+func (self *PolicyList) FindMatchedChangePolicy(reqc *common.ReqContext, matchedKeys []string) *PolicyList {
+	matched := &PolicyList{}
+
+	isMatchedKey := map[string]bool{}
+	for _, k := range matchedKeys {
+		isMatchedKey[k] = true
 	}
-	items := []*Policy{}
+
+	policyList := self.Get([]PolicyType{IEPolicy, DefaultPolicy, CustomPolicy})
+	for _, pol := range policyList.Items {
+		polMatched := false
+		for _, change := range pol.Allow.Change {
+			if polMatched {
+				break
+			}
+			if change.Request.Match(reqc) {
+				for _, key := range change.Key {
+					if isMatchedKey[key] {
+						polMatched = true
+						break
+					}
+				}
+			}
+		}
+		if polMatched {
+			matched.Add(pol)
+		}
+	}
+	return matched
+}
+
+func (self *PolicyList) FindMatchedSignerPolicy(reqc *common.ReqContext, matchedRule SignerMatchPattern) *Policy {
+	policyList := self.Get([]PolicyType{IEPolicy, SignerPolicy, CustomPolicy})
+	for _, pol := range policyList.Items {
+		for _, signer := range pol.Signer {
+			if signer.Request.Match(reqc) {
+				if reflect.DeepEqual(signer, matchedRule) {
+					return pol
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (self *PolicyList) String() string {
+	strList := []string{}
 	for _, pol := range self.Items {
-		if isListed[pol.PolicyType] {
-			items = append(items, pol)
-		}
+		strList = append(strList, pol.String())
 	}
-	return &PolicyList{
-		Items: items,
-	}
-}
-
-func (self *PolicyList) Policy() *Policy {
-	pol := &Policy{}
-	for _, iPol := range self.Items {
-		pol = pol.Merge(iPol)
-	}
-	return pol
-}
-
-func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
-	mode := defaultIntegrityEnforcerMode
-	var matchedPolicy *Policy
-	// priority := 0
-	iePolicyList := self.Get([]PolicyType{IEPolicy})
-	for _, pol := range iePolicyList.Items {
-		if pol.Mode != UnknownMode {
-			mode = pol.Mode
-			matchedPolicy = pol
-		}
-	}
-	return mode, matchedPolicy
+	return strings.Join(strList, ",")
 }
 
 type IEDefaultPolicy struct {
-	Allow       AllowRequestCondition `json:"allowe,omitempty"`
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
 	PolicyType  PolicyType            `json:"policyType,omitempty"`
 	Description string                `json:"description,omitempty"`
 }
@@ -184,7 +205,7 @@ func (self *AppEnforcePolicy) Policy() *Policy {
 
 type IntegrityEnforcerPolicy struct {
 	Allow       AllowRequestCondition `json:"allow,omitempty"`
-	Signer      []SignerMatchPattern  `json:"allowedSigner,omitempty"`
+	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
 	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
 	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
 	PolicyType  PolicyType            `json:"policyType,omitempty"`
@@ -248,6 +269,14 @@ func (self *Policy) CheckFormat() (bool, string) {
 	return true, ""
 }
 
+func (self *Policy) String() string {
+	if self.Description == "" {
+		return fmt.Sprintf("%s", self.PolicyType)
+	} else {
+		return fmt.Sprintf("%s(%s)", self.PolicyType, self.Description)
+	}
+}
+
 func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs string) (bool, string) {
 	// ok, errMsg := self.CheckFormat()
 	// if !ok {
@@ -296,13 +325,18 @@ type SubjectMatchPattern struct {
 	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
+type SubjectCondition struct {
+	Name    string              `json:"name"`
+	Subject SubjectMatchPattern `json:"subject"`
+}
+
 type AllowUnverifiedCondition struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
 type SignerMatchPattern struct {
-	Request RequestMatchPattern `json:"request,omitempty"`
-	Subject SubjectMatchPattern `json:"subject,omitempty"`
+	Request   RequestMatchPattern `json:"request,omitempty"`
+	Condition SubjectCondition    `json:"condition,omitempty"`
 }
 
 type AllowedUserPattern struct {
