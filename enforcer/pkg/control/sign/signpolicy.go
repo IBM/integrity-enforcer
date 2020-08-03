@@ -329,7 +329,7 @@ func (v *Subject) Match(signer *common.SignerInfo) bool {
 		policy.MatchPattern(v.StreetAddress, signer.StreetAddress) &&
 		policy.MatchPattern(v.PostalCode, signer.PostalCode) &&
 		policy.MatchPattern(v.CommonName, signer.CommonName) &&
-		policy.MatchPattern(v.SerialNumber, signer.SerialNumber)
+		policy.MatchBigInt(v.SerialNumber, signer.SerialNumber)
 }
 
 type Resource struct {

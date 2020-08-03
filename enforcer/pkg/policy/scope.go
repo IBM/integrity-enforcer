@@ -17,6 +17,8 @@
 package policy
 
 import (
+	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
@@ -151,6 +153,30 @@ func MatchWithPatternArray(value string, patternArray []string) bool {
 		}
 	}
 	return false
+}
+
+func MatchBigInt(pattern string, value *big.Int) bool {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		return true
+	} else if pattern == "*" {
+		return true
+	} else if pattern == "-" && value == nil {
+		return true
+	} else if strings.Contains(pattern, ":") {
+		return pattern2BigInt(pattern).Cmp(value) == 0
+	} else if i, err := strconv.Atoi(pattern); err == nil {
+		return i == int(value.Int64())
+	} else {
+		return false
+	}
+}
+
+func pattern2BigInt(pattern string) *big.Int {
+	a := strings.ReplaceAll(pattern, ":", "")
+	i := new(big.Int)
+	i.SetString(a, 16)
+	return i
 }
 
 func SplitRule(rules string) []string {

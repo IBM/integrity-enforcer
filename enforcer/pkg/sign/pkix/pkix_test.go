@@ -37,6 +37,8 @@ func TestEndToEndCAVerification(t *testing.T) {
 		t.Error(err)
 	}
 
+	servicePubKeyBytes = PEMDecode(servicePubKeyBytes, PEMTypePublicKey)
+
 	testPrivateKeyPath := "./test-ie-private.key"
 	testPublicKeyPath := "./test-ie-public.key"
 	testCertPoolDir := "./"

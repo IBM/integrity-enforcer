@@ -19,6 +19,7 @@ package common
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"math/big"
 	"strconv"
 )
 
@@ -248,7 +249,7 @@ type SignerInfo struct {
 	StreetAddress      string
 	PostalCode         string
 	CommonName         string
-	SerialNumber       string
+	SerialNumber       *big.Int
 }
 
 func (self *SignerInfo) GetName() string {
@@ -266,7 +267,7 @@ func (self *SignerInfo) GetName() string {
 
 func NewSignerInfoFromCert(cert *x509.Certificate) *SignerInfo {
 	si := NewSignerInfoFromPKIXName(cert.Subject)
-	si.SerialNumber = strconv.Itoa(int(cert.SerialNumber.Int64()))
+	si.SerialNumber = cert.SerialNumber
 	return si
 }
 
