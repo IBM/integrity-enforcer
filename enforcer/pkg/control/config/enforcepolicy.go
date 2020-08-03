@@ -18,6 +18,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -54,7 +55,7 @@ type PolicyLoader struct {
 
 func NewPolicyLoader(enforcerNamespace, policyNamespace string) *PolicyLoader {
 	iePolicyInterval := time.Second * 10
-	appPolicyInterval := time.Second * 0
+	appPolicyInterval := time.Second * 10
 	config, _ := rest.InClusterConfig()
 
 	iePolicyClient, _ := iepolclient.NewForConfig(config)
@@ -169,7 +170,7 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 		}
 	}
 
-	keyName = "policyLoader/appPolList"
+	keyName = fmt.Sprintf("policyLoader/appPolList/%s", requestNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
 		appPolList, err = self.appEnforcePolicyClient.AppEnforcePolicies(requestNamespace).List(metav1.ListOptions{})
 		if err != nil {
@@ -187,7 +188,7 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 		}
 	}
 
-	keyName = "policyLoader/appPolList2"
+	keyName = fmt.Sprintf("policyLoader/appPolList2/%s", policyNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
 		appPolList2, err = self.appEnforcePolicyClient.AppEnforcePolicies(policyNamespace).List(metav1.ListOptions{})
 		if err != nil {
