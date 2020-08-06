@@ -31,19 +31,10 @@ func BuildAppEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cus
 			"apiVersion": {
 				Type: "string",
 			},
-			"firstUser": {
-				Type: "boolean",
-			},
-			"k8screatedby": {
-				Type: "string",
-			},
 			"kind": {
 				Type: "string",
 			},
 			"name": {
-				Type: "string",
-			},
-			"namespace": {
 				Type: "string",
 			},
 			"operation": {
@@ -178,12 +169,6 @@ func BuildIEPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResou
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
 			"apiVersion": {
-				Type: "string",
-			},
-			"firstUser": {
-				Type: "boolean",
-			},
-			"k8screatedby": {
 				Type: "string",
 			},
 			"kind": {
@@ -344,12 +329,6 @@ func BuildIESingnerPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 			"apiVersion": {
 				Type: "string",
 			},
-			"firstUser": {
-				Type: "boolean",
-			},
-			"k8screatedby": {
-				Type: "string",
-			},
 			"kind": {
 				Type: "string",
 			},
@@ -468,12 +447,6 @@ func BuildIEDefaultPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cust
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
 			"apiVersion": {
-				Type: "string",
-			},
-			"firstUser": {
-				Type: "boolean",
-			},
-			"k8screatedby": {
 				Type: "string",
 			},
 			"kind": {

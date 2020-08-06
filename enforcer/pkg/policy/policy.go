@@ -346,15 +346,14 @@ type AllowedUserPattern struct {
 }
 
 type RequestMatchPattern struct {
-	Namespace    string `json:"namespace,omitempty"`
-	Name         string `json:"name,omitempty"`
-	Operation    string `json:"operation,omitempty"`
-	ApiVersion   string `json:"apiVersion,omitempty"`
-	Kind         string `json:"kind,omitempty"`
-	UserName     string `json:"username,omitempty"`
-	Type         string `json:"type,omitempty"`
-	K8sCreatedBy string `json:"k8screatedby,omitempty"`
-	UserGroup    string `json:"usergroup,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Operation  string `json:"operation,omitempty"`
+	ApiVersion string `json:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty"`
+	UserName   string `json:"username,omitempty"`
+	Type       string `json:"type,omitempty"`
+	UserGroup  string `json:"usergroup,omitempty"`
 }
 
 func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
@@ -371,7 +370,6 @@ func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
 		MatchPattern(v.ApiVersion, apiVersion) &&
 		MatchPattern(v.UserName, reqc.UserName) &&
 		MatchPattern(v.Type, reqc.Type) &&
-		MatchPattern(v.K8sCreatedBy, reqc.OrgMetadata.K8sCreatedBy) &&
 		MatchPatternWithArray(v.UserGroup, reqc.UserGroups)
 
 }
