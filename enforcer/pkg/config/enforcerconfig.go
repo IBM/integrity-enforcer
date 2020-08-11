@@ -18,6 +18,7 @@ package config
 
 import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	"github.com/jinzhu/copier"
 )
@@ -43,11 +44,15 @@ type EnforcerConfig struct {
 }
 
 type LoggingScopeConfig struct {
-	LogLevel       string          `json:"logLevel,omitempty"`
-	IncludeRequest bool            `json:"includeRequest,omitempty"`
-	IncludeRelease bool            `json:"includeRelease,omitempty"`
-	ConsoleLog     *LogScopeConfig `json:"consoleLog,omitempty"`
-	ContextLog     *LogScopeConfig `json:"contextLog,omitempty"`
+	LogLevel             string          `json:"logLevel,omitempty"`
+	IncludeRequest       bool            `json:"includeRequest,omitempty"`
+	IncludeRelease       bool            `json:"includeRelease,omitempty"`
+	ConsoleLog           *LogScopeConfig `json:"consoleLog,omitempty"`
+	ContextLog           *LogScopeConfig `json:"contextLog,omitempty"`
+	ConsoleLogFormat     string          `json:"consoleLogFormat,omitempty"`
+	ConsoleLogFile       string          `json:"consoleLogFile,omitempty"`
+	ContextLogFile       string          `json:"contextLogFile,omitempty"`
+	ContextLogRotateSize int64           `json:"contextLogRotateSize,omitempty"`
 }
 
 /**********************************************
@@ -124,6 +129,23 @@ func (ec *EnforcerConfig) LogConfig() *LoggingScopeConfig {
 		}
 	}
 
+	defaultFormat := "json"
+	defaultLogOutput := "" // console
+	defaultFilePath := "/ie-app/public/events.txt"
+	defaultRotateSize := int64(10485760) // 10MB
+	if lc.ConsoleLogFormat == "" {
+		lc.ConsoleLogFormat = defaultFormat
+	}
+	if lc.ConsoleLogFile == "" {
+		lc.ConsoleLogFile = defaultLogOutput
+	}
+	if lc.ContextLogFile == "" {
+		lc.ContextLogFile = defaultFilePath
+	}
+	if lc.ContextLogRotateSize == 0 {
+		lc.ContextLogRotateSize = defaultRotateSize
+	}
+
 	return lc
 
 }
@@ -136,4 +158,14 @@ func (ec *EnforcerConfig) DeepCopy() *EnforcerConfig {
 	ec2 := &EnforcerConfig{}
 	ec.DeepCopyInto(ec2)
 	return ec2
+}
+
+func (ec *EnforcerConfig) LoggerConfig() logger.LoggerConfig {
+	lc := ec.LogConfig()
+	return logger.LoggerConfig{Level: lc.LogLevel, Format: lc.ConsoleLogFormat, FileDest: lc.ConsoleLogFile}
+}
+
+func (ec *EnforcerConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
+	lc := ec.LogConfig()
+	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
 }

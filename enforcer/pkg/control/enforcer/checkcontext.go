@@ -24,6 +24,7 @@ import (
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
+	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
 	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
@@ -41,41 +42,50 @@ import (
 
 type CheckContext struct {
 	// request context
-	config         *config.EnforcerConfig
-	policy         *policy.Policy
-	ReqC           *common.ReqContext `json:"-"`
-	ServiceAccount *v1.ServiceAccount `json:"serviceAccount"`
-	DryRun         bool               `json:"dryRun"`
-	Unverified     bool               `json:"unverified"`
+	config                *config.EnforcerConfig
+	policy                *ctlconfig.PolicyLoader
+	ReqC                  *common.ReqContext `json:"-"`
+	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
+	DryRun                bool               `json:"dryRun"`
+	DetectionModeEnabled  bool               `json:"detectionModeEnabled"`
+	UnverifiedModeEnabled bool               `json:"unverifiedModeEnabled"`
 
 	Result *CheckResult `json:"result"`
 
-	Enforced    bool   `json:"enforced"`
-	Ignored     bool   `json:"ignored"`
-	Allow       bool   `json:"allow"`
-	Aborted     bool   `json:"aborted"`
-	AbortReason string `json:"abortReason"`
-	Error       error  `json:"error"`
-	Message     string `json:"msg"`
+	Enforced      bool   `json:"enforced"`
+	Ignored       bool   `json:"ignored"`
+	Allow         bool   `json:"allow"`
+	Verified      bool   `json:"verified"`
+	Aborted       bool   `json:"aborted"`
+	AbortReason   string `json:"abortReason"`
+	Error         error  `json:"error"`
+	Message       string `json:"msg"`
+	MatchedPolicy string `json:"matchedPolicy"`
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
 
 	ReasonCode int `json:"reasonCode"`
+
+	AllowByUnverifiedMode bool `json:"allowByUnverifiedMode"`
+	AllowByDetectionMode  bool `json:"allowByDetectionMode"`
+
+	detectionMatchedPolicy  string `json:"-"`
+	unverifiedMatchedPolicy string `json:"-"`
+	ignoreMatchedPolicy     string `json:"-"`
+	allowMatchedPolicy      string `json:"-"`
+	mutationMatchedPolicy   string `json:"-"`
+	signerMatchedPolicy     string `json:"-"`
 }
 
 type CheckResult struct {
-	InternalRequest                bool                         `json:"internal"`
-	AllowedByRule                  bool                         `json:"allowedByRule"`
-	PermitIfVerifiedOwner          bool                         `json:"permitIfVerifiedOwner"`
-	PermitIfFirstUser              bool                         `json:"permitIfFirstUser"`
-	PermitIfVerifiedServiceAccount bool                         `json:"permitIfVerifiedServiceAccount"`
-	SignPolicyEvalResult           *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult             *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult             *common.MutationEvalResult   `json:"mutation"`
+	InternalRequest      bool                         `json:"internal"`
+	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
+	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
+	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
-func NewCheckContext(config *config.EnforcerConfig, policy *policy.Policy) *CheckContext {
+func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *CheckContext {
 	cc := &CheckContext{
 		config:   config,
 		policy:   policy,
@@ -83,11 +93,9 @@ func NewCheckContext(config *config.EnforcerConfig, policy *policy.Policy) *Chec
 		Ignored:  false,
 		Aborted:  false,
 		Allow:    false,
+		Verified: false,
 		Result: &CheckResult{
-			InternalRequest:       false,
-			AllowedByRule:         false,
-			PermitIfVerifiedOwner: false,
-			PermitIfFirstUser:     false,
+			InternalRequest: false,
 			SignPolicyEvalResult: &common.SignPolicyEvalResult{
 				Allow:   false,
 				Checked: false,
@@ -123,15 +131,14 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	logger.InitSessionLogger(reqc.Namespace, reqc.Name, reqc.ResourceRef().ApiVersion, reqc.Kind, reqc.Operation)
 	self.ReqC = reqc
 
-	policyChecker := policy.NewPolicyChecker(self.policy, self.ReqC)
+	self.policy.Load(self.ReqC.Namespace)
 
-	self.Unverified = policyChecker.IsTrustStateEnforcementDisabled()
-	self.Ignored = policyChecker.IsIgnoreRequest()
-	self.Enforced = policyChecker.IsEnforceResult()
-	self.Result.InternalRequest = policyChecker.IsAllowedForInternalRequest()
-	self.Result.AllowedByRule = policyChecker.IsAllowedByRule()
-	self.Result.PermitIfVerifiedOwner = policyChecker.PermitIfVerifiedOwner()
-	self.Result.PermitIfVerifiedServiceAccount = policyChecker.PermitIfVerifiedServiceAccount()
+	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
+
+	self.DetectionModeEnabled, self.detectionMatchedPolicy = policyChecker.IsDetectionModeEnabled()
+	self.UnverifiedModeEnabled, self.unverifiedMatchedPolicy = policyChecker.IsTrustStateEnforcementDisabled()
+	self.Ignored, self.ignoreMatchedPolicy = policyChecker.IsIgnoreRequest()
+	self.Result.InternalRequest, self.allowMatchedPolicy = policyChecker.IsAllowRequest()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -150,24 +157,13 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
+	matchedPolicy := ""
 	var errMsg string
 
 	if !allowed && self.Result.InternalRequest {
 		allowed = true
 		evalReason = common.REASON_INTERNAL
-	}
-
-	if !allowed && self.Result.AllowedByRule {
-		allowed = true
-		evalReason = common.REASON_RULE_MATCH
-	}
-
-	//check verified user
-	if !self.Aborted && !allowed &&
-		self.Result.PermitIfVerifiedServiceAccount &&
-		self.IsVerifiedServiceAccount() {
-		allowed = true
-		evalReason = common.REASON_VERIFIED_SA
+		matchedPolicy = self.allowMatchedPolicy
 	}
 
 	//evaluate sign policy
@@ -179,6 +175,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 			if r.Checked && r.Allow {
 				allowed = true
 				evalReason = common.REASON_VALID_SIG
+				matchedPolicy = r.MatchedPolicy
 			}
 			if r.Error != nil {
 				errMsg = r.Error.MakeMessage()
@@ -195,20 +192,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		}
 	}
 
-	//resolve owner
-	if !self.Aborted && !allowed && self.ReqC.IsCreateRequest() && self.ReqC.IsServiceAccount() {
-		if r, err := self.resolveOwner(); err != nil {
-			self.abort("Error when resolving owner", err)
-		} else {
-			self.Result.ResolveOwnerResult = r
-			if self.Result.PermitIfVerifiedOwner &&
-				r.Checked && r.Verified {
-				allowed = true
-				evalReason = common.REASON_VERIFIED_OWNER
-			}
-		}
-	}
-
 	//check mutation
 	if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
 		if r, err := self.evalMutation(); err != nil {
@@ -218,30 +201,53 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 			if r.Checked && !r.IsMutated {
 				allowed = true
 				evalReason = common.REASON_NO_MUTATION
+				matchedPolicy = r.MatchedPolicy
 			}
 		}
 	}
 
 	if !self.Enforced {
 		self.Allow = true
+		self.Verified = true
 		self.ReasonCode = common.REASON_NOT_ENFORCED
 		self.Message = common.ReasonCodeMap[common.REASON_NOT_ENFORCED].Message
 	} else if self.ReqC.IsDeleteRequest() {
 		self.Allow = true
+		self.Verified = true
 		self.ReasonCode = common.REASON_SKIP_DELETE
 		self.Message = common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message
 	} else if self.Aborted {
 		self.Allow = false
+		self.Verified = false
 		self.Message = self.AbortReason
 		self.ReasonCode = common.REASON_ABORTED
 	} else if allowed {
 		self.Allow = true
+		self.Verified = true
 		self.ReasonCode = evalReason
 		self.Message = common.ReasonCodeMap[evalReason].Message
+		self.MatchedPolicy = matchedPolicy
 	} else {
 		self.Allow = false
+		self.Verified = false
 		self.Message = errMsg
 		self.ReasonCode = evalReason
+	}
+
+	if !self.Allow && self.DetectionModeEnabled {
+		self.Allow = true
+		self.Verified = false
+		self.AllowByDetectionMode = true
+		self.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
+		self.ReasonCode = common.REASON_DETECTION
+		self.MatchedPolicy = self.detectionMatchedPolicy
+	} else if !self.Allow && self.UnverifiedModeEnabled {
+		self.Allow = true
+		self.Verified = false
+		self.AllowByUnverifiedMode = true
+		self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
+		self.ReasonCode = common.REASON_UNVERIFIED
+		self.MatchedPolicy = self.unverifiedMatchedPolicy
 	}
 
 	if evalReason == common.REASON_UNEXPECTED {
@@ -310,41 +316,16 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	labels := map[string]string{}
 	deleteKeys := []string{}
 	if allowed {
-		if self.Result.SignPolicyEvalResult.Allow {
-			labels["integrityVerified"] = "true"
-			labels["integrityVerifiedReason"] = "valid-sig"
-			deleteKeys = append(deleteKeys, "integrityUnverified")
-		} else if self.Result.PermitIfVerifiedOwner &&
-			self.Result.ResolveOwnerResult.Checked &&
-			self.Result.ResolveOwnerResult.Verified {
-			labels["integrityVerified"] = "true"
-			labels["integrityVerifiedReason"] = "verified-owner"
-			deleteKeys = append(deleteKeys, "integrityUnverified")
-		} else if self.Result.PermitIfVerifiedServiceAccount &&
-			self.IsVerifiedServiceAccount() {
-			labels["integrityVerified"] = "true"
-			labels["integrityVerifiedReason"] = "verified-sa"
-			deleteKeys = append(deleteKeys, "integrityUnverified")
+
+		if !self.Verified {
+			labels[common.ResourceIntegrityLabelKey] = common.LabelValueUnverified
+			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
+		} else if self.Result.SignPolicyEvalResult.Allow {
+			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
+			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ReasonCode].Code
 		} else {
-			deleteKeys = append(deleteKeys, "integrityVerified")
-			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
-		}
-		if !self.Result.InternalRequest {
-			labels["ie-createdBy"] = self.ReqC.UserName
-		} else {
-			deleteKeys = append(deleteKeys, "ie-createdBy")
-		}
-	} else {
-		if self.Unverified {
-			self.Allow = true
-			allowed = self.Allow
-			self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
-			self.ReasonCode = common.REASON_UNVERIFIED
-			msg = self.Message
-			labels["integrityVerified"] = "false"
-			labels["ie-createdBy"] = self.ReqC.UserName
-			labels["integrityUnverified"] = "true"
-			deleteKeys = append(deleteKeys, "integrityVerifiedReason")
+			deleteKeys = append(deleteKeys, common.ResourceIntegrityLabelKey)
+			deleteKeys = append(deleteKeys, common.ReasonLabelKey)
 		}
 	}
 
@@ -375,57 +356,20 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 
 func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.AllowedSigner); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
 	}
 }
 
-func (self *CheckContext) resolveOwner() (*common.ResolveOwnerResult, error) {
-	reqc := self.ReqC
-	if resolver, err := NewOwnerResolver(); err != nil {
-		return nil, err
-	} else {
-		return resolver.Find(reqc)
-	}
-}
-
-func (self *CheckContext) IsVerifiedServiceAccount() bool {
-
-	sa := self.ServiceAccount
-	if sa == nil {
-		v, err := GetServiceAccount(self.ReqC.UserName)
-		if err != nil || v == nil {
-			return false
-		}
-		sa = v
-	}
-
-	if self.ReqC.Namespace != sa.ObjectMeta.Namespace {
-		return false
-	}
-	if s, ok := sa.Labels["integrityVerified"]; ok {
-		if b, err := strconv.ParseBool(s); err != nil {
-			return false
-		} else {
-			return b
-		}
-	}
-	return false
-}
-
 func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	reqc := self.ReqC
-	r := self.Result.ResolveOwnerResult
-	var owners []*common.Owner
-	if r != nil && r.Owners != nil {
-		owners = r.Owners.VerifiedOwners()
-	}
+	owners := []*common.Owner{}
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, self.policy.AllowedChange)
+		return checker.Eval(reqc, self.policy.Policy)
 	}
 }
 
@@ -461,9 +405,11 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"enfored":     self.Enforced,
 		"ignored":     self.Ignored,
 		"allowed":     self.Allow,
+		"verified":    self.Verified,
 		"aborted":     self.Aborted,
 		"abortReason": self.AbortReason,
 		"msg":         self.Message,
+		"policy":      self.MatchedPolicy,
 
 		//reason code
 		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
@@ -501,9 +447,6 @@ func (self *CheckContext) convertToLogBytes() []byte {
 
 	if self.Result != nil {
 		logRecord["internal"] = self.Result.InternalRequest
-		logRecord["allowedByRule"] = self.Result.AllowedByRule
-		logRecord["permitIfVerifiedOwner"] = self.Result.PermitIfVerifiedOwner
-		logRecord["permitIfFirstUser"] = self.Result.PermitIfFirstUser
 	}
 
 	//context from sign policy eval
@@ -513,7 +456,7 @@ func (self *CheckContext) convertToLogBytes() []byte {
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
 			logRecord["sig.signer.comment"] = r.Signer.Comment
-			logRecord["sig.signer.displayName"] = r.Signer.GetName()
+			logRecord["sig.signer.displayName"] = r.GetSignerName()
 		}
 		logRecord["sig.allow"] = r.Allow
 		if r.Error != nil {

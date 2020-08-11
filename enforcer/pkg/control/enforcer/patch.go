@@ -89,6 +89,7 @@ func createPatch(name, reqJson string, labels map[string]string, deleteKeys []st
 
 		}
 	}
+
 	if len(patch) > 0 {
 		patchBytes, _ := json.Marshal(patch)
 		return patchBytes

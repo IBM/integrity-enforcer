@@ -55,19 +55,9 @@ func NewEPW() *EnforcePolicyWhitelist {
 	return wl
 }
 
-func (wl *EnforcePolicyWhitelist) GenerateMaskKeys(namespace, name, kind, username, ownerKind, ownerApiVersion, ownerName string, usergroups []string) []string {
+func (wl *EnforcePolicyWhitelist) GenerateMaskKeys(namespace, name, kind, username string, usergroups []string) []string {
 	maskKey := []string{}
 	for _, rule := range wl.Rule {
-		// owner match
-		if !policy.MatchPattern(rule.Owner.Kind, ownerKind) {
-			continue
-		}
-		if !policy.MatchPattern(rule.Owner.ApiVersion, ownerApiVersion) {
-			continue
-		}
-		if !policy.MatchPattern(rule.Owner.Name, ownerName) {
-			continue
-		}
 		// request match
 		if !policy.MatchPattern(rule.Request.Name, name) {
 			continue
@@ -89,10 +79,10 @@ func (wl *EnforcePolicyWhitelist) GenerateMaskKeys(namespace, name, kind, userna
 	return maskKey
 }
 
-func FilterDiff(dr *mapnode.DiffResult, maskKeys []string) (*mapnode.DiffResult, *mapnode.DiffResult) {
+func FilterDiff(dr *mapnode.DiffResult, maskKeys []string) (*mapnode.DiffResult, *mapnode.DiffResult, []string) {
 	if dr == nil {
-		return &mapnode.DiffResult{}, &mapnode.DiffResult{}
+		return &mapnode.DiffResult{}, &mapnode.DiffResult{}, []string{}
 	}
-	filtered, unfiltered := dr.Filter(maskKeys)
-	return filtered, unfiltered
+	filtered, unfiltered, matchedKeys := dr.Filter(maskKeys)
+	return filtered, unfiltered, matchedKeys
 }

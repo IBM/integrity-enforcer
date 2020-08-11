@@ -17,7 +17,9 @@
 package common
 
 import (
+	"crypto/x509"
 	"crypto/x509/pkix"
+	"math/big"
 	"strconv"
 )
 
@@ -26,6 +28,23 @@ const (
 	SignatureCustomResourceKind       = "ResourceSignature"
 	PolicyCustomResourceAPIVersion    = "research.ibm.com/v1alpha1"
 	PolicyCustomResourceKind          = "EnforcePolicy"
+
+	IEPolicyCustomResourceAPIVersion      = "research.ibm.com/v1alpha1"
+	IEPolicyCustomResourceKind            = "IntegrityEnforcerPolicy"
+	DefaultPolicyCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
+	SignerPolicyCustomResourceAPIVersion  = "research.ibm.com/v1alpha1"
+	SignerPolicyCustomResourceKind        = "IESignerPolicy"
+	AppPolicyCustomResourceAPIVersion     = "research.ibm.com/v1alpha1"
+	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
+)
+
+const (
+	ResourceIntegrityLabelKey = "integrity-enforcer.ibm.com/resourceIntegrity"
+	ReasonLabelKey            = "integrity-enforcer.ibm.com/reason"
+
+	LabelValueVerified   = "verified"
+	LabelValueUnverified = "unverified"
 )
 
 /**********************************************
@@ -91,7 +110,7 @@ func NewResourceLabel(values map[string]string) *ResourceLabel {
 }
 
 func (self *ResourceLabel) IntegrityVerified() bool {
-	return self.getBool("integrityVerified", false)
+	return self.getString(ResourceIntegrityLabelKey) == LabelValueVerified
 }
 
 func (self *ResourceLabel) CreatedBy() string {
@@ -199,10 +218,22 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 ***********************************************/
 
 type SignPolicyEvalResult struct {
-	Signer  *SignerInfo `json:"signer"`
-	Checked bool        `json:"checked"`
-	Allow   bool        `json:"allow"`
-	Error   *CheckError `json:"error"`
+	Signer        *SignerInfo `json:"signer"`
+	SignerName    string      `json:"signerName"`
+	Checked       bool        `json:"checked"`
+	Allow         bool        `json:"allow"`
+	MatchedPolicy string      `json:"matchedPolicy"`
+	Error         *CheckError `json:"error"`
+}
+
+func (self *SignPolicyEvalResult) GetSignerName() string {
+	if self.SignerName != "" {
+		return self.SignerName
+	}
+	if self.Signer != nil {
+		return self.Signer.GetName()
+	}
+	return ""
 }
 
 type SignerInfo struct {
@@ -218,7 +249,7 @@ type SignerInfo struct {
 	StreetAddress      string
 	PostalCode         string
 	CommonName         string
-	SerialNumber       string
+	SerialNumber       *big.Int
 }
 
 func (self *SignerInfo) GetName() string {
@@ -232,6 +263,12 @@ func (self *SignerInfo) GetName() string {
 		return self.Name
 	}
 	return ""
+}
+
+func NewSignerInfoFromCert(cert *x509.Certificate) *SignerInfo {
+	si := NewSignerInfoFromPKIXName(cert.Subject)
+	si.SerialNumber = cert.SerialNumber
+	return si
 }
 
 func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
@@ -261,9 +298,9 @@ func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
 	if dn.CommonName != "" {
 		si.CommonName = dn.CommonName
 	}
-	if dn.SerialNumber != "" {
-		si.SerialNumber = dn.SerialNumber
-	}
+	// if dn.SerialNumber != "" {
+	// 	si.SerialNumber = dn.SerialNumber
+	// }
 	return si
 }
 
@@ -317,11 +354,12 @@ func (self *OwnerList) VerifiedOwners() []*Owner {
 }
 
 type MutationEvalResult struct {
-	IsMutated bool        `json:"isMutated"`
-	Diff      string      `json:"diff"`
-	Filtered  string      `json:"filtered"`
-	Checked   bool        `json:"checked"`
-	Error     *CheckError `json:"error"`
+	IsMutated     bool        `json:"isMutated"`
+	Diff          string      `json:"diff"`
+	Filtered      string      `json:"filtered"`
+	Checked       bool        `json:"checked"`
+	MatchedPolicy string      `json:"matchedPolicy"`
+	Error         *CheckError `json:"error"`
 }
 
 type ReasonCode struct {
@@ -341,6 +379,7 @@ const (
 	REASON_SKIP_DELETE
 	REASON_ABORTED
 	REASON_UNVERIFIED
+	REASON_DETECTION
 	REASON_INVALID_SIG
 	REASON_NO_SIG
 	REASON_NO_POLICY
@@ -392,6 +431,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_UNVERIFIED: {
 		Message: "allowed by allowUnverified policy",
 		Code:    "unverified",
+	},
+	REASON_DETECTION: {
+		Message: "allowed by detection mode",
+		Code:    "detection",
 	},
 	REASON_INVALID_SIG: {
 		Message: "Failed to verify signature",

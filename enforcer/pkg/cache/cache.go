@@ -46,8 +46,11 @@ func NewCache() *Cache {
 	}
 }
 
-func NewCachedObject(object interface{}, now time.Time) *CachedObject {
+func NewCachedObject(object interface{}, now time.Time, ttl *time.Duration) *CachedObject {
 	duration := defaultCacheDuration
+	if ttl != nil {
+		duration = *ttl
+	}
 	exp := now.Add(duration)
 	return &CachedObject{
 		rawObject: object,
@@ -87,11 +90,11 @@ func (self *Cache) clearExpiredItem() {
 	self.data = deleteKey(self.data, delKeys)
 }
 
-func (self *Cache) Set(name string, object interface{}) {
+func (self *Cache) Set(name string, object interface{}, ttl *time.Duration) {
 	self.clearExpiredItem()
 
 	now := time.Now()
-	obj := NewCachedObject(object, now)
+	obj := NewCachedObject(object, now, ttl)
 	self.data[name] = obj
 }
 
@@ -119,8 +122,12 @@ func (self *Cache) GetString(name string) string {
 	return objStr
 }
 
-func Set(name string, object interface{}) {
-	cache.Set(name, object)
+func Set(name string, object interface{}, ttl *time.Duration) {
+	cache.Set(name, object, ttl)
+}
+
+func SetString(name string, object string, ttl *time.Duration) {
+	cache.Set(name, object, ttl)
 }
 
 func Get(name string) interface{} {

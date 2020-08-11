@@ -123,6 +123,22 @@ func (rc *ReqContext) IsEnforcePolicyRequest() bool {
 	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
 }
 
+func (rc *ReqContext) IsIEPolicyRequest() bool {
+	return rc.GroupVersion() == IEPolicyCustomResourceAPIVersion && rc.Kind == IEPolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsIEDefaultPolicyRequest() bool {
+	return rc.GroupVersion() == DefaultPolicyCustomResourceAPIVersion && rc.Kind == DefaultPolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsIESignerPolicyRequest() bool {
+	return rc.GroupVersion() == SignerPolicyCustomResourceAPIVersion && rc.Kind == SignerPolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsAppEnforcePolicyRequest() bool {
+	return rc.GroupVersion() == AppPolicyCustomResourceAPIVersion && rc.Kind == AppPolicyCustomResourceKind
+}
+
 func (rc *ReqContext) IsResourceSignatureRequest() bool {
 	return rc.GroupVersion() == SignatureCustomResourceAPIVersion && rc.Kind == SignatureCustomResourceKind
 }
@@ -309,9 +325,8 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 }
 
 var CommonMessageMask = []string{
-	"metadata.labels.integrityVerified",
-	"metadata.labels.integrityUnverified",
-	"metadata.labels.ie-createdBy",
+	ResourceIntegrityLabelKey,
+	ReasonLabelKey,
 	"metadata.annotations.sigOwnerApiVersion",
 	"metadata.annotations.sigOwnerKind",
 	"metadata.annotations.sigOwnerName",

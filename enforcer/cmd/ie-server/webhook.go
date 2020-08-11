@@ -33,6 +33,7 @@ import (
 )
 
 var acConfig *config.AdmissionControlConfig
+var policyLoader *config.PolicyLoader
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -46,27 +47,28 @@ type WebhookServer struct {
 func init() {
 	acConfig = config.NewAdmissionControlConfig()
 	acConfig.InitEnforcerConfig()
-	logger.InitContextLogger(acConfig.ContextLoggerConfig)
-	logger.InitServerLogger(acConfig.LoggerConfig)
+	logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
+	logger.InitServerLogger(acConfig.EnforcerConfig.LoggerConfig())
 	logger.Info("Integrity Enforcer has been started.")
 
 	cfgBytes, _ := json.Marshal(acConfig)
 	logger.Trace(string(cfgBytes))
 	logger.Info("EnforcerConfig is loaded.")
+
+	policyLoader = config.NewPolicyLoader(acConfig.EnforcerConfig.Namespace, acConfig.EnforcerConfig.PolicyNamespace)
+	logger.Info("PolicyLoader is ready.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 
 	renew := acConfig.InitEnforcerConfig()
 	if renew {
-		logger.InitContextLogger(acConfig.ContextLoggerConfig)
-		logger.InitServerLogger(acConfig.LoggerConfig)
+		logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
+		logger.InitServerLogger(acConfig.EnforcerConfig.LoggerConfig())
 	}
 
-	enforcePolicy := acConfig.LoadEnforcePolicy()
-
 	//create context
-	cc := enforcer.NewCheckContext(acConfig.EnforcerConfig, enforcePolicy)
+	cc := enforcer.NewCheckContext(acConfig.EnforcerConfig, policyLoader)
 
 	//process request
 	admissionResponse := cc.ProcessRequest(admissionReviewReq.Request)

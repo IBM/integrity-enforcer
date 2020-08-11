@@ -18,8 +18,9 @@ package resources
 
 import (
 	"fmt"
-	"strconv"
 	"reflect"
+	"strconv"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -138,10 +139,6 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcePolicyReloadSec)),
 			},
 			{
-				Name:  "CX_LOG_ENABLED",
-				Value: strconv.FormatBool(cr.Spec.Server.ContextLogEnabled),
-			},
-			{
 				Name:  "PACKAGE_DIR",
 				Value: "/tmp",
 			},
@@ -221,7 +218,7 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		Spec: appsv1.DeploymentSpec{
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge: cr.Spec.MaxSurge,
+					MaxSurge:       cr.Spec.MaxSurge,
 					MaxUnavailable: cr.Spec.MaxUnavailable,
 				},
 			},
@@ -279,6 +276,7 @@ func EqualPods(expected v1.PodTemplateSpec, found v1.PodTemplateSpec) bool {
 	}
 	return true
 }
+
 // EqualContainers returns a Boolean
 func EqualContainers(expected v1.Container, found v1.Container) bool {
 	if !reflect.DeepEqual(found.Name, expected.Name) {

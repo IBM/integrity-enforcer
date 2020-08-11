@@ -24,20 +24,21 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, policy []policy.AllowedChangeCondition) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, policyList *policy.PolicyList) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []policy.AllowedChangeCondition) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policyList *policy.PolicyList) (*common.MutationEvalResult, error) {
+
+	policy := policyList.GetAllowChange()
 
 	mask := []string{
+		common.ResourceIntegrityLabelKey,
+		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
-		"metadata.labels.integrityVerified",
-		"metadata.labels.integrityUnverified",
-		"metadata.labels.ie-createdBy",
 		"metadata.annotations.sigOwnerKind",
 		"metadata.annotations.sigOwnerApiVersion",
 		"metadata.annotations.sigOwnerName",
@@ -101,9 +102,11 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []poli
 		}
 		return maResult, nil
 	} else {
+		matchedPolicy := policyList.FindMatchedChangePolicy(reqc, mr.MatchedKeys).String()
 		maResult.IsMutated = mr.IsMutated
 		maResult.Diff = mr.Diff
 		maResult.Filtered = mr.Filtered
+		maResult.MatchedPolicy = matchedPolicy
 		maResult.Checked = mr.Checked
 		maResult.Error = &common.CheckError{
 			Error:  mr.Error,
@@ -132,12 +135,13 @@ type Ma4kInput struct {
 }
 
 type MAResult struct {
-	IsMutated bool
-	Diff      string
-	Filtered  string
-	Checked   bool
-	Msg       string
-	Error     error
+	IsMutated   bool
+	Diff        string
+	Filtered    string
+	MatchedKeys []string
+	Checked     bool
+	Msg         string
+	Error       error
 }
 
 func NewMa4kInput(namespace, kind, name, username string, usergroups []string, oldObj map[string]interface{}, newObj map[string]interface{}, owners []*common.Owner) *Ma4kInput {
@@ -190,16 +194,10 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	kind := ma4kInput.Kind
 	username := ma4kInput.UserName
 	userGroups := ma4kInput.UserGroups
-	var ownerKind, ownerApiVersion, ownerName string
-	if ma4kInput.IntegrityRef != nil {
-		ownerKind = ma4kInput.IntegrityRef.Kind
-		ownerApiVersion = ma4kInput.IntegrityRef.ApiVersion
-		ownerName = ma4kInput.IntegrityRef.Name
-	}
 
 	allWhitelist := whitelist.NewEPW()
 	allWhitelist.Rule = policy
-	allMaskKeys := allWhitelist.GenerateMaskKeys(namespace, name, kind, username, ownerKind, ownerApiVersion, ownerName, userGroups)
+	allMaskKeys := allWhitelist.GenerateMaskKeys(namespace, name, kind, username, userGroups)
 
 	// diff
 	dr := oldObject.Diff(newObject)
@@ -208,9 +206,10 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	// split diff into 2 diffs with whitelist (mc & cmc)
 	filtered := &mapnode.DiffResult{}
 	unfiltered := &mapnode.DiffResult{}
+	matchedKeys := []string{}
 	if dr != nil {
 		//filtered, unfiltered = dr.Filter(appMaskKeys)
-		filtered, unfiltered = dr.Filter(allMaskKeys)
+		filtered, unfiltered, matchedKeys = dr.Filter(allMaskKeys)
 	}
 
 	// make result
@@ -223,6 +222,7 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	}
 	mr.Diff = unfiltered.String()
 	mr.Filtered = filtered.String()
+	mr.MatchedKeys = matchedKeys
 	msg := MutationMessage(ma4kInput.Name, unfiltered.Items)
 	mr.Msg = msg
 	return mr, nil

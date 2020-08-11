@@ -57,19 +57,21 @@ func (dr *DiffResult) Size() int {
 	return len(dr.Items)
 }
 
-func (dr *DiffResult) Filter(maskKeys []string) (*DiffResult, *DiffResult) {
+func (dr *DiffResult) Filter(maskKeys []string) (*DiffResult, *DiffResult, []string) {
 	filtered := &DiffResult{}
 	unfiltered := &DiffResult{}
+	matchedKeys := []string{}
 	for _, dri := range dr.Items {
 		driKey := dri.Key
-		exists := keyExistsInList(maskKeys, driKey)
+		exists, matched := keyExistsInList(maskKeys, driKey)
 		if exists {
 			filtered.Items = append(filtered.Items, dri)
+			matchedKeys = append(matchedKeys, matched)
 		} else {
 			unfiltered.Items = append(unfiltered.Items, dri)
 		}
 	}
-	return filtered, unfiltered
+	return filtered, unfiltered, matchedKeys
 }
 
 func (d *DiffResult) ToJson() string {
@@ -87,15 +89,15 @@ func (d *DiffResult) String() string {
 	return d.ToJson()
 }
 
-func keyExistsInList(slice []string, val string) bool {
+func keyExistsInList(slice []string, val string) (bool, string) {
 	var isMatch bool
 	for _, item := range slice {
 		isMatch = isListed(val, item)
 		if isMatch {
-			return isMatch
+			return true, item
 		}
 	}
-	return isMatch
+	return false, ""
 }
 
 func isListed(data, rule string) bool {

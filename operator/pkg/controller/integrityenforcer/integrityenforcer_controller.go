@@ -131,7 +131,22 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateEnforcePolicyCRD(instance)
+	recResult, recErr = r.createOrUpdateAppEnforcePolicyCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	recResult, recErr = r.createOrUpdateIESignerPolicyCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	recResult, recErr = r.createOrUpdateIEDefaultPolicyCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	recResult, recErr = r.createOrUpdateIEPolicyCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -147,7 +162,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateIntegrityEnforcerEnforcePolicyCR(instance)
+	recResult, recErr = r.createOrUpdateIntegrityEnforcerPolicyCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -157,7 +172,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateSignerEnforcePolicyCR(instance)
+	recResult, recErr = r.createOrUpdateSignerPolicyCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}

@@ -18,6 +18,8 @@ package policy
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/jinzhu/copier"
@@ -34,6 +36,16 @@ const (
 	CustomPolicy  PolicyType = "CustomPolicy"
 )
 
+type IntegrityEnforcerMode string
+
+const (
+	UnknownMode IntegrityEnforcerMode = ""
+	EnforceMode IntegrityEnforcerMode = "enforce"
+	DetectMode  IntegrityEnforcerMode = "detect"
+)
+
+const defaultIntegrityEnforcerMode = EnforceMode
+
 /**********************************************
 
 					Policy
@@ -41,45 +53,215 @@ const (
 ***********************************************/
 
 type Policy struct {
-	Enforce                   []RequestMatchPattern      `json:"enforce,omitempty"`
-	AllowUnverified           []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
-	IgnoreRequest             []RequestMatchPattern      `json:"ignoreRequest,omitempty"`
-	AllowedSigner             []SignerMatchPattern       `json:"allowedSigner,omitempty"`
-	AllowedForInternalRequest []RequestMatchPattern      `json:"allowedForInternalRequest,omitempty"`
-	AllowedByRule             []RequestMatchPattern      `json:"allowedByRule,omitempty"`
-	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
-	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
-	Namespace                 string                     `json:"namespace,omitempty"`
-	PolicyType                PolicyType                 `json:"policyType,omitempty"`
+	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
+	Ignore          []RequestMatchPattern      `json:"ignore,omitempty"`
+	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
+	Allow           AllowRequestCondition      `json:"allow,omitempty"`
+	Mode            IntegrityEnforcerMode      `json:"mode,omitempty"`
+	PolicyType      PolicyType                 `json:"policyType,omitempty"`
+	Description     string                     `json:"description,omitempty"`
+}
+
+type PolicyList struct {
+	Items []*Policy `json:"items,omitempty"`
+}
+
+func (self *PolicyList) Add(pol *Policy) {
+	self.Items = append(self.Items, pol)
+}
+
+func (self *PolicyList) Get(pTypeList []PolicyType) *PolicyList {
+	isListed := map[PolicyType]bool{}
+	for _, pType := range pTypeList {
+		isListed[pType] = true
+	}
+	items := []*Policy{}
+	for _, pol := range self.Items {
+		if isListed[pol.PolicyType] {
+			items = append(items, pol)
+		}
+	}
+	return &PolicyList{
+		Items: items,
+	}
+}
+
+func (self *PolicyList) Policy() *Policy {
+	pol := &Policy{}
+	for _, iPol := range self.Items {
+		pol = pol.Merge(iPol)
+	}
+	return pol
+}
+
+func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
+	mode := defaultIntegrityEnforcerMode
+	var matchedPolicy *Policy
+	// priority := 0
+	iePolicyList := self.Get([]PolicyType{IEPolicy})
+	for _, pol := range iePolicyList.Items {
+		if pol.Mode != UnknownMode {
+			mode = pol.Mode
+			matchedPolicy = pol
+		}
+	}
+	return mode, matchedPolicy
+}
+
+func (self *PolicyList) GetAllowChange() []AllowedChangeCondition {
+	policyList := self.Get([]PolicyType{IEPolicy, DefaultPolicy, CustomPolicy})
+	policy := policyList.Policy()
+	return policy.Allow.Change
+}
+
+func (self *PolicyList) GetSigner() []SignerMatchPattern {
+	policyList := self.Get([]PolicyType{IEPolicy, SignerPolicy, CustomPolicy})
+	policy := policyList.Policy()
+	return policy.Signer
+}
+
+func (self *PolicyList) FindMatchedChangePolicy(reqc *common.ReqContext, matchedKeys []string) *PolicyList {
+	matched := &PolicyList{}
+
+	isMatchedKey := map[string]bool{}
+	for _, k := range matchedKeys {
+		isMatchedKey[k] = true
+	}
+
+	policyList := self.Get([]PolicyType{IEPolicy, DefaultPolicy, CustomPolicy})
+	for _, pol := range policyList.Items {
+		polMatched := false
+		for _, change := range pol.Allow.Change {
+			if polMatched {
+				break
+			}
+			if change.Request.Match(reqc) {
+				for _, key := range change.Key {
+					if isMatchedKey[key] {
+						polMatched = true
+						break
+					}
+				}
+			}
+		}
+		if polMatched {
+			matched.Add(pol)
+		}
+	}
+	return matched
+}
+
+func (self *PolicyList) FindMatchedSignerPolicy(reqc *common.ReqContext, matchedRule SignerMatchPattern) *Policy {
+	policyList := self.Get([]PolicyType{IEPolicy, SignerPolicy, CustomPolicy})
+	for _, pol := range policyList.Items {
+		for _, signer := range pol.Signer {
+			if signer.Request.Match(reqc) {
+				if reflect.DeepEqual(signer, matchedRule) {
+					return pol
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (self *PolicyList) String() string {
+	strList := []string{}
+	for _, pol := range self.Items {
+		strList = append(strList, pol.String())
+	}
+	return strings.Join(strList, ",")
+}
+
+type IEDefaultPolicy struct {
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
+}
+
+func (self *IEDefaultPolicy) Policy() *Policy {
+	return &Policy{
+		Allow:       self.Allow,
+		PolicyType:  self.PolicyType,
+		Description: self.Description,
+	}
+}
+
+type AppEnforcePolicy struct {
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
+}
+
+func (self *AppEnforcePolicy) Policy() *Policy {
+	return &Policy{
+		Allow:       self.Allow,
+		Signer:      self.Signer,
+		PolicyType:  self.PolicyType,
+		Description: self.Description,
+	}
+}
+
+type IntegrityEnforcerPolicy struct {
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
+	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
+	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
+}
+
+func (self *IntegrityEnforcerPolicy) Policy() *Policy {
+	return &Policy{
+		Allow:       self.Allow,
+		Signer:      self.Signer,
+		Ignore:      self.Ignore,
+		Mode:        self.Mode,
+		PolicyType:  self.PolicyType,
+		Description: self.Description,
+	}
+}
+
+type IESignerPolicy struct {
+	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
+	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
+	PolicyType      PolicyType                 `json:"policyType,omitempty"`
+	Description     string                     `json:"description,omitempty"`
+}
+
+func (self *IESignerPolicy) Policy() *Policy {
+	return &Policy{
+		Signer:          self.Signer,
+		AllowUnverified: self.AllowUnverified,
+		PolicyType:      self.PolicyType,
+		Description:     self.Description,
+	}
 }
 
 func (self *Policy) CheckFormat() (bool, string) {
 	pType := self.PolicyType
-	ns := self.Namespace
 
 	if pType == UnknownPolicy {
 		return false, "\"policyType\" must be set for any Policy"
 	}
 
-	if ns != "" && (pType == DefaultPolicy || pType == IEPolicy || pType == SignerPolicy) {
+	if pType == DefaultPolicy || pType == IEPolicy || pType == SignerPolicy {
 		return false, fmt.Sprintf("\"namespace\" must be empty for %s", pType)
 	}
-	if ns == "" && pType == CustomPolicy {
+	if pType == CustomPolicy {
 		return false, fmt.Sprintf("\"namespace\" must be specified for %s", pType)
 	}
 	if pType == SignerPolicy {
-		hasEnforce := len(self.Enforce) > 0
-		hasIgnore := len(self.IgnoreRequest) > 0
-		hasInternal := len(self.AllowedForInternalRequest) > 0
-		hasAllowRule := len(self.AllowedByRule) > 0
-		hasAllowChange := len(self.AllowedChange) > 0
-		hasVOwner := len(self.PermitIfVerifiedOwner) > 0
-		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner {
+		hasIgnore := len(self.Ignore) > 0
+		hasAllowChange := len(self.Allow.Change) > 0
+		hasAllowRequest := len(self.Allow.Request) > 0
+		if hasIgnore || hasAllowChange || hasAllowRequest {
 			return false, fmt.Sprintf("%s must contain only AllowedSigner rule", pType)
 		}
 	}
 	if pType == CustomPolicy {
-		hasSigner := len(self.AllowedSigner) > 0
+		hasSigner := len(self.Signer) > 0
 		if hasSigner {
 			return false, fmt.Sprintf("%s must not contain AllowedSigner rule", pType)
 		}
@@ -87,33 +269,46 @@ func (self *Policy) CheckFormat() (bool, string) {
 	return true, ""
 }
 
+func (self *Policy) String() string {
+	if self.Description == "" {
+		return fmt.Sprintf("%s", self.PolicyType)
+	} else {
+		return fmt.Sprintf("%s(%s)", self.PolicyType, self.Description)
+	}
+}
+
 func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs string) (bool, string) {
-	ok, errMsg := self.CheckFormat()
-	if !ok {
-		return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
-	}
-	ns := reqc.Namespace
+	// ok, errMsg := self.CheckFormat()
+	// if !ok {
+	// 	return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
+	// }
+	// ns := reqc.Namespace
 
-	polNs := policyNs
-	pType := self.PolicyType
+	// polNs := policyNs
+	// pType := self.PolicyType
 
-	if pType == CustomPolicy && ns != polNs {
-		return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
-	}
+	// if pType == CustomPolicy && ns != polNs {
+	// 	return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
+	// }
 
 	return true, ""
+}
+
+type AllowRequestCondition struct {
+	Request []RequestMatchPattern    `json:"request,omitempty"`
+	Change  []AllowedChangeCondition `json:"change,omitempty"`
+}
+
+func (arc1 AllowRequestCondition) Merge(arc2 AllowRequestCondition) AllowRequestCondition {
+	return AllowRequestCondition{
+		Request: append(arc1.Request, arc2.Request...),
+		Change:  append(arc1.Change, arc2.Change...),
+	}
 }
 
 type AllowedChangeCondition struct {
 	Request RequestMatchPattern `json:"request,omitempty"`
 	Key     []string            `json:"key,omitempty"`
-	Owner   OwnerMatchCondition `json:"owner,omitempty"`
-}
-
-type OwnerMatchCondition struct {
-	Kind       string `json:"kind,omitempty"`
-	ApiVersion string `json:"apiVersion,omitempty"`
-	Name       string `json:"name,omitempty"`
 }
 
 type SubjectMatchPattern struct {
@@ -130,13 +325,18 @@ type SubjectMatchPattern struct {
 	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
+type SubjectCondition struct {
+	Name    string              `json:"name"`
+	Subject SubjectMatchPattern `json:"subject"`
+}
+
 type AllowUnverifiedCondition struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
 type SignerMatchPattern struct {
-	Request RequestMatchPattern `json:"request,omitempty"`
-	Subject SubjectMatchPattern `json:"subject,omitempty"`
+	Request   RequestMatchPattern `json:"request,omitempty"`
+	Condition SubjectCondition    `json:"condition,omitempty"`
 }
 
 type AllowedUserPattern struct {
@@ -146,15 +346,14 @@ type AllowedUserPattern struct {
 }
 
 type RequestMatchPattern struct {
-	Namespace    string `json:"namespace,omitempty"`
-	Name         string `json:"name,omitempty"`
-	Operation    string `json:"operation,omitempty"`
-	ApiVersion   string `json:"apiVersion,omitempty"`
-	Kind         string `json:"kind,omitempty"`
-	UserName     string `json:"username,omitempty"`
-	Type         string `json:"type,omitempty"`
-	K8sCreatedBy string `json:"k8screatedby,omitempty"`
-	UserGroup    string `json:"usergroup,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Operation  string `json:"operation,omitempty"`
+	ApiVersion string `json:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty"`
+	UserName   string `json:"username,omitempty"`
+	Type       string `json:"type,omitempty"`
+	UserGroup  string `json:"usergroup,omitempty"`
 }
 
 func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
@@ -171,7 +370,6 @@ func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
 		MatchPattern(v.ApiVersion, apiVersion) &&
 		MatchPattern(v.UserName, reqc.UserName) &&
 		MatchPattern(v.Type, reqc.Type) &&
-		MatchPattern(v.K8sCreatedBy, reqc.OrgMetadata.K8sCreatedBy) &&
 		MatchPatternWithArray(v.UserGroup, reqc.UserGroups)
 
 }
@@ -193,15 +391,57 @@ func (p *Policy) DeepCopy() *Policy {
 	return p2
 }
 
+func (p *AppEnforcePolicy) DeepCopyInto(p2 *AppEnforcePolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *AppEnforcePolicy) DeepCopy() *AppEnforcePolicy {
+	p2 := &AppEnforcePolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *IESignerPolicy) DeepCopyInto(p2 *IESignerPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *IESignerPolicy) DeepCopy() *IESignerPolicy {
+	p2 := &IESignerPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *IntegrityEnforcerPolicy) DeepCopyInto(p2 *IntegrityEnforcerPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *IntegrityEnforcerPolicy) DeepCopy() *IntegrityEnforcerPolicy {
+	p2 := &IntegrityEnforcerPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *IEDefaultPolicy) DeepCopyInto(p2 *IEDefaultPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *IEDefaultPolicy) DeepCopy() *IEDefaultPolicy {
+	p2 := &IEDefaultPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
 func (p *Policy) Merge(p2 *Policy) *Policy {
+	mode := p.Mode
+	if p2.Mode != UnknownMode {
+		mode = p2.Mode
+	}
+	allow := p.Allow.Merge(p2.Allow)
 	return &Policy{
-		Enforce:                   append(p.Enforce, p2.Enforce...),
-		IgnoreRequest:             append(p.IgnoreRequest, p2.IgnoreRequest...),
-		AllowedSigner:             append(p.AllowedSigner, p2.AllowedSigner...),
-		AllowedForInternalRequest: append(p.AllowedForInternalRequest, p2.AllowedForInternalRequest...),
-		AllowedByRule:             append(p.AllowedByRule, p2.AllowedByRule...),
-		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
-		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
-		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
+		Ignore:          append(p.Ignore, p2.Ignore...),
+		Signer:          append(p.Signer, p2.Signer...),
+		Allow:           allow,
+		AllowUnverified: append(p.AllowUnverified, p2.AllowUnverified...),
+		Mode:            mode,
 	}
 }
