@@ -43,6 +43,7 @@ spec:
   enforcerConfigCrName: ie-config
   globalConfig:
     openShift: true
+    detectionMode: false
   imagePullSecrets: []
   certPoolConfig:
     createIfNotExist: false
