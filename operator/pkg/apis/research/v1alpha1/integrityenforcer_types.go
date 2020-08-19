@@ -79,6 +79,7 @@ type GlobalConfig struct {
 	NoCertManager bool     `json:"noCertManager,omitempty"`
 	OpenShift     bool     `json:"openShift,omitempty"`
 	Roks          bool     `json:"roks,omitempty"`
+	DetectionMode bool     `json:"detectionMode,omitempty"`
 }
 
 type RegKeySecret struct {
