@@ -124,8 +124,10 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 			return nil
 		}
 		logger.Debug("IntegrityEnforcerPolicy reloaded.")
-		tmp, _ := json.Marshal(iePolList)
-		cache.SetString(keyName, string(tmp), &(self.iePolicyInterval))
+		if len(iePolList.Items) > 0 {
+			tmp, _ := json.Marshal(iePolList)
+			cache.SetString(keyName, string(tmp), &(self.iePolicyInterval))
+		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &iePolList)
 		if err != nil {
@@ -142,8 +144,11 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 			return nil
 		}
 		logger.Debug("IEDefaultPolicy reloaded.")
-		tmp, _ := json.Marshal(defPolList)
-		cache.SetString(keyName, string(tmp), &(self.iePolicyInterval))
+		if len(defPolList.Items) > 0 {
+			tmp, _ := json.Marshal(defPolList)
+			cache.SetString(keyName, string(tmp), &(self.iePolicyInterval))
+		}
+
 	} else {
 		err = json.Unmarshal([]byte(cached), &defPolList)
 		if err != nil {
@@ -160,8 +165,10 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 			return nil
 		}
 		logger.Debug("IESignerPolicy reloaded.")
-		tmp, _ := json.Marshal(sigPolList)
-		cache.SetString(keyName, string(tmp), &(self.iePolicyInterval))
+		if len(sigPolList.Items) > 0 {
+			tmp, _ := json.Marshal(sigPolList)
+			cache.SetString(keyName, string(tmp), &(self.iePolicyInterval))
+		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &sigPolList)
 		if err != nil {
@@ -178,8 +185,10 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 			return nil
 		}
 		logger.Debug("AppEnforcePolicy reloaded.")
-		tmp, _ := json.Marshal(appPolList)
-		cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
+		if len(appPolList.Items) > 0 {
+			tmp, _ := json.Marshal(appPolList)
+			cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
+		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &appPolList)
 		if err != nil {
@@ -196,8 +205,10 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 			return nil
 		}
 		logger.Debug("AppEnforcePolicy reloaded.")
-		tmp, _ := json.Marshal(appPolList2)
-		cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
+		if len(appPolList2.Items) > 0 {
+			tmp, _ := json.Marshal(appPolList2)
+			cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
+		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &appPolList2)
 		if err != nil {

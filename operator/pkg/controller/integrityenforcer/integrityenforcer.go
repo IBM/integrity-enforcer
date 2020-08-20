@@ -131,6 +131,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSignatureCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
+func (r *ReconcileIntegrityEnforcer) createOrUpdateHelmReleaseMetadataCRD(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildHelmReleaseMetadataCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
 /**********************************************
 
 				CR
