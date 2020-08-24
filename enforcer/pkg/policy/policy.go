@@ -118,14 +118,28 @@ func (self *PolicyList) CheckPluginEnabled(name string) bool {
 			break
 		}
 		for _, plg := range pol.Plugin {
-		if plg.Name == name {
-			if plg.Enabled {
-				enabled = true
+			if plg.Name == name {
+				if plg.Enabled {
+					enabled = true
+				}
+				found = true
 			}
-			found = true 
 		}
 	}
 	return enabled
+}
+
+func (self *PolicyList) GetEnabledPlugins() map[string]bool {
+	plugins := map[string]bool{}
+	iePolicyList := self.Get([]PolicyType{IEPolicy})
+	for _, pol := range iePolicyList.Items {
+		for _, plg := range pol.Plugin {
+			if plg.Enabled {
+				plugins[plg.Name] = true
+			}
+		}
+	}
+	return plugins
 }
 
 func (self *PolicyList) GetAllowChange() []AllowedChangeCondition {
