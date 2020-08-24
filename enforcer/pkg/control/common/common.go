@@ -164,7 +164,7 @@ type SignatureAnnotation struct {
 	Certificate           string
 	Message               string
 	MessageScope          string
-	IgnoreAttrs           string
+	MutableAttrs          string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
@@ -175,7 +175,7 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 		Certificate:           self.getString("certificate"),
 		Message:               self.getString("message"),
 		MessageScope:          self.getString("messageScope"),
-		IgnoreAttrs:           self.getString("ignoreAttrs"),
+		MutableAttrs:          self.getString("mutableAttrs"),
 	}
 }
 

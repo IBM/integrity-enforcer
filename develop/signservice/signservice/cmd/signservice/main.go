@@ -129,6 +129,10 @@ func PatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
 	signToResourceSignature(w, r, sign.PatchSign)
 }
 
+// func SignBytes(w http.ResponseWriter, r *http.Request) {
+// 	signer := getParamInRequest(r, "signer", "")
+// }
+
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	mode := "all"
 
@@ -153,6 +157,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", ServeHTTP)
 	r.HandleFunc("/sign", SignToResourceSignature)
+	// r.HandleFunc("/sign/bytes", SignBytes)
 	r.HandleFunc("/sign/apply", ApplySignToResourceSignature)
 	r.HandleFunc("/sign/patch", PatchSignToResourceSignature)
 	r.HandleFunc("/sign/annotation", SignToAnnotation)
