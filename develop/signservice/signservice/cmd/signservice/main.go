@@ -153,6 +153,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", ServeHTTP)
 	r.HandleFunc("/sign", SignToResourceSignature)
+	r.HandleFunc("/sign/bytes", SignBytes)
 	r.HandleFunc("/sign/apply", ApplySignToResourceSignature)
 	r.HandleFunc("/sign/patch", PatchSignToResourceSignature)
 	r.HandleFunc("/sign/annotation", SignToAnnotation)
