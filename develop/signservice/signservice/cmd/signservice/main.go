@@ -129,6 +129,10 @@ func PatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
 	signToResourceSignature(w, r, sign.PatchSign)
 }
 
+func SignBytes(w http.ResponseWriter, r *http.Request) {
+	signer := getParamInRequest(r, "signer", "")
+}
+
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	mode := "all"
 

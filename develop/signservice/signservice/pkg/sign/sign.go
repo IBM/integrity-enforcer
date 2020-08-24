@@ -229,6 +229,13 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	return mergedRsigStr, nil
 }
 
+func SignBytes(msg []byte) ([]byte, error) {
+	sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+	}
+}
+
 func ListUsers(mode string) (string, error) {
 	pubkeyList, err := iesign.LoadKeyRing(publicKeyPath)
 	if err != nil {
