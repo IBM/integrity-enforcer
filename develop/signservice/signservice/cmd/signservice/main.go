@@ -130,7 +130,20 @@ func PatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
 }
 
 func SignBytes(w http.ResponseWriter, r *http.Request) {
+	msg, err := readFileInRequest(r, "yaml")
+	if err != nil {
+		log.Error(err.Error())
+		fmt.Fprint(w, err.Error())
+		return
+	}
 	signer := getParamInRequest(r, "signer", "")
+	result, err := sign.SignBytes([]byte(msg), signer)
+	if err != nil {
+		log.Error(err.Error())
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	fmt.Fprint(w, string(result))
 }
 
 func ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +166,19 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, userStr)
 }
 
+func ListCerts(w http.ResponseWriter, r *http.Request) {
+	mode := "all"
+
+	certStr, err := sign.ListCerts(mode)
+	if err != nil {
+		msg := err.Error()
+		log.Error(msg)
+		fmt.Fprint(w, msg)
+		return
+	}
+	fmt.Fprint(w, certStr)
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", ServeHTTP)
@@ -162,6 +188,7 @@ func main() {
 	r.HandleFunc("/sign/patch", PatchSignToResourceSignature)
 	r.HandleFunc("/sign/annotation", SignToAnnotation)
 	r.HandleFunc("/list/users", ListUsers)
+	r.HandleFunc("/list/certs", ListCerts)
 	r.Schemes("https")
 
 	tlsConfig, err := cert.LoadTLSConfig()

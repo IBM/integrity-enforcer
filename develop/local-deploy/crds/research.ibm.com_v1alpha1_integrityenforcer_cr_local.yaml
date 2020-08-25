@@ -27,6 +27,9 @@ spec:
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
     - namespace: '-'
+    plugin:
+    - name: helm
+      enabled: false
   enforcerConfig:
     log:
       consoleLog:

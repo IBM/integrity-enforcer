@@ -259,6 +259,14 @@ func (self *IntegrityEnforcerPolicy) Policy() *Policy {
 	}
 }
 
+func (self *IntegrityEnforcerPolicy) CheckPluginEnabled(name string) bool {
+	policy := self.Policy()
+	pList := &PolicyList{
+		Items: []*Policy{policy},
+	}
+	return pList.CheckPluginEnabled(name)
+}
+
 type PluginPolicy struct {
 	Name    string `json:"name,omitempty"`
 	Enabled bool   `json:"enabled,omitempty"`

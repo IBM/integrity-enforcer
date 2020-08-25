@@ -180,7 +180,8 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 
 	// find signature
 	signStore := GetSignStore()
-	rsig := signStore.GetResourceSignature(ref, reqc)
+	plugins := self.Policy.GetEnabledPlugins()
+	rsig := signStore.GetResourceSignature(ref, reqc, plugins)
 	if rsig == nil {
 		return &common.SignPolicyEvalResult{
 			Allow:   false,
