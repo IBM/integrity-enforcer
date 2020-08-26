@@ -235,6 +235,7 @@ type SignItem struct {
 	Metadata     SignItemMeta `json:"metadata"`
 	Message      string       `json:"message,omitempty"`
 	MessageScope string       `json:"messageScope,omitempty"`
+	MutableAttrs string       `json:"mutableAttrs,omitempty"`
 	Signature    string       `json:"signature"`
 	Certificate  string       `json:"certificate"`
 	MatchMethod  string       `json:"matchMethod"`
