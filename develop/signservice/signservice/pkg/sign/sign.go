@@ -232,6 +232,25 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	return mergedRsigStr, nil
 }
 
+func SignBytes(msg []byte, signer string) ([]byte, error) {
+	sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error in signing bytes; %s", err.Error()))
+	}
+	msgB64 := base64.StdEncoding.EncodeToString(msg)
+	sigB64 := base64.StdEncoding.EncodeToString(sig)
+	certB64 := base64.StdEncoding.EncodeToString(certPemBytes)
+	result := map[string]string{}
+	result["message"] = msgB64
+	result["signature"] = sigB64
+	result["certificate"] = certB64
+	resultBytes, err := json.Marshal(result)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Error in marshaling sig/cert to bytes; %s", err.Error()))
+	}
+	return resultBytes, nil
+}
+
 func ListUsers(mode string) (string, error) {
 	pubkeyList, err := iesign.LoadKeyRing(publicKeyPath)
 	if err != nil {
@@ -268,4 +287,8 @@ func ListUsers(mode string) (string, error) {
 		return "", errors.New(fmt.Sprintf("Error in marshaling users; %s", err.Error()))
 	}
 	return string(usersBytes), nil
+}
+
+func ListCerts(mode string) (string, error) {
+	return pkix.ListCerts()
 }

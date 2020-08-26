@@ -37,7 +37,7 @@ type KeyBox struct {
 }
 
 type KeyBoxList struct {
-	Items map[string]*KeyBox `json:"items"`
+	Items []*KeyBox `json:"items"`
 }
 
 func (self *KeyBoxList) ToSecretData() map[string][]byte {
@@ -71,6 +71,24 @@ func (self *KeyBoxList) ToCertPoolData() map[string][]byte {
 	return data
 }
 
+func findByName(keyBoxItems []*KeyBox, name string) (*KeyBox, bool) {
+	ok := false
+	var found *KeyBox
+	for _, keyBox := range keyBoxItems {
+		certBytes := keyBox.Certificate
+		cert, err := iepkix.ParseCertificate(certBytes)
+		if err != nil {
+			continue
+		}
+		if cert.Subject.CommonName == name {
+			found = keyBox
+			ok = true
+			break
+		}
+	}
+	return found, ok
+}
+
 func CreateKeyBoxListFromSignerChain(chain []SignerCertName) (*KeyBoxList, error) {
 	selfSignSignerCerts := []SignerCertName{}
 	childSignerCerts := []SignerCertName{}
@@ -81,7 +99,7 @@ func CreateKeyBoxListFromSignerChain(chain []SignerCertName) (*KeyBoxList, error
 			childSignerCerts = append(childSignerCerts, certName)
 		}
 	}
-	keyBoxMap := map[string]*KeyBox{}
+	items := []*KeyBox{}
 	for _, certName := range selfSignSignerCerts {
 		cert, prvKey, pubKey, err := iepkix.CreateCertificate(certName.Name, nil, nil)
 		if err != nil {
@@ -93,10 +111,10 @@ func CreateKeyBoxListFromSignerChain(chain []SignerCertName) (*KeyBoxList, error
 			PublicKey:   pubKey,
 			IsCA:        certName.IsCA,
 		}
-		keyBoxMap[certName.Name] = keyBox
+		items = append(items, keyBox)
 	}
 	for _, certName := range childSignerCerts {
-		parentKeyBox, ok := keyBoxMap[certName.IssuerName]
+		parentKeyBox, ok := findByName(items, certName.IssuerName)
 		if !ok {
 			return nil, fmt.Errorf("There is no cert issuer named", certName.IssuerName)
 		}
@@ -110,9 +128,9 @@ func CreateKeyBoxListFromSignerChain(chain []SignerCertName) (*KeyBoxList, error
 			PublicKey:   pubKey,
 			IsCA:        certName.IsCA,
 		}
-		keyBoxMap[certName.Name] = keyBox
+		items = append(items, keyBox)
 	}
 	return &KeyBoxList{
-		Items: keyBoxMap,
+		Items: items,
 	}, nil
 }

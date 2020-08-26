@@ -46,7 +46,7 @@ const (
 )
 
 type SignStore interface {
-	GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext) *ResourceSignature
+	GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, plugins map[string]bool) *ResourceSignature
 }
 
 /**********************************************
@@ -76,7 +76,7 @@ func InitSignStore(config *config.SignStoreConfig) {
 	}
 }
 
-func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext) *ResourceSignature {
+func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, plugins map[string]bool) *ResourceSignature {
 
 	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
@@ -145,7 +145,13 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 	//3. pick ResourceSignature from external store if available
 
 	//4. helm resource (release secret, helm cahrt resources)
-	return self.helmSignStore.GetResourceSignature(ref, reqc)
+	if ok := plugins["helm"]; ok {
+		rsig := self.helmSignStore.GetResourceSignature(ref, reqc)
+		if rsig != nil {
+			return rsig
+		}
+	}
+	return nil
 
 	//5. return nil if no signature found
 	// return nil

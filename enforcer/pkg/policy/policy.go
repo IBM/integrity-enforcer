@@ -58,6 +58,7 @@ type Policy struct {
 	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
 	Allow           AllowRequestCondition      `json:"allow,omitempty"`
 	Mode            IntegrityEnforcerMode      `json:"mode,omitempty"`
+	Plugin          []PluginPolicy             `json:"plugin,omitempty"`
 	PolicyType      PolicyType                 `json:"policyType,omitempty"`
 	Description     string                     `json:"description,omitempty"`
 }
@@ -106,6 +107,39 @@ func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
 		}
 	}
 	return mode, matchedPolicy
+}
+
+func (self *PolicyList) CheckPluginEnabled(name string) bool {
+	enabled := false
+	iePolicyList := self.Get([]PolicyType{IEPolicy})
+	found := false
+	for _, pol := range iePolicyList.Items {
+		if found {
+			break
+		}
+		for _, plg := range pol.Plugin {
+			if plg.Name == name {
+				if plg.Enabled {
+					enabled = true
+				}
+				found = true
+			}
+		}
+	}
+	return enabled
+}
+
+func (self *PolicyList) GetEnabledPlugins() map[string]bool {
+	plugins := map[string]bool{}
+	iePolicyList := self.Get([]PolicyType{IEPolicy})
+	for _, pol := range iePolicyList.Items {
+		for _, plg := range pol.Plugin {
+			if plg.Enabled {
+				plugins[plg.Name] = true
+			}
+		}
+	}
+	return plugins
 }
 
 func (self *PolicyList) GetAllowChange() []AllowedChangeCondition {
@@ -208,6 +242,7 @@ type IntegrityEnforcerPolicy struct {
 	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
 	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
 	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
+	Plugin      []PluginPolicy        `json:"plugin,omitempty"`
 	PolicyType  PolicyType            `json:"policyType,omitempty"`
 	Description string                `json:"description,omitempty"`
 }
@@ -218,9 +253,23 @@ func (self *IntegrityEnforcerPolicy) Policy() *Policy {
 		Signer:      self.Signer,
 		Ignore:      self.Ignore,
 		Mode:        self.Mode,
+		Plugin:      self.Plugin,
 		PolicyType:  self.PolicyType,
 		Description: self.Description,
 	}
+}
+
+func (self *IntegrityEnforcerPolicy) CheckPluginEnabled(name string) bool {
+	policy := self.Policy()
+	pList := &PolicyList{
+		Items: []*Policy{policy},
+	}
+	return pList.CheckPluginEnabled(name)
+}
+
+type PluginPolicy struct {
+	Name    string `json:"name,omitempty"`
+	Enabled bool   `json:"enabled,omitempty"`
 }
 
 type IESignerPolicy struct {
@@ -443,5 +492,6 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 		Allow:           allow,
 		AllowUnverified: append(p.AllowUnverified, p2.AllowUnverified...),
 		Mode:            mode,
+		Plugin:          append(p.Plugin, p2.Plugin...),
 	}
 }

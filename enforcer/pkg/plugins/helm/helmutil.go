@@ -18,7 +18,6 @@ package helm
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -122,13 +121,4 @@ func ParseManifest(manifest []byte) []map[string]interface{} {
 		t = make(map[string]interface{})
 	}
 	return outputs
-}
-
-func base64decode(str string) string {
-	decBytes, err := base64.StdEncoding.DecodeString(str)
-	if err != nil {
-		return ""
-	}
-	dec := string(decBytes)
-	return dec
 }

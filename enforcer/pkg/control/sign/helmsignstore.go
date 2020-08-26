@@ -23,6 +23,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
 )
 
 type HelmSignStore struct {
@@ -30,17 +31,19 @@ type HelmSignStore struct {
 }
 
 type HelmSignStoreConfig struct {
-	ChartDir    string
-	ChartRepo   string
-	KeyringPath string
+	ChartDir     string
+	ChartRepo    string
+	KeyringPath  string
+	CertPoolPath string
 }
 
 func NewHelmSignStore(ssconfig *config.SignStoreConfig) *HelmSignStore {
 	return &HelmSignStore{
 		config: &HelmSignStoreConfig{
-			ChartDir:    ssconfig.ChartDir,
-			ChartRepo:   ssconfig.ChartRepo,
-			KeyringPath: ssconfig.KeyringPath,
+			ChartDir:     ssconfig.ChartDir,
+			ChartRepo:    ssconfig.ChartRepo,
+			KeyringPath:  ssconfig.KeyringPath,
+			CertPoolPath: ssconfig.CertPoolPath,
 		},
 	}
 }
@@ -56,21 +59,41 @@ func (self *HelmSignStore) GetResourceSignature(ref *common.ResourceRef, reqc *c
 		return nil
 	}
 	if rsecBytes != nil {
-		pkgInfo, err := helm.GetPackageInfo(rsecBytes, self.config.ChartRepo, self.config.ChartDir)
+		// pkgInfo, err := helm.GetPackageInfo(rsecBytes, self.config.ChartRepo, self.config.ChartDir)
+		// if err == nil {
+		// 	fPath := pkgInfo.Package.FilePath
+		// 	pPath := pkgInfo.Package.ProvPath
+		// 	vSig := pkgInfo.Values.Signature
+		// 	vMsg := pkgInfo.Values.Message
+		// 	eCfg := pkgInfo.Values.EmptyConfig
+		// 	return &ResourceSignature{
+		// 		SignType:    SignatureTypeHelm,
+		// 		keyringPath: self.config.KeyringPath,
+		// 		data:        map[string]string{"pkgFilePath": fPath, "pkgProvPath": pPath, "valMessage": vMsg, "valSignature": vSig},
+		// 		option:      map[string]bool{"emptyConfig": eCfg},
+		// 	}
+		// } else {
+		// 	logger.Error(fmt.Sprintf("Error occured in get helm package info from release secret; %s", err.Error()))
+		// 	return nil
+		// }
+
+		hrmSigs, err := helm.GetHelmReleaseMetadata(rsecBytes)
 		if err == nil {
-			fPath := pkgInfo.Package.FilePath
-			pPath := pkgInfo.Package.ProvPath
-			vSig := pkgInfo.Values.Signature
-			vMsg := pkgInfo.Values.Message
-			eCfg := pkgInfo.Values.EmptyConfig
+			message := hrmSigs[0]
+			signature := hrmSigs[1]
+			certificate := hrmSigs[2]
+			rls := hrmSigs[3]
+			hrm := hrmSigs[4]
+			eCfg := true
 			return &ResourceSignature{
-				SignType:    SignatureTypeHelm,
-				keyringPath: self.config.KeyringPath,
-				data:        map[string]string{"pkgFilePath": fPath, "pkgProvPath": pPath, "valMessage": vMsg, "valSignature": vSig},
-				option:      map[string]bool{"emptyConfig": eCfg},
+				SignType:     SignatureTypeHelm,
+				keyringPath:  self.config.KeyringPath,
+				certPoolPath: self.config.CertPoolPath,
+				data:         map[string]string{"message": message, "signature": signature, "certificate": certificate, "releaseSecret": rls, "helmReleaseMetadata": hrm},
+				option:       map[string]bool{"emptyConfig": eCfg, "matchRequired": true},
 			}
 		} else {
-			logger.Error(fmt.Sprintf("Error occured in get helm package info from release secret; %s", err.Error()))
+			logger.Error(fmt.Sprintf("Error occured in getting signature from helm release metadata; %s", err.Error()))
 			return nil
 		}
 	}
@@ -87,31 +110,73 @@ func (self *HelmVerifier) Verify(sig *ResourceSignature, reqc *common.ReqContext
 	var vsinfo *common.SignerInfo
 	var retErr error
 
-	signer, err := helm.VerifyPackage(sig.data["pkgFilePath"], sig.data["pkgProvPath"], sig.keyringPath)
+	if sig.option["matchRequired"] {
+		rls, _ := sig.data["releaseSecret"]
+		hrm, _ := sig.data["helmReleaseMetadata"]
+		matched := helm.MatchReleaseSecret(rls, hrm)
+		if !matched {
+			return &SigVerifyResult{
+				Error: &common.CheckError{
+					Msg:    "HelmReleaseMetadata is not identical with the release secret",
+					Reason: "HelmReleaseMetadata is not identical with the release secret",
+					Error:  nil,
+				},
+				Signer: nil,
+			}, nil
+		}
+	}
+
+	certificate := []byte(sig.data["certificate"])
+	certOk, reasonFail, err := pkix.VerifyCertificate(certificate, sig.certPoolPath)
 	if err != nil {
 		vcerr = &common.CheckError{
-			Msg:    "Failed to load keyring",
-			Reason: "Failed to load keyring",
+			Msg:    "Error occured in certificate verification",
+			Reason: reasonFail,
 			Error:  err,
 		}
 		vsinfo = nil
 		retErr = err
-	} else if signer == nil {
+	} else if !certOk {
 		vcerr = &common.CheckError{
-			Msg:    "Failed to verify Helm package; no valid signer",
-			Reason: "Failed to verify Helm package; no valid signer",
+			Msg:    "Failed to verify certificate",
+			Reason: reasonFail,
 			Error:  nil,
 		}
 		vsinfo = nil
 		retErr = nil
 	} else {
-		vcerr = nil
-		vsinfo = &common.SignerInfo{
-			Email:   signer.Email,
-			Name:    signer.Name,
-			Comment: signer.Comment,
+		cert, err := pkix.ParseCertificate(certificate)
+		if err != nil {
+			logger.Error("Failed to parse certificate; ", err)
 		}
-		retErr = nil
+		pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
+		if err != nil {
+			logger.Error("Failed to get public key from certificate; ", err)
+		}
+		message := []byte(sig.data["message"])
+		signature := []byte(sig.data["signature"])
+		sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in signature verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if sigOk {
+			vcerr = nil
+			vsinfo = common.NewSignerInfoFromCert(cert)
+			retErr = nil
+		} else {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify signature",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		}
 	}
 
 	svresult := &SigVerifyResult{
@@ -119,4 +184,5 @@ func (self *HelmVerifier) Verify(sig *ResourceSignature, reqc *common.ReqContext
 		Signer: vsinfo,
 	}
 	return svresult, retErr
+
 }

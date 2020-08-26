@@ -18,6 +18,7 @@ package pkix
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -87,4 +88,41 @@ func GenerateSignature(msg []byte, name string) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 	return sig, certPemBytes, nil
+}
+
+func ListCerts() (string, error) {
+	files, err := ioutil.ReadDir(signserviceSecretPath)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get files from mounted secret dir; %s" + err.Error())
+	}
+	result := []map[string]string{}
+	var certPemBytes []byte
+	for _, f := range files {
+		if !f.IsDir() {
+			fname := f.Name()
+			isCert := strings.HasPrefix(fname, "certificate-")
+			if !isCert {
+				continue
+			}
+			fpath := path.Join(signserviceSecretPath, fname)
+			certPemBytes, err = ioutil.ReadFile(fpath)
+			if err != nil {
+				return "", fmt.Errorf("Failed to read certificate file; %s", err.Error())
+			}
+			certBytes := iepkix.PEMDecode(certPemBytes, iepkix.PEMTypeCertificate)
+			cert, err := x509.ParseCertificate(certBytes)
+			if err != nil {
+				return "", fmt.Errorf("Failed to load certificate; %s", err.Error())
+			}
+			tmp := map[string]string{}
+			tmp["subject"] = cert.Subject.CommonName
+			tmp["issuer"] = cert.Issuer.CommonName
+			result = append(result, tmp)
+		}
+	}
+	resultBytes, err := json.Marshal(result)
+	if err != nil {
+		return "", fmt.Errorf("Failed to marshal list of certs; %s", err.Error())
+	}
+	return string(resultBytes), nil
 }
