@@ -33,6 +33,7 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 	labels := cr.Spec.MetaLabels
 
 	var volumemounts []v1.VolumeMount
+	var servervolumemounts []v1.VolumeMount
 	var volumes []v1.Volume
 
 	volumemounts = []v1.VolumeMount{
@@ -41,12 +42,63 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			Name:      "log-volume",
 		},
 	}
-	volumes = []v1.Volume{
-		SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
-		SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
-		SecretVolume("ie-keyring-secret", cr.Spec.KeyRing.Name),
-		EmptyDirVolume("log-volume"),
-		EmptyDirVolume("tmp"),
+
+	if cr.Spec.GlobalConfig.DetectionMode {
+		volumes = []v1.Volume{
+			SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
+			EmptyDirVolume("log-volume"),
+			EmptyDirVolume("tmp"),
+		}
+	} else {
+		volumes = []v1.Volume{
+			SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
+			SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
+			SecretVolume("ie-keyring-secret", cr.Spec.KeyRing.Name),
+			EmptyDirVolume("log-volume"),
+			EmptyDirVolume("tmp"),
+		}
+	}
+
+	if cr.Spec.GlobalConfig.DetectionMode {
+		servervolumemounts = []v1.VolumeMount{
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
+	} else {
+		servervolumemounts = []v1.VolumeMount{
+			{
+				MountPath: "/ie-certpool-secret",
+				Name:      "ie-certpool-secret",
+			},
+			{
+				MountPath: "/keyring",
+				Name:      "ie-keyring-secret",
+			},
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
 	}
 
 	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
@@ -82,29 +134,7 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				Protocol:      v1.ProtocolTCP,
 			},
 		},
-		VolumeMounts: []v1.VolumeMount{
-			{
-				MountPath: "/ie-certpool-secret",
-				Name:      "ie-certpool-secret",
-			},
-			{
-				MountPath: "/keyring",
-				Name:      "ie-keyring-secret",
-			},
-			{
-				MountPath: "/run/secrets/tls",
-				Name:      "ie-tls-certs",
-				ReadOnly:  true,
-			},
-			{
-				MountPath: "/tmp",
-				Name:      "tmp",
-			},
-			{
-				MountPath: "/ie-app/public",
-				Name:      "log-volume",
-			},
-		},
+		VolumeMounts: servervolumemounts,
 		Env: []v1.EnvVar{
 			{
 				Name:  "CHART_BASE_URL",

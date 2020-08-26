@@ -44,7 +44,8 @@ spec:
     patch:
       enabled: true
   enforcerConfigCrName: ie-config
-  globalConfig: {}
+  globalConfig: 
+    detectionMode: false
   imagePullSecrets: []
   certPoolConfig:
     createIfNotExist: false

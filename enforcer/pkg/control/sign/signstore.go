@@ -84,11 +84,11 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 	if sigAnnotations.Signature != "" {
 		message := base64decode(sigAnnotations.Message)
 		messageScope := sigAnnotations.MessageScope
-		ignoreAttrs := sigAnnotations.IgnoreAttrs
+		mutableAttrs := sigAnnotations.MutableAttrs
 		matchRequired := true
 		scopedSignature := false
 		if message == "" && messageScope != "" {
-			message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, ignoreAttrs)
+			message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, mutableAttrs)
 			matchRequired = false  // skip matching because the message is generated from Requested Object
 			scopedSignature = true // enable checking if the signature is for patch
 		}
@@ -103,7 +103,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 		return &ResourceSignature{
 			SignType:     signType,
 			certPoolPath: self.config.CertPoolPath,
-			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope},
+			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope, "mutableAttrs": mutableAttrs},
 			option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 		}
 	}
@@ -119,10 +119,11 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 			signature := base64decode(si.Signature)
 			certificate := base64decode(si.Certificate)
 			message := base64decode(si.Message)
+			mutableAttrs := si.MutableAttrs
 			matchRequired := true
 			scopedSignature := false
 			if si.Message == "" && si.MessageScope != "" {
-				message = GenerateMessageFromRawObj(reqc.RawObject, si.MessageScope, "")
+				message = GenerateMessageFromRawObj(reqc.RawObject, si.MessageScope, mutableAttrs)
 				matchRequired = false  // skip matching because the message is generated from Requested Object
 				scopedSignature = true // enable checking if the signature is for patch
 			}
@@ -135,7 +136,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 			return &ResourceSignature{
 				SignType:     signType,
 				certPoolPath: self.config.CertPoolPath,
-				data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": si.MessageScope},
+				data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": si.MessageScope, "mutableAttrs": mutableAttrs},
 				option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -188,7 +189,8 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 
 	if sig.option["matchRequired"] {
 		message, _ := sig.data["message"]
-		matched := self.MatchMessage([]byte(message), reqc.RawObject, self.Namespace, sig.SignType)
+		mutableAttrs, _ := sig.data["mutableAttrs"]
+		matched := self.MatchMessage([]byte(message), reqc.RawObject, mutableAttrs, self.Namespace, sig.SignType)
 		if !matched {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
@@ -295,21 +297,32 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNamespace string, signType SignatureType) bool {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs, enforcerNamespace string, signType SignatureType) bool {
 	var mask []string
 	mask = getMaskDef("")
 
 	orgObj := []byte(message)
+	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error in loading orgNode: %s", err.Error()))
+		return false
+	}
+
+	addMask := []string{}
+	if mutableAttrs != "" {
+		orgMutableAttrs := orgNode.GetString("metadata.annotations.mutableAttrs")
+		if orgMutableAttrs == mutableAttrs {
+			addMask = mapnode.SplitCommaSeparatedKeys(mutableAttrs)
+		}
+	}
+	mask = append(mask, addMask...)
+
 	matched := matchContents(orgObj, reqObj, mask)
 	if matched {
 		logger.Debug("matched directly")
 	}
 	if !matched && signType == SignatureTypeResource {
-		orgNode, err := mapnode.NewFromYamlBytes(orgObj)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Error in loading orgNode: %s", err.Error()))
-			return false
-		}
+
 		nsMaskedOrgBytes := orgNode.Mask([]string{"metadata.namespace"}).ToYaml()
 		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), enforcerNamespace)
 		if err != nil {
@@ -317,6 +330,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNames
 			return false
 		}
 		mask = getMaskDef("")
+		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 		matched = matchContents(simObj, reqObj, mask)
@@ -341,6 +355,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNames
 			return false
 		}
 		mask = getMaskDef("")
+		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 		matched = matchContents(simPatchedObj, reqObj, mask)
@@ -362,6 +377,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, enforcerNames
 			return false
 		}
 		mask = getMaskDef("")
+		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 		matched = matchContents(simPatchedObj, reqObj, mask)
@@ -454,15 +470,15 @@ func findSignatureFromCR(namespace string) (*rsig.ResourceSignatureList, error) 
 	return rsiglObj, nil
 }
 
-func GenerateMessageFromRawObj(rawObj []byte, filter, ignoreAttrs string) string {
+func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) string {
 	message := ""
 	node, err := mapnode.NewFromBytes(rawObj)
 	if err != nil {
 		return ""
 	}
-	if ignoreAttrs != "" {
-		ignoreAttrs = strings.ReplaceAll(ignoreAttrs, "\n", "")
-		mask := strings.Split(ignoreAttrs, ",")
+	if mutableAttrs != "" {
+		mutableAttrs = strings.ReplaceAll(mutableAttrs, "\n", "")
+		mask := strings.Split(mutableAttrs, ",")
 		for i := range mask {
 			mask[i] = strings.Trim(mask[i], " ")
 		}

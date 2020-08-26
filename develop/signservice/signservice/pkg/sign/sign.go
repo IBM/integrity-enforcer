@@ -116,6 +116,7 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	apiVersion := node.GetString("apiVersion")
 	kind := node.GetString("kind")
 	name := node.GetString("metadata.name")
+	mutableAttrs := node.GetString("metadata.annotations.mutableAttrs")
 	namespaceInYaml := node.GetString("metadata.namespace")
 	namespace := namespaceInQuery
 	if namespace == "" {
@@ -154,10 +155,11 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 				Name:      name,
 				Namespace: namespace,
 			},
-			Message:     msgB64,
-			Signature:   sigB64,
-			Certificate: certB64,
-			Type:        signType,
+			Message:      msgB64,
+			MutableAttrs: mutableAttrs,
+			Signature:    sigB64,
+			Certificate:  certB64,
+			Type:         signType,
 		}
 	} else {
 		scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
@@ -185,6 +187,7 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 				Namespace: namespace,
 			},
 			MessageScope: scope,
+			MutableAttrs: mutableAttrs,
 			Signature:    sigB64,
 			Certificate:  certB64,
 			Type:         signType,
