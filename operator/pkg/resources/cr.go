@@ -113,7 +113,7 @@ func BuildDefaultEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *ied
 
 // ie policy cr
 func BuildIntegrityEnforcerPolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iepol.IntegrityEnforcerPolicy {
-	pol := &cr.Spec.EnforcePolicy
+	pol := cr.Spec.EnforcePolicy
 	pol.PolicyType = policy.IEPolicy
 	epcr := &iepol.IntegrityEnforcerPolicy{
 		ObjectMeta: metav1.ObjectMeta{

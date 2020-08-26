@@ -209,7 +209,10 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 	in.RegKeySecret.DeepCopyInto(&out.RegKeySecret)
 	in.GlobalConfig.DeepCopyInto(&out.GlobalConfig)
 	in.EnforcerConfig.DeepCopyInto(&out.EnforcerConfig)
-	in.EnforcePolicy.DeepCopyInto(&out.EnforcePolicy)
+	if in.EnforcePolicy != nil {
+		in, out := &in.EnforcePolicy, &out.EnforcePolicy
+		*out = (*in).DeepCopy()
+	}
 	if in.DefaultPolicy != nil {
 		in, out := &in.DefaultPolicy, &out.DefaultPolicy
 		*out = (*in).DeepCopy()

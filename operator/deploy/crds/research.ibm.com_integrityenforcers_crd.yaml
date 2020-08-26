@@ -603,59 +603,52 @@ spec:
                       type: array
                   type: object
               type: object
+            certPoolConfig:
+              properties:
+                createIfNotExist:
+                  type: boolean
+                keyValue:
+                  format: byte
+                  type: string
+                name:
+                  type: string
+              type: object
             defaultPolicy:
               properties:
-                allowUnverified:
-                  items:
-                    properties:
-                      namespace:
-                        type: string
-                    type: object
-                  type: array
-                allowedByRule:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                allowedChange:
-                  items:
-                    properties:
-                      key:
-                        items:
-                          type: string
-                        type: array
-                      owner:
+                allow:
+                  properties:
+                    change:
+                      items:
                         properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
+                          key:
+                            items:
+                              type: string
+                            type: array
+                          request:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              operation:
+                                type: string
+                              type:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
                         type: object
-                      request:
+                      type: array
+                    request:
+                      items:
                         properties:
                           apiVersion:
-                            type: string
-                          k8screatedby:
                             type: string
                           kind:
                             type: string
@@ -672,232 +665,49 @@ spec:
                           username:
                             type: string
                         type: object
-                    type: object
-                  type: array
-                allowedForInternalRequest:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                allowedSigner:
-                  items:
-                    properties:
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                      subject:
-                        properties:
-                          email:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-                enforce:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                ignoreRequest:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                namespace:
+                      type: array
+                  type: object
+                description:
                   type: string
-                permitIfCreator:
-                  items:
-                    properties:
-                      allowChangesBySignedServiceAccount:
-                        type: boolean
-                      authorizedServiceAccount:
-                        items:
-                          type: string
-                        type: array
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-                permitIfVerifiedOwner:
-                  items:
-                    properties:
-                      allowChangesBySignedServiceAccount:
-                        type: boolean
-                      authorizedServiceAccount:
-                        items:
-                          type: string
-                        type: array
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
                 policyType:
                   type: string
               type: object
             enforcePolicy:
               properties:
-                allowUnverified:
-                  items:
-                    properties:
-                      namespace:
-                        type: string
-                    type: object
-                  type: array
-                allowedByRule:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                allowedChange:
-                  items:
-                    properties:
-                      key:
-                        items:
-                          type: string
-                        type: array
-                      owner:
+                allow:
+                  properties:
+                    change:
+                      items:
                         properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
+                          key:
+                            items:
+                              type: string
+                            type: array
+                          request:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              operation:
+                                type: string
+                              type:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
                         type: object
-                      request:
+                      type: array
+                    request:
+                      items:
                         properties:
                           apiVersion:
-                            type: string
-                          k8screatedby:
                             type: string
                           kind:
                             type: string
@@ -914,178 +724,101 @@ spec:
                           username:
                             type: string
                         type: object
-                    type: object
-                  type: array
-                allowedForInternalRequest:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                allowedSigner:
-                  items:
-                    properties:
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                      subject:
-                        properties:
-                          email:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-                enforce:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                ignoreRequest:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                namespace:
+                      type: array
+                  type: object
+                description:
                   type: string
-                permitIfCreator:
+                ignore:
                   items:
                     properties:
-                      allowChangesBySignedServiceAccount:
-                        type: boolean
-                      authorizedServiceAccount:
-                        items:
-                          type: string
-                        type: array
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      operation:
+                        type: string
+                      type:
+                        type: string
+                      usergroup:
+                        type: string
+                      username:
+                        type: string
                     type: object
                   type: array
-                permitIfVerifiedOwner:
+                mode:
+                  type: string
+                plugin:
                   items:
                     properties:
-                      allowChangesBySignedServiceAccount:
+                      enabled:
                         type: boolean
-                      authorizedServiceAccount:
-                        items:
-                          type: string
-                        type: array
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
+                      name:
+                        type: string
                     type: object
                   type: array
                 policyType:
                   type: string
+                signer:
+                  items:
+                    properties:
+                      condition:
+                        properties:
+                          name:
+                            type: string
+                          subject:
+                            properties:
+                              commonName:
+                                type: string
+                              country:
+                                type: string
+                              email:
+                                type: string
+                              locality:
+                                type: string
+                              organization:
+                                type: string
+                              organizationalUnit:
+                                type: string
+                              postalCode:
+                                type: string
+                              province:
+                                type: string
+                              serialNumber:
+                                type: string
+                              streetAddress:
+                                type: string
+                              uid:
+                                type: string
+                            type: object
+                        required:
+                        - name
+                        - subject
+                        type: object
+                      request:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                          operation:
+                            type: string
+                          type:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
+                            type: string
+                        type: object
+                    type: object
+                  type: array
               type: object
             enforcePolicyCrName:
               type: string
@@ -1102,8 +835,6 @@ spec:
                             properties:
                               apiVersion:
                                 type: string
-                              k8screatedby:
-                                type: string
                               kind:
                                 type: string
                               name:
@@ -1125,8 +856,6 @@ spec:
                             properties:
                               apiVersion:
                                 type: string
-                              k8screatedby:
-                                type: string
                               kind:
                                 type: string
                               name:
@@ -1144,6 +873,10 @@ spec:
                             type: object
                           type: array
                       type: object
+                    consoleLogFile:
+                      type: string
+                    consoleLogFormat:
+                      type: string
                     contextLog:
                       properties:
                         enabled:
@@ -1153,8 +886,6 @@ spec:
                             properties:
                               apiVersion:
                                 type: string
-                              k8screatedby:
-                                type: string
                               kind:
                                 type: string
                               name:
@@ -1176,8 +907,6 @@ spec:
                             properties:
                               apiVersion:
                                 type: string
-                              k8screatedby:
-                                type: string
                               kind:
                                 type: string
                               name:
@@ -1195,6 +924,11 @@ spec:
                             type: object
                           type: array
                       type: object
+                    contextLogFile:
+                      type: string
+                    contextLogRotateSize:
+                      format: int64
+                      type: integer
                     includeRelease:
                       type: boolean
                     includeRequest:
@@ -1216,6 +950,8 @@ spec:
                   items:
                     type: string
                   type: array
+                detectionMode:
+                  type: boolean
                 noCertManager:
                   type: boolean
                 openShift:
@@ -1440,6 +1176,20 @@ spec:
                 stdOutput:
                   type: boolean
               type: object
+            maxSurge:
+              anyOf:
+              - type: integer
+              - type: string
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              x-kubernetes-int-or-string: true
+            maxUnavailable:
+              anyOf:
+              - type: integer
+              - type: string
+              x-kubernetes-int-or-string: true
             nodeSelector:
               additionalProperties:
                 type: string
@@ -1455,10 +1205,6 @@ spec:
                   type: string
               type: object
             replicaCount:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "operator-sdk generate k8s" to regenerate code after
-                modifying this file Add custom validation using kubebuilder tags:
-                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
               format: int32
               type: integer
             security:
@@ -1789,238 +1535,67 @@ spec:
                         type: string
                     type: object
                   type: array
-                allowedByRule:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                allowedChange:
-                  items:
-                    properties:
-                      key:
-                        items:
-                          type: string
-                        type: array
-                      owner:
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                        type: object
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-                allowedForInternalRequest:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                allowedSigner:
-                  items:
-                    properties:
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                      subject:
-                        properties:
-                          email:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-                enforce:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                ignoreRequest:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      k8screatedby:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                namespace:
+                description:
                   type: string
-                permitIfCreator:
-                  items:
-                    properties:
-                      allowChangesBySignedServiceAccount:
-                        type: boolean
-                      authorizedServiceAccount:
-                        items:
-                          type: string
-                        type: array
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-                permitIfVerifiedOwner:
-                  items:
-                    properties:
-                      allowChangesBySignedServiceAccount:
-                        type: boolean
-                      authorizedServiceAccount:
-                        items:
-                          type: string
-                        type: array
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          k8screatedby:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
                 policyType:
                   type: string
+                signer:
+                  items:
+                    properties:
+                      condition:
+                        properties:
+                          name:
+                            type: string
+                          subject:
+                            properties:
+                              commonName:
+                                type: string
+                              country:
+                                type: string
+                              email:
+                                type: string
+                              locality:
+                                type: string
+                              organization:
+                                type: string
+                              organizationalUnit:
+                                type: string
+                              postalCode:
+                                type: string
+                              province:
+                                type: string
+                              serialNumber:
+                                type: string
+                              streetAddress:
+                                type: string
+                              uid:
+                                type: string
+                            type: object
+                        required:
+                        - name
+                        - subject
+                        type: object
+                      request:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                          operation:
+                            type: string
+                          type:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
+                            type: string
+                        type: object
+                    type: object
+                  type: array
               type: object
             tolerations:
               items:

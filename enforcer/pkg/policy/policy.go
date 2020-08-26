@@ -111,9 +111,8 @@ func (self *PolicyList) GetMode() (IntegrityEnforcerMode, *Policy) {
 
 func (self *PolicyList) CheckPluginEnabled(name string) bool {
 	enabled := false
-	iePolicyList := self.Get([]PolicyType{IEPolicy})
 	found := false
-	for _, pol := range iePolicyList.Items {
+	for _, pol := range self.Items {
 		if found {
 			break
 		}

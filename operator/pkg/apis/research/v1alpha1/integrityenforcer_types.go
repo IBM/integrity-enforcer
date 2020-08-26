@@ -50,12 +50,12 @@ type IntegrityEnforcerSpec struct {
 	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
 	GlobalConfig GlobalConfig    `json:"globalConfig,omitempty"`
 
-	EnforcerConfigCrName string                         `json:"enforcerConfigCrName,omitempty"`
-	EnforcerConfig       iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
-	EnforcePolicyCrName  string                         `json:"enforcePolicyCrName,omitempty"`
-	EnforcePolicy        policy.IntegrityEnforcerPolicy `json:"enforcePolicy,omitempty"`
-	DefaultPolicy        *policy.IEDefaultPolicy        `json:"defaultPolicy,omitempty"`
-	SignerPolicy         *policy.IESignerPolicy         `json:"signerPolicy,omitempty"`
+	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
+	EnforcerConfig       iec.EnforcerConfig              `json:"enforcerConfig,omitempty"`
+	EnforcePolicyCrName  string                          `json:"enforcePolicyCrName,omitempty"`
+	EnforcePolicy        *policy.IntegrityEnforcerPolicy `json:"enforcePolicy,omitempty"`
+	DefaultPolicy        *policy.IEDefaultPolicy         `json:"defaultPolicy,omitempty"`
+	SignerPolicy         *policy.IESignerPolicy          `json:"signerPolicy,omitempty"`
 
 	SignatureNamespace string `json:"signatureNamespace,omitempty"`
 	PolicyNamespace    string `json:"policyNamespace,omitempty"`
