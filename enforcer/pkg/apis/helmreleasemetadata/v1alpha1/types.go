@@ -60,7 +60,7 @@ type HelmReleaseMetadata struct {
 type HelmReleaseMetadataSpec struct {
 	Name          string `json:"name"`
 	Chart         []byte `json:"chart"`
-	Prov          []byte `json:"prov"`
+	Prov          []byte `json:"prov,omitempty"`
 	Config        []byte `json:"config"`
 	Manifest      []byte `json:"manifest"`
 	InstallOption string `json:"installOption"`

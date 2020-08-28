@@ -222,7 +222,15 @@ func GetHelmReleaseMetadata(rawBytes []byte) ([]string, error) {
 
 	hrmAnt := hrm.GetObjectMeta().GetAnnotations()
 
-	messageB64, _ := hrmAnt["message"]
+	messageB64, ok := hrmAnt["message"]
+	if !ok {
+		scopeKeys, ok2 := hrmAnt["messageScope"]
+		if !ok2 {
+			return nil, fmt.Errorf("failed to get helm signature in HelmReleaseMetadata: must contain `message` or `messageScope` in annotation.")
+		}
+		genMessage := GenerateMessageFromRawObj(hlmBytes, scopeKeys, "")
+		messageB64 = base64.StdEncoding.EncodeToString([]byte(genMessage))
+	}
 	signatureB64, _ := hrmAnt["signature"]
 	certificateB64, _ := hrmAnt["certificate"]
 	message := base64decode(messageB64)
@@ -399,4 +407,32 @@ func matchWithManifest(requestObject, manifestObject []byte) bool {
 
 func IsReleaseSecret(kind, name string) bool {
 	return (kind == "Secret" && strings.HasPrefix(name, releaseSecretPrefix))
+}
+
+func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) string {
+	message := ""
+	node, err := mapnode.NewFromBytes(rawObj)
+	if err != nil {
+		return ""
+	}
+	if mutableAttrs != "" {
+		mutableAttrs = strings.ReplaceAll(mutableAttrs, "\n", "")
+		mask := strings.Split(mutableAttrs, ",")
+		for i := range mask {
+			mask[i] = strings.Trim(mask[i], " ")
+		}
+		node = node.Mask(mask)
+	}
+	if filter == "" {
+		message = node.ToJson() + "\n"
+	} else {
+		filterKeys := mapnode.SplitCommaSeparatedKeys(filter)
+		for _, k := range filterKeys {
+			subNodeList := node.MultipleSubNode(k)
+			for _, subNode := range subNodeList {
+				message += subNode.ToJson() + "\n"
+			}
+		}
+	}
+	return message
 }
