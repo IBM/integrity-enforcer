@@ -137,6 +137,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateHelmReleaseMetadataCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
+func (r *ReconcileIntegrityEnforcer) createOrUpdateProtectRuleCRD(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildProtectRuleCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
 /**********************************************
 
 				CR

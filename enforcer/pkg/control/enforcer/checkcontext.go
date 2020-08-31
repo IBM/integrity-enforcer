@@ -18,10 +18,14 @@ package enforcer
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	prapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/protectrule/v1alpha1"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
+	prclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/protectrule/clientset/versioned/typed/protectrule/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -32,6 +36,7 @@ import (
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 /**********************************************
@@ -131,14 +136,19 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	logger.InitSessionLogger(reqc.Namespace, reqc.Name, reqc.ResourceRef().ApiVersion, reqc.Kind, reqc.Operation)
 	self.ReqC = reqc
 
+	// Check if the resource is protected or not
+	pRule := self.loadProtectRule(self.ReqC.Namespace)
+	isProtected := self.isProtected(pRule, reqc)
+
+	if !isProtected {
+		self.Ignored = true
+		return self.createAdmissionResponse()
+	}
+
 	self.policy.Load(self.ReqC.Namespace)
-
 	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
-
 	self.DetectionModeEnabled, self.detectionMatchedPolicy = policyChecker.IsDetectionModeEnabled()
 	self.UnverifiedModeEnabled, self.unverifiedMatchedPolicy = policyChecker.IsTrustStateEnforcementDisabled()
-	self.Ignored, self.ignoreMatchedPolicy = policyChecker.IsIgnoreRequest()
-	self.Result.InternalRequest, self.allowMatchedPolicy = policyChecker.IsAllowRequest()
 
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
@@ -147,11 +157,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	if !self.Ignored && self.config.Log.ContextLog.IsInScope(self.ReqC) {
 		self.ContextLogEnabled = true
 	}
-
-	if self.Ignored {
-		return self.createAdmissionResponse()
-	}
-
 	//log entry
 	self.logEntry()
 
@@ -159,12 +164,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	evalReason := common.REASON_UNEXPECTED
 	matchedPolicy := ""
 	var errMsg string
-
-	if !allowed && self.Result.InternalRequest {
-		allowed = true
-		evalReason = common.REASON_INTERNAL
-		matchedPolicy = self.allowMatchedPolicy
-	}
 
 	//evaluate sign policy
 	if !self.Aborted && !allowed {
@@ -256,6 +255,10 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	//create admission response
 	admissionResponse := self.createAdmissionResponse()
+
+	if !admissionResponse.Allowed {
+		pRule.Update(reqc.Map())
+	}
 
 	//log context
 	self.logContext()
@@ -538,4 +541,43 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		return []byte("")
 	}
 	return logBytes
+}
+
+func (self *CheckContext) loadProtectRule(namespace string) *prapi.ProtectRule {
+	name := "ie-protect-rule"
+	prLoadInterval := time.Second * 5
+	config, _ := rest.InClusterConfig()
+	var pr *prapi.ProtectRule
+	var err error
+	var keyName string
+	prClient, _ := prclient.NewForConfig(config)
+	keyName = fmt.Sprintf("protectRule/%s", namespace)
+	if cached := cache.GetString(keyName); cached == "" {
+		pr, err = prClient.ProtectRules(namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			logger.Debug("failed to get ProtectRule:", err)
+			return nil
+		}
+		logger.Debug("ProtectRule reloaded.")
+		if !pr.IsEmpty() {
+			tmp, _ := json.Marshal(pr)
+			cache.SetString(keyName, string(tmp), &(prLoadInterval))
+		}
+	} else {
+		err = json.Unmarshal([]byte(cached), &pr)
+		if err != nil {
+			logger.Debug("failed to Unmarshal cached IntegrityEnforcerPolicy:", err)
+			return nil
+		}
+	}
+	return pr
+}
+
+func (self *CheckContext) isProtected(pRule *prapi.ProtectRule, reqc *common.ReqContext) bool {
+	if pRule == nil {
+		return false
+	}
+	reqFields := reqc.Map()
+	return pRule.Match(reqFields)
+	//return reqc.Namespace == "secure-ns" && reqc.Kind == "ConfigMap" && reqc.Name == "test-cm"
 }

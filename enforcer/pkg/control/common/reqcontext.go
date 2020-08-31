@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
@@ -97,6 +98,23 @@ func (reqc *ReqContext) ResourceRef() *ResourceRef {
 		Kind:       reqc.Kind,
 		ApiVersion: gv.String(),
 	}
+}
+
+func (reqc *ReqContext) Map() map[string]string {
+	m := map[string]string{}
+	v := reflect.Indirect(reflect.ValueOf(reqc))
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		f := v.Field(i)
+		itf := f.Interface()
+		if value, ok := itf.(string); ok {
+			filedName := t.Field(i).Name
+			m[filedName] = value
+		} else {
+			continue
+		}
+	}
+	return m
 }
 
 func (reqc *ReqContext) GroupVersion() string {

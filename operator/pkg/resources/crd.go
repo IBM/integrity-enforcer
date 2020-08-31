@@ -690,3 +690,43 @@ func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.
 	}
 	return newCRD
 }
+
+// protectrule crd
+func BuildProtectRuleCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+	xPreserve := true
+	newCRD := &extv1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "protectrules.research.ibm.com",
+			Namespace: cr.Namespace,
+		},
+		Spec: extv1.CustomResourceDefinitionSpec{
+			Group: "research.ibm.com",
+			//Version: "v1beta1",
+			Names: extv1.CustomResourceDefinitionNames{
+				Kind:     "ProtectRule",
+				Plural:   "protectrules",
+				ListKind: "ProtectRuleList",
+				Singular: "protectrule",
+			},
+			Scope: "Namespaced",
+			Validation: &extv1.CustomResourceValidation{
+				OpenAPIV3Schema: &extv1.JSONSchemaProps{
+					Type:                   "object",
+					XPreserveUnknownFields: &xPreserve,
+				},
+			},
+			Versions: []extv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
+	}
+	return newCRD
+}
