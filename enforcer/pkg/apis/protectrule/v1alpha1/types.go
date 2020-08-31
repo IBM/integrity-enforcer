@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ type ProtectRuleSpec struct {
 
 // ProtectRuleStatus defines the observed state of AppEnforcePolicy
 type ProtectRuleStatus struct {
-	Results []*Result `json:"results,omitempty"`
+	Results []*Result `json:"deniedRequests,omitempty"`
 }
 
 // +genclient
@@ -54,19 +55,19 @@ func (self *ProtectRule) IsEmpty() bool {
 	return len(self.Spec.Rules) == 0
 }
 
-func (self *ProtectRule) Match(reqFields map[string]string) bool {
+func (self *ProtectRule) Match(reqFields map[string]string) (bool, *Rule) {
 	for _, rule := range self.Spec.Rules {
 		if rule.match(reqFields) {
-			return true
+			return true, rule
 		}
 	}
-	return false
+	return false, nil
 }
 
-func (self *ProtectRule) Update(reqFields map[string]string) {
+func (self *ProtectRule) Update(reqFields map[string]string, matchedRule *Rule) {
 	results := self.Status.Results
 	new_result := &Result{}
-	new_result.update(reqFields)
+	new_result.update(reqFields, matchedRule)
 	results = append(results, new_result)
 	self.Status.Results = results
 	return
@@ -88,6 +89,11 @@ type Rule struct {
 	Kind       *RulePattern `json:"kind,omitempty"`
 	Name       *RulePattern `json:"name,omitempty"`
 	User       *RulePattern `json:"user,omitempty"`
+}
+
+func (self *Rule) String() string {
+	rB, _ := json.Marshal(self)
+	return string(rB)
 }
 
 func (self *Rule) match(reqFields map[string]string) bool {
@@ -122,17 +128,29 @@ func (self *RulePattern) match(value string) bool {
 	return false
 }
 
-type Result struct {
+type Request struct {
 	// Scope      string `json:"scope,omitempty"`
+	Operation  string `json:"operation,omitempty"`
 	Namespace  string `json:"namespace,omitempty"`
 	ApiVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 	Name       string `json:"name,omitempty"`
-	User       string `json:"user,omitempty"`
+	UserName   string `json:"userName,omitempty"`
 }
 
-func (self *Result) update(reqFields map[string]string) {
-	v := reflect.Indirect(reflect.ValueOf(self))
+func (self *Request) String() string {
+	rB, _ := json.Marshal(self)
+	return string(rB)
+}
+
+type Result struct {
+	Request     string `json:"request,omitempty"`
+	MatchedRule string `json:"matchedRule,omitempty"`
+}
+
+func (self *Result) update(reqFields map[string]string, matchedRule *Rule) {
+	tmp := &Request{}
+	v := reflect.Indirect(reflect.ValueOf(tmp))
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		fieldName := t.Field(i).Name
@@ -147,5 +165,7 @@ func (self *Result) update(reqFields map[string]string) {
 			continue
 		}
 	}
+	self.Request = tmp.String()
+	self.MatchedRule = matchedRule.String()
 	return
 }

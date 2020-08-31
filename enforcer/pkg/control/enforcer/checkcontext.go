@@ -138,7 +138,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 	// Check if the resource is protected or not
 	pRule := self.loadProtectRule(self.ReqC.Namespace)
-	isProtected := self.isProtected(pRule, reqc)
+	isProtected, matchedProtectRule := self.isProtected(pRule, reqc)
 
 	if !isProtected {
 		self.Ignored = true
@@ -257,7 +257,8 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	admissionResponse := self.createAdmissionResponse()
 
 	if !admissionResponse.Allowed {
-		pRule.Update(reqc.Map())
+		pRule.Update(reqc.Map(), matchedProtectRule)
+		self.updateProtectRule(pRule)
 	}
 
 	//log context
@@ -573,11 +574,24 @@ func (self *CheckContext) loadProtectRule(namespace string) *prapi.ProtectRule {
 	return pr
 }
 
-func (self *CheckContext) isProtected(pRule *prapi.ProtectRule, reqc *common.ReqContext) bool {
+func (self *CheckContext) updateProtectRule(pr *prapi.ProtectRule) error {
+	namespace := pr.Namespace
+	config, _ := rest.InClusterConfig()
+	var err error
+	prClient, _ := prclient.NewForConfig(config)
+
+	_, err = prClient.ProtectRules(namespace).Update(pr)
+	if err != nil {
+		logger.Error("failed to update ProtectRule:", err)
+		return err
+	}
+	return nil
+}
+
+func (self *CheckContext) isProtected(pRule *prapi.ProtectRule, reqc *common.ReqContext) (bool, *prapi.Rule) {
 	if pRule == nil {
-		return false
+		return false, nil
 	}
 	reqFields := reqc.Map()
 	return pRule.Match(reqFields)
-	//return reqc.Namespace == "secure-ns" && reqc.Kind == "ConfigMap" && reqc.Name == "test-cm"
 }
