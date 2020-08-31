@@ -17,6 +17,7 @@
 package cache
 
 import (
+	"sync"
 	"time"
 )
 
@@ -33,6 +34,7 @@ type CachedObject struct {
 
 type Cache struct {
 	data map[string]*CachedObject
+	mu   sync.RWMutex
 }
 
 func init() {
@@ -91,16 +93,20 @@ func (self *Cache) clearExpiredItem() {
 }
 
 func (self *Cache) Set(name string, object interface{}, ttl *time.Duration) {
+	self.mu.Lock()
 	self.clearExpiredItem()
 
 	now := time.Now()
 	obj := NewCachedObject(object, now, ttl)
 	self.data[name] = obj
+	self.mu.Unlock()
 }
 
 func (self *Cache) Get(name string) interface{} {
+	self.mu.RLock()
 	now := time.Now()
 	obj, ok := self.data[name]
+	self.mu.RUnlock()
 	if !ok {
 		return nil
 	}

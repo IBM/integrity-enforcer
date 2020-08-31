@@ -69,7 +69,6 @@ func (self *EnforceRuleStoreFromPolicy) Find(reqc *common.ReqContext) *EnforceRu
 		er := &EnforceRuleFromCR{Instance: r}
 		eRules = append(eRules, er)
 	}
-	logger.Debug("DEBUG rules: ", eRules)
 	return &EnforceRuleList{Rules: eRules}
 }
 
@@ -226,7 +225,6 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 	signer := sigVerifyResult.Signer
 
 	signerPatterns := self.Policy.GetSigner()
-	logger.Debug("DEBUG patterns: ", signerPatterns)
 	// get enforce rule list
 	var ruleStore EnforceRuleStore = &EnforceRuleStoreFromPolicy{Patterns: signerPatterns}
 
@@ -249,9 +247,7 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 		matchedPolicyStr := ""
 		matchedRule := ruleEvalResult.MatchedRule
 		if matchedRule != nil {
-			logger.Debug("DEBUG matchedRule: ", matchedRule)
 			matchedPolicy := self.Policy.FindMatchedSignerPolicy(reqc, ToSignerMatchPattern(matchedRule))
-			logger.Debug("DEBUG matchedPolicy: ", matchedPolicy)
 			if matchedPolicy != nil {
 				matchedPolicyStr = matchedPolicy.String()
 			}

@@ -78,17 +78,8 @@ func NewPolicyLoader(enforcerNamespace, policyNamespace string) *PolicyLoader {
 
 func (self *PolicyLoader) Load(requestNamespace string) {
 
-	renew := false
+	renew := true
 	t := time.Now()
-	if self.Policy != nil {
-		interval := self.appPolicyInterval
-		duration := t.Sub(self.lastUpdated)
-		if duration > interval {
-			renew = true
-		}
-	} else {
-		renew = true
-	}
 
 	if renew {
 		reqNs := requestNamespace
@@ -184,11 +175,9 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 			logger.Fatal("failed to get AppEnforcePolicy:", err)
 			return nil
 		}
-		logger.Debug("AppEnforcePolicy reloaded.")
-		if len(appPolList.Items) > 0 {
-			tmp, _ := json.Marshal(appPolList)
-			cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
-		}
+		logger.Debug("AppEnforcePolicy reloaded. namespace: ", requestNamespace)
+		tmp, _ := json.Marshal(appPolList)
+		cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
 	} else {
 		err = json.Unmarshal([]byte(cached), &appPolList)
 		if err != nil {
@@ -201,18 +190,16 @@ func (self *PolicyLoader) loadEnforcePolicy(requestNamespace, enforcerNamespace,
 	if cached := cache.GetString(keyName); cached == "" {
 		appPolList2, err = self.appEnforcePolicyClient.AppEnforcePolicies(policyNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get AppEnforcePolicy:", err)
+			logger.Fatal("failed to get AppEnforcePolicy2:", err)
 			return nil
 		}
-		logger.Debug("AppEnforcePolicy reloaded.")
-		if len(appPolList2.Items) > 0 {
-			tmp, _ := json.Marshal(appPolList2)
-			cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
-		}
+		logger.Debug("AppEnforcePolicy2 reloaded. namespace: ", policyNamespace)
+		tmp, _ := json.Marshal(appPolList2)
+		cache.SetString(keyName, string(tmp), &(self.appPolicyInterval))
 	} else {
 		err = json.Unmarshal([]byte(cached), &appPolList2)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached AppEnforcePolicy:", err)
+			logger.Fatal("failed to Unmarshal cached AppEnforcePolicy2:", err)
 			return nil
 		}
 	}
