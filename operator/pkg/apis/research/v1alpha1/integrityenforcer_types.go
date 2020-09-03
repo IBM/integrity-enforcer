@@ -43,6 +43,7 @@ type IntegrityEnforcerSpec struct {
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Security     SecurityConfig  `json:"security,omitempty"`
+	VerifyType   string          `json:"verifyType,omitempty"`
 	KeyRing      KeyRingConfig   `json:"keyRingConfig,omitempty"`
 	CertPool     CertPoolConfig  `json:"certPoolConfig,omitempty"`
 	Server       ServerContainer `json:"server,omitempty"`

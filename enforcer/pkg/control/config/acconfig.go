@@ -87,6 +87,10 @@ func (ac *AdmissionControlConfig) HelmIntegrityEnabled() bool {
 }
 
 func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
+	verifyType := os.Getenv("VERIFY_TYPE")
+	if verifyType == "" {
+		verifyType = "x509" // default value, TODO: change the default value to "pgp"
+	}
 	certPoolPath := os.Getenv("CERT_POOL_PATH")
 	if certPoolPath == "" {
 		certPoolPath = "/ie-certpool-secret/" // default value
@@ -104,6 +108,7 @@ func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
 		chartRepo = ""
 	}
 	ssconfig := &cfg.SignStoreConfig{
+		VerifyType:         verifyType,
 		CertPoolPath:       certPoolPath,
 		KeyringPath:        keyringPath,
 		ChartDir:           chartDir,

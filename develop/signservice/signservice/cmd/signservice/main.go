@@ -60,7 +60,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "get request: ", r)
 }
 
-func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
+func signToAnnotation(w http.ResponseWriter, r *http.Request, verifyType string) {
 	signer := getParamInRequest(r, "signer", "")
 	scope := getParamInRequest(r, "scope", "")
 	modeStr := getParamInRequest(r, "mode", "apply")
@@ -79,7 +79,7 @@ func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sig, err := sign.SignYaml(yamlStr, scope, signer, mode)
+	sig, err := sign.SignYaml(yamlStr, scope, signer, mode, verifyType)
 	if err != nil {
 		log.Error(err)
 		return
@@ -87,7 +87,15 @@ func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, sig)
 }
 
-func signToResourceSignature(w http.ResponseWriter, r *http.Request, mode sign.SignMode) {
+func SignToAnnotation(w http.ResponseWriter, r *http.Request) {
+	signToAnnotation(w, r, "x509")
+}
+
+func PGPSignToAnnotation(w http.ResponseWriter, r *http.Request) {
+	signToAnnotation(w, r, "pgp")
+}
+
+func signToResourceSignature(w http.ResponseWriter, r *http.Request, mode sign.SignMode, verifyType string) {
 	signer := getParamInRequest(r, "signer", "")
 	namespace := getParamInRequest(r, "namespace", "")
 	scope := getParamInRequest(r, "scope", "")
@@ -100,14 +108,14 @@ func signToResourceSignature(w http.ResponseWriter, r *http.Request, mode sign.S
 		return
 	}
 
-	rsig, err := sign.CreateResourceSignature(yamlStr, signer, namespace, scope, mode)
+	rsig, err := sign.CreateResourceSignature(yamlStr, signer, namespace, scope, mode, verifyType)
 	if err != nil {
 		msg := err.Error()
 		log.Error(msg)
 		fmt.Fprint(w, msg)
 		return
 	}
-	sig, err := sign.SignYaml(rsig, "spec", signer, sign.DefaultSign)
+	sig, err := sign.SignYaml(rsig, "spec", signer, sign.DefaultSign, verifyType)
 	if err != nil {
 		msg := err.Error()
 		log.Error(msg)
@@ -118,18 +126,30 @@ func signToResourceSignature(w http.ResponseWriter, r *http.Request, mode sign.S
 }
 
 func SignToResourceSignature(w http.ResponseWriter, r *http.Request) {
-	signToResourceSignature(w, r, sign.DefaultSign)
+	signToResourceSignature(w, r, sign.DefaultSign, "x509")
 }
 
 func ApplySignToResourceSignature(w http.ResponseWriter, r *http.Request) {
-	signToResourceSignature(w, r, sign.ApplySign)
+	signToResourceSignature(w, r, sign.ApplySign, "x509")
 }
 
 func PatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
-	signToResourceSignature(w, r, sign.PatchSign)
+	signToResourceSignature(w, r, sign.PatchSign, "x509")
 }
 
-func SignBytes(w http.ResponseWriter, r *http.Request) {
+func PGPSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.DefaultSign, "pgp")
+}
+
+func PGPApplySignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.ApplySign, "pgp")
+}
+
+func PGPPatchSignToResourceSignature(w http.ResponseWriter, r *http.Request) {
+	signToResourceSignature(w, r, sign.PatchSign, "pgp")
+}
+
+func signBytes(w http.ResponseWriter, r *http.Request, verifyType string) {
 	msg, err := readFileInRequest(r, "yaml")
 	if err != nil {
 		log.Error(err.Error())
@@ -137,13 +157,21 @@ func SignBytes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	signer := getParamInRequest(r, "signer", "")
-	result, err := sign.SignBytes([]byte(msg), signer)
+	result, err := sign.SignBytes([]byte(msg), signer, verifyType)
 	if err != nil {
 		log.Error(err.Error())
 		fmt.Fprint(w, err.Error())
 		return
 	}
 	fmt.Fprint(w, string(result))
+}
+
+func SignBytes(w http.ResponseWriter, r *http.Request) {
+	signBytes(w, r, "x509")
+}
+
+func PGPSignBytes(w http.ResponseWriter, r *http.Request) {
+	signBytes(w, r, "pgp")
 }
 
 func ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -187,6 +215,11 @@ func main() {
 	r.HandleFunc("/sign/apply", ApplySignToResourceSignature)
 	r.HandleFunc("/sign/patch", PatchSignToResourceSignature)
 	r.HandleFunc("/sign/annotation", SignToAnnotation)
+	r.HandleFunc("/pgpsign", PGPSignToResourceSignature)
+	r.HandleFunc("/pgpsign/bytes", PGPSignBytes)
+	r.HandleFunc("/pgpsign/apply", PGPApplySignToResourceSignature)
+	r.HandleFunc("/pgpsign/patch", PGPPatchSignToResourceSignature)
+	r.HandleFunc("/pgpsign/annotation", PGPSignToAnnotation)
 	r.HandleFunc("/list/users", ListUsers)
 	r.HandleFunc("/list/certs", ListCerts)
 	r.Schemes("https")

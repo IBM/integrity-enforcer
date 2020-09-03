@@ -31,11 +31,18 @@ import (
 	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type VerifyType string
 type SignatureType string
+
+const (
+	VerifyTypeX509 VerifyType = "x509"
+	VerifyTypePGP  VerifyType = "pgp"
+)
 
 const (
 	SignatureTypeUnknown          SignatureType = ""
@@ -47,6 +54,7 @@ const (
 
 type SignStore interface {
 	GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, plugins map[string]bool) *ResourceSignature
+	GetVerifyType() VerifyType
 }
 
 /**********************************************
@@ -76,6 +84,10 @@ func InitSignStore(config *config.SignStoreConfig) {
 	}
 }
 
+func (self *ConcreteSignStore) GetVerifyType() VerifyType {
+	return VerifyType(self.config.VerifyType)
+}
+
 func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, plugins map[string]bool) *ResourceSignature {
 
 	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
@@ -103,6 +115,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 		return &ResourceSignature{
 			SignType:     signType,
 			certPoolPath: self.config.CertPoolPath,
+			keyringPath:  self.config.KeyringPath,
 			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope, "mutableAttrs": mutableAttrs},
 			option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 		}
@@ -136,6 +149,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 			return &ResourceSignature{
 				SignType:     signType,
 				certPoolPath: self.config.CertPoolPath,
+				keyringPath:  self.config.KeyringPath,
 				data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": si.MessageScope, "mutableAttrs": mutableAttrs},
 				option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
@@ -160,7 +174,7 @@ func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, req
 type ResourceSignature struct {
 	SignType     SignatureType
 	certPoolPath string
-	keyringPath  string // TODO: remove this after support cert verification for helm case
+	keyringPath  string
 	data         map[string]string
 	option       map[string]bool
 }
@@ -170,14 +184,15 @@ type VerifierInterface interface {
 }
 
 type ResourceVerifier struct {
-	Namespace string
+	VerifyType VerifyType
+	Namespace  string
 }
 
-func NewVerifier(signType SignatureType, enforcerNamespace string) VerifierInterface {
+func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespace string) VerifierInterface {
 	if signType == SignatureTypeResource || signType == SignatureTypeApplyingResource || signType == SignatureTypePatch {
-		return &ResourceVerifier{Namespace: enforcerNamespace}
+		return &ResourceVerifier{Namespace: enforcerNamespace, VerifyType: verifyType}
 	} else if signType == SignatureTypeHelm {
-		return &HelmVerifier{Namespace: enforcerNamespace}
+		return &HelmVerifier{Namespace: enforcerNamespace, VerifyType: verifyType}
 	}
 	return nil
 }
@@ -237,36 +252,10 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 		}
 	}
 
-	certificate := []byte(sig.data["certificate"])
-	certOk, reasonFail, err := pkix.VerifyCertificate(certificate, sig.certPoolPath)
-	if err != nil {
-		vcerr = &common.CheckError{
-			Msg:    "Error occured in certificate verification",
-			Reason: reasonFail,
-			Error:  err,
-		}
-		vsinfo = nil
-		retErr = err
-	} else if !certOk {
-		vcerr = &common.CheckError{
-			Msg:    "Failed to verify certificate",
-			Reason: reasonFail,
-			Error:  nil,
-		}
-		vsinfo = nil
-		retErr = nil
-	} else {
-		cert, err := pkix.ParseCertificate(certificate)
-		if err != nil {
-			logger.Error("Failed to parse certificate; ", err)
-		}
-		pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
-		if err != nil {
-			logger.Error("Failed to get public key from certificate; ", err)
-		}
-		message := []byte(sig.data["message"])
-		signature := []byte(sig.data["signature"])
-		sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+	if self.VerifyType == VerifyTypePGP {
+		message := sig.data["message"]
+		signature := sig.data["signature"]
+		ok, reasonFail, signer, err := pgp.VerifySignature(sig.keyringPath, message, signature)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in signature verification",
@@ -275,9 +264,13 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 			}
 			vsinfo = nil
 			retErr = err
-		} else if sigOk {
+		} else if ok {
 			vcerr = nil
-			vsinfo = common.NewSignerInfoFromCert(cert)
+			vsinfo = &common.SignerInfo{
+				Email:   signer.Email,
+				Name:    signer.Name,
+				Comment: signer.Comment,
+			}
 			retErr = nil
 		} else {
 			vcerr = &common.CheckError{
@@ -288,6 +281,69 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 			vsinfo = nil
 			retErr = nil
 		}
+
+	} else if self.VerifyType == VerifyTypeX509 {
+		certificate := []byte(sig.data["certificate"])
+		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, sig.certPoolPath)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in certificate verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if !certOk {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify certificate",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		} else {
+			cert, err := pkix.ParseCertificate(certificate)
+			if err != nil {
+				logger.Error("Failed to parse certificate; ", err)
+			}
+			pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
+			if err != nil {
+				logger.Error("Failed to get public key from certificate; ", err)
+			}
+			message := []byte(sig.data["message"])
+			signature := []byte(sig.data["signature"])
+			sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+			if err != nil {
+				vcerr = &common.CheckError{
+					Msg:    "Error occured in signature verification",
+					Reason: reasonFail,
+					Error:  err,
+				}
+				vsinfo = nil
+				retErr = err
+			} else if sigOk {
+				vcerr = nil
+				vsinfo = common.NewSignerInfoFromCert(cert)
+				retErr = nil
+			} else {
+				vcerr = &common.CheckError{
+					Msg:    "Failed to verify signature",
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
+				retErr = nil
+			}
+		}
+	} else {
+		errMsg := fmt.Sprintf("Unknown VerifyType is specified; VerifyType: %s", string(self.VerifyType))
+		vcerr = &common.CheckError{
+			Msg:    errMsg,
+			Reason: errMsg,
+			Error:  nil,
+		}
+		vsinfo = nil
+		retErr = nil
 	}
 
 	svresult := &SigVerifyResult{

@@ -191,9 +191,10 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 			},
 		}, nil
 	}
+	verifyType := signStore.GetVerifyType()
 
 	// create verifier
-	verifier := NewVerifier(rsig.SignType, self.EnforcerNamespace)
+	verifier := NewVerifier(verifyType, rsig.SignType, self.EnforcerNamespace)
 
 	// verify signature
 	sigVerifyResult, err := verifier.Verify(rsig, reqc)

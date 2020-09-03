@@ -4,6 +4,7 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
+  verifyType: x509
   enforcePolicy:
     allow: {}
     signer:

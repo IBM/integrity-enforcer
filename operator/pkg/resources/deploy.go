@@ -149,6 +149,10 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				Value: cr.Spec.SignatureNamespace,
 			},
 			{
+				Name:  "VERIFY_TYPE",
+				Value: cr.Spec.VerifyType,
+			},
+			{
 				Name:  "POLICY_NS",
 				Value: cr.Spec.PolicyNamespace,
 			},

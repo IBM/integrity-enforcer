@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pgp"
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pkix"
 
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
@@ -42,7 +43,7 @@ const (
 )
 
 const publicKeyPath = "/keyring/pubring.gpg"
-const privateKeyPath = "/private-keyring/secring.gpg"
+const privateKeyPath = "/private-keyring-secret/secring.gpg"
 
 var useKnownFilterKinds = map[string]bool{
 	"Deployment": true,
@@ -53,7 +54,7 @@ type User struct {
 	Valid  bool           `json:"valid"`
 }
 
-func SignYaml(yamlBytes, scopeKeys, signer string, mode SignMode) (string, error) {
+func SignYaml(yamlBytes, scopeKeys, signer string, mode SignMode, verifyType string) (string, error) {
 
 	jsonBytes, err := yaml.YAMLToJSON([]byte(yamlBytes))
 	if err != nil {
@@ -66,16 +67,29 @@ func SignYaml(yamlBytes, scopeKeys, signer string, mode SignMode) (string, error
 		msg = iectlsign.GenerateMessageFromRawObj(jsonBytes, scopeKeys, "")
 	}
 
-	sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
-	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+	var msgB64, sigB64, certB64 string
+	if verifyType == "pgp" {
+		sig, err := pgp.GenerateSignature([]byte(msg), signer)
+		if err != nil {
+			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+		}
+		if sig == nil {
+			return "", errors.New("generated signature is null")
+		}
+		msgB64 = base64.StdEncoding.EncodeToString([]byte(msg))
+		sigB64 = base64.StdEncoding.EncodeToString(sig)
+	} else if verifyType == "x509" {
+		sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
+		if err != nil {
+			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+		}
+		if sig == nil {
+			return "", errors.New("generated signature is null")
+		}
+		msgB64 = base64.StdEncoding.EncodeToString([]byte(msg))
+		sigB64 = base64.StdEncoding.EncodeToString(sig)
+		certB64 = base64.StdEncoding.EncodeToString(certPemBytes)
 	}
-	if sig == nil {
-		return "", errors.New("generated signature is null")
-	}
-	msgB64 := base64.StdEncoding.EncodeToString([]byte(msg))
-	sigB64 := base64.StdEncoding.EncodeToString(sig)
-	certB64 := base64.StdEncoding.EncodeToString(certPemBytes)
 
 	node, err := mapnode.NewFromBytes(jsonBytes)
 	if err != nil {
@@ -103,7 +117,7 @@ func SignYaml(yamlBytes, scopeKeys, signer string, mode SignMode) (string, error
 	return signedYaml, nil
 }
 
-func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, mode SignMode) (string, error) {
+func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, mode SignMode, verifyType string) (string, error) {
 
 	jsonBytes, err := yaml.YAMLToJSON([]byte(yamlBytes))
 	if err != nil {
@@ -135,64 +149,61 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	}
 
 	var signItem rsig.SignItem
+
+	msg := ""
 	if scope == "" {
-		msgB64 := base64.StdEncoding.EncodeToString([]byte(yamlBytes))
-
-		sig, certPemBytes, err := pkix.GenerateSignature([]byte(yamlBytes), signer)
-		if err != nil {
-			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
-		}
-		if sig == nil {
-			return "", errors.New("generated signature is null")
-		}
-		sigB64 := base64.StdEncoding.EncodeToString(sig)
-		certB64 := base64.StdEncoding.EncodeToString(certPemBytes)
-
-		signItem = rsig.SignItem{
-			ApiVersion: apiVersion,
-			Kind:       kind,
-			Metadata: rsig.SignItemMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Message:      msgB64,
-			MutableAttrs: mutableAttrs,
-			Signature:    sigB64,
-			Certificate:  certB64,
-			Type:         signType,
-		}
+		msg = yamlBytes
 	} else {
 		scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
-		message := ""
+		msg = ""
 		for _, k := range scopeKeys {
 			subNodeList := node.MultipleSubNode(k)
 			for _, subNode := range subNodeList {
-				message += subNode.ToJson() + "\n"
+				msg += subNode.ToJson() + "\n"
 			}
 		}
-		sig, certBytes, err := pkix.GenerateSignature([]byte(message), signer)
+	}
+
+	var msgB64, sigB64, certB64 string
+	if verifyType == "pgp" {
+		sig, err := pgp.GenerateSignature([]byte(msg), signer)
 		if err != nil {
 			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
 		}
 		if sig == nil {
 			return "", errors.New("generated signature is null")
 		}
-		sigB64 := base64.StdEncoding.EncodeToString(sig)
-		certB64 := base64.StdEncoding.EncodeToString(certBytes)
-		signItem = rsig.SignItem{
-			ApiVersion: apiVersion,
-			Kind:       kind,
-			Metadata: rsig.SignItemMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			MessageScope: scope,
-			MutableAttrs: mutableAttrs,
-			Signature:    sigB64,
-			Certificate:  certB64,
-			Type:         signType,
+		msgB64 = base64.StdEncoding.EncodeToString([]byte(msg))
+		sigB64 = base64.StdEncoding.EncodeToString(sig)
+	} else if verifyType == "x509" {
+		sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
+		if err != nil {
+			return "", errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
 		}
+		if sig == nil {
+			return "", errors.New("generated signature is null")
+		}
+		msgB64 = base64.StdEncoding.EncodeToString([]byte(msg))
+		sigB64 = base64.StdEncoding.EncodeToString(sig)
+		certB64 = base64.StdEncoding.EncodeToString(certPemBytes)
+	}
 
+	signItem = rsig.SignItem{
+		ApiVersion: apiVersion,
+		Kind:       kind,
+		Metadata: rsig.SignItemMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		MutableAttrs: mutableAttrs,
+		Signature:    sigB64,
+		Certificate:  certB64,
+		Type:         signType,
+	}
+	if scope == "" {
+		signItem.Message = msgB64
+	} else {
+		signItem.MessageScope = scope
 	}
 
 	rsName := fmt.Sprintf("rsig-%s-%s-%s", namespace, strings.ToLower(kind), name)
@@ -232,14 +243,31 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	return mergedRsigStr, nil
 }
 
-func SignBytes(msg []byte, signer string) ([]byte, error) {
-	sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error in signing bytes; %s", err.Error()))
+func SignBytes(msg []byte, signer, verifyType string) ([]byte, error) {
+	var msgB64, sigB64, certB64 string
+	if verifyType == "pgp" {
+		sig, err := pgp.GenerateSignature([]byte(msg), signer)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+		}
+		if sig == nil {
+			return nil, errors.New("generated signature is null")
+		}
+		msgB64 = base64.StdEncoding.EncodeToString([]byte(msg))
+		sigB64 = base64.StdEncoding.EncodeToString(sig)
+	} else if verifyType == "x509" {
+		sig, certPemBytes, err := pkix.GenerateSignature([]byte(msg), signer)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Error in signing yaml; %s", err.Error()))
+		}
+		if sig == nil {
+			return nil, errors.New("generated signature is null")
+		}
+		msgB64 = base64.StdEncoding.EncodeToString([]byte(msg))
+		sigB64 = base64.StdEncoding.EncodeToString(sig)
+		certB64 = base64.StdEncoding.EncodeToString(certPemBytes)
 	}
-	msgB64 := base64.StdEncoding.EncodeToString(msg)
-	sigB64 := base64.StdEncoding.EncodeToString(sig)
-	certB64 := base64.StdEncoding.EncodeToString(certPemBytes)
+
 	result := map[string]string{}
 	result["message"] = msgB64
 	result["signature"] = sigB64

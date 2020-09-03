@@ -1643,6 +1643,8 @@ spec:
                     type: string
                 type: object
               type: array
+            verifyType:
+              type: string
             webhookConfigName:
               type: string
             webhookServerTlsSecretName:
