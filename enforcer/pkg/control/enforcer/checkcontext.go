@@ -141,8 +141,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	isProtected, matchedProtectRule := self.isProtected(pRule, reqc)
 
 	if !isProtected {
-		self.Ignored = true
-		return self.createAdmissionResponse()
+		self.Result.InternalRequest = true
 	}
 
 	self.policy.Load(self.ReqC.Namespace)
@@ -164,6 +163,11 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	evalReason := common.REASON_UNEXPECTED
 	matchedPolicy := ""
 	var errMsg string
+
+	if !allowed && self.Result.InternalRequest {
+		allowed = true
+		evalReason = common.REASON_INTERNAL
+	}
 
 	//evaluate sign policy
 	if !self.Aborted && !allowed {
