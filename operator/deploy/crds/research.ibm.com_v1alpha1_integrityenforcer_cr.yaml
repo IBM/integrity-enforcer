@@ -66,6 +66,9 @@ spec:
       indexPrefix: ac-log
       port: 9200
       scheme: http
+    http:
+      enabled: false
+      endpoint: http://sample-http-server
     esSecretName: es-tls-certs
     image: integrityenforcer/ie-logging:0.0.1
     imagePullPolicy: Always

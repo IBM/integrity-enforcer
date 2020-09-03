@@ -188,6 +188,14 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				Value: strconv.FormatBool(cr.Spec.Logger.StdOutput),
 			},
 			{
+				Name:  "HTTPOUT_ENABLED",
+				Value: strconv.FormatBool(cr.Spec.Logger.HttpConfig.Enabled),
+			},
+			{
+				Name:  "HTTPOUT_ENDPOINT_URL",
+				Value: cr.Spec.Logger.HttpConfig.Endpoint,
+			},
+			{
 				Name:  "ES_ENABLED",
 				Value: strconv.FormatBool(cr.Spec.Logger.EsConfig.Enabled),
 			},

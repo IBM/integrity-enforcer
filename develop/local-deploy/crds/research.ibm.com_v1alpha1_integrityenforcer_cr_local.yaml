@@ -65,6 +65,9 @@ spec:
       indexPrefix: ac-log
       port: 9200
       scheme: http
+    http:
+      enabled: true
+      endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
     image: ie-logging:local
     imagePullPolicy: IfNotPresent

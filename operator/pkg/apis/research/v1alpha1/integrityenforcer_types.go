@@ -119,6 +119,7 @@ type LoggerContainer struct {
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
 	StdOutput       bool                    `json:"stdOutput,omitempty"`
+	HttpConfig      *HttpConfig             `json:"http,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 	EsConfig        *EsConfig               `json:"es,omitempty"`
 	EsSecretName    string                  `json:"esSecretName,omitempty"`
@@ -134,6 +135,19 @@ type EsConfig struct {
 	ClientKey   string `json:"clientKey,omitempty"`
 	ClientCert  string `json:"clientCert,omitempty"`
 	CaFile      string `json:"caFile,omitempty"`
+}
+
+type HttpConfig struct {
+	Enabled  bool   `json:"enabled,omitempty"`
+	Endpoint string `json:"endpoint,omitempty"`
+	// Scheme      string `json:"scheme,omitempty"`
+	// Host        string `json:"host,omitempty"`
+	// Port        int32  `json:"port,omitempty"`
+	// SslVerify   bool   `json:"sslVerify,omitempty"`
+	// IndexPrefix string `json:"indexPrefix,omitempty"`
+	// ClientKey   string `json:"clientKey,omitempty"`
+	// ClientCert  string `json:"clientCert,omitempty"`
+	// CaFile      string `json:"caFile,omitempty"`
 }
 
 // IntegrityEnforcerStatus defines the observed state of IntegrityEnforcer

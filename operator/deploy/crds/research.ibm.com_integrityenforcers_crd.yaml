@@ -1012,6 +1012,13 @@ spec:
                   type: object
                 esSecretName:
                   type: string
+                http:
+                  properties:
+                    enabled:
+                      type: boolean
+                    endpoint:
+                      type: string
+                  type: object
                 image:
                   type: string
                 imagePullPolicy:
