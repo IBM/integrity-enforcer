@@ -39,6 +39,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	ModeDefault      string = "Default"
+	ModeDryRun       string = "DryRun"
+	ModeNotProtected string = "NotProtected"
+	ModeDetect       string = "Detect"
+	ModeUnverified   string = "Unverified" //BreakGlass
+)
+
 /**********************************************
 
 				CheckContext
@@ -46,9 +54,13 @@ import (
 ***********************************************/
 
 type CheckContext struct {
+	Mode          string `json:"mode"`
+	RequireChecks bool   `json:"RequireChecks"`
+
 	// request context
 	config                *config.EnforcerConfig
 	policy                *ctlconfig.PolicyLoader
+	protectRule           *prapi.ProtectRule
 	ReqC                  *common.ReqContext `json:"-"`
 	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
 	DryRun                bool               `json:"dryRun"`
@@ -57,15 +69,16 @@ type CheckContext struct {
 
 	Result *CheckResult `json:"result"`
 
-	Enforced      bool   `json:"enforced"`
-	Ignored       bool   `json:"ignored"`
-	Allow         bool   `json:"allow"`
-	Verified      bool   `json:"verified"`
-	Aborted       bool   `json:"aborted"`
-	AbortReason   string `json:"abortReason"`
-	Error         error  `json:"error"`
-	Message       string `json:"msg"`
-	MatchedPolicy string `json:"matchedPolicy"`
+	Enforced      bool        `json:"enforced"`
+	Ignored       bool        `json:"ignored"`
+	Allow         bool        `json:"allow"`
+	Verified      bool        `json:"verified"`
+	Aborted       bool        `json:"aborted"`
+	AbortReason   string      `json:"abortReason"`
+	Error         error       `json:"error"`
+	Message       string      `json:"msg"`
+	MatchedPolicy string      `json:"matchedPolicy"`
+	MatchedRule   *prapi.Rule `json:"matchedRule"`
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
@@ -74,17 +87,9 @@ type CheckContext struct {
 
 	AllowByUnverifiedMode bool `json:"allowByUnverifiedMode"`
 	AllowByDetectionMode  bool `json:"allowByDetectionMode"`
-
-	detectionMatchedPolicy  string `json:"-"`
-	unverifiedMatchedPolicy string `json:"-"`
-	ignoreMatchedPolicy     string `json:"-"`
-	allowMatchedPolicy      string `json:"-"`
-	mutationMatchedPolicy   string `json:"-"`
-	signerMatchedPolicy     string `json:"-"`
 }
 
 type CheckResult struct {
-	InternalRequest      bool                         `json:"internal"`
 	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
 	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
 	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
@@ -92,15 +97,17 @@ type CheckResult struct {
 
 func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *CheckContext {
 	cc := &CheckContext{
-		config:   config,
-		policy:   policy,
-		Enforced: true,
-		Ignored:  false,
-		Aborted:  false,
-		Allow:    false,
-		Verified: false,
+		Mode:          ModeDefault,
+		RequireChecks: false,
+		config:        config,
+		policy:        policy,
+		protectRule:   &prapi.ProtectRule{},
+		Enforced:      true,
+		Ignored:       false,
+		Aborted:       false,
+		Allow:         false,
+		Verified:      false,
 		Result: &CheckResult{
-			InternalRequest: false,
 			SignPolicyEvalResult: &common.SignPolicyEvalResult{
 				Allow:   false,
 				Checked: false,
@@ -118,96 +125,163 @@ func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoad
 	return cc
 }
 
-func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
+func (self *CheckContext) setReqContext(req *v1beta1.AdmissionRequest) {
+	reqc := common.NewReqContext(req)
+	self.ReqC = reqc
+	return
+}
 
+func (self *CheckContext) setMode(req *v1beta1.AdmissionRequest) {
+
+	/********************************************
+				DryRun Mode Check (1/4)
+	********************************************/
 	self.DryRun = *(req.DryRun)
 	if self.DryRun {
-		return self.createAdmissionResponse()
+		self.Mode = ModeDryRun
+		return
 	}
 
-	//init annotation store (singleton)
-	annotationStoreInstance = &ConcreteAnnotationStore{}
+	// load protect rule
+	self.protectRule = self.loadProtectRule(self.ReqC.Namespace)
 
-	//init sign store (singleton)
-	sign.InitSignStore(self.config.SignStore)
+	/********************************************
+			Protected Mode Check (2/4)
+	********************************************/
+	var isProtected bool
+	var tmpMatchedRule *prapi.Rule
+	isProtected, tmpMatchedRule = self.isProtected(self.protectRule, self.ReqC)
 
-	//load req context
-	reqc := common.NewReqContext(req)
-	logger.InitSessionLogger(reqc.Namespace, reqc.Name, reqc.ResourceRef().ApiVersion, reqc.Kind, reqc.Operation)
-	self.ReqC = reqc
-
-	// Check if the resource is protected or not
-	pRule := self.loadProtectRule(self.ReqC.Namespace)
-	isProtected, matchedProtectRule := self.isProtected(pRule, reqc)
-
-	if !isProtected {
-		self.Result.InternalRequest = true
+	if isProtected {
+		self.MatchedRule = tmpMatchedRule
+		self.RequireChecks = true
+	} else {
+		self.Mode = ModeNotProtected
+		return
 	}
 
+	// load policy
 	self.policy.Load(self.ReqC.Namespace)
-	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
-	self.DetectionModeEnabled, self.detectionMatchedPolicy = policyChecker.IsDetectionModeEnabled()
-	self.UnverifiedModeEnabled, self.unverifiedMatchedPolicy = policyChecker.IsTrustStateEnforcementDisabled()
 
+	/********************************************
+			Detection Mode Check (3/4)
+	********************************************/
+	var detectionModeEnabled bool
+	var tmpMatchedPolicy string
+	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
+	detectionModeEnabled, tmpMatchedPolicy = policyChecker.IsDetectionModeEnabled()
+	if detectionModeEnabled {
+		self.Mode = ModeDetect
+		self.MatchedPolicy = tmpMatchedPolicy
+		self.DetectionModeEnabled = true
+		return
+	}
+
+	/********************************************
+			Unverified Mode Check (4/4)
+	********************************************/
+	var unverifiedModeEnabled bool
+	unverifiedModeEnabled, tmpMatchedPolicy = policyChecker.IsTrustStateEnforcementDisabled()
+	if unverifiedModeEnabled {
+		self.Mode = ModeUnverified
+		self.MatchedPolicy = tmpMatchedPolicy
+		self.UnverifiedModeEnabled = true
+		return
+	}
+
+	return
+}
+
+func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
+
+	/********************************************
+				Preparation Step [1/3]
+
+		input: AdmissionRequest
+		output: RequireChecks flag (& matchedRule, matchedPolicy, modeInfo)
+	********************************************/
+
+	self.setReqContext(req)
+
+	// "self.RequireChecks" must be set here
+	self.setMode(req)
+
+	/********************************************
+			Process Request Step [2/3]
+
+		input: RequireChecks flag, ReqContext, Policy
+		output: allowed, evalReason, errMsg (&matchedPolicy)
+	********************************************/
+
+	// log init
+	logger.InitSessionLogger(self.ReqC.Namespace, self.ReqC.Name, self.ReqC.ResourceRef().ApiVersion, self.ReqC.Kind, self.ReqC.Operation)
 	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
 	}
-
 	if !self.Ignored && self.config.Log.ContextLog.IsInScope(self.ReqC) {
 		self.ContextLogEnabled = true
 	}
-	//log entry
 	self.logEntry()
 
-	allowed := false
+	allowed := true
 	evalReason := common.REASON_UNEXPECTED
 	matchedPolicy := ""
 	var errMsg string
+	if self.RequireChecks {
+		allowed = false
 
-	if !allowed && self.Result.InternalRequest {
-		allowed = true
-		evalReason = common.REASON_INTERNAL
-	}
+		//init annotation store (singleton)
+		annotationStoreInstance = &ConcreteAnnotationStore{}
+		//init sign store (singleton)
+		sign.InitSignStore(self.config.SignStore)
 
-	//evaluate sign policy
-	if !self.Aborted && !allowed {
-		if r, err := self.evalSignPolicy(); err != nil {
-			self.abort("Error when evaluating sign policy", err)
-		} else {
-			self.Result.SignPolicyEvalResult = r
-			if r.Checked && r.Allow {
-				allowed = true
-				evalReason = common.REASON_VALID_SIG
-				matchedPolicy = r.MatchedPolicy
+		//evaluate sign policy
+		if !self.Aborted && !allowed {
+			if r, err := self.evalSignPolicy(self.policy.Policy); err != nil {
+				self.abort("Error when evaluating sign policy", err)
+			} else {
+				self.Result.SignPolicyEvalResult = r
+				if r.Checked && r.Allow {
+					allowed = true
+					evalReason = common.REASON_VALID_SIG
+					matchedPolicy = r.MatchedPolicy
+				}
+				if r.Error != nil {
+					errMsg = r.Error.MakeMessage()
+					if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
+						evalReason = common.REASON_INVALID_SIG
+					} else if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
+						evalReason = common.REASON_NO_POLICY
+					} else if errMsg == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
+						evalReason = common.REASON_NO_SIG
+					} else {
+						evalReason = common.REASON_ERROR
+					}
+				}
 			}
-			if r.Error != nil {
-				errMsg = r.Error.MakeMessage()
-				if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
-					evalReason = common.REASON_INVALID_SIG
-				} else if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
-					evalReason = common.REASON_NO_POLICY
-				} else if errMsg == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
-					evalReason = common.REASON_NO_SIG
-				} else {
-					evalReason = common.REASON_ERROR
+		}
+
+		//check mutation
+		if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
+			if r, err := self.evalMutation(self.policy.Policy); err != nil {
+				self.abort("Error when evaluating mutation", err)
+			} else {
+				self.Result.MutationEvalResult = r
+				if r.Checked && !r.IsMutated {
+					allowed = true
+					evalReason = common.REASON_NO_MUTATION
+					matchedPolicy = r.MatchedPolicy
 				}
 			}
 		}
 	}
 
-	//check mutation
-	if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
-		if r, err := self.evalMutation(); err != nil {
-			self.abort("Error when evaluating mutation", err)
-		} else {
-			self.Result.MutationEvalResult = r
-			if r.Checked && !r.IsMutated {
-				allowed = true
-				evalReason = common.REASON_NO_MUTATION
-				matchedPolicy = r.MatchedPolicy
-			}
-		}
-	}
+	/********************************************
+				Decision Step [3/3]
+
+		input: allowed, evalReason, errMsg (&matchedPolicy)
+		output: AdmissionResponse
+	********************************************/
 
 	if !self.Enforced {
 		self.Allow = true
@@ -243,14 +317,12 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		self.AllowByDetectionMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		self.ReasonCode = common.REASON_DETECTION
-		self.MatchedPolicy = self.detectionMatchedPolicy
 	} else if !self.Allow && self.UnverifiedModeEnabled {
 		self.Allow = true
 		self.Verified = false
 		self.AllowByUnverifiedMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
 		self.ReasonCode = common.REASON_UNVERIFIED
-		self.MatchedPolicy = self.unverifiedMatchedPolicy
 	}
 
 	if evalReason == common.REASON_UNEXPECTED {
@@ -261,8 +333,8 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	admissionResponse := self.createAdmissionResponse()
 
 	if !admissionResponse.Allowed {
-		pRule.Update(reqc.Map(), matchedProtectRule)
-		self.updateProtectRule(pRule)
+		self.protectRule.Update(self.ReqC.Map(), self.MatchedRule)
+		self.updateProtectRule()
 	}
 
 	//log context
@@ -362,22 +434,22 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 	return admissionResponse
 }
 
-func (self *CheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
+func (self *CheckContext) evalSignPolicy(pol *policy.PolicyList) (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, self.policy.Policy); err != nil {
+	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, pol); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
 	}
 }
 
-func (self *CheckContext) evalMutation() (*common.MutationEvalResult, error) {
+func (self *CheckContext) evalMutation(pol *policy.PolicyList) (*common.MutationEvalResult, error) {
 	reqc := self.ReqC
 	owners := []*common.Owner{}
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, self.policy.Policy)
+		return checker.Eval(reqc, pol)
 	}
 }
 
@@ -418,6 +490,8 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"abortReason": self.AbortReason,
 		"msg":         self.Message,
 		"policy":      self.MatchedPolicy,
+		"rule":        self.MatchedRule.String(),
+		"mode":        self.Mode,
 
 		//reason code
 		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
@@ -451,10 +525,6 @@ func (self *CheckContext) convertToLogBytes() []byte {
 	if reqc.IntegrityValue != nil {
 		logRecord["maIntegrity.serviceAccount"] = reqc.IntegrityValue.ServiceAccount
 		logRecord["maIntegrity.signature"] = reqc.IntegrityValue.Signature
-	}
-
-	if self.Result != nil {
-		logRecord["internal"] = self.Result.InternalRequest
 	}
 
 	//context from sign policy eval
@@ -578,13 +648,13 @@ func (self *CheckContext) loadProtectRule(namespace string) *prapi.ProtectRule {
 	return pr
 }
 
-func (self *CheckContext) updateProtectRule(pr *prapi.ProtectRule) error {
-	namespace := pr.Namespace
+func (self *CheckContext) updateProtectRule() error {
+	namespace := self.protectRule.Namespace
 	config, _ := rest.InClusterConfig()
 	var err error
 	prClient, _ := prclient.NewForConfig(config)
 
-	_, err = prClient.ProtectRules(namespace).Update(pr)
+	_, err = prClient.ProtectRules(namespace).Update(self.protectRule)
 	if err != nil {
 		logger.Error("failed to update ProtectRule:", err)
 		return err
