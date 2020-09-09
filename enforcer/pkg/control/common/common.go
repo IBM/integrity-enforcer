@@ -34,7 +34,7 @@ const (
 	DefaultPolicyCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
 	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
 	SignerPolicyCustomResourceAPIVersion  = "research.ibm.com/v1alpha1"
-	SignerPolicyCustomResourceKind        = "IESignerPolicy"
+	SignerPolicyCustomResourceKind        = "SignPolicy"
 	AppPolicyCustomResourceAPIVersion     = "research.ibm.com/v1alpha1"
 	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
 )

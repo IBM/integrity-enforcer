@@ -271,14 +271,14 @@ type PluginPolicy struct {
 	Enabled bool   `json:"enabled,omitempty"`
 }
 
-type IESignerPolicy struct {
+type SignPolicy struct {
 	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
 	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
 	PolicyType      PolicyType                 `json:"policyType,omitempty"`
 	Description     string                     `json:"description,omitempty"`
 }
 
-func (self *IESignerPolicy) Policy() *Policy {
+func (self *SignPolicy) Policy() *Policy {
 	return &Policy{
 		Signer:          self.Signer,
 		AllowUnverified: self.AllowUnverified,
@@ -449,12 +449,12 @@ func (p *AppEnforcePolicy) DeepCopy() *AppEnforcePolicy {
 	return p2
 }
 
-func (p *IESignerPolicy) DeepCopyInto(p2 *IESignerPolicy) {
+func (p *SignPolicy) DeepCopyInto(p2 *SignPolicy) {
 	copier.Copy(&p2, &p)
 }
 
-func (p *IESignerPolicy) DeepCopy() *IESignerPolicy {
-	p2 := &IESignerPolicy{}
+func (p *SignPolicy) DeepCopy() *SignPolicy {
+	p2 := &SignPolicy{}
 	p.DeepCopyInto(p2)
 	return p2
 }

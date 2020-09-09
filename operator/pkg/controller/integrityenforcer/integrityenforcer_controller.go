@@ -131,22 +131,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateAppEnforcePolicyCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateIESignerPolicyCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateIEDefaultPolicyCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateIEPolicyCRD(instance)
+	recResult, recErr = r.createOrUpdateSignPolicyCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -161,7 +146,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	if instance.Spec.EnforcePolicy.CheckPluginEnabled("helm") {
+	if instance.Spec.EnforcerConfig.Policy.CheckPluginEnabled("helm") {
 		recResult, recErr = r.createOrUpdateHelmReleaseMetadataCRD(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
@@ -174,17 +159,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateIntegrityEnforcerPolicyCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateDefaultEnforcePolicyCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateSignerPolicyCR(instance)
+	recResult, recErr = r.createOrUpdateSignPolicyCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}

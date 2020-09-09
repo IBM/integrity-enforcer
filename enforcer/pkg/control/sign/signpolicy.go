@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	epolpkg "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcepolicy/v1alpha1"
 	rsigpkg "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
@@ -147,19 +146,19 @@ func (self *EnforceRuleList) Eval(reqc *common.ReqContext, signer *common.Signer
 
 func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolicyEvalResult, error) {
 
-	if reqc.IsEnforcePolicyRequest() {
-		var polObj *epolpkg.EnforcePolicy
-		json.Unmarshal(reqc.RawObject, &polObj)
-		if ok, reasonFail := polObj.Spec.Policy.Validate(reqc, self.EnforcerNamespace, self.PolicyNamespace); !ok {
-			return &common.SignPolicyEvalResult{
-				Allow:   false,
-				Checked: true,
-				Error: &common.CheckError{
-					Reason: fmt.Sprintf("Schema Error for %s; %s", common.PolicyCustomResourceKind, reasonFail),
-				},
-			}, nil
-		}
-	}
+	// if reqc.IsEnforcePolicyRequest() {
+	// 	var polObj *epolpkg.EnforcePolicy
+	// 	json.Unmarshal(reqc.RawObject, &polObj)
+	// 	if ok, reasonFail := polObj.Spec.Policy.Validate(reqc, self.EnforcerNamespace, self.PolicyNamespace); !ok {
+	// 		return &common.SignPolicyEvalResult{
+	// 			Allow:   false,
+	// 			Checked: true,
+	// 			Error: &common.CheckError{
+	// 				Reason: fmt.Sprintf("Schema Error for %s; %s", common.PolicyCustomResourceKind, reasonFail),
+	// 			},
+	// 		}, nil
+	// 	}
+	// }
 
 	if reqc.IsResourceSignatureRequest() {
 		var rsigObj *rsigpkg.ResourceSignature
@@ -180,7 +179,10 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 
 	// find signature
 	signStore := GetSignStore()
-	plugins := self.Policy.GetEnabledPlugins()
+	plugins := map[string]bool{}
+	if self.Policy != nil {
+		plugins = self.Policy.GetEnabledPlugins()
+	}
 	rsig := signStore.GetResourceSignature(ref, reqc, plugins)
 	if rsig == nil {
 		return &common.SignPolicyEvalResult{

@@ -165,10 +165,6 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcerCmReloadSec)),
 			},
 			{
-				Name:  "ENFORCE_POLICY_NAME",
-				Value: cr.Spec.EnforcePolicyCrName,
-			},
-			{
 				Name:  "ENFORCE_POLICY_RELOAD_SEC",
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcePolicyReloadSec)),
 			},

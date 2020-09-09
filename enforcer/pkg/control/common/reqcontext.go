@@ -149,7 +149,7 @@ func (rc *ReqContext) IsIEDefaultPolicyRequest() bool {
 	return rc.GroupVersion() == DefaultPolicyCustomResourceAPIVersion && rc.Kind == DefaultPolicyCustomResourceKind
 }
 
-func (rc *ReqContext) IsIESignerPolicyRequest() bool {
+func (rc *ReqContext) IsSignPolicyRequest() bool {
 	return rc.GroupVersion() == SignerPolicyCustomResourceAPIVersion && rc.Kind == SignerPolicyCustomResourceKind
 }
 

@@ -37,11 +37,12 @@ type SignStoreConfig struct {
 }
 
 type EnforcerConfig struct {
-	Patch           *PatchConfig        `json:"patch,omitempty"`
-	Log             *LoggingScopeConfig `json:"log,omitempty"`
-	SignStore       *SignStoreConfig    `json:"-"`
-	Namespace       string              `json:"-"`
-	PolicyNamespace string              `json:"-"`
+	Patch           *PatchConfig                    `json:"patch,omitempty"`
+	Log             *LoggingScopeConfig             `json:"log,omitempty"`
+	Policy          *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
+	SignStore       *SignStoreConfig                `json:"-"`
+	Namespace       string                          `json:"-"`
+	PolicyNamespace string                          `json:"-"`
 }
 
 type LoggingScopeConfig struct {
@@ -152,7 +153,7 @@ func (ec *EnforcerConfig) LogConfig() *LoggingScopeConfig {
 }
 
 func (ec *EnforcerConfig) DeepCopyInto(ec2 *EnforcerConfig) {
-	copier.Copy(&ec, &ec2)
+	copier.Copy(&ec2, &ec)
 }
 
 func (ec *EnforcerConfig) DeepCopy() *EnforcerConfig {

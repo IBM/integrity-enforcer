@@ -33,12 +33,9 @@ import (
 
 	cert "github.com/IBM/integrity-enforcer/operator/pkg/cert"
 
-	epol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcepolicy/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	iedpol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/iedefaultpolicy/v1alpha1"
-	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/iesignerpolicy/v1alpha1"
-	iepol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/integrityenforcerpolicy/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -101,30 +98,11 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateAppEnforcePolicyCRD(
+func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildAppEnforcePolicyCRD(instance)
+	expected := res.BuildSignPolicyCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateIESignerPolicyCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildIESingnerPolicyCRD(instance)
-	return r.createOrUpdateCRD(instance, expected)
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateIEDefaultPolicyCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildIEDefaultPolicyCRD(instance)
-	return r.createOrUpdateCRD(instance, expected)
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateIEPolicyCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildIEPolicyCRD(instance)
-	return r.createOrUpdateCRD(instance, expected)
-}
-
 func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSignatureCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
 	expected := res.BuildResourceSignatureCRD(instance)
@@ -191,135 +169,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCR(instance *re
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcePolicyCR(instance *researchv1alpha1.IntegrityEnforcer, expected *epol.EnforcePolicy) (reconcile.Result, error) {
-	found := &epol.EnforcePolicy{}
-
+func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	found := &spol.SignPolicy{}
+	expected := res.BuildSignEnforcePolicyForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
-		"EnforcePolicy.Name", expected.Name)
-
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return reconcile.Result{}, err
-	}
-
-	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.client.Create(context.TODO(), expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return reconcile.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return reconcile.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return reconcile.Result{}, nil
-
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultEnforcePolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &iedpol.IEDefaultPolicy{}
-	expected := res.BuildDefaultEnforcePolicyForIE(instance)
-	reqLogger := log.WithValues(
-		"Instance.Name", instance.Name,
-		"DefaultPolicy.Name", expected.Name)
-
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return reconcile.Result{}, err
-	}
-
-	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.client.Create(context.TODO(), expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return reconcile.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return reconcile.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return reconcile.Result{}, nil
-
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateIntegrityEnforcerPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &iepol.IntegrityEnforcerPolicy{}
-	expected := res.BuildIntegrityEnforcerPolicyForIE(instance)
-	reqLogger := log.WithValues(
-		"Instance.Name", instance.Name,
-		"IEPolicy.Name", expected.Name)
-
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return reconcile.Result{}, err
-	}
-
-	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.client.Create(context.TODO(), expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return reconcile.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return reconcile.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return reconcile.Result{}, nil
-
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateSignerPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &iespol.IESignerPolicy{}
-	expected := res.BuildSignerEnforcePolicyForIE(instance)
-	reqLogger := log.WithValues(
-		"Instance.Name", instance.Name,
-		"SignerPolicy.Name", expected.Name)
+		"SignPolicy.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)

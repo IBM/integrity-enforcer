@@ -613,215 +613,6 @@ spec:
                 name:
                   type: string
               type: object
-            defaultPolicy:
-              properties:
-                allow:
-                  properties:
-                    change:
-                      items:
-                        properties:
-                          key:
-                            items:
-                              type: string
-                            type: array
-                          request:
-                            properties:
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              namespace:
-                                type: string
-                              operation:
-                                type: string
-                              type:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                        type: object
-                      type: array
-                    request:
-                      items:
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                      type: array
-                  type: object
-                description:
-                  type: string
-                policyType:
-                  type: string
-              type: object
-            enforcePolicy:
-              properties:
-                allow:
-                  properties:
-                    change:
-                      items:
-                        properties:
-                          key:
-                            items:
-                              type: string
-                            type: array
-                          request:
-                            properties:
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              namespace:
-                                type: string
-                              operation:
-                                type: string
-                              type:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                        type: object
-                      type: array
-                    request:
-                      items:
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                      type: array
-                  type: object
-                description:
-                  type: string
-                ignore:
-                  items:
-                    properties:
-                      apiVersion:
-                        type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      operation:
-                        type: string
-                      type:
-                        type: string
-                      usergroup:
-                        type: string
-                      username:
-                        type: string
-                    type: object
-                  type: array
-                mode:
-                  type: string
-                plugin:
-                  items:
-                    properties:
-                      enabled:
-                        type: boolean
-                      name:
-                        type: string
-                    type: object
-                  type: array
-                policyType:
-                  type: string
-                signer:
-                  items:
-                    properties:
-                      condition:
-                        properties:
-                          name:
-                            type: string
-                          subject:
-                            properties:
-                              commonName:
-                                type: string
-                              country:
-                                type: string
-                              email:
-                                type: string
-                              locality:
-                                type: string
-                              organization:
-                                type: string
-                              organizationalUnit:
-                                type: string
-                              postalCode:
-                                type: string
-                              province:
-                                type: string
-                              serialNumber:
-                                type: string
-                              streetAddress:
-                                type: string
-                              uid:
-                                type: string
-                            type: object
-                        required:
-                        - name
-                        - subject
-                        type: object
-                      request:
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                          operation:
-                            type: string
-                          type:
-                            type: string
-                          usergroup:
-                            type: string
-                          username:
-                            type: string
-                        type: object
-                    type: object
-                  type: array
-              type: object
-            enforcePolicyCrName:
-              type: string
             enforcerConfig:
               properties:
                 log:
@@ -940,6 +731,154 @@ spec:
                   properties:
                     enabled:
                       type: boolean
+                  type: object
+                policy:
+                  properties:
+                    allow:
+                      properties:
+                        change:
+                          items:
+                            properties:
+                              key:
+                                items:
+                                  type: string
+                                type: array
+                              request:
+                                properties:
+                                  apiVersion:
+                                    type: string
+                                  kind:
+                                    type: string
+                                  name:
+                                    type: string
+                                  namespace:
+                                    type: string
+                                  operation:
+                                    type: string
+                                  type:
+                                    type: string
+                                  usergroup:
+                                    type: string
+                                  username:
+                                    type: string
+                                type: object
+                            type: object
+                          type: array
+                        request:
+                          items:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              operation:
+                                type: string
+                              type:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    description:
+                      type: string
+                    ignore:
+                      items:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                          operation:
+                            type: string
+                          type:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
+                            type: string
+                        type: object
+                      type: array
+                    mode:
+                      type: string
+                    plugin:
+                      items:
+                        properties:
+                          enabled:
+                            type: boolean
+                          name:
+                            type: string
+                        type: object
+                      type: array
+                    policyType:
+                      type: string
+                    signer:
+                      items:
+                        properties:
+                          condition:
+                            properties:
+                              name:
+                                type: string
+                              subject:
+                                properties:
+                                  commonName:
+                                    type: string
+                                  country:
+                                    type: string
+                                  email:
+                                    type: string
+                                  locality:
+                                    type: string
+                                  organization:
+                                    type: string
+                                  organizationalUnit:
+                                    type: string
+                                  postalCode:
+                                    type: string
+                                  province:
+                                    type: string
+                                  serialNumber:
+                                    type: string
+                                  streetAddress:
+                                    type: string
+                                  uid:
+                                    type: string
+                                type: object
+                            required:
+                            - name
+                            - subject
+                            type: object
+                          request:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              operation:
+                                type: string
+                              type:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                        type: object
+                      type: array
                   type: object
               type: object
             enforcerConfigCrName:
@@ -1531,9 +1470,7 @@ spec:
                       type: object
                   type: object
               type: object
-            signatureNamespace:
-              type: string
-            signerPolicy:
+            signPolicy:
               properties:
                 allowUnverified:
                   items:
@@ -1604,6 +1541,8 @@ spec:
                     type: object
                   type: array
               type: object
+            signatureNamespace:
+              type: string
             tolerations:
               items:
                 description: The pod this Toleration is attached to tolerates any

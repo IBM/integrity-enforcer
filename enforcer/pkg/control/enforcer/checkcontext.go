@@ -17,11 +17,15 @@
 package enforcer
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/open-policy-agent/opa/rego"
 
 	prapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/protectrule/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
@@ -150,7 +154,7 @@ func (self *CheckContext) setMode(req *v1beta1.AdmissionRequest) {
 	********************************************/
 	var isProtected bool
 	var tmpMatchedRule *prapi.Rule
-	isProtected, tmpMatchedRule = self.isProtected(self.protectRule, self.ReqC)
+	isProtected, tmpMatchedRule = self.isProtectedByRule(self.protectRule, self.ReqC)
 
 	if isProtected {
 		self.MatchedRule = tmpMatchedRule
@@ -192,6 +196,60 @@ func (self *CheckContext) setMode(req *v1beta1.AdmissionRequest) {
 	return
 }
 
+func (self *CheckContext) isProtected(req *v1beta1.AdmissionRequest) bool {
+	ctx := context.Background()
+
+	reqB, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("request:", string(reqB))
+
+	d := json.NewDecoder(bytes.NewBufferString(string(reqB)))
+	d.UseNumber()
+
+	var input interface{}
+	if err := d.Decode(&input); err != nil {
+		panic(err)
+	}
+
+	// Create a simple query
+	r := rego.New(
+		//rego.Query("input.review.kind.kind == \"ConfigMap\""),
+		rego.Query("input.kind.kind == \"ConfigMap\""),
+		rego.Input(input),
+	)
+
+	// // Prepare for evaluation
+	// pq, err := r.PrepareForEval(ctx)
+
+	// if err != nil {
+	// 	// Handle error.
+	// }
+
+	// // Raw input data that will be used in the first evaluation
+	// input := map[string]interface{}{"x": 2}
+
+	// Run the evaluation
+	rs, err := r.Eval(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	rsB, err := json.Marshal(rs)
+	if err != nil {
+		panic(err)
+	}
+	// Inspect results.
+	fmt.Println("result set:", string(rsB))
+
+	protected, err := strconv.ParseBool(rs[0].Expressions[0].String())
+	if err != nil {
+		panic(err)
+	}
+	return protected
+}
+
 func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 
 	/********************************************
@@ -202,9 +260,10 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	********************************************/
 
 	self.setReqContext(req)
+	self.setMode(req)
 
 	// "self.RequireChecks" must be set here
-	self.setMode(req)
+	self.RequireChecks = self.isProtected(req)
 
 	/********************************************
 			Process Request Step [2/3]
@@ -333,8 +392,10 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	admissionResponse := self.createAdmissionResponse()
 
 	if !admissionResponse.Allowed {
-		self.protectRule.Update(self.ReqC.Map(), self.MatchedRule)
-		self.updateProtectRule()
+		if self.protectRule != nil && self.MatchedRule != nil {
+			self.protectRule.Update(self.ReqC.Map(), self.MatchedRule)
+			self.updateProtectRule()
+		}
 	}
 
 	//log context
@@ -662,7 +723,7 @@ func (self *CheckContext) updateProtectRule() error {
 	return nil
 }
 
-func (self *CheckContext) isProtected(pRule *prapi.ProtectRule, reqc *common.ReqContext) (bool, *prapi.Rule) {
+func (self *CheckContext) isProtectedByRule(pRule *prapi.ProtectRule, reqc *common.ReqContext) (bool, *prapi.Rule) {
 	if pRule == nil {
 		return false, nil
 	}

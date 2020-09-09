@@ -224,17 +224,12 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 	in.Logger.DeepCopyInto(&out.Logger)
 	in.RegKeySecret.DeepCopyInto(&out.RegKeySecret)
 	in.GlobalConfig.DeepCopyInto(&out.GlobalConfig)
-	in.EnforcerConfig.DeepCopyInto(&out.EnforcerConfig)
-	if in.EnforcePolicy != nil {
-		in, out := &in.EnforcePolicy, &out.EnforcePolicy
+	if in.EnforcerConfig != nil {
+		in, out := &in.EnforcerConfig, &out.EnforcerConfig
 		*out = (*in).DeepCopy()
 	}
-	if in.DefaultPolicy != nil {
-		in, out := &in.DefaultPolicy, &out.DefaultPolicy
-		*out = (*in).DeepCopy()
-	}
-	if in.SignerPolicy != nil {
-		in, out := &in.SignerPolicy, &out.SignerPolicy
+	if in.SignPolicy != nil {
+		in, out := &in.SignPolicy, &out.SignPolicy
 		*out = (*in).DeepCopy()
 	}
 	return

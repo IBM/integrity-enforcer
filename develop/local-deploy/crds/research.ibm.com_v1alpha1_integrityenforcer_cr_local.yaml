@@ -5,33 +5,26 @@ metadata:
 spec:
   affinity: {}
   verifyType: x509
-  enforcePolicy:
-    allow: {}
-    signer:
-    - request:
-        namespace: '*'
-      condition:
-        name: ClusterSigner
-        subject:
-          commonName: "ClusterAdmin"
-    - request:
-        namespace: '*'
-      condition:
-        name: HelmClusterSigner
-        subject:
-          email: cluster_signer@signer.com
-    ignore:
-    - kind: Event
-    - kind: Lease
-    - kind: Endpoints
-    - kind: TokenReview
-    - kind: SubjectAccessReview
-    - kind: SelfSubjectAccessReview
-    - namespace: '-'
-    plugin:
-    - name: helm
-      enabled: false
   enforcerConfig:
+    policy:
+      plugin:
+      - name: helm
+        enabled: false
+      signer:
+      - request:
+          namespace: '*'
+        condition:
+          name: ClusterSigner
+          subject:
+            commonName: "ClusterAdmin"
+      - request:
+          namespace: '*'
+        condition:
+          name: HelmClusterSigner
+          subject:
+            email: cluster_signer@signer.com
+    patch:
+      enabled: true
     log:
       consoleLog:
         enabled: true
@@ -42,8 +35,6 @@ spec:
         inScope:
         - namespace: '*'
       logLevel: trace
-    patch:
-      enabled: true
   enforcerConfigCrName: ie-config
   globalConfig: 
     detectionMode: false
