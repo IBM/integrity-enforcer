@@ -36,6 +36,14 @@ const (
 	CustomPolicy  PolicyType = "CustomPolicy"
 )
 
+type ScopeType string
+
+const (
+	ScopeUndefined  ScopeType = ""
+	ScopeNamespaced ScopeType = "Namespaced"
+	ScopeCluster    ScopeType = "Cluster"
+)
+
 type IntegrityEnforcerMode string
 
 const (
@@ -285,6 +293,36 @@ func (self *SignPolicy) Policy() *Policy {
 		PolicyType:      self.PolicyType,
 		Description:     self.Description,
 	}
+}
+
+type VSignPolicy struct {
+	Policies    []SignPolicyCondition `json:"policies,omitempty"`
+	Signers     []SignerCondition     `json:"signers,omitempty"`
+	BreakGlass  []BreakGlassCondition `json:"breakGlass,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
+}
+
+func (self *SignPolicy) Policy() *Policy {
+	// TODO: implement
+	return nil
+}
+
+type SignPolicyCondition struct {
+	Scope             ScopeType `json:"scope,omitempty"`
+	Namespaces        []string  `json:"namespaces,omitempty"`
+	ExcludeNamespaces []string  `json:"excludeNamespaces,omitempty"`
+	Signers           []string  `json:"signers,omitempty"`
+}
+
+type SignerCondition struct {
+	Name     string                `json:"name,omitempty"`
+	Subjects []SubjectMatchPattern `json:"subjects,omitempty"`
+}
+
+type BreakGlassCondition struct {
+	Scope      ScopeType `json:"scope,omitempty"`
+	Namespaces []string  `json:"namespaces,omitempty"`
 }
 
 func (self *Policy) CheckFormat() (bool, string) {

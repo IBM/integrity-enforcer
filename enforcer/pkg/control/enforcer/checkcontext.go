@@ -27,9 +27,10 @@ import (
 
 	"github.com/open-policy-agent/opa/rego"
 
-	prapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/protectrule/v1alpha1"
+	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
+	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
+
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
-	prclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/protectrule/clientset/versioned/typed/protectrule/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -64,7 +65,7 @@ type CheckContext struct {
 	// request context
 	config                *config.EnforcerConfig
 	policy                *ctlconfig.PolicyLoader
-	protectRule           *prapi.ProtectRule
+	protectRule           *ctlconfig.ProtectRuleLoader
 	ReqC                  *common.ReqContext `json:"-"`
 	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
 	DryRun                bool               `json:"dryRun"`
@@ -73,16 +74,17 @@ type CheckContext struct {
 
 	Result *CheckResult `json:"result"`
 
-	Enforced      bool        `json:"enforced"`
-	Ignored       bool        `json:"ignored"`
-	Allow         bool        `json:"allow"`
-	Verified      bool        `json:"verified"`
-	Aborted       bool        `json:"aborted"`
-	AbortReason   string      `json:"abortReason"`
-	Error         error       `json:"error"`
-	Message       string      `json:"msg"`
-	MatchedPolicy string      `json:"matchedPolicy"`
-	MatchedRule   *prapi.Rule `json:"matchedRule"`
+	Enforced           bool          `json:"enforced"`
+	Ignored            bool          `json:"ignored"`
+	Allow              bool          `json:"allow"`
+	Verified           bool          `json:"verified"`
+	Aborted            bool          `json:"aborted"`
+	AbortReason        string        `json:"abortReason"`
+	Error              error         `json:"error"`
+	Message            string        `json:"msg"`
+	MatchedPolicy      string        `json:"matchedPolicy"`
+	MatchedRule        *rppapi.Rule  `json:"matchedRule"`
+	MatchedClusterRule *crppapi.Rule `json:"matchedRule"`
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
@@ -105,7 +107,7 @@ func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoad
 		RequireChecks: false,
 		config:        config,
 		policy:        policy,
-		protectRule:   &prapi.ProtectRule{},
+		protectRule:   ctlconfig.NewProtectRuleLoader(),
 		Enforced:      true,
 		Ignored:       false,
 		Aborted:       false,
@@ -393,7 +395,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	admissionResponse := self.createAdmissionResponse()
 
 	if !admissionResponse.Allowed {
-		if self.protectRule != nil && self.MatchedRule != nil {
+		if self.MatchedRule != nil {
 			self.protectRule.Update(self.ReqC.Map(), self.MatchedRule)
 			self.updateProtectRule()
 		}
@@ -710,24 +712,17 @@ func (self *CheckContext) loadProtectRule(namespace string) *prapi.ProtectRule {
 	return pr
 }
 
-func (self *CheckContext) updateProtectRule() error {
-	namespace := self.protectRule.Namespace
-	config, _ := rest.InClusterConfig()
-	var err error
-	prClient, _ := prclient.NewForConfig(config)
-
-	_, err = prClient.ProtectRules(namespace).Update(self.protectRule)
-	if err != nil {
-		logger.Error("failed to update ProtectRule:", err)
-		return err
-	}
-	return nil
+func (self *CheckContext) updateRPP() error {
+	// TODO: implement
 }
 
 func (self *CheckContext) isProtectedByRule(pRule *prapi.ProtectRule, reqc *common.ReqContext) (bool, *prapi.Rule) {
-	if pRule == nil {
-		return false, nil
-	}
-	reqFields := reqc.Map()
-	return pRule.Match(reqFields)
+	// if pRule == nil {
+	// 	return false, nil
+	// }
+	// reqFields := reqc.Map()
+	// return pRule.Match(reqFields)
+
+	// TODO: implement
+	return false, nil
 }
