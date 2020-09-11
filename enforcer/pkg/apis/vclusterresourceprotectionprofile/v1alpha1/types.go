@@ -42,6 +42,7 @@ type VClusterResourceProtectionProfileStatus struct {
 
 // +genclient
 // +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +resource:path=vclusterresourceprotectionprofile,scope=Cluster
 
@@ -81,7 +82,7 @@ func (self *VClusterResourceProtectionProfile) Update(reqFields map[string]strin
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// +genclient:nonNamespaced
 // VClusterResourceProtectionProfileList contains a list of VClusterResourceProtectionProfile
 type VClusterResourceProtectionProfileList struct {
 	metav1.TypeMeta `json:",inline"`

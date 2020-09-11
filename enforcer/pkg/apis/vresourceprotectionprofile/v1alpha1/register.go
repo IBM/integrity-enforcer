@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,8 +46,8 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ProtectRule{},
-		&ProtectRuleList{},
+		&VResourceProtectionProfile{},
+		&VResourceProtectionProfileList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -32,7 +32,7 @@ import (
 // VClusterResourceProtectionProfilesGetter has a method to return a VClusterResourceProtectionProfileInterface.
 // A group's client should implement this interface.
 type VClusterResourceProtectionProfilesGetter interface {
-	VClusterResourceProtectionProfiles(namespace string) VClusterResourceProtectionProfileInterface
+	VClusterResourceProtectionProfiles() VClusterResourceProtectionProfileInterface
 }
 
 // VClusterResourceProtectionProfileInterface has methods to work with VClusterResourceProtectionProfile resources.
@@ -51,14 +51,12 @@ type VClusterResourceProtectionProfileInterface interface {
 // vClusterResourceProtectionProfiles implements VClusterResourceProtectionProfileInterface
 type vClusterResourceProtectionProfiles struct {
 	client rest.Interface
-	ns     string
 }
 
 // newVClusterResourceProtectionProfiles returns a VClusterResourceProtectionProfiles
-func newVClusterResourceProtectionProfiles(c *ResearchV1alpha1Client, namespace string) *vClusterResourceProtectionProfiles {
+func newVClusterResourceProtectionProfiles(c *ResearchV1alpha1Client) *vClusterResourceProtectionProfiles {
 	return &vClusterResourceProtectionProfiles{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -66,7 +64,6 @@ func newVClusterResourceProtectionProfiles(c *ResearchV1alpha1Client, namespace 
 func (c *vClusterResourceProtectionProfiles) Get(name string, options v1.GetOptions) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	result = &v1alpha1.VClusterResourceProtectionProfile{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -83,7 +80,6 @@ func (c *vClusterResourceProtectionProfiles) List(opts v1.ListOptions) (result *
 	}
 	result = &v1alpha1.VClusterResourceProtectionProfileList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -100,7 +96,6 @@ func (c *vClusterResourceProtectionProfiles) Watch(opts v1.ListOptions) (watch.I
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -111,7 +106,6 @@ func (c *vClusterResourceProtectionProfiles) Watch(opts v1.ListOptions) (watch.I
 func (c *vClusterResourceProtectionProfiles) Create(vClusterResourceProtectionProfile *v1alpha1.VClusterResourceProtectionProfile) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	result = &v1alpha1.VClusterResourceProtectionProfile{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		Body(vClusterResourceProtectionProfile).
 		Do().
@@ -123,7 +117,6 @@ func (c *vClusterResourceProtectionProfiles) Create(vClusterResourceProtectionPr
 func (c *vClusterResourceProtectionProfiles) Update(vClusterResourceProtectionProfile *v1alpha1.VClusterResourceProtectionProfile) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	result = &v1alpha1.VClusterResourceProtectionProfile{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		Name(vClusterResourceProtectionProfile.Name).
 		Body(vClusterResourceProtectionProfile).
@@ -135,7 +128,6 @@ func (c *vClusterResourceProtectionProfiles) Update(vClusterResourceProtectionPr
 // Delete takes name of the vClusterResourceProtectionProfile and deletes it. Returns an error if one occurs.
 func (c *vClusterResourceProtectionProfiles) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		Name(name).
 		Body(options).
@@ -150,7 +142,6 @@ func (c *vClusterResourceProtectionProfiles) DeleteCollection(options *v1.Delete
 		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -163,7 +154,6 @@ func (c *vClusterResourceProtectionProfiles) DeleteCollection(options *v1.Delete
 func (c *vClusterResourceProtectionProfiles) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	result = &v1alpha1.VClusterResourceProtectionProfile{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("vclusterresourceprotectionprofiles").
 		SubResource(subresources...).
 		Name(name).

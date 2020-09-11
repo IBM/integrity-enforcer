@@ -30,7 +30,6 @@ import (
 	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -41,7 +40,6 @@ import (
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -60,12 +58,16 @@ const (
 
 type CheckContext struct {
 	Mode          string `json:"mode"`
+	Scope         string `json:"scope,omitempty"`
 	RequireChecks bool   `json:"RequireChecks"`
 
 	// request context
-	config                *config.EnforcerConfig
-	policy                *ctlconfig.PolicyLoader
-	protectRule           *ctlconfig.ProtectRuleLoader
+	config           *config.EnforcerConfig
+	signPolicyLoader *ctlconfig.SignPolicyLoader
+	rppLoader        *ctlconfig.RPPLoader
+	crppLoader       *ctlconfig.CRPPLoader
+	resSigLoader     *ctlconfig.ResSigLoader
+
 	ReqC                  *common.ReqContext `json:"-"`
 	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
 	DryRun                bool               `json:"dryRun"`
@@ -74,17 +76,20 @@ type CheckContext struct {
 
 	Result *CheckResult `json:"result"`
 
-	Enforced           bool          `json:"enforced"`
-	Ignored            bool          `json:"ignored"`
-	Allow              bool          `json:"allow"`
-	Verified           bool          `json:"verified"`
-	Aborted            bool          `json:"aborted"`
-	AbortReason        string        `json:"abortReason"`
-	Error              error         `json:"error"`
-	Message            string        `json:"msg"`
-	MatchedPolicy      string        `json:"matchedPolicy"`
-	MatchedRule        *rppapi.Rule  `json:"matchedRule"`
-	MatchedClusterRule *crppapi.Rule `json:"matchedRule"`
+	Enforced    bool   `json:"enforced"`
+	Ignored     bool   `json:"ignored"`
+	Allow       bool   `json:"allow"`
+	Verified    bool   `json:"verified"`
+	Aborted     bool   `json:"aborted"`
+	AbortReason string `json:"abortReason"`
+	Error       error  `json:"error"`
+	Message     string `json:"msg"`
+
+	mergedPolicy *policy.PolicyList
+
+	MatchedPolicy string                                     `json:"matchedPolicy"`
+	MatchedRPP    *rppapi.VResourceProtectionProfile         `json:"matchedRPP"`
+	MatchedCRPP   *crppapi.VClusterResourceProtectionProfile `json:"matchedCRPP"`
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
@@ -103,16 +108,21 @@ type CheckResult struct {
 
 func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *CheckContext {
 	cc := &CheckContext{
-		Mode:          ModeDefault,
-		RequireChecks: false,
-		config:        config,
-		policy:        policy,
-		protectRule:   ctlconfig.NewProtectRuleLoader(),
-		Enforced:      true,
-		Ignored:       false,
-		Aborted:       false,
-		Allow:         false,
-		Verified:      false,
+		Mode:             ModeDefault,
+		RequireChecks:    false,
+		config:           config,
+		signPolicyLoader: nil,
+		rppLoader:        nil,
+		crppLoader:       nil,
+		resSigLoader:     nil,
+
+		// policy:      policy,
+		// protectRule: ctlconfig.NewProtectRuleLoader(),
+		Enforced: true,
+		Ignored:  false,
+		Aborted:  false,
+		Allow:    false,
+		Verified: false,
 		Result: &CheckResult{
 			SignPolicyEvalResult: &common.SignPolicyEvalResult{
 				Allow:   false,
@@ -131,50 +141,89 @@ func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoad
 	return cc
 }
 
-func (self *CheckContext) setReqContext(req *v1beta1.AdmissionRequest) {
+func (self *CheckContext) setReqContextAndScope(req *v1beta1.AdmissionRequest) {
 	reqc := common.NewReqContext(req)
 	self.ReqC = reqc
+	if reqc.Namespace == "" {
+		self.Scope = "Cluster"
+	} else {
+		self.Scope = "Namespaced"
+	}
 	return
 }
 
-func (self *CheckContext) setProtectMode(req *v1beta1.AdmissionRequest) {
+func (self *CheckContext) isIgnore() bool {
+	// TODO: implement
+	// check isDryRun(reqc), isIgnoreKind(reqc+enforcerconfig), isIgnoreSA(reqc+rpp/crpp) <== isIgnoreSA should be separated(?)
+	return false
+}
 
-	/********************************************
-				DryRun Mode Check (1/4)
-	********************************************/
-	self.DryRun = *(req.DryRun)
-	if self.DryRun {
-		self.Mode = ModeDryRun
+func (self *CheckContext) isIEProtectingCR() bool {
+	// TODO: implement
+	// RPP, CRPP...
+	return false
+}
+
+func (self *CheckContext) initLoaders() {
+	enforcerNamespace := self.config.Namespace
+	requestNamespace := self.ReqC.Namespace
+	signatureNamespace := self.config.SignStore.SignatureNamespace // for cluster scope request
+	self.signPolicyLoader = ctlconfig.NewSignPolicyLoader(enforcerNamespace)
+	self.rppLoader = ctlconfig.NewRPPLoader(enforcerNamespace, requestNamespace)
+	self.crppLoader = ctlconfig.NewCRPPLoader()
+	self.resSigLoader = ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace)
+	return
+}
+
+func (self *CheckContext) loadResourcesByLoader() {
+	self.signPolicyLoader.Load()
+	self.rppLoader.Load()
+	self.crppLoader.Load()
+	self.resSigLoader.Load()
+}
+
+func (self *CheckContext) setProtectMode() {
+
+	if self.isIgnore() {
+		self.RequireChecks = false
 		return
+	} else {
+		self.loadResourcesByLoader()
 	}
-
-	// load protect rule
-	self.protectRule = self.loadProtectRule(self.ReqC.Namespace)
 
 	/********************************************
 			Protected Mode Check (2/4)
 	********************************************/
 	var isProtected bool
-	var tmpMatchedRule *prapi.Rule
-	isProtected, tmpMatchedRule = self.isProtectedByRule(self.protectRule, self.ReqC)
+	var tmpMatchedRPP *rppapi.VResourceProtectionProfile
+	isProtected, tmpMatchedRPP = self.isProtectedByProfile()
 
 	if isProtected {
-		self.MatchedRule = tmpMatchedRule
+		self.MatchedRPP = tmpMatchedRPP
 		self.RequireChecks = true
 	} else {
 		self.Mode = ModeNotProtected
 		return
 	}
 
-	// load policy
-	self.policy.Load(self.ReqC.Namespace)
-
 	/********************************************
 			Detection Mode Check (3/4)
 	********************************************/
 	var detectionModeEnabled bool
 	var tmpMatchedPolicy string
-	policyChecker := policy.NewPolicyChecker(self.policy.Policy, self.ReqC)
+
+	polList := []*policy.Policy{self.config.Policy.Policy()}
+	polList2 := []*policy.Policy{}
+	for _, d := range self.signPolicyLoader.Data {
+		polList2 = append(polList2, d.Spec.VSignPolicy.Policy())
+	}
+	polList = append(polList, polList2...)
+	polMerged := &policy.PolicyList{Items: polList}
+
+	self.mergedPolicy = polMerged
+
+	policyChecker := policy.NewPolicyChecker(polMerged, self.ReqC)
+
 	detectionModeEnabled, tmpMatchedPolicy = policyChecker.IsDetectionModeEnabled()
 	if detectionModeEnabled {
 		self.Mode = ModeDetect
@@ -198,7 +247,7 @@ func (self *CheckContext) setProtectMode(req *v1beta1.AdmissionRequest) {
 	return
 }
 
-func (self *CheckContext) isProtected(req *v1beta1.AdmissionRequest) bool {
+func (self *CheckContext) isProtectedREGO(req *v1beta1.AdmissionRequest) bool {
 	ctx := context.Background()
 
 	reqB, err := json.Marshal(req)
@@ -254,6 +303,10 @@ func (self *CheckContext) isProtected(req *v1beta1.AdmissionRequest) bool {
 
 func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 
+	// init
+	self.setReqContextAndScope(req)
+	self.initLoaders()
+
 	/********************************************
 				Preparation Step [1/3]
 
@@ -261,12 +314,11 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		output: RequireChecks flag (& matchedRule, matchedPolicy, modeInfo)
 	********************************************/
 
-	self.setReqContext(req)
 	// "self.RequireChecks" must be set here
-	self.setProtectMode(req)
+	self.setProtectMode()
 
 	// OPA version of isProtected()
-	// self.RequireChecks = self.isProtected(req)
+	// self.RequireChecks = self.isProtectedREGO(req)
 
 	/********************************************
 			Process Request Step [2/3]
@@ -299,7 +351,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 		//evaluate sign policy
 		if !self.Aborted && !allowed {
-			if r, err := self.evalSignPolicy(self.policy.Policy); err != nil {
+			if r, err := self.evalSignPolicy(self.mergedPolicy); err != nil {
 				self.abort("Error when evaluating sign policy", err)
 			} else {
 				self.Result.SignPolicyEvalResult = r
@@ -325,7 +377,7 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 		//check mutation
 		if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
-			if r, err := self.evalMutation(self.policy.Policy); err != nil {
+			if r, err := self.evalMutation(self.mergedPolicy); err != nil {
 				self.abort("Error when evaluating mutation", err)
 			} else {
 				self.Result.MutationEvalResult = r
@@ -395,9 +447,11 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	admissionResponse := self.createAdmissionResponse()
 
 	if !admissionResponse.Allowed {
-		if self.MatchedRule != nil {
-			self.protectRule.Update(self.ReqC.Map(), self.MatchedRule)
-			self.updateProtectRule()
+		if self.MatchedRPP != nil {
+			// TODO: implement update()
+
+			// self.protectRule.Update(self.ReqC.Map(), self.MatchedRPP)
+			// self.updateProtectRule()
 		}
 	}
 
@@ -554,8 +608,9 @@ func (self *CheckContext) convertToLogBytes() []byte {
 		"abortReason": self.AbortReason,
 		"msg":         self.Message,
 		"policy":      self.MatchedPolicy,
-		"rule":        self.MatchedRule.String(),
-		"mode":        self.Mode,
+		// TODO: implement matched RPP/CRPP logging
+		// "rule":        self.MatchedRPP.String(),
+		"mode": self.Mode,
 
 		//reason code
 		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
@@ -682,41 +737,12 @@ func (self *CheckContext) convertToLogBytes() []byte {
 	return logBytes
 }
 
-func (self *CheckContext) loadProtectRule(namespace string) *prapi.ProtectRule {
-	name := "ie-protect-rule"
-	prLoadInterval := time.Second * 5
-	config, _ := rest.InClusterConfig()
-	var pr *prapi.ProtectRule
-	var err error
-	var keyName string
-	prClient, _ := prclient.NewForConfig(config)
-	keyName = fmt.Sprintf("protectRule/%s", namespace)
-	if cached := cache.GetString(keyName); cached == "" {
-		pr, err = prClient.ProtectRules(namespace).Get(name, metav1.GetOptions{})
-		if err != nil {
-			logger.Debug("failed to get ProtectRule:", err)
-			return nil
-		}
-		logger.Debug("ProtectRule reloaded.")
-		if !pr.IsEmpty() {
-			tmp, _ := json.Marshal(pr)
-			cache.SetString(keyName, string(tmp), &(prLoadInterval))
-		}
-	} else {
-		err = json.Unmarshal([]byte(cached), &pr)
-		if err != nil {
-			logger.Debug("failed to Unmarshal cached IntegrityEnforcerPolicy:", err)
-			return nil
-		}
-	}
-	return pr
-}
-
 func (self *CheckContext) updateRPP() error {
 	// TODO: implement
+	return nil
 }
 
-func (self *CheckContext) isProtectedByRule(pRule *prapi.ProtectRule, reqc *common.ReqContext) (bool, *prapi.Rule) {
+func (self *CheckContext) isProtectedByProfile() (bool, *rppapi.VResourceProtectionProfile) {
 	// if pRule == nil {
 	// 	return false, nil
 	// }

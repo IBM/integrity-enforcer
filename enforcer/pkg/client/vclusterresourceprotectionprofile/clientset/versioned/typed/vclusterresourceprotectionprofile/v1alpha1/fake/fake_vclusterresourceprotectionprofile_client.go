@@ -28,8 +28,8 @@ type FakeResearchV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeResearchV1alpha1) VClusterResourceProtectionProfiles(namespace string) v1alpha1.VClusterResourceProtectionProfileInterface {
-	return &FakeVClusterResourceProtectionProfiles{c, namespace}
+func (c *FakeResearchV1alpha1) VClusterResourceProtectionProfiles() v1alpha1.VClusterResourceProtectionProfileInterface {
+	return &FakeVClusterResourceProtectionProfiles{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

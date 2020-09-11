@@ -31,7 +31,6 @@ import (
 // FakeVClusterResourceProtectionProfiles implements VClusterResourceProtectionProfileInterface
 type FakeVClusterResourceProtectionProfiles struct {
 	Fake *FakeResearchV1alpha1
-	ns   string
 }
 
 var vclusterresourceprotectionprofilesResource = schema.GroupVersionResource{Group: "research.ibm.com", Version: "v1alpha1", Resource: "vclusterresourceprotectionprofiles"}
@@ -41,8 +40,7 @@ var vclusterresourceprotectionprofilesKind = schema.GroupVersionKind{Group: "res
 // Get takes name of the vClusterResourceProtectionProfile, and returns the corresponding vClusterResourceProtectionProfile object, and an error if there is any.
 func (c *FakeVClusterResourceProtectionProfiles) Get(name string, options v1.GetOptions) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(vclusterresourceprotectionprofilesResource, c.ns, name), &v1alpha1.VClusterResourceProtectionProfile{})
-
+		Invokes(testing.NewRootGetAction(vclusterresourceprotectionprofilesResource, name), &v1alpha1.VClusterResourceProtectionProfile{})
 	if obj == nil {
 		return nil, err
 	}
@@ -52,8 +50,7 @@ func (c *FakeVClusterResourceProtectionProfiles) Get(name string, options v1.Get
 // List takes label and field selectors, and returns the list of VClusterResourceProtectionProfiles that match those selectors.
 func (c *FakeVClusterResourceProtectionProfiles) List(opts v1.ListOptions) (result *v1alpha1.VClusterResourceProtectionProfileList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(vclusterresourceprotectionprofilesResource, vclusterresourceprotectionprofilesKind, c.ns, opts), &v1alpha1.VClusterResourceProtectionProfileList{})
-
+		Invokes(testing.NewRootListAction(vclusterresourceprotectionprofilesResource, vclusterresourceprotectionprofilesKind, opts), &v1alpha1.VClusterResourceProtectionProfileList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -74,15 +71,13 @@ func (c *FakeVClusterResourceProtectionProfiles) List(opts v1.ListOptions) (resu
 // Watch returns a watch.Interface that watches the requested vClusterResourceProtectionProfiles.
 func (c *FakeVClusterResourceProtectionProfiles) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(vclusterresourceprotectionprofilesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(vclusterresourceprotectionprofilesResource, opts))
 }
 
 // Create takes the representation of a vClusterResourceProtectionProfile and creates it.  Returns the server's representation of the vClusterResourceProtectionProfile, and an error, if there is any.
 func (c *FakeVClusterResourceProtectionProfiles) Create(vClusterResourceProtectionProfile *v1alpha1.VClusterResourceProtectionProfile) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(vclusterresourceprotectionprofilesResource, c.ns, vClusterResourceProtectionProfile), &v1alpha1.VClusterResourceProtectionProfile{})
-
+		Invokes(testing.NewRootCreateAction(vclusterresourceprotectionprofilesResource, vClusterResourceProtectionProfile), &v1alpha1.VClusterResourceProtectionProfile{})
 	if obj == nil {
 		return nil, err
 	}
@@ -92,8 +87,7 @@ func (c *FakeVClusterResourceProtectionProfiles) Create(vClusterResourceProtecti
 // Update takes the representation of a vClusterResourceProtectionProfile and updates it. Returns the server's representation of the vClusterResourceProtectionProfile, and an error, if there is any.
 func (c *FakeVClusterResourceProtectionProfiles) Update(vClusterResourceProtectionProfile *v1alpha1.VClusterResourceProtectionProfile) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(vclusterresourceprotectionprofilesResource, c.ns, vClusterResourceProtectionProfile), &v1alpha1.VClusterResourceProtectionProfile{})
-
+		Invokes(testing.NewRootUpdateAction(vclusterresourceprotectionprofilesResource, vClusterResourceProtectionProfile), &v1alpha1.VClusterResourceProtectionProfile{})
 	if obj == nil {
 		return nil, err
 	}
@@ -103,14 +97,13 @@ func (c *FakeVClusterResourceProtectionProfiles) Update(vClusterResourceProtecti
 // Delete takes name of the vClusterResourceProtectionProfile and deletes it. Returns an error if one occurs.
 func (c *FakeVClusterResourceProtectionProfiles) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(vclusterresourceprotectionprofilesResource, c.ns, name), &v1alpha1.VClusterResourceProtectionProfile{})
-
+		Invokes(testing.NewRootDeleteAction(vclusterresourceprotectionprofilesResource, name), &v1alpha1.VClusterResourceProtectionProfile{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeVClusterResourceProtectionProfiles) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(vclusterresourceprotectionprofilesResource, c.ns, listOptions)
+	action := testing.NewRootDeleteCollectionAction(vclusterresourceprotectionprofilesResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.VClusterResourceProtectionProfileList{})
 	return err
@@ -119,8 +112,7 @@ func (c *FakeVClusterResourceProtectionProfiles) DeleteCollection(options *v1.De
 // Patch applies the patch and returns the patched vClusterResourceProtectionProfile.
 func (c *FakeVClusterResourceProtectionProfiles) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.VClusterResourceProtectionProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(vclusterresourceprotectionprofilesResource, c.ns, name, pt, data, subresources...), &v1alpha1.VClusterResourceProtectionProfile{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(vclusterresourceprotectionprofilesResource, name, pt, data, subresources...), &v1alpha1.VClusterResourceProtectionProfile{})
 	if obj == nil {
 		return nil, err
 	}

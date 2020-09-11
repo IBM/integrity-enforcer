@@ -303,7 +303,7 @@ type VSignPolicy struct {
 	Description string                `json:"description,omitempty"`
 }
 
-func (self *SignPolicy) Policy() *Policy {
+func (self *VSignPolicy) Policy() *Policy {
 	// TODO: implement
 	return nil
 }
@@ -493,6 +493,16 @@ func (p *SignPolicy) DeepCopyInto(p2 *SignPolicy) {
 
 func (p *SignPolicy) DeepCopy() *SignPolicy {
 	p2 := &SignPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *VSignPolicy) DeepCopyInto(p2 *VSignPolicy) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *VSignPolicy) DeepCopy() *VSignPolicy {
+	p2 := &VSignPolicy{}
 	p.DeepCopyInto(p2)
 	return p2
 }

@@ -34,8 +34,8 @@ type ResearchV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ResearchV1alpha1Client) VClusterResourceProtectionProfiles(namespace string) VClusterResourceProtectionProfileInterface {
-	return newVClusterResourceProtectionProfiles(c, namespace)
+func (c *ResearchV1alpha1Client) VClusterResourceProtectionProfiles() VClusterResourceProtectionProfileInterface {
+	return newVClusterResourceProtectionProfiles(c)
 }
 
 // NewForConfig creates a new ResearchV1alpha1Client for the given config.
