@@ -135,7 +135,7 @@ func (self *CheckContext) setReqContext(req *v1beta1.AdmissionRequest) {
 	return
 }
 
-func (self *CheckContext) setMode(req *v1beta1.AdmissionRequest) {
+func (self *CheckContext) setProtectMode(req *v1beta1.AdmissionRequest) {
 
 	/********************************************
 				DryRun Mode Check (1/4)
@@ -260,10 +260,11 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	********************************************/
 
 	self.setReqContext(req)
-	self.setMode(req)
-
 	// "self.RequireChecks" must be set here
-	self.RequireChecks = self.isProtected(req)
+	self.setProtectMode(req)
+
+	// OPA version of isProtected()
+	// self.RequireChecks = self.isProtected(req)
 
 	/********************************************
 			Process Request Step [2/3]
