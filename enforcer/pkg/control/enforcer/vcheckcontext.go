@@ -17,19 +17,12 @@
 package enforcer
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/open-policy-agent/opa/rego"
-
-	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
-	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
-
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -43,42 +36,33 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	ModeDefault      string = "Default"
-	ModeDryRun       string = "DryRun"
-	ModeNotProtected string = "NotProtected"
-	ModeDetect       string = "Detect"
-	ModeUnverified   string = "Unverified" //BreakGlass
-)
-
 /**********************************************
 
-				CheckContext
+				VCheckContext
 
 ***********************************************/
 
-type CheckContext struct {
-	Mode          string `json:"mode"`
-	Scope         string `json:"scope,omitempty"`
-	RequireChecks bool   `json:"RequireChecks"`
+type VCheckContext struct {
+	ResourceScope string `json:"resourceScope,omitempty"`
 
 	// request context
-	config           *config.EnforcerConfig
-	signPolicyLoader *ctlconfig.SignPolicyLoader
-	rppLoader        *ctlconfig.RPPLoader
-	crppLoader       *ctlconfig.CRPPLoader
-	resSigLoader     *ctlconfig.ResSigLoader
+	config *config.EnforcerConfig
+	Loader *Loader
 
 	ReqC                  *common.ReqContext `json:"-"`
 	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
-	DryRun                bool               `json:"dryRun"`
+	DryRun                bool               `json:"dryRun"` //used
 	DetectionModeEnabled  bool               `json:"detectionModeEnabled"`
 	UnverifiedModeEnabled bool               `json:"unverifiedModeEnabled"`
 
 	Result *CheckResult `json:"result"`
 
-	Enforced    bool   `json:"enforced"`
-	Ignored     bool   `json:"ignored"`
+	Enforced     bool `json:"enforced"`
+	IEControlled bool `json:"iecontrolled"` //used
+	// Ignored      bool   `json:"ignored"`      //used
+	Unprocessed bool   `json:"unprocessed"` //used
+	IgnoredSA   bool   `json:"ignoredSA"`   //used
+	Protected   bool   `json:"protected"`   //used
 	Allow       bool   `json:"allow"`
 	Verified    bool   `json:"verified"`
 	Aborted     bool   `json:"aborted"`
@@ -87,10 +71,6 @@ type CheckContext struct {
 	Message     string `json:"msg"`
 
 	mergedPolicy *policy.PolicyList
-
-	MatchedPolicy string                                     `json:"matchedPolicy"`
-	MatchedRPP    *rppapi.VResourceProtectionProfile         `json:"matchedRPP"`
-	MatchedCRPP   *crppapi.VClusterResourceProtectionProfile `json:"matchedCRPP"`
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
@@ -101,29 +81,25 @@ type CheckContext struct {
 	AllowByDetectionMode  bool `json:"allowByDetectionMode"`
 }
 
-type CheckResult struct {
+type VCheckResult struct {
 	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
 	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
 	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
-func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *CheckContext {
-	cc := &CheckContext{
-		Mode:             ModeDefault,
-		RequireChecks:    false,
-		config:           config,
-		signPolicyLoader: nil,
-		rppLoader:        nil,
-		crppLoader:       nil,
-		resSigLoader:     nil,
+func NewVCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *VCheckContext {
+	cc := &VCheckContext{
+		config: config,
+		Loader: nil,
 
 		// policy:      policy,
 		// protectRule: ctlconfig.NewProtectRuleLoader(),
-		Enforced: true,
-		Ignored:  false,
-		Aborted:  false,
-		Allow:    false,
-		Verified: false,
+		Enforced:  true,
+		IgnoredSA: false,
+		Protected: false,
+		Aborted:   false,
+		Allow:     false,
+		Verified:  false,
 		Result: &CheckResult{
 			SignPolicyEvalResult: &common.SignPolicyEvalResult{
 				Allow:   false,
@@ -142,207 +118,75 @@ func NewCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoad
 	return cc
 }
 
-func (self *CheckContext) setReqContextAndScope(req *v1beta1.AdmissionRequest) {
-	reqc := common.NewReqContext(req)
-	self.ReqC = reqc
-	if reqc.Namespace == "" {
-		self.Scope = "Cluster"
-	} else {
-		self.Scope = "Namespaced"
-	}
-	return
-}
-
-func (self *CheckContext) isIgnore() bool {
-	// TODO: implement
-	// check isDryRun(reqc), isIgnoreKind(reqc+enforcerconfig), isIgnoreSA(reqc+rpp/crpp) <== isIgnoreSA should be separated(?)
-	return false
-}
-
-func (self *CheckContext) isIEProtectingCR() bool {
-	// TODO: implement
-	// RPP, CRPP...
-	return false
-}
-
-func (self *CheckContext) initLoaders() {
-	enforcerNamespace := self.config.Namespace
-	requestNamespace := self.ReqC.Namespace
-	signatureNamespace := self.config.SignStore.SignatureNamespace // for cluster scope request
-	self.signPolicyLoader = ctlconfig.NewSignPolicyLoader(enforcerNamespace)
-	self.rppLoader = ctlconfig.NewRPPLoader(enforcerNamespace, requestNamespace)
-	self.crppLoader = ctlconfig.NewCRPPLoader()
-	self.resSigLoader = ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace)
-	return
-}
-
-func (self *CheckContext) loadResourcesByLoader() {
-	self.signPolicyLoader.Load()
-	self.rppLoader.Load()
-	self.crppLoader.Load()
-	self.resSigLoader.Load()
-}
-
-func (self *CheckContext) setProtectMode() {
-
-	if self.isIgnore() {
-		self.RequireChecks = false
-		return
-	} else {
-		self.loadResourcesByLoader()
-	}
-
-	/********************************************
-			Protected Mode Check (2/4)
-	********************************************/
-	var isProtected bool
-	var tmpMatchedRPP *rppapi.VResourceProtectionProfile
-	isProtected, tmpMatchedRPP = self.isProtectedByProfile()
-
-	if isProtected {
-		self.MatchedRPP = tmpMatchedRPP
-		self.RequireChecks = true
-	} else {
-		self.Mode = ModeNotProtected
-		return
-	}
-
-	/********************************************
-			Detection Mode Check (3/4)
-	********************************************/
-	var detectionModeEnabled bool
-	var tmpMatchedPolicy string
-
-	polList := []*policy.Policy{self.config.Policy.Policy()}
-	polList2 := []*policy.Policy{}
-	for _, d := range self.signPolicyLoader.Data {
-		polList2 = append(polList2, d.Spec.VSignPolicy.Policy())
-	}
-	polList = append(polList, polList2...)
-	polMerged := &policy.PolicyList{Items: polList}
-
-	self.mergedPolicy = polMerged
-
-	policyChecker := policy.NewPolicyChecker(polMerged, self.ReqC)
-
-	detectionModeEnabled, tmpMatchedPolicy = policyChecker.IsDetectionModeEnabled()
-	if detectionModeEnabled {
-		self.Mode = ModeDetect
-		self.MatchedPolicy = tmpMatchedPolicy
-		self.DetectionModeEnabled = true
-		return
-	}
-
-	/********************************************
-			Unverified Mode Check (4/4)
-	********************************************/
-	var unverifiedModeEnabled bool
-	unverifiedModeEnabled, tmpMatchedPolicy = policyChecker.IsTrustStateEnforcementDisabled()
-	if unverifiedModeEnabled {
-		self.Mode = ModeUnverified
-		self.MatchedPolicy = tmpMatchedPolicy
-		self.UnverifiedModeEnabled = true
-		return
-	}
-
-	return
-}
-
-func (self *CheckContext) isProtectedREGO(req *v1beta1.AdmissionRequest) bool {
-	ctx := context.Background()
-
-	reqB, err := json.Marshal(req)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("request:", string(reqB))
-
-	d := json.NewDecoder(bytes.NewBufferString(string(reqB)))
-	d.UseNumber()
-
-	var input interface{}
-	if err := d.Decode(&input); err != nil {
-		panic(err)
-	}
-
-	// Create a simple query
-	r := rego.New(
-		//rego.Query("input.review.kind.kind == \"ConfigMap\""),
-		rego.Query("input.kind.kind == \"ConfigMap\""),
-		rego.Input(input),
-	)
-
-	// // Prepare for evaluation
-	// pq, err := r.PrepareForEval(ctx)
-
-	// if err != nil {
-	// 	// Handle error.
-	// }
-
-	// // Raw input data that will be used in the first evaluation
-	// input := map[string]interface{}{"x": 2}
-
-	// Run the evaluation
-	rs, err := r.Eval(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	rsB, err := json.Marshal(rs)
-	if err != nil {
-		panic(err)
-	}
-	// Inspect results.
-	fmt.Println("result set:", string(rsB))
-
-	protected, err := strconv.ParseBool(rs[0].Expressions[0].String())
-	if err != nil {
-		panic(err)
-	}
-	return protected
-}
-
-func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
+func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 
 	// init
-	self.setReqContextAndScope(req)
-	self.initLoaders()
+	reqc := common.NewReqContext(req) //reqcにdry-runフラグを入れる
+	self.ReqC = reqc
+	if reqc.Namespace == "" {
+		self.ResourceScope = "Cluster"
+	} else {
+		self.ResourceScope = "Namespaced"
+	}
 
-	/********************************************
-				Preparation Step [1/3]
+	self.DryRun = self.checkIfDryRunAdmission()
 
-		input: AdmissionRequest
-		output: RequireChecks flag (& matchedRule, matchedPolicy, modeInfo)
-	********************************************/
+	if self.DryRun {
+		return createAdmissionResponse(true, "request is dry run")
+	}
 
-	// "self.RequireChecks" must be set here
-	self.setProtectMode()
+	self.Unprocessed = self.checkIfUnprocessedInIE()
+	if self.Unprocessed {
+		return createAdmissionResponse(true, "request is not processed by IE")
+	}
 
-	// OPA version of isProtected()
-	// self.RequireChecks = self.isProtectedREGO(req)
+	if self.checkIfIEResource() {
+		return self.processRequestForIEResource()
+	}
 
-	/********************************************
-			Process Request Step [2/3]
+	// Start IE world from here ...
 
-		input: RequireChecks flag, ReqContext, Policy
-		output: allowed, evalReason, errMsg (&matchedPolicy)
-	********************************************/
+	//init loader
+	self.initLoader()
 
-	// log init
-	logger.InitSessionLogger(self.ReqC.Namespace, self.ReqC.Name, self.ReqC.ResourceRef().ApiVersion, self.ReqC.Kind, self.ReqC.Operation)
-	if !self.Ignored && self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
+	//init logger
+	logger.InitSessionLogger(self.ReqC.Namespace,
+		self.ReqC.Name,
+		self.ReqC.ResourceRef().ApiVersion,
+		self.ReqC.Kind,
+		self.ReqC.Operation)
+
+	if !self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
 	}
-	if !self.Ignored && self.config.Log.ContextLog.IsInScope(self.ReqC) {
+
+	if !self.config.Log.ContextLog.IsInScope(self.ReqC) {
 		self.ContextLogEnabled = true
 	}
+
 	self.logEntry()
+
+	requireChk := true
+
+	if ignoredSA, err := self.checkIfIgnoredSA(); err != nil {
+		self.abort("Error when checking if ignored service accounts", err)
+	} else if ignoredSA {
+		self.IgnoredSA = ignoredSA
+		requireChk = false
+	}
+
+	if !self.Aborted && requireChk {
+		if protected, err := self.checkIfProtected(); err != nil {
+			self.abort("Error when check if the resource is protected", err)
+		} else {
+			self.Protected = protected
+		}
+	}
 
 	allowed := true
 	evalReason := common.REASON_UNEXPECTED
-	matchedPolicy := ""
 	var errMsg string
-	if self.RequireChecks {
+	if !self.Aborted && self.Protected {
 		allowed = false
 
 		//init annotation store (singleton)
@@ -359,7 +203,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 				if r.Checked && r.Allow {
 					allowed = true
 					evalReason = common.REASON_VALID_SIG
-					matchedPolicy = r.MatchedPolicy
 				}
 				if r.Error != nil {
 					errMsg = r.Error.MakeMessage()
@@ -385,7 +228,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 				if r.Checked && !r.IsMutated {
 					allowed = true
 					evalReason = common.REASON_NO_MUTATION
-					matchedPolicy = r.MatchedPolicy
 				}
 			}
 		}
@@ -418,7 +260,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 		self.Verified = true
 		self.ReasonCode = evalReason
 		self.Message = common.ReasonCodeMap[evalReason].Message
-		self.MatchedPolicy = matchedPolicy
 	} else {
 		self.Allow = false
 		self.Verified = false
@@ -445,15 +286,20 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 	}
 
 	//create admission response
-	admissionResponse := self.createAdmissionResponse()
+	admissionResponse := createAdmissionResponse(self.Allow, self.Message)
 
-	if !admissionResponse.Allowed {
-		if self.MatchedRPP != nil {
-			// TODO: implement update()
+	patch := self.createPatch()
 
-			// self.protectRule.Update(self.ReqC.Map(), self.MatchedRPP)
-			// self.updateProtectRule()
-		}
+	if !self.ReqC.IsDeleteRequest() && len(patch) > 0 {
+		admissionResponse.Patch = patch
+		admissionResponse.PatchType = func() *v1beta1.PatchType {
+			pt := v1beta1.PatchTypeJSONPatch
+			return &pt
+		}()
+	}
+
+	if !self.Allow {
+		self.updateRPP()
 	}
 
 	//log context
@@ -466,14 +312,14 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 
 }
 
-func (self *CheckContext) logEntry() {
+func (self *VCheckContext) logEntry() {
 	if self.ConsoleLogEnabled {
 		sLogger := logger.GetSessionLogger()
 		sLogger.Trace("New Admission Request Received")
 	}
 }
 
-func (self *CheckContext) logContext() {
+func (self *VCheckContext) logContext() {
 	if self.ContextLogEnabled {
 		cLogger := logger.GetContextLogger()
 		logBytes := self.convertToLogBytes()
@@ -481,7 +327,7 @@ func (self *CheckContext) logContext() {
 	}
 }
 
-func (self *CheckContext) logExit() {
+func (self *VCheckContext) logExit() {
 	if self.ConsoleLogEnabled {
 		sLogger := logger.GetSessionLogger()
 		sLogger.WithFields(log.Fields{
@@ -491,30 +337,20 @@ func (self *CheckContext) logExit() {
 	}
 }
 
-func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
+	return &v1beta1.AdmissionResponse{
+		Allowed: allowed,
+		Result: &metav1.Status{
+			Message: msg,
+		}}
+}
 
-	if self.DryRun {
-		return &v1beta1.AdmissionResponse{
-			Allowed: true,
-			Result: &metav1.Status{
-				Message: "request is dry run",
-			}}
-	}
+func (self *VCheckContext) createPatch() []byte {
 
-	if self.Ignored {
-		return &v1beta1.AdmissionResponse{
-			Allowed: true,
-			Result: &metav1.Status{
-				Message: "request ignored",
-			}}
-	}
-
-	allowed := self.Allow
-	msg := self.Message
-
-	labels := map[string]string{}
-	deleteKeys := []string{}
-	if allowed {
+	var patch []byte
+	if self.Allow {
+		labels := map[string]string{}
+		deleteKeys := []string{}
 
 		if !self.Verified {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueUnverified
@@ -526,34 +362,16 @@ func (self *CheckContext) createAdmissionResponse() *v1beta1.AdmissionResponse {
 			deleteKeys = append(deleteKeys, common.ResourceIntegrityLabelKey)
 			deleteKeys = append(deleteKeys, common.ReasonLabelKey)
 		}
-	}
-
-	var patch []byte
-	if allowed {
 		name := self.ReqC.Name
 		reqJson := self.ReqC.RequestJsonStr
 		if self.config.PatchEnabled() {
 			patch = patchutil.CreatePatch(name, reqJson, labels, deleteKeys)
 		}
 	}
-
-	admissionResponse := &v1beta1.AdmissionResponse{
-		Allowed: allowed,
-		Result: &metav1.Status{
-			Message: msg,
-		}}
-
-	if !self.ReqC.IsDeleteRequest() && len(patch) > 0 {
-		admissionResponse.Patch = patch
-		admissionResponse.PatchType = func() *v1beta1.PatchType {
-			pt := v1beta1.PatchTypeJSONPatch
-			return &pt
-		}()
-	}
-	return admissionResponse
+	return patch
 }
 
-func (self *CheckContext) evalSignPolicy(pol *policy.PolicyList) (*common.SignPolicyEvalResult, error) {
+func (self *VCheckContext) evalSignPolicy(pol *policy.PolicyList) (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
 	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, pol); err != nil {
 		return nil, err
@@ -562,7 +380,7 @@ func (self *CheckContext) evalSignPolicy(pol *policy.PolicyList) (*common.SignPo
 	}
 }
 
-func (self *CheckContext) evalMutation(pol *policy.PolicyList) (*common.MutationEvalResult, error) {
+func (self *VCheckContext) evalMutation(pol *policy.PolicyList) (*common.MutationEvalResult, error) {
 	reqc := self.ReqC
 	owners := []*common.Owner{}
 	if checker, err := NewMutationChecker(owners); err != nil {
@@ -572,13 +390,13 @@ func (self *CheckContext) evalMutation(pol *policy.PolicyList) (*common.Mutation
 	}
 }
 
-func (self *CheckContext) abort(reason string, err error) {
+func (self *VCheckContext) abort(reason string, err error) {
 	self.Aborted = true
 	self.AbortReason = reason
 	self.Error = err
 }
 
-func (self *CheckContext) convertToLogBytes() []byte {
+func (self *VCheckContext) convertToLogBytes() []byte {
 
 	reqc := self.ReqC
 
@@ -602,16 +420,13 @@ func (self *CheckContext) convertToLogBytes() []byte {
 
 		//context
 		"enfored":     self.Enforced,
-		"ignored":     self.Ignored,
 		"allowed":     self.Allow,
 		"verified":    self.Verified,
 		"aborted":     self.Aborted,
 		"abortReason": self.AbortReason,
 		"msg":         self.Message,
-		"policy":      self.MatchedPolicy,
 		// TODO: implement matched RPP/CRPP logging
 		// "rule":        self.MatchedRPP.String(),
-		"mode": self.Mode,
 
 		//reason code
 		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
@@ -738,12 +553,73 @@ func (self *CheckContext) convertToLogBytes() []byte {
 	return logBytes
 }
 
-func (self *CheckContext) updateRPP() error {
+func (self *VCheckContext) checkIfDryRunAdmission() bool {
 	// TODO: implement
+	// with reqc
+	return false
+}
+
+func (self *VCheckContext) checkIfUnprocessedInIE() bool {
+	// TODO: implement
+	// with reqc + enforceconfig
+	return false
+}
+
+type Loader struct {
+	Config            *config.EnforcerConfig
+	SignPolicy        *ctlconfig.SignPolicyLoader
+	RPP               *ctlconfig.RPPLoader
+	CRPP              *ctlconfig.CRPPLoader
+	ResourceSignature *ctlconfig.ResSigLoader
+}
+
+func (self *Loader) IgnoreServiceAccountPatterns() []*v1alpha1.ServieAccountPattern {
+	rpps := self.RPP.Data
+	patterns := []*v1alpha1.ServieAccountPattern{}
+	for _, d := range rpps {
+		patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+	}
+	return patterns
+}
+
+func (self *VCheckContext) initLoader() {
+	enforcerNamespace := self.config.Namespace
+	requestNamespace := self.ReqC.Namespace
+	signatureNamespace := self.config.SignStore.SignatureNamespace // for cluster scope request
+	loader := &Loader{
+		Config:            self.config,
+		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
+		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, requestNamespace),
+		CRPP:              ctlconfig.NewCRPPLoader(),
+		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace),
+	}
+	self.Loader = loader
+}
+
+func (self *VCheckContext) checkIfIEResource() bool {
+	// TODO: implement
+	// with reqc + enforceconfig
+	return false
+}
+
+func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionResponse {
+	// TODO: implement
+	// with reqc + enforceconfig
 	return nil
 }
 
-func (self *CheckContext) isProtectedByProfile() (bool, *rppapi.VResourceProtectionProfile) {
+func (self *VCheckContext) checkIfIgnoredSA() (bool, error) {
+	// reqc = self.ReqC
+	// patterns := self.Loader.IgnoreServiceAccountPatterns()
+	// for _, d := range patterns {
+	// if reqc.ServiceAccount == d.ServiceAccountName &&
+
+	// TODO: implementz
+	// with reqc + rpp/crpp
+	return false, nil
+}
+
+func (self *VCheckContext) checkIfProtected() (bool, error) {
 	// if pRule == nil {
 	// 	return false, nil
 	// }
@@ -752,4 +628,10 @@ func (self *CheckContext) isProtectedByProfile() (bool, *rppapi.VResourceProtect
 
 	// TODO: implement
 	return false, nil
+}
+
+func (self *VCheckContext) updateRPP() error {
+	// TODO: implement
+	// self.protectRule.Update(self.ReqC.Map(), self.MatchedRPP)
+	return nil
 }

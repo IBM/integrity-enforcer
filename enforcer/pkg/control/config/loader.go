@@ -61,6 +61,13 @@ func NewRPPLoader(enforcerNamespace, requestNamespace string) *RPPLoader {
 	}
 }
 
+func (self *RPPLoader) GetData() []*rppapi.VResourceProtectionProfile {
+	if len(self.Data) == 0 {
+		self.Load()
+	}
+	return self.Data
+}
+
 func (self *RPPLoader) Load() {
 	var err error
 	var list1, list2 *rppapi.VResourceProtectionProfileList

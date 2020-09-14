@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package enforcer
+package patchutil
 
 import (
 	"encoding/json"
@@ -28,7 +28,7 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func createPatch(name, reqJson string, labels map[string]string, deleteKeys []string) []byte {
+func CreatePatch(name, reqJson string, labels map[string]string, deleteKeys []string) []byte {
 
 	var patch []PatchOperation
 
