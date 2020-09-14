@@ -19,7 +19,7 @@ package resources
 import (
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
-	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
+	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,35 +45,40 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 }
 
 //sign enforce policy cr
-func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.SignPolicy {
-	var signPolicy *policy.SignPolicy
+func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.VSignPolicy {
+	var signPolicy *policy.VSignPolicy
 
 	if cr.Spec.SignPolicy != nil {
-		signPolicy = &policy.SignPolicy{
-			Signer:     cr.Spec.SignPolicy.Signer,
-			PolicyType: policy.SignerPolicy,
-		}
+		signPolicy = cr.Spec.SignPolicy
+		signPolicy.PolicyType = policy.SignerPolicy
 	} else {
-		signPolicy = &policy.SignPolicy{
-			Signer: []policy.SignerMatchPattern{
+		signPolicy = &policy.VSignPolicy{
+			Policies: []policy.SignPolicyCondition{
 				{
-					Request: policy.RequestMatchPattern{Namespace: "sample"},
-					Condition: policy.SubjectCondition{
-						Name:    "SampleSigner",
-						Subject: policy.SubjectMatchPattern{CommonName: "sample"},
+					Namespaces: []string{"sample"},
+					Signers:    []string{"SampleSigner"},
+				},
+			},
+			Signers: []policy.SignerCondition{
+				{
+					Name: "SampleSigner",
+					Subjects: []policy.SubjectMatchPattern{
+						{
+							CommonName: "sample",
+						},
 					},
 				},
 			},
 			PolicyType: policy.SignerPolicy,
 		}
 	}
-	epcr := &iespol.SignPolicy{
+	epcr := &iespol.VSignPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      signerPolicyName,
 			Namespace: cr.Namespace,
 		},
-		Spec: iespol.SignPolicySpec{
-			SignPolicy: signPolicy,
+		Spec: iespol.VSignPolicySpec{
+			VSignPolicy: signPolicy,
 		},
 	}
 	return epcr

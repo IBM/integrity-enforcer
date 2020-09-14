@@ -35,7 +35,7 @@ import (
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
+	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -115,9 +115,15 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateHelmReleaseMetadataCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateProtectRuleCRD(
+func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceProtectionProfileCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildProtectRuleCRD(instance)
+	expected := res.BuildResourceProtectionProfileCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterResourceProtectionProfileCRD(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterResourceProtectionProfileCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
@@ -170,7 +176,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCR(instance *re
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &spol.SignPolicy{}
+	found := &spol.VSignPolicy{}
 	expected := res.BuildSignEnforcePolicyForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,

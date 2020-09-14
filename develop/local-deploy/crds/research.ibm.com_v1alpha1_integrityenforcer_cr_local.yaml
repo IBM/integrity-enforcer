@@ -7,22 +7,24 @@ spec:
   verifyType: x509
   enforcerConfig:
     policy:
+      policyType: IEPolicy
       plugin:
       - name: helm
         enabled: false
-      signer:
-      - request:
-          namespace: '*'
-        condition:
-          name: ClusterSigner
-          subject:
-            commonName: "ClusterAdmin"
-      - request:
-          namespace: '*'
-        condition:
-          name: HelmClusterSigner
-          subject:
-            email: cluster_signer@signer.com
+      sign:
+        policies:
+        - namespaces:
+          - "*"
+          signers:
+          - "ClusterSigner"
+          - "HelmClusterSigner"
+        signers:
+        - name: "ClusterSigner"
+          subjects:
+          - commonName: "ClusterAdmin"
+        - name: "HelmClusterSigner"
+          subjects:
+          - email: cluster_signer@signer.com
     patch:
       enabled: true
     log:

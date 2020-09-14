@@ -21,7 +21,6 @@
 package v1alpha1
 
 import (
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -91,8 +90,7 @@ func (in *VSignPolicySpec) DeepCopyInto(out *VSignPolicySpec) {
 	*out = *in
 	if in.VSignPolicy != nil {
 		in, out := &in.VSignPolicy, &out.VSignPolicy
-		*out = new(policy.VSignPolicy)
-		(*in).DeepCopyInto(*out)
+		*out = (*in).DeepCopy()
 	}
 	return
 }

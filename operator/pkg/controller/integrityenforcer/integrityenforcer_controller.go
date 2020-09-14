@@ -141,7 +141,12 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateProtectRuleCRD(instance)
+	recResult, recErr = r.createOrUpdateResourceProtectionProfileCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	recResult, recErr = r.createOrUpdateClusterResourceProtectionProfileCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}

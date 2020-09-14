@@ -144,6 +144,13 @@ func NewCRPPLoader() *CRPPLoader {
 	}
 }
 
+func (self *CRPPLoader) GetData() []*crppapi.VClusterResourceProtectionProfile {
+	if len(self.Data) == 0 {
+		self.Load()
+	}
+	return self.Data
+}
+
 func (self *CRPPLoader) Load() {
 	var err error
 	var list1 *crppapi.VClusterResourceProtectionProfileList
@@ -197,6 +204,13 @@ func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
 		enforcerNamespace: enforcerNamespace,
 		Client:            client,
 	}
+}
+
+func (self *SignPolicyLoader) GetData() []*spolapi.VSignPolicy {
+	if len(self.Data) == 0 {
+		self.Load()
+	}
+	return self.Data
 }
 
 func (self *SignPolicyLoader) Load() {
@@ -253,6 +267,13 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 		signatureNamespace: signatureNamespace,
 		Client:             client,
 	}
+}
+
+func (self *ResSigLoader) GetData() []*rsigapi.VResourceSignature {
+	if len(self.Data) == 0 {
+		self.Load()
+	}
+	return self.Data
 }
 
 func (self *ResSigLoader) Load() {

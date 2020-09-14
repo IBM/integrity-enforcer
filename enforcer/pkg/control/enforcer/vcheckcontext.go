@@ -121,7 +121,7 @@ func NewVCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoa
 func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 
 	// init
-	reqc := common.NewReqContext(req) //reqcにdry-runフラグを入れる
+	reqc := common.NewReqContext(req)
 	self.ReqC = reqc
 	if reqc.Namespace == "" {
 		self.ResourceScope = "Cluster"
@@ -195,8 +195,9 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 		sign.InitSignStore(self.config.SignStore)
 
 		//evaluate sign policy
+		policies := self.getPolicyList()
 		if !self.Aborted && !allowed {
-			if r, err := self.evalSignPolicy(self.mergedPolicy); err != nil {
+			if r, err := self.evalSignPolicy(policies); err != nil {
 				self.abort("Error when evaluating sign policy", err)
 			} else {
 				self.Result.SignPolicyEvalResult = r
@@ -221,7 +222,7 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 
 		//check mutation
 		if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
-			if r, err := self.evalMutation(self.mergedPolicy); err != nil {
+			if r, err := self.evalMutation(policies); err != nil {
 				self.abort("Error when evaluating mutation", err)
 			} else {
 				self.Result.MutationEvalResult = r
@@ -554,9 +555,7 @@ func (self *VCheckContext) convertToLogBytes() []byte {
 }
 
 func (self *VCheckContext) checkIfDryRunAdmission() bool {
-	// TODO: implement
-	// with reqc
-	return false
+	return self.ReqC.DryRun
 }
 
 func (self *VCheckContext) checkIfUnprocessedInIE() bool {
@@ -608,6 +607,19 @@ func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionRespo
 	return nil
 }
 
+func (self *VCheckContext) getPolicyList() *policy.PolicyList {
+	items := []*policy.Policy{}
+	iepol := self.config.Policy.Policy()
+	spol := self.Loader.SignPolicy.GetData()
+
+	items = append(items, iepol)
+	for _, vsp := range spol {
+		tmpSP := vsp.Spec.VSignPolicy.Policy()
+		items = append(items, tmpSP)
+	}
+	return &policy.PolicyList{Items: items}
+}
+
 func (self *VCheckContext) checkIfIgnoredSA() (bool, error) {
 	// reqc = self.ReqC
 	// patterns := self.Loader.IgnoreServiceAccountPatterns()
@@ -620,13 +632,19 @@ func (self *VCheckContext) checkIfIgnoredSA() (bool, error) {
 }
 
 func (self *VCheckContext) checkIfProtected() (bool, error) {
-	// if pRule == nil {
-	// 	return false, nil
-	// }
-	// reqFields := reqc.Map()
-	// return pRule.Match(reqFields)
+	reqFields := self.ReqC.Map()
 
-	// TODO: implement
+	if self.ResourceScope == "Cluster" {
+		// TODO: implement this
+		return false, nil
+
+	} else if self.ResourceScope == "Namespaced" {
+		for _, rpp := range self.Loader.RPP.GetData() {
+			if matched, _ := rpp.Match(reqFields); matched {
+				return true, nil
+			}
+		}
+	}
 	return false, nil
 }
 

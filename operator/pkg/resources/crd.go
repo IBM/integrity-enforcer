@@ -73,17 +73,17 @@ func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomRes
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "signpolicies.research.ibm.com",
+			Name:      "vsignpolicies.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "SignPolicy",
-				Plural:   "signpolicies",
-				ListKind: "SignPolicyList",
-				Singular: "signpolicy",
+				Kind:     "VSignPolicy",
+				Plural:   "vsignpolicies",
+				ListKind: "VSignPolicyList",
+				Singular: "vsignpolicy",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -203,17 +203,17 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "resourcesignatures.research.ibm.com",
+			Name:      "vresourcesignatures.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "ResourceSignature",
-				Plural:   "resourcesignatures",
-				ListKind: "ResourceSignatureList",
-				Singular: "resourcesignature",
+				Kind:     "VResourceSignature",
+				Plural:   "vresourcesignatures",
+				ListKind: "VResourceSignatureList",
+				Singular: "vresourcesignature",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -274,8 +274,8 @@ func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.
 	return newCRD
 }
 
-// protectrule crd
-func BuildProtectRuleCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+// resourceprotectionprofile crd
+func BuildResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -283,19 +283,59 @@ func BuildProtectRuleCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomRe
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "protectrules.research.ibm.com",
+			Name:      "vresourceprotectionprofiles.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "ProtectRule",
-				Plural:   "protectrules",
-				ListKind: "ProtectRuleList",
-				Singular: "protectrule",
+				Kind:     "VResourceProtectionProfile",
+				Plural:   "vresourceprotectionprofiles",
+				ListKind: "VResourceProtectionProfileList",
+				Singular: "vresourceprotectionprofile",
 			},
 			Scope: "Namespaced",
+			Validation: &extv1.CustomResourceValidation{
+				OpenAPIV3Schema: &extv1.JSONSchemaProps{
+					Type:                   "object",
+					XPreserveUnknownFields: &xPreserve,
+				},
+			},
+			Versions: []extv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
+	}
+	return newCRD
+}
+
+// clusterresourceprotectionprofile crd
+func BuildClusterResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+	xPreserve := true
+	newCRD := &extv1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vclusterresourceprotectionprofiles.research.ibm.com",
+			Namespace: cr.Namespace,
+		},
+		Spec: extv1.CustomResourceDefinitionSpec{
+			Group: "research.ibm.com",
+			//Version: "v1beta1",
+			Names: extv1.CustomResourceDefinitionNames{
+				Kind:     "VClusterResourceProtectionProfile",
+				Plural:   "vclusterresourceprotectionprofiles",
+				ListKind: "VClusterResourceProtectionProfileList",
+				Singular: "vclusterresourceprotectionprofile",
+			},
+			Scope: "Cluster",
 			Validation: &extv1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1.JSONSchemaProps{
 					Type:                   "object",

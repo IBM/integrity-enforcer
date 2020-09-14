@@ -54,6 +54,7 @@ type ObjectMetadata struct {
 }
 
 type ReqContext struct {
+	DryRun          bool            `json:"dryRun"`
 	RawObject       []byte          `json:"-"`
 	RawOldObject    []byte          `json:"-"`
 	RequestJsonStr  string          `json:"request"`
@@ -315,6 +316,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 	}
 
 	rc := &ReqContext{
+		DryRun:          *req.DryRun,
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
 		RequestUid:      pr.UID,

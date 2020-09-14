@@ -68,7 +68,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 	}
 
 	//create context
-	cc := enforcer.NewCheckContext(acConfig.EnforcerConfig, policyLoader)
+	cc := enforcer.NewVCheckContext(acConfig.EnforcerConfig, policyLoader)
 
 	//process request
 	admissionResponse := cc.ProcessRequest(admissionReviewReq.Request)

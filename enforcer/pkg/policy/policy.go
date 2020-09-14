@@ -246,7 +246,7 @@ func (self *AppEnforcePolicy) Policy() *Policy {
 
 type IntegrityEnforcerPolicy struct {
 	Allow       AllowRequestCondition `json:"allow,omitempty"`
-	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
+	Sign        *VSignPolicy          `json:"sign,omitempty"`
 	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
 	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
 	Plugin      []PluginPolicy        `json:"plugin,omitempty"`
@@ -257,7 +257,7 @@ type IntegrityEnforcerPolicy struct {
 func (self *IntegrityEnforcerPolicy) Policy() *Policy {
 	return &Policy{
 		Allow:       self.Allow,
-		Signer:      self.Signer,
+		Signer:      self.Sign.Policy().Signer,
 		Ignore:      self.Ignore,
 		Mode:        self.Mode,
 		Plugin:      self.Plugin,
@@ -304,8 +304,49 @@ type VSignPolicy struct {
 }
 
 func (self *VSignPolicy) Policy() *Policy {
-	// TODO: implement
-	return nil
+	signerMap := map[string][]SubjectCondition{}
+	for _, si := range self.Signers {
+		tmpSC := []SubjectCondition{}
+		for _, sj := range si.Subjects {
+			sc := SubjectCondition{
+				Name:    si.Name,
+				Subject: sj,
+			}
+			tmpSC = append(tmpSC, sc)
+		}
+		signerMap[si.Name] = tmpSC
+	}
+
+	signer := []SignerMatchPattern{}
+	for _, sp := range self.Policies {
+		rmp := RequestMatchPattern{
+			Namespace: strings.Join(sp.Namespaces, ","),
+		}
+		for _, si := range sp.Signers {
+			if scList, ok := signerMap[si]; ok {
+				for _, sc := range scList {
+					smp := SignerMatchPattern{
+						Request:   rmp,
+						Condition: sc,
+					}
+					signer = append(signer, smp)
+				}
+			}
+		}
+	}
+
+	allowUnverified := []AllowUnverifiedCondition{}
+	for _, bg := range self.BreakGlass {
+		tmp := AllowUnverifiedCondition{Namespace: strings.Join(bg.Namespaces, ",")}
+		allowUnverified = append(allowUnverified, tmp)
+	}
+
+	return &Policy{
+		Signer:          signer,
+		AllowUnverified: allowUnverified,
+		PolicyType:      self.PolicyType,
+		Description:     self.Description,
+	}
 }
 
 type SignPolicyCondition struct {

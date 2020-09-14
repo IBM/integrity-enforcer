@@ -108,29 +108,39 @@ func (self *Rule) String() string {
 }
 
 func (self *Rule) match(reqFields map[string]string) bool {
-	// v := reflect.Indirect(reflect.ValueOf(self))
-	// t := v.Type()
-	// matched := true
-	// patternCount := 0
-	// for i := 0; i < t.NumField(); i++ {
-	// 	fieldName := t.Field(i).Name
-	// 	f := v.Field(i)
-	// 	i := f.Interface()
-	// 	if value, ok := i.(*RulePattern); ok {
-	// 		if value != nil {
-	// 			pattern := value
-	// 			reqValue := reqFields[fieldName]
-	// 			patternCount += 1
-	// 			matched = matched && pattern.match(reqValue)
-	// 		}
-	// 	} else {
-	// 		continue
-	// 	}
-	// }
-	// return (patternCount > 0) && matched
+	matched := false
+	for _, m := range self.Match {
+		if m.match(reqFields) {
+			matched = true
+			break
+		}
+	}
 
-	// TODO: implement
-	return false
+	// TODO: implement exclude case
+	return matched
+}
+
+func (self *RequestPattern) match(reqFields map[string]string) bool {
+	v := reflect.Indirect(reflect.ValueOf(self))
+	t := v.Type()
+	matched := true
+	patternCount := 0
+	for i := 0; i < t.NumField(); i++ {
+		fieldName := t.Field(i).Name
+		f := v.Field(i)
+		i := f.Interface()
+		if value, ok := i.(*RulePattern); ok {
+			if value != nil {
+				pattern := value
+				reqValue := reqFields[fieldName]
+				patternCount += 1
+				matched = matched && pattern.match(reqValue)
+			}
+		} else {
+			continue
+		}
+	}
+	return (patternCount > 0) && matched
 }
 
 type RulePattern string

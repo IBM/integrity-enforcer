@@ -160,6 +160,9 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 	// 	}
 	// }
 
+	polB, _ := json.Marshal(self.Policy)
+	logger.Debug("policydump: ", string(polB))
+
 	if reqc.IsResourceSignatureRequest() {
 		var rsigObj *rsigpkg.ResourceSignature
 		json.Unmarshal(reqc.RawObject, &rsigObj)
