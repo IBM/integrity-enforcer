@@ -64,7 +64,7 @@ func (self *VResourceProtectionProfile) IsEmpty() bool {
 
 func (self *VResourceProtectionProfile) Match(reqFields map[string]string) (bool, *Rule) {
 	for _, rule := range self.Spec.Rules {
-		if rule.match(reqFields) {
+		if rule.MatchWithRequest(reqFields) {
 			return true, rule
 		}
 	}
@@ -107,20 +107,28 @@ func (self *Rule) String() string {
 	return string(rB)
 }
 
-func (self *Rule) match(reqFields map[string]string) bool {
+func (self *Rule) MatchWithRequest(reqFields map[string]string) bool {
 	matched := false
 	for _, m := range self.Match {
-		if m.match(reqFields) {
+		if m.Match(reqFields) {
 			matched = true
 			break
 		}
 	}
+	excluded := false
+	if matched {
+		for _, ex := range self.Exclude {
+			if ex.Match(reqFields) {
+				excluded = true
+				break
+			}
+		}
+	}
 
-	// TODO: implement exclude case
-	return matched
+	return matched && !excluded
 }
 
-func (self *RequestPattern) match(reqFields map[string]string) bool {
+func (self *RequestPattern) Match(reqFields map[string]string) bool {
 	v := reflect.Indirect(reflect.ValueOf(self))
 	t := v.Type()
 	matched := true
