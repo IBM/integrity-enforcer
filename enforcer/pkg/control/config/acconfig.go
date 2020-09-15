@@ -68,12 +68,37 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 		enforcerConfigName := os.Getenv("ENFORCER_CONFIG_NAME")
 		enforcerConfig := LoadEnforceConfig(enforcerNs, enforcerConfigName)
 
-		ssconfig := loadSingStoreConfig(signatureNs)
+		verifyType := os.Getenv("VERIFY_TYPE")
+		if verifyType == "" {
+			verifyType = "x509" // default value, TODO: change the default value to "pgp"
+		}
+		certPoolPath := os.Getenv("CERT_POOL_PATH")
+		if certPoolPath == "" {
+			certPoolPath = "/ie-certpool-secret/" // default value
+		}
+		keyringPath := os.Getenv("KEYRING_PATH")
+		if keyringPath == "" {
+			keyringPath = "/keyring/pubring.gpg" // default value
+		}
+		chartDir := os.Getenv("CHART_DIR")
+		if chartDir == "" {
+			chartDir = "/tmp/"
+		}
+		chartRepo := os.Getenv("CHART_BASE_URL")
+		if chartRepo == "" {
+			chartRepo = ""
+		}
 
 		if enforcerConfig != nil {
-			enforcerConfig.SignStore = ssconfig
 			enforcerConfig.Namespace = enforcerNs
 			enforcerConfig.PolicyNamespace = policyNs
+			enforcerConfig.SignatureNamespace = signatureNs
+			enforcerConfig.VerifyType = verifyType
+			enforcerConfig.CertPoolPath = certPoolPath
+			enforcerConfig.KeyringPath = keyringPath
+			enforcerConfig.ChartDir = chartDir
+			enforcerConfig.ChartRepo = chartRepo
+
 			ac.EnforcerConfig = enforcerConfig
 			ac.lastUpdated = t
 		}
@@ -84,36 +109,4 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 
 func (ac *AdmissionControlConfig) HelmIntegrityEnabled() bool {
 	return true
-}
-
-func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
-	verifyType := os.Getenv("VERIFY_TYPE")
-	if verifyType == "" {
-		verifyType = "x509" // default value, TODO: change the default value to "pgp"
-	}
-	certPoolPath := os.Getenv("CERT_POOL_PATH")
-	if certPoolPath == "" {
-		certPoolPath = "/ie-certpool-secret/" // default value
-	}
-	keyringPath := os.Getenv("KEYRING_PATH")
-	if keyringPath == "" {
-		keyringPath = "/keyring/pubring.gpg" // default value
-	}
-	chartDir := os.Getenv("CHART_DIR")
-	if chartDir == "" {
-		chartDir = "/tmp/"
-	}
-	chartRepo := os.Getenv("CHART_BASE_URL")
-	if chartRepo == "" {
-		chartRepo = ""
-	}
-	ssconfig := &cfg.SignStoreConfig{
-		VerifyType:         verifyType,
-		CertPoolPath:       certPoolPath,
-		KeyringPath:        keyringPath,
-		ChartDir:           chartDir,
-		ChartRepo:          chartRepo,
-		SignatureNamespace: signatureNs,
-	}
-	return ssconfig
 }

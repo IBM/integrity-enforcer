@@ -18,7 +18,6 @@ package resources
 
 import (
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
@@ -50,7 +49,6 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 
 	if cr.Spec.SignPolicy != nil {
 		signPolicy = cr.Spec.SignPolicy
-		signPolicy.PolicyType = policy.SignerPolicy
 	} else {
 		signPolicy = &policy.VSignPolicy{
 			Policies: []policy.SignPolicyCondition{
@@ -69,7 +67,6 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 					},
 				},
 			},
-			PolicyType: policy.SignerPolicy,
 		}
 	}
 	epcr := &iespol.VSignPolicy{
@@ -82,20 +79,4 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 		},
 	}
 	return epcr
-}
-
-// resource signature cr
-func BuildResourceSignatureForCR(cr *researchv1alpha1.IntegrityEnforcer) *rs.ResourceSignature {
-	// rscr := &rs.ResourceSignature{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name: cr.Spec.ResourceSignatureName,
-	// 	},
-	// 	Spec: rs.ResourceSignatureSpec{
-	// 		Data: []rs.SignItem{
-
-	// 		},
-	// 	},
-	// }
-	// return rscr
-	return nil
 }

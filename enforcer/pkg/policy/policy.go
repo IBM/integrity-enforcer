@@ -250,7 +250,6 @@ type IntegrityEnforcerPolicy struct {
 	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
 	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
 	Plugin      []PluginPolicy        `json:"plugin,omitempty"`
-	PolicyType  PolicyType            `json:"policyType,omitempty"`
 	Description string                `json:"description,omitempty"`
 }
 
@@ -261,9 +260,18 @@ func (self *IntegrityEnforcerPolicy) Policy() *Policy {
 		Ignore:      self.Ignore,
 		Mode:        self.Mode,
 		Plugin:      self.Plugin,
-		PolicyType:  self.PolicyType,
 		Description: self.Description,
 	}
+}
+
+func (self *IntegrityEnforcerPolicy) GetEnabledPlugins() map[string]bool {
+	plugins := map[string]bool{}
+	for _, plg := range self.Plugin {
+		if plg.Enabled {
+			plugins[plg.Name] = true
+		}
+	}
+	return plugins
 }
 
 func (self *IntegrityEnforcerPolicy) CheckPluginEnabled(name string) bool {
@@ -279,31 +287,14 @@ type PluginPolicy struct {
 	Enabled bool   `json:"enabled,omitempty"`
 }
 
-type SignPolicy struct {
-	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
-	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
-	PolicyType      PolicyType                 `json:"policyType,omitempty"`
-	Description     string                     `json:"description,omitempty"`
-}
-
-func (self *SignPolicy) Policy() *Policy {
-	return &Policy{
-		Signer:          self.Signer,
-		AllowUnverified: self.AllowUnverified,
-		PolicyType:      self.PolicyType,
-		Description:     self.Description,
-	}
-}
-
 type VSignPolicy struct {
 	Policies    []SignPolicyCondition `json:"policies,omitempty"`
 	Signers     []SignerCondition     `json:"signers,omitempty"`
 	BreakGlass  []BreakGlassCondition `json:"breakGlass,omitempty"`
-	PolicyType  PolicyType            `json:"policyType,omitempty"`
 	Description string                `json:"description,omitempty"`
 }
 
-func (self *VSignPolicy) Policy() *Policy {
+func (self *VSignPolicy) GetSignerMap() map[string][]SubjectCondition {
 	signerMap := map[string][]SubjectCondition{}
 	for _, si := range self.Signers {
 		tmpSC := []SubjectCondition{}
@@ -316,6 +307,49 @@ func (self *VSignPolicy) Policy() *Policy {
 		}
 		signerMap[si.Name] = tmpSC
 	}
+	return signerMap
+}
+
+func (self *VSignPolicy) Merge(data *VSignPolicy) *VSignPolicy {
+	merged := &VSignPolicy{}
+	merged.Policies = append(self.Policies, data.Policies...)
+	merged.Signers = append(self.Signers, data.Signers...)
+	merged.BreakGlass = append(self.BreakGlass, data.BreakGlass...)
+	merged.Description = self.Description
+	return merged
+}
+
+func (self *VSignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
+	signerMap := self.GetSignerMap()
+	for _, spc := range self.Policies {
+		included := MatchWithPatternArray(namespace, spc.Namespaces)
+		excluded := MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+		signerMatched := false
+		for _, signerName := range spc.Signers {
+			subjectConditions, ok := signerMap[signerName]
+			if !ok {
+				continue
+			}
+			for _, subjectCondition := range subjectConditions {
+				if subjectCondition.Match(signer) {
+					signerMatched = true
+					break
+				}
+			}
+			if signerMatched {
+				break
+			}
+		}
+		matched := included && !excluded && signerMatched
+		if matched {
+			return true, &spc
+		}
+	}
+	return false, nil
+}
+
+func (self *VSignPolicy) Policy() *Policy {
+	signerMap := self.GetSignerMap()
 
 	signer := []SignerMatchPattern{}
 	for _, sp := range self.Policies {
@@ -344,7 +378,6 @@ func (self *VSignPolicy) Policy() *Policy {
 	return &Policy{
 		Signer:          signer,
 		AllowUnverified: allowUnverified,
-		PolicyType:      self.PolicyType,
 		Description:     self.Description,
 	}
 }
@@ -457,6 +490,20 @@ type SubjectCondition struct {
 	Subject SubjectMatchPattern `json:"subject"`
 }
 
+func (self *SubjectCondition) Match(signer *common.SignerInfo) bool {
+	return MatchPattern(self.Subject.Email, signer.Email) &&
+		MatchPattern(self.Subject.Uid, signer.Uid) &&
+		MatchPattern(self.Subject.Country, signer.Country) &&
+		MatchPattern(self.Subject.Organization, signer.Organization) &&
+		MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
+		MatchPattern(self.Subject.Locality, signer.Locality) &&
+		MatchPattern(self.Subject.Province, signer.Province) &&
+		MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
+		MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
+		MatchPattern(self.Subject.CommonName, signer.CommonName) &&
+		MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
+}
+
 type AllowUnverifiedCondition struct {
 	Namespace string `json:"namespace,omitempty"`
 }
@@ -524,16 +571,6 @@ func (p *AppEnforcePolicy) DeepCopyInto(p2 *AppEnforcePolicy) {
 
 func (p *AppEnforcePolicy) DeepCopy() *AppEnforcePolicy {
 	p2 := &AppEnforcePolicy{}
-	p.DeepCopyInto(p2)
-	return p2
-}
-
-func (p *SignPolicy) DeepCopyInto(p2 *SignPolicy) {
-	copier.Copy(&p2, &p)
-}
-
-func (p *SignPolicy) DeepCopy() *SignPolicy {
-	p2 := &SignPolicy{}
 	p.DeepCopyInto(p2)
 	return p2
 }

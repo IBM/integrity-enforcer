@@ -14,81 +14,26 @@
 // limitations under the License.
 //
 
-package v1alpha1
+package protect
 
 import (
 	"encoding/json"
 	"reflect"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/jinzhu/copier"
 )
 
-// ProtectRuleSpec defines the desired state of AppEnforcePolicy
-type ProtectRuleSpec struct {
-	Rules []*Rule `json:"rules,omitempty"`
-}
-
-// ProtectRuleStatus defines the observed state of AppEnforcePolicy
-type ProtectRuleStatus struct {
-	Results []*Result `json:"deniedRequests,omitempty"`
-}
-
-// +genclient
-// +genclient:noStatus
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=protectrule,scope=Namespaced
-
-// EnforcePolicy is the CRD. Use this command to generate deepcopy for it:
-// ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
-// For more details of code-generator, please visit https://github.com/kubernetes/code-generator
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// ProtectRule is the CRD. Use this command to generate deepcopy for it:
-type ProtectRule struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   ProtectRuleSpec   `json:"spec,omitempty"`
-	Status ProtectRuleStatus `json:"status,omitempty"`
-}
-
-func (self *ProtectRule) IsEmpty() bool {
-	return len(self.Spec.Rules) == 0
-}
-
-func (self *ProtectRule) Match(reqFields map[string]string) (bool, *Rule) {
-	for _, rule := range self.Spec.Rules {
-		if rule.match(reqFields) {
-			return true, rule
-		}
-	}
-	return false, nil
-}
-
-func (self *ProtectRule) Update(reqFields map[string]string, matchedRule *Rule) {
-	results := self.Status.Results
-	new_result := &Result{}
-	new_result.update(reqFields, matchedRule)
-	results = append(results, new_result)
-	self.Status.Results = results
-	return
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ProtectRuleList contains a list of ProtectRule
-type ProtectRuleList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProtectRule `json:"items"`
-}
-
 type Rule struct {
+	Match   []*RequestPattern `json:"match,omitempty"`
+	Exclude []*RequestPattern `json:"exclude,omitempty"`
+}
+
+type RequestPattern struct {
 	Scope      *RulePattern `json:"scope,omitempty"`
 	Namespace  *RulePattern `json:"namespace,omitempty"`
 	ApiVersion *RulePattern `json:"apiVersion,omitempty"`
 	Kind       *RulePattern `json:"kind,omitempty"`
 	Name       *RulePattern `json:"name,omitempty"`
-	User       *RulePattern `json:"user,omitempty"`
 }
 
 func (self *Rule) String() string {
@@ -96,7 +41,28 @@ func (self *Rule) String() string {
 	return string(rB)
 }
 
-func (self *Rule) match(reqFields map[string]string) bool {
+func (self *Rule) MatchWithRequest(reqFields map[string]string) bool {
+	matched := false
+	for _, m := range self.Match {
+		if m.Match(reqFields) {
+			matched = true
+			break
+		}
+	}
+	excluded := false
+	if matched {
+		for _, ex := range self.Exclude {
+			if ex.Match(reqFields) {
+				excluded = true
+				break
+			}
+		}
+	}
+
+	return matched && !excluded
+}
+
+func (self *RequestPattern) Match(reqFields map[string]string) bool {
 	v := reflect.Indirect(reflect.ValueOf(self))
 	t := v.Type()
 	matched := true
@@ -128,6 +94,16 @@ func (self *RulePattern) match(value string) bool {
 	return false
 }
 
+type ServieAccountPattern struct {
+	Match              *RequestPattern `json:"match,omitempty"`
+	ServiceAccountName []string        `json:"serviceAccountName,omitempty"`
+}
+
+type AttrsPattern struct {
+	Match *RequestPattern `json:"match,omitempty"`
+	Attrs []string        `json:"attrs,omitempty"`
+}
+
 type Request struct {
 	// Scope      string `json:"scope,omitempty"`
 	Operation  string `json:"operation,omitempty"`
@@ -148,7 +124,7 @@ type Result struct {
 	MatchedRule string `json:"matchedRule,omitempty"`
 }
 
-func (self *Result) update(reqFields map[string]string, matchedRule *Rule) {
+func (self *Result) Update(reqFields map[string]string, matchedRule *Rule) {
 	tmp := &Request{}
 	v := reflect.Indirect(reflect.ValueOf(tmp))
 	t := v.Type()
@@ -168,4 +144,54 @@ func (self *Result) update(reqFields map[string]string, matchedRule *Rule) {
 	self.Request = tmp.String()
 	self.MatchedRule = matchedRule.String()
 	return
+}
+
+func (p *Rule) DeepCopyInto(p2 *Rule) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *Rule) DeepCopy() *Rule {
+	p2 := &Rule{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *RequestPattern) DeepCopyInto(p2 *RequestPattern) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *RequestPattern) DeepCopy() *RequestPattern {
+	p2 := &RequestPattern{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *ServieAccountPattern) DeepCopyInto(p2 *ServieAccountPattern) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *ServieAccountPattern) DeepCopy() *ServieAccountPattern {
+	p2 := &ServieAccountPattern{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *AttrsPattern) DeepCopyInto(p2 *AttrsPattern) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *AttrsPattern) DeepCopy() *AttrsPattern {
+	p2 := &AttrsPattern{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *Result) DeepCopyInto(p2 *Result) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *Result) DeepCopy() *Result {
+	p2 := &Result{}
+	p.DeepCopyInto(p2)
+	return p2
 }

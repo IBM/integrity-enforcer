@@ -22,182 +22,48 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ghodss/yaml"
-
-	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
-	rsigcli "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
-	config "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
+	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type VerifyType string
-type SignatureType string
+/**********************************************
 
-const (
-	VerifyTypeX509 VerifyType = "x509"
-	VerifyTypePGP  VerifyType = "pgp"
-)
+				Verifier
 
-const (
-	SignatureTypeUnknown          SignatureType = ""
-	SignatureTypeResource         SignatureType = "Resource"
-	SignatureTypeApplyingResource SignatureType = "ApplyingResource"
-	SignatureTypePatch            SignatureType = "Patch"
-	SignatureTypeHelm             SignatureType = "Helm"
-)
+***********************************************/
 
-type SignStore interface {
-	GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, plugins map[string]bool) *ResourceSignature
-	GetVerifyType() VerifyType
+type VerifierInterface interface {
+	Verify(sig *GeneralSignature, reqc *common.ReqContext) (*SigVerifyResult, error)
 }
 
 /**********************************************
 
-				SignStore (singleton)
+				ResourceVerifier
 
 ***********************************************/
 
-var signStoreInstance SignStore
-
-func GetSignStore() SignStore {
-	if signStoreInstance == nil {
-		signStoreInstance = &ConcreteSignStore{}
-	}
-	return signStoreInstance
-}
-
-type ConcreteSignStore struct {
-	config        *config.SignStoreConfig
-	helmSignStore *HelmSignStore
-}
-
-func InitSignStore(config *config.SignStoreConfig) {
-	signStoreInstance = &ConcreteSignStore{
-		config:        config,
-		helmSignStore: NewHelmSignStore(config),
-	}
-}
-
-func (self *ConcreteSignStore) GetVerifyType() VerifyType {
-	return VerifyType(self.config.VerifyType)
-}
-
-func (self *ConcreteSignStore) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, plugins map[string]bool) *ResourceSignature {
-
-	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
-
-	//1. pick ResourceSignature from metadata.annotation if available
-	if sigAnnotations.Signature != "" {
-		message := base64decode(sigAnnotations.Message)
-		messageScope := sigAnnotations.MessageScope
-		mutableAttrs := sigAnnotations.MutableAttrs
-		matchRequired := true
-		scopedSignature := false
-		if message == "" && messageScope != "" {
-			message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, mutableAttrs)
-			matchRequired = false  // skip matching because the message is generated from Requested Object
-			scopedSignature = true // enable checking if the signature is for patch
-		}
-		signature := base64decode(sigAnnotations.Signature)
-		certificate := base64decode(sigAnnotations.Certificate)
-		signType := SignatureTypeResource
-		if sigAnnotations.SignatureType == rsig.SignatureTypeApplyingResource {
-			signType = SignatureTypeApplyingResource
-		} else if sigAnnotations.SignatureType == rsig.SignatureTypePatch {
-			signType = SignatureTypePatch
-		}
-		return &ResourceSignature{
-			SignType:     signType,
-			certPoolPath: self.config.CertPoolPath,
-			keyringPath:  self.config.KeyringPath,
-			data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope, "mutableAttrs": mutableAttrs},
-			option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
-		}
-	}
-
-	//2. pick ResourceSignature from custom resource if available
-	rsCR, err := findSignatureFromCR(self.config.SignatureNamespace)
-	if err != nil {
-		return nil
-	}
-	if rsCR != nil && len(rsCR.Items) > 0 {
-		si, _, found := rsCR.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
-		if found {
-			signature := base64decode(si.Signature)
-			certificate := base64decode(si.Certificate)
-			message := base64decode(si.Message)
-			mutableAttrs := si.MutableAttrs
-			matchRequired := true
-			scopedSignature := false
-			if si.Message == "" && si.MessageScope != "" {
-				message = GenerateMessageFromRawObj(reqc.RawObject, si.MessageScope, mutableAttrs)
-				matchRequired = false  // skip matching because the message is generated from Requested Object
-				scopedSignature = true // enable checking if the signature is for patch
-			}
-			signType := SignatureTypeResource
-			if si.Type == rsig.SignatureTypeApplyingResource {
-				signType = SignatureTypeApplyingResource
-			} else if si.Type == rsig.SignatureTypePatch {
-				signType = SignatureTypePatch
-			}
-			return &ResourceSignature{
-				SignType:     signType,
-				certPoolPath: self.config.CertPoolPath,
-				keyringPath:  self.config.KeyringPath,
-				data:         map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": si.MessageScope, "mutableAttrs": mutableAttrs},
-				option:       map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
-			}
-		}
-	}
-
-	//3. pick ResourceSignature from external store if available
-
-	//4. helm resource (release secret, helm cahrt resources)
-	if ok := plugins["helm"]; ok {
-		rsig := self.helmSignStore.GetResourceSignature(ref, reqc)
-		if rsig != nil {
-			return rsig
-		}
-	}
-	return nil
-
-	//5. return nil if no signature found
-	// return nil
-}
-
-type ResourceSignature struct {
-	SignType     SignatureType
-	certPoolPath string
-	keyringPath  string
-	data         map[string]string
-	option       map[string]bool
-}
-
-type VerifierInterface interface {
-	Verify(sig *ResourceSignature, reqc *common.ReqContext) (*SigVerifyResult, error)
-}
-
 type ResourceVerifier struct {
-	VerifyType VerifyType
-	Namespace  string
+	VerifyType   VerifyType
+	Namespace    string
+	CertPoolPath string
+	KeyringPath  string
 }
 
-func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespace string) VerifierInterface {
+func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespace, certPoolPath, keyringPath string) VerifierInterface {
 	if signType == SignatureTypeResource || signType == SignatureTypeApplyingResource || signType == SignatureTypePatch {
-		return &ResourceVerifier{Namespace: enforcerNamespace, VerifyType: verifyType}
+		return &ResourceVerifier{Namespace: enforcerNamespace, VerifyType: verifyType, CertPoolPath: certPoolPath, KeyringPath: keyringPath}
 	} else if signType == SignatureTypeHelm {
-		return &HelmVerifier{Namespace: enforcerNamespace, VerifyType: verifyType}
+		return &HelmVerifier{Namespace: enforcerNamespace, VerifyType: verifyType, CertPoolPath: certPoolPath, KeyringPath: keyringPath}
 	}
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqContext) (*SigVerifyResult, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -255,7 +121,7 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 	if self.VerifyType == VerifyTypePGP {
 		message := sig.data["message"]
 		signature := sig.data["signature"]
-		ok, reasonFail, signer, err := pgp.VerifySignature(sig.keyringPath, message, signature)
+		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyringPath, message, signature)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in signature verification",
@@ -284,7 +150,7 @@ func (self *ResourceVerifier) Verify(sig *ResourceSignature, reqc *common.ReqCon
 
 	} else if self.VerifyType == VerifyTypeX509 {
 		certificate := []byte(sig.data["certificate"])
-		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, sig.certPoolPath)
+		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, self.CertPoolPath)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in certificate verification",
@@ -389,6 +255,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+
 		matched = matchContents(simObj, reqObj, mask)
 		if matched {
 			logger.Debug("matched by DryRunCreate()")
@@ -477,13 +344,7 @@ func getMaskDef(kind string) []string {
 }
 
 func matchContents(orgObj, reqObj []byte, mask []string) bool {
-	var orgMap map[string]interface{}
-	err := yaml.Unmarshal(orgObj, &orgMap)
-	if err != nil {
-		logger.Error("Input original message is not in yaml format", string(orgObj))
-		return false
-	}
-	orgNode, err := mapnode.NewFromMap(orgMap)
+	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error("Failed to load original message as *Node", string(orgObj))
 		return false
@@ -497,6 +358,7 @@ func matchContents(orgObj, reqObj []byte, mask []string) bool {
 	matched := false
 	maskedOrgNode := orgNode.Mask(mask)
 	maskedReqNode := reqNode.Mask(mask)
+
 	dr := maskedOrgNode.Diff(maskedReqNode)
 	if dr == nil {
 		matched = true
@@ -505,25 +367,6 @@ func matchContents(orgObj, reqObj []byte, mask []string) bool {
 	}
 
 	return matched
-}
-
-func findSignatureFromCR(namespace string) (*rsig.ResourceSignatureList, error) {
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return nil, err
-	}
-	rsigClient, err := rsigcli.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	rsiglObj, err := rsigClient.ResourceSignatures(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	if len(rsiglObj.Items) == 0 {
-		return nil, nil
-	}
-	return rsiglObj, nil
 }
 
 func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) string {
@@ -566,4 +409,140 @@ func base64decode(str string) string {
 type SigVerifyResult struct {
 	Error  *common.CheckError
 	Signer *common.SignerInfo
+}
+
+/**********************************************
+
+				HelmVerifier
+
+***********************************************/
+
+type HelmVerifier struct {
+	VerifyType   VerifyType
+	Namespace    string
+	CertPoolPath string
+	KeyringPath  string
+}
+
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext) (*SigVerifyResult, error) {
+	var vcerr *common.CheckError
+	var vsinfo *common.SignerInfo
+	var retErr error
+
+	if sig.option["matchRequired"] {
+		rls, _ := sig.data["releaseSecret"]
+		hrm, _ := sig.data["helmReleaseMetadata"]
+		matched := helm.MatchReleaseSecret(rls, hrm)
+		if !matched {
+			return &SigVerifyResult{
+				Error: &common.CheckError{
+					Msg:    "HelmReleaseMetadata is not identical with the release secret",
+					Reason: "HelmReleaseMetadata is not identical with the release secret",
+					Error:  nil,
+				},
+				Signer: nil,
+			}, nil
+		}
+	}
+
+	if self.VerifyType == VerifyTypePGP {
+		message := sig.data["message"]
+		signature := sig.data["signature"]
+		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyringPath, message, signature)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in signature verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if ok {
+			vcerr = nil
+			vsinfo = &common.SignerInfo{
+				Email:   signer.Email,
+				Name:    signer.Name,
+				Comment: signer.Comment,
+			}
+			retErr = nil
+		} else {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify signature",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		}
+
+	} else if self.VerifyType == VerifyTypeX509 {
+		certificate := []byte(sig.data["certificate"])
+		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, self.CertPoolPath)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in certificate verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if !certOk {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify certificate",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		} else {
+			cert, err := pkix.ParseCertificate(certificate)
+			if err != nil {
+				logger.Error("Failed to parse certificate; ", err)
+			}
+			pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
+			if err != nil {
+				logger.Error("Failed to get public key from certificate; ", err)
+			}
+			message := []byte(sig.data["message"])
+			signature := []byte(sig.data["signature"])
+			sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+			if err != nil {
+				vcerr = &common.CheckError{
+					Msg:    "Error occured in signature verification",
+					Reason: reasonFail,
+					Error:  err,
+				}
+				vsinfo = nil
+				retErr = err
+			} else if sigOk {
+				vcerr = nil
+				vsinfo = common.NewSignerInfoFromCert(cert)
+				retErr = nil
+			} else {
+				vcerr = &common.CheckError{
+					Msg:    "Failed to verify signature",
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
+				retErr = nil
+			}
+		}
+	} else {
+		errMsg := fmt.Sprintf("Unknown VerifyType is specified; VerifyType: %s", string(self.VerifyType))
+		vcerr = &common.CheckError{
+			Msg:    errMsg,
+			Reason: errMsg,
+			Error:  nil,
+		}
+		vsinfo = nil
+		retErr = nil
+	}
+
+	svresult := &SigVerifyResult{
+		Error:  vcerr,
+		Signer: vsinfo,
+	}
+	return svresult, retErr
+
 }

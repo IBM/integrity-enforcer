@@ -7,7 +7,6 @@ spec:
   verifyType: x509
   enforcerConfig:
     policy:
-      policyType: IEPolicy
       plugin:
       - name: helm
         enabled: false

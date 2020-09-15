@@ -27,22 +27,18 @@ type PatchConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-type SignStoreConfig struct {
-	VerifyType         string `json:"verifyType"`
-	CertPoolPath       string `json:"certPoolPath"`
-	KeyringPath        string `json:"keyringPath"`
-	ChartDir           string `json:"chartPath"`
-	ChartRepo          string `json:"chartRepo"`
-	SignatureNamespace string `json:"signatureNamespace"`
-}
-
 type EnforcerConfig struct {
-	Patch           *PatchConfig                    `json:"patch,omitempty"`
-	Log             *LoggingScopeConfig             `json:"log,omitempty"`
-	Policy          *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
-	SignStore       *SignStoreConfig                `json:"-"`
-	Namespace       string                          `json:"-"`
-	PolicyNamespace string                          `json:"-"`
+	Patch              *PatchConfig                    `json:"patch,omitempty"`
+	Log                *LoggingScopeConfig             `json:"log,omitempty"`
+	Policy             *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
+	Namespace          string                          `json:"-"`
+	PolicyNamespace    string                          `json:"-"`
+	SignatureNamespace string                          `json:"-"`
+	VerifyType         string                          `json:"verifyType"`
+	CertPoolPath       string                          `json:"certPoolPath"`
+	KeyringPath        string                          `json:"keyringPath"`
+	ChartDir           string                          `json:"chartPath"`
+	ChartRepo          string                          `json:"chartRepo"`
 }
 
 type LoggingScopeConfig struct {
