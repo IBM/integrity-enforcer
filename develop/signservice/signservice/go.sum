@@ -25,6 +25,7 @@ github.com/IBM/app-integrity-enforcer/signservice v0.0.0-20200528052732-191d8a19
 github.com/IBM/app-integrity-enforcer/signservice v0.0.0-20200528052732-191d8a1926ee/go.mod h1:C6LBWH4Leg7xqgdNkqR3zIosgdguXKebatlzPW/IGag=
 github.com/IBM/integrity-enforcer v0.0.0-20200602011609-bcff978cc3af h1:zLMlMhc27w0XTqACI4Ng3EVcwJMSDf/lK5obS1wwLiA=
 github.com/IBM/integrity-enforcer v0.0.0-20200602121605-c0fa868d3900 h1:oAVE0J7k3c9vpux3RcbUz+bRX685eP++ZOWXT9lOiCU=
+github.com/IBM/integrity-enforcer v0.0.0-20200716085043-d66c0991e14c h1:CkNEw9z/7Cx+s3HpJ5ZDCPNkZED6LjNevA7MvftPaYs=
 github.com/IBM/integrity-enforcer/enforcer v0.0.0-20200602011609-bcff978cc3af h1:mNjolw78I3U5Wo6gn9+5BHBC3rAGv59TVzZ4ri0dVeo=
 github.com/IBM/integrity-enforcer/enforcer v0.0.0-20200602011609-bcff978cc3af/go.mod h1:w3hHA67oxkj/+HRePpbf+ldk9Njpk1My+exfyKsC28Q=
 github.com/IBM/integrity-enforcer/enforcer v0.0.0-20200602121605-c0fa868d3900 h1:BDuNHFVvuIgIJaegQ875lpDoCvVbI+8UH0NQnEay5Hs=

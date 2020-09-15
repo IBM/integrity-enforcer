@@ -900,12 +900,6 @@ spec:
                   type: object
                 verifyType:
                   type: string
-              required:
-              - certPoolPath
-              - chartPath
-              - chartRepo
-              - keyringPath
-              - verifyType
               type: object
             enforcerConfigCrName:
               type: string

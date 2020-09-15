@@ -26,7 +26,7 @@ import (
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pgp"
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pkix"
 
-	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
 	iectlsign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	iesign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
@@ -189,12 +189,6 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	}
 
 	signItem = rsig.SignItem{
-		ApiVersion: apiVersion,
-		Kind:       kind,
-		Metadata: rsig.SignItemMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
 		MutableAttrs: mutableAttrs,
 		Signature:    sigB64,
 		Certificate:  certB64,
@@ -207,11 +201,11 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	}
 
 	rsName := fmt.Sprintf("rsig-%s-%s-%s", namespace, strings.ToLower(kind), name)
-	rs := rsig.ResourceSignature{
+	rs := rsig.VResourceSignature{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: rsName,
 		},
-		Spec: rsig.ResourceSignatureSpec{
+		Spec: rsig.VResourceSignatureSpec{
 			Data: []rsig.SignItem{
 				signItem,
 			},
