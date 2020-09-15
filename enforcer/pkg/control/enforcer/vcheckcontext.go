@@ -161,11 +161,11 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 		self.ReqC.Kind,
 		self.ReqC.Operation)
 
-	if !self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
+	if self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
 		self.ConsoleLogEnabled = true
 	}
 
-	if !self.config.Log.ContextLog.IsInScope(self.ReqC) {
+	if self.config.Log.ContextLog.IsInScope(self.ReqC) {
 		self.ContextLogEnabled = true
 	}
 
