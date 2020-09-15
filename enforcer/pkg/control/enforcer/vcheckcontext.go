@@ -18,6 +18,7 @@ package enforcer
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -32,7 +33,6 @@ import (
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,24 +45,21 @@ import (
 type VCheckContext struct {
 	ResourceScope string `json:"resourceScope,omitempty"`
 
-	// request context
 	config *config.EnforcerConfig
 	Loader *Loader
 
-	ReqC                  *common.ReqContext `json:"-"`
-	ServiceAccount        *v1.ServiceAccount `json:"serviceAccount"`
-	DryRun                bool               `json:"dryRun"` //used
-	DetectionModeEnabled  bool               `json:"detectionModeEnabled"`
-	UnverifiedModeEnabled bool               `json:"unverifiedModeEnabled"`
+	// request context
+	ReqC *common.ReqContext `json:"-"`
+
+	DetectOnlyModeEnabled bool `json:"detectOnly"`
+	BreakGlassModeEnabled bool `json:"breakGlass"`
 
 	Result *CheckResult `json:"result"`
 
-	Enforced     bool `json:"enforced"`
-	IEControlled bool `json:"iecontrolled"` //used
-	// Ignored      bool   `json:"ignored"`      //used
-	Unprocessed bool   `json:"unprocessed"` //used
-	IgnoredSA   bool   `json:"ignoredSA"`   //used
-	Protected   bool   `json:"protected"`   //used
+	DryRun      bool   `json:"dryRun"`
+	Unprocessed bool   `json:"unprocessed"`
+	IgnoredSA   bool   `json:"ignoredSA"`
+	Protected   bool   `json:"protected"`
 	Allow       bool   `json:"allow"`
 	Verified    bool   `json:"verified"`
 	Aborted     bool   `json:"aborted"`
@@ -70,15 +67,13 @@ type VCheckContext struct {
 	Error       error  `json:"error"`
 	Message     string `json:"msg"`
 
-	mergedPolicy *policy.PolicyList
-
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
 
 	ReasonCode int `json:"reasonCode"`
 
-	AllowByUnverifiedMode bool `json:"allowByUnverifiedMode"`
-	AllowByDetectionMode  bool `json:"allowByDetectionMode"`
+	AllowByBreakGlassMode bool `json:"allowByBreakGlassMode"`
+	AllowByDetectOnlyMode bool `json:"allowByDetectOnlyMode"`
 }
 
 type VCheckResult struct {
@@ -94,7 +89,6 @@ func NewVCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoa
 
 		// policy:      policy,
 		// protectRule: ctlconfig.NewProtectRuleLoader(),
-		Enforced:  true,
 		IgnoredSA: false,
 		Protected: false,
 		Aborted:   false,
@@ -234,6 +228,9 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 		}
 	}
 
+	self.BreakGlassModeEnabled = self.CheckIfBreakGlassEnabled()
+	self.DetectOnlyModeEnabled = self.CheckIfDetectOnly()
+
 	/********************************************
 				Decision Step [3/3]
 
@@ -241,12 +238,7 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 		output: AdmissionResponse
 	********************************************/
 
-	if !self.Enforced {
-		self.Allow = true
-		self.Verified = true
-		self.ReasonCode = common.REASON_NOT_ENFORCED
-		self.Message = common.ReasonCodeMap[common.REASON_NOT_ENFORCED].Message
-	} else if self.ReqC.IsDeleteRequest() {
+	if self.ReqC.IsDeleteRequest() {
 		self.Allow = true
 		self.Verified = true
 		self.ReasonCode = common.REASON_SKIP_DELETE
@@ -268,16 +260,16 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 		self.ReasonCode = evalReason
 	}
 
-	if !self.Allow && self.DetectionModeEnabled {
+	if !self.Allow && self.DetectOnlyModeEnabled {
 		self.Allow = true
 		self.Verified = false
-		self.AllowByDetectionMode = true
+		self.AllowByDetectOnlyMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		self.ReasonCode = common.REASON_DETECTION
-	} else if !self.Allow && self.UnverifiedModeEnabled {
+	} else if !self.Allow && self.BreakGlassModeEnabled {
 		self.Allow = true
 		self.Verified = false
-		self.AllowByUnverifiedMode = true
+		self.AllowByBreakGlassMode = true
 		self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
 		self.ReasonCode = common.REASON_UNVERIFIED
 	}
@@ -420,14 +412,18 @@ func (self *VCheckContext) convertToLogBytes() []byte {
 		"creator":      reqc.OrgMetadata.Annotations.CreatedBy(),
 
 		//context
-		"enfored":     self.Enforced,
-		"allowed":     self.Allow,
-		"verified":    self.Verified,
-		"aborted":     self.Aborted,
-		"abortReason": self.AbortReason,
-		"msg":         self.Message,
-		// TODO: implement matched RPP/CRPP logging
-		// "rule":        self.MatchedRPP.String(),
+		"requestScope": self.ResourceScope,
+		"dryrun":       self.DryRun,
+		"unprocessed":  self.Unprocessed,
+		"ignoreSA":     self.IgnoredSA,
+		"protected":    self.Protected,
+		"allowed":      self.Allow,
+		"verified":     self.Verified,
+		"aborted":      self.Aborted,
+		"abortReason":  self.AbortReason,
+		"msg":          self.Message,
+		"breakglass":   self.BreakGlassModeEnabled,
+		"detectOnly":   self.DetectOnlyModeEnabled,
 
 		//reason code
 		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
@@ -554,15 +550,11 @@ func (self *VCheckContext) convertToLogBytes() []byte {
 	return logBytes
 }
 
-func (self *VCheckContext) checkIfDryRunAdmission() bool {
-	return self.ReqC.DryRun
-}
+/**********************************************
 
-func (self *VCheckContext) checkIfUnprocessedInIE() bool {
-	// TODO: implement
-	// with reqc + enforceconfig
-	return false
-}
+				VCheckContext
+
+***********************************************/
 
 type Loader struct {
 	Config            *config.EnforcerConfig
@@ -572,13 +564,39 @@ type Loader struct {
 	ResourceSignature *ctlconfig.ResSigLoader
 }
 
+func (self *Loader) ProtectRules() []*v1alpha1.Rule {
+	rpps := self.RPP.GetData()
+	rules := []*v1alpha1.Rule{}
+	for _, d := range rpps {
+		rules = append(rules, d.Spec.Rules...)
+	}
+	return rules
+}
+
+func (self *Loader) UnprotectedRequestMatchPattern() []policy.RequestMatchPattern {
+	return self.Config.Policy.Ignore
+}
+
 func (self *Loader) IgnoreServiceAccountPatterns() []*v1alpha1.ServieAccountPattern {
-	rpps := self.RPP.Data
+	rpps := self.RPP.GetData()
 	patterns := []*v1alpha1.ServieAccountPattern{}
 	for _, d := range rpps {
 		patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
 	}
 	return patterns
+}
+
+func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
+	sp := self.SignPolicy.GetData()
+	conditions := []policy.BreakGlassCondition{}
+	if len(sp) > 0 {
+		conditions = append(conditions, sp[0].Spec.VSignPolicy.BreakGlass...)
+	}
+	return conditions
+}
+
+func (self *Loader) DetectOnlyMode() bool {
+	return self.Config.Policy.Mode == policy.DetectMode
 }
 
 func (self *VCheckContext) initLoader() {
@@ -593,6 +611,20 @@ func (self *VCheckContext) initLoader() {
 		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace),
 	}
 	self.Loader = loader
+}
+
+func (self *VCheckContext) checkIfDryRunAdmission() bool {
+	return self.ReqC.DryRun
+}
+
+func (self *VCheckContext) checkIfUnprocessedInIE() bool {
+	reqc := self.ReqC
+	for _, d := range self.Loader.UnprotectedRequestMatchPattern() {
+		if d.Match(reqc) {
+			return true
+		}
+	}
+	return false
 }
 
 func (self *VCheckContext) checkIfIEResource() bool {
@@ -620,17 +652,6 @@ func (self *VCheckContext) getPolicyList() *policy.PolicyList {
 	return &policy.PolicyList{Items: items}
 }
 
-func (self *VCheckContext) checkIfIgnoredSA() (bool, error) {
-	// reqc = self.ReqC
-	// patterns := self.Loader.IgnoreServiceAccountPatterns()
-	// for _, d := range patterns {
-	// if reqc.ServiceAccount == d.ServiceAccountName &&
-
-	// TODO: implementz
-	// with reqc + rpp/crpp
-	return false, nil
-}
-
 func (self *VCheckContext) checkIfProtected() (bool, error) {
 	reqFields := self.ReqC.Map()
 
@@ -639,13 +660,64 @@ func (self *VCheckContext) checkIfProtected() (bool, error) {
 		return false, nil
 
 	} else if self.ResourceScope == "Namespaced" {
-		for _, rpp := range self.Loader.RPP.GetData() {
-			if matched, _ := rpp.Match(reqFields); matched {
+		rules := self.Loader.ProtectRules()
+		for _, r := range rules {
+			if matched := r.MatchWithRequest(reqFields); matched {
 				return true, nil
 			}
 		}
+		return false, nil
+	} else {
+		return false, fmt.Errorf("invalid resource scope")
 	}
-	return false, nil
+}
+
+func (self *VCheckContext) checkIfIgnoredSA() (bool, error) {
+	reqc := self.ReqC
+	reqFields := self.ReqC.Map()
+	patterns := self.Loader.IgnoreServiceAccountPatterns()
+	ignoredSA := false
+	for _, d := range patterns {
+		saMatch := false
+		for _, sa := range d.ServiceAccountName {
+			if reqc.UserName == sa {
+				saMatch = true
+				break
+			}
+		}
+		if saMatch && d.Match.Match(reqFields) {
+			ignoredSA = true
+			break
+		}
+	}
+	return ignoredSA, nil
+}
+
+func (self *VCheckContext) CheckIfBreakGlassEnabled() bool {
+	reqNs := self.ReqC.Namespace
+	conditions := self.Loader.BreakGlassConditions()
+	breakGlassEnabled := false
+	for _, d := range conditions {
+		if d.Scope == policy.ScopeNamespaced {
+			for _, ns := range d.Namespaces {
+				if reqNs == ns {
+					breakGlassEnabled = true
+					break
+				}
+			}
+		} else {
+			//TODO need implement
+			//cluster scope
+		}
+		if breakGlassEnabled {
+			break
+		}
+	}
+	return breakGlassEnabled
+}
+
+func (self *VCheckContext) CheckIfDetectOnly() bool {
+	return self.Loader.DetectOnlyMode()
 }
 
 func (self *VCheckContext) updateRPP() error {

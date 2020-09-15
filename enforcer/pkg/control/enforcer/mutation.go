@@ -102,11 +102,9 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policyList *p
 		}
 		return maResult, nil
 	} else {
-		matchedPolicy := policyList.FindMatchedChangePolicy(reqc, mr.MatchedKeys).String()
 		maResult.IsMutated = mr.IsMutated
 		maResult.Diff = mr.Diff
 		maResult.Filtered = mr.Filtered
-		maResult.MatchedPolicy = matchedPolicy
 		maResult.Checked = mr.Checked
 		maResult.Error = &common.CheckError{
 			Error:  mr.Error,

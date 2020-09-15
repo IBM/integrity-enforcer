@@ -385,7 +385,6 @@ func (self *CheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1
 				if r.Checked && !r.IsMutated {
 					allowed = true
 					evalReason = common.REASON_NO_MUTATION
-					matchedPolicy = r.MatchedPolicy
 				}
 			}
 		}

@@ -354,12 +354,11 @@ func (self *OwnerList) VerifiedOwners() []*Owner {
 }
 
 type MutationEvalResult struct {
-	IsMutated     bool        `json:"isMutated"`
-	Diff          string      `json:"diff"`
-	Filtered      string      `json:"filtered"`
-	Checked       bool        `json:"checked"`
-	MatchedPolicy string      `json:"matchedPolicy"`
-	Error         *CheckError `json:"error"`
+	IsMutated bool        `json:"isMutated"`
+	Diff      string      `json:"diff"`
+	Filtered  string      `json:"filtered"`
+	Checked   bool        `json:"checked"`
+	Error     *CheckError `json:"error"`
 }
 
 type ReasonCode struct {
@@ -415,10 +414,6 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_NO_MUTATION: {
 		Message: "allowed because no mutation found",
 		Code:    "no-mutation",
-	},
-	REASON_NOT_ENFORCED: {
-		Message: "not enforced",
-		Code:    "not-enforced",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",
