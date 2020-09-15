@@ -191,7 +191,7 @@ type SignPolicyLoader struct {
 	enforcerNamespace string
 
 	Client *spolclient.ResearchV1alpha1Client
-	Data   []*spolapi.VSignPolicy
+	Data   *spolapi.VSignPolicy
 }
 
 func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
@@ -206,8 +206,8 @@ func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
 	}
 }
 
-func (self *SignPolicyLoader) GetData() []*spolapi.VSignPolicy {
-	if len(self.Data) == 0 {
+func (self *SignPolicyLoader) GetData() *spolapi.VSignPolicy {
+	if self.Data == nil {
 		self.Load()
 	}
 	return self.Data
@@ -238,9 +238,9 @@ func (self *SignPolicyLoader) Load() {
 		}
 	}
 
-	data := []*spolapi.VSignPolicy{}
-	for _, d := range list1.Items {
-		data = append(data, &d)
+	data := &spolapi.VSignPolicy{}
+	if len(list1.Items) > 0 {
+		data = &(list1.Items[0])
 	}
 	self.Data = data
 	return

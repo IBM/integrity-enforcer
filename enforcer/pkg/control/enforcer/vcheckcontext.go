@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
+	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -31,10 +31,23 @@ import (
 	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+/**********************************************
+
+				CheckResult
+
+***********************************************/
+
+type CheckResult struct {
+	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
+	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
+	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
+}
 
 /**********************************************
 
@@ -82,13 +95,11 @@ type VCheckResult struct {
 	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
-func NewVCheckContext(config *config.EnforcerConfig, policy *ctlconfig.PolicyLoader) *VCheckContext {
+func NewVCheckContext(config *config.EnforcerConfig) *VCheckContext {
 	cc := &VCheckContext{
 		config: config,
 		Loader: nil,
 
-		// policy:      policy,
-		// protectRule: ctlconfig.NewProtectRuleLoader(),
 		IgnoredSA: false,
 		Protected: false,
 		Aborted:   false,
@@ -185,13 +196,10 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 
 		//init annotation store (singleton)
 		annotationStoreInstance = &ConcreteAnnotationStore{}
-		//init sign store (singleton)
-		sign.InitSignStore(self.config.SignStore)
 
 		//evaluate sign policy
-		policies := self.getPolicyList()
 		if !self.Aborted && !allowed {
-			if r, err := self.evalSignPolicy(policies); err != nil {
+			if r, err := self.evalSignPolicy(); err != nil {
 				self.abort("Error when evaluating sign policy", err)
 			} else {
 				self.Result.SignPolicyEvalResult = r
@@ -216,7 +224,7 @@ func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta
 
 		//check mutation
 		if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
-			if r, err := self.evalMutation(policies); err != nil {
+			if r, err := self.evalMutation(); err != nil {
 				self.abort("Error when evaluating mutation", err)
 			} else {
 				self.Result.MutationEvalResult = r
@@ -364,22 +372,26 @@ func (self *VCheckContext) createPatch() []byte {
 	return patch
 }
 
-func (self *VCheckContext) evalSignPolicy(pol *policy.PolicyList) (*common.SignPolicyEvalResult, error) {
+func (self *VCheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	if signPolicy, err := sign.NewSignPolicy(self.config.Namespace, self.config.PolicyNamespace, pol); err != nil {
+	signPolicy := self.GetVSignPolicy()
+	resSigList := self.GetResourceSigantures()
+	plugins := self.GetEnabledPlugins()
+	if signPolicy, err := sign.NewSignPolicy(self.config, signPolicy, resSigList, plugins); err != nil {
 		return nil, err
 	} else {
 		return signPolicy.Eval(reqc)
 	}
 }
 
-func (self *VCheckContext) evalMutation(pol *policy.PolicyList) (*common.MutationEvalResult, error) {
+func (self *VCheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	reqc := self.ReqC
 	owners := []*common.Owner{}
+	//ignoreAttrs := self.GetIgnoreAttrs()
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, pol)
+		return checker.Eval(reqc, nil) // TODO: implement ignoreAttr from RPP
 	}
 }
 
@@ -564,24 +576,34 @@ type Loader struct {
 	ResourceSignature *ctlconfig.ResSigLoader
 }
 
-func (self *Loader) ProtectRules() []*v1alpha1.Rule {
-	rpps := self.RPP.GetData()
-	rules := []*v1alpha1.Rule{}
-	for _, d := range rpps {
-		rules = append(rules, d.Spec.Rules...)
+func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
+	rules := []*protect.Rule{}
+	if resourceScope == "Namespaced" {
+		rpps := self.RPP.GetData()
+		for _, d := range rpps {
+			rules = append(rules, d.Spec.Rules...)
+		}
+	} else if resourceScope == "Cluster" {
+		rpps := self.CRPP.GetData()
+		for _, d := range rpps {
+			rules = append(rules, d.Spec.Rules...)
+		}
 	}
 	return rules
 }
 
-func (self *Loader) UnprotectedRequestMatchPattern() []policy.RequestMatchPattern {
-	return self.Config.Policy.Ignore
-}
-
-func (self *Loader) IgnoreServiceAccountPatterns() []*v1alpha1.ServieAccountPattern {
-	rpps := self.RPP.GetData()
-	patterns := []*v1alpha1.ServieAccountPattern{}
-	for _, d := range rpps {
-		patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+func (self *Loader) IgnoreServiceAccountPatterns(resourceScope string) []*protect.ServieAccountPattern {
+	patterns := []*protect.ServieAccountPattern{}
+	if resourceScope == "Namespaced" {
+		rpps := self.RPP.GetData()
+		for _, d := range rpps {
+			patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+		}
+	} else if resourceScope == "Cluster" {
+		rpps := self.CRPP.GetData()
+		for _, d := range rpps {
+			patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+		}
 	}
 	return patterns
 }
@@ -589,8 +611,8 @@ func (self *Loader) IgnoreServiceAccountPatterns() []*v1alpha1.ServieAccountPatt
 func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 	sp := self.SignPolicy.GetData()
 	conditions := []policy.BreakGlassCondition{}
-	if len(sp) > 0 {
-		conditions = append(conditions, sp[0].Spec.VSignPolicy.BreakGlass...)
+	if sp != nil {
+		conditions = append(conditions, sp.Spec.VSignPolicy.BreakGlass...)
 	}
 	return conditions
 }
@@ -602,7 +624,7 @@ func (self *Loader) DetectOnlyMode() bool {
 func (self *VCheckContext) initLoader() {
 	enforcerNamespace := self.config.Namespace
 	requestNamespace := self.ReqC.Namespace
-	signatureNamespace := self.config.SignStore.SignatureNamespace // for cluster scope request
+	signatureNamespace := self.config.SignatureNamespace // for cluster scope request
 	loader := &Loader{
 		Config:            self.config,
 		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
@@ -619,7 +641,7 @@ func (self *VCheckContext) checkIfDryRunAdmission() bool {
 
 func (self *VCheckContext) checkIfUnprocessedInIE() bool {
 	reqc := self.ReqC
-	for _, d := range self.Loader.UnprotectedRequestMatchPattern() {
+	for _, d := range self.config.Policy.Ignore {
 		if d.Match(reqc) {
 			return true
 		}
@@ -639,28 +661,34 @@ func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionRespo
 	return nil
 }
 
-func (self *VCheckContext) getPolicyList() *policy.PolicyList {
-	items := []*policy.Policy{}
-	iepol := self.config.Policy.Policy()
+func (self *VCheckContext) GetVSignPolicy() *policy.VSignPolicy {
+	iepol := self.config.Policy
 	spol := self.Loader.SignPolicy.GetData()
 
-	items = append(items, iepol)
-	for _, vsp := range spol {
-		tmpSP := vsp.Spec.VSignPolicy.Policy()
-		items = append(items, tmpSP)
-	}
-	return &policy.PolicyList{Items: items}
+	data := &policy.VSignPolicy{}
+	data = data.Merge(iepol.Sign)
+	data = data.Merge(spol.Spec.VSignPolicy)
+	return data
+}
+
+func (self *VCheckContext) GetEnabledPlugins() map[string]bool {
+	return self.config.Policy.GetEnabledPlugins()
+}
+
+func (self *VCheckContext) GetResourceSigantures() *rsig.VResourceSignatureList {
+	// TODO: implement
+	return nil
+}
+
+func (self *VCheckContext) GetIgnoreAttrs() *string {
+	// TODO: implement (replace *string with correct struct)
+	return nil
 }
 
 func (self *VCheckContext) checkIfProtected() (bool, error) {
 	reqFields := self.ReqC.Map()
-
-	if self.ResourceScope == "Cluster" {
-		// TODO: implement this
-		return false, nil
-
-	} else if self.ResourceScope == "Namespaced" {
-		rules := self.Loader.ProtectRules()
+	if self.ResourceScope == "Cluster" || self.ResourceScope == "Namespaced" {
+		rules := self.Loader.ProtectRules(self.ResourceScope)
 		for _, r := range rules {
 			if matched := r.MatchWithRequest(reqFields); matched {
 				return true, nil
@@ -675,7 +703,7 @@ func (self *VCheckContext) checkIfProtected() (bool, error) {
 func (self *VCheckContext) checkIfIgnoredSA() (bool, error) {
 	reqc := self.ReqC
 	reqFields := self.ReqC.Map()
-	patterns := self.Loader.IgnoreServiceAccountPatterns()
+	patterns := self.Loader.IgnoreServiceAccountPatterns(self.ResourceScope)
 	ignoredSA := false
 	for _, d := range patterns {
 		saMatch := false

@@ -34,7 +34,6 @@ import (
 	cert "github.com/IBM/integrity-enforcer/operator/pkg/cert"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -181,48 +180,6 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *resear
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
 		"SignPolicy.Name", expected.Name)
-
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return reconcile.Result{}, err
-	}
-
-	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.client.Create(context.TODO(), expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return reconcile.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return reconcile.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return reconcile.Result{}, nil
-
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSignatureCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildResourceSignatureForCR(instance)
-	found := &rs.ResourceSignature{}
-
-	reqLogger := log.WithValues(
-		"Instance.Name", instance.Name,
-		"ResourceSignature.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)

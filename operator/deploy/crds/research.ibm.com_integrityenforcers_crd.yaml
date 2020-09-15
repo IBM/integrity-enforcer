@@ -615,6 +615,14 @@ spec:
               type: object
             enforcerConfig:
               properties:
+                certPoolPath:
+                  type: string
+                chartPath:
+                  type: string
+                chartRepo:
+                  type: string
+                keyringPath:
+                  type: string
                 log:
                   properties:
                     consoleLog:
@@ -820,8 +828,6 @@ spec:
                             type: string
                         type: object
                       type: array
-                    policyType:
-                      type: string
                     sign:
                       properties:
                         breakGlass:
@@ -856,8 +862,6 @@ spec:
                                 type: array
                             type: object
                           type: array
-                        policyType:
-                          type: string
                         signers:
                           items:
                             properties:
@@ -894,6 +898,14 @@ spec:
                           type: array
                       type: object
                   type: object
+                verifyType:
+                  type: string
+              required:
+              - certPoolPath
+              - chartPath
+              - chartRepo
+              - keyringPath
+              - verifyType
               type: object
             enforcerConfigCrName:
               type: string
@@ -1518,8 +1530,6 @@ spec:
                         type: array
                     type: object
                   type: array
-                policyType:
-                  type: string
                 signers:
                   items:
                     properties:

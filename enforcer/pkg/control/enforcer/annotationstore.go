@@ -40,7 +40,7 @@ func GetAnnotationStore() AnnotationStore {
 }
 
 type ConcreteAnnotationStore struct {
-	Context *CheckContext
+	Context *VCheckContext
 }
 
 func (self *ConcreteAnnotationStore) GetAnnotation(ref *common.ResourceRef, annotation *common.ResourceAnnotation) *common.ResourceAnnotation {
