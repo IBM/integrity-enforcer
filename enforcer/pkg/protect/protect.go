@@ -32,6 +32,7 @@ type Rule struct {
 type RequestPattern struct {
 	Scope      *RulePattern `json:"scope,omitempty"`
 	Namespace  *RulePattern `json:"namespace,omitempty"`
+	ApiGroup   *RulePattern `json:"apiGroup,omitempty"`
 	ApiVersion *RulePattern `json:"apiVersion,omitempty"`
 	Kind       *RulePattern `json:"kind,omitempty"`
 	Name       *RulePattern `json:"name,omitempty"`
@@ -109,6 +110,7 @@ type Request struct {
 	// Scope      string `json:"scope,omitempty"`
 	Operation  string `json:"operation,omitempty"`
 	Namespace  string `json:"namespace,omitempty"`
+	ApiGroup   string `json:"apiGroup,omitempty"`
 	ApiVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 	Name       string `json:"name,omitempty"`

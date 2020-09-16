@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pgp"
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pkix"
@@ -32,6 +31,7 @@ import (
 	iesign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rand "k8s.io/apimachinery/pkg/util/rand"
 )
 
 type SignMode string
@@ -127,18 +127,18 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Error in loading yaml to mapnode; %s", err.Error()))
 	}
-	apiVersion := node.GetString("apiVersion")
-	kind := node.GetString("kind")
-	name := node.GetString("metadata.name")
+	// apiVersion := node.GetString("apiVersion")
+	// kind := node.GetString("kind")
+	// name := node.GetString("metadata.name")
 	mutableAttrs := node.GetString("metadata.annotations.mutableAttrs")
-	namespaceInYaml := node.GetString("metadata.namespace")
-	namespace := namespaceInQuery
-	if namespace == "" {
-		namespace = namespaceInYaml
-	}
-	if apiVersion == "" || kind == "" || name == "" || namespace == "" {
-		return "", errors.New(fmt.Sprintf("required value is empty; apiVersion: %s, kind: %s, metadata.name: %s, metadata.namespace: %s", apiVersion, kind, name, namespace))
-	}
+	// namespaceInYaml := node.GetString("metadata.namespace")
+	// namespace := namespaceInQuery
+	// if namespace == "" {
+	// 	namespace = namespaceInYaml
+	// }
+	// if apiVersion == "" || kind == "" || name == "" || namespace == "" {
+	// 	return "", errors.New(fmt.Sprintf("required value is empty; apiVersion: %s, kind: %s, metadata.name: %s, metadata.namespace: %s", apiVersion, kind, name, namespace))
+	// }
 
 	signType := rsig.SignatureTypeResource
 
@@ -200,7 +200,8 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 		signItem.MessageScope = scope
 	}
 
-	rsName := fmt.Sprintf("rsig-%s-%s-%s", namespace, strings.ToLower(kind), name)
+	rsName := fmt.Sprintf("rsig-%s", rand.String(16))
+	// rsName := fmt.Sprintf("rsig-%s-%s-%s", namespace, strings.ToLower(kind), name)
 	rs := rsig.VResourceSignature{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: rsName,
