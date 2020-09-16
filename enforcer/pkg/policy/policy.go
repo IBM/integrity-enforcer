@@ -61,14 +61,13 @@ const defaultIntegrityEnforcerMode = EnforceMode
 ***********************************************/
 
 type Policy struct {
-	AllowUnverified []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
-	Ignore          []RequestMatchPattern      `json:"ignore,omitempty"`
-	Signer          []SignerMatchPattern       `json:"signer,omitempty"`
-	Allow           AllowRequestCondition      `json:"allow,omitempty"`
-	Mode            IntegrityEnforcerMode      `json:"mode,omitempty"`
-	Plugin          []PluginPolicy             `json:"plugin,omitempty"`
-	PolicyType      PolicyType                 `json:"policyType,omitempty"`
-	Description     string                     `json:"description,omitempty"`
+	Ignore      []RequestMatchPattern `json:"ignore,omitempty"`
+	Signer      []SignerMatchPattern  `json:"signer,omitempty"`
+	Allow       AllowRequestCondition `json:"allow,omitempty"`
+	Mode        IntegrityEnforcerMode `json:"mode,omitempty"`
+	Plugin      []PluginPolicy        `json:"plugin,omitempty"`
+	PolicyType  PolicyType            `json:"policyType,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
 type PolicyList struct {
@@ -369,16 +368,9 @@ func (self *VSignPolicy) Policy() *Policy {
 		}
 	}
 
-	allowUnverified := []AllowUnverifiedCondition{}
-	for _, bg := range self.BreakGlass {
-		tmp := AllowUnverifiedCondition{Namespace: strings.Join(bg.Namespaces, ",")}
-		allowUnverified = append(allowUnverified, tmp)
-	}
-
 	return &Policy{
-		Signer:          signer,
-		AllowUnverified: allowUnverified,
-		Description:     self.Description,
+		Signer:      signer,
+		Description: self.Description,
 	}
 }
 
@@ -504,10 +496,6 @@ func (self *SubjectCondition) Match(signer *common.SignerInfo) bool {
 		common.MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
 }
 
-type AllowUnverifiedCondition struct {
-	Namespace string `json:"namespace,omitempty"`
-}
-
 type SignerMatchPattern struct {
 	Request   RequestMatchPattern `json:"request,omitempty"`
 	Condition SubjectCondition    `json:"condition,omitempty"`
@@ -546,13 +534,6 @@ func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
 		common.MatchPattern(v.Type, reqc.Type) &&
 		common.MatchPatternWithArray(v.UserGroup, reqc.UserGroups)
 
-}
-
-func (v *AllowUnverifiedCondition) Match(reqc *common.ReqContext) bool {
-	if v.Namespace == reqc.Namespace || v.Namespace == "*" {
-		return true
-	}
-	return false
 }
 
 func (p *Policy) DeepCopyInto(p2 *Policy) {
@@ -612,11 +593,10 @@ func (p *Policy) Merge(p2 *Policy) *Policy {
 	}
 	allow := p.Allow.Merge(p2.Allow)
 	return &Policy{
-		Ignore:          append(p.Ignore, p2.Ignore...),
-		Signer:          append(p.Signer, p2.Signer...),
-		Allow:           allow,
-		AllowUnverified: append(p.AllowUnverified, p2.AllowUnverified...),
-		Mode:            mode,
-		Plugin:          append(p.Plugin, p2.Plugin...),
+		Ignore: append(p.Ignore, p2.Ignore...),
+		Signer: append(p.Signer, p2.Signer...),
+		Allow:  allow,
+		Mode:   mode,
+		Plugin: append(p.Plugin, p2.Plugin...),
 	}
 }
