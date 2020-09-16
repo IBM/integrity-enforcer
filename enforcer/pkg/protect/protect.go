@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/jinzhu/copier"
 )
 
@@ -34,6 +35,9 @@ type RequestPattern struct {
 	ApiVersion *RulePattern `json:"apiVersion,omitempty"`
 	Kind       *RulePattern `json:"kind,omitempty"`
 	Name       *RulePattern `json:"name,omitempty"`
+	Operation  *RulePattern `json:"operation,omitempty"`
+	UserName   *RulePattern `json:"username,omitempty"`
+	UserGroup  *RulePattern `json:"usergroup,omitempty"`
 }
 
 func (self *Rule) String() string {
@@ -88,10 +92,7 @@ func (self *RequestPattern) Match(reqFields map[string]string) bool {
 type RulePattern string
 
 func (self *RulePattern) match(value string) bool {
-	if string(*self) == value {
-		return true
-	}
-	return false
+	return common.MatchPattern(string(*self), value)
 }
 
 type ServieAccountPattern struct {

@@ -191,7 +191,8 @@ func (self *VCheckContext) evalMutation() (*common.MutationEvalResult, error) {
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, nil) // TODO: implement ignoreAttr from RPP
+		rules := self.Loader.IgnoreAttrsPatterns(self.ResourceScope)
+		return checker.Eval(reqc, rules)
 	}
 }
 
@@ -412,6 +413,23 @@ func (self *Loader) IgnoreServiceAccountPatterns(resourceScope string) []*protec
 	return patterns
 }
 
+func (self *Loader) IgnoreAttrsPatterns(resourceScope string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	if resourceScope == "Namespaced" {
+		rpps := self.RPP.GetData()
+		for _, d := range rpps {
+			patterns = append(patterns, d.Spec.IgnoreAttrs...)
+		}
+	} else if resourceScope == "Cluster" {
+		rpps := self.CRPP.GetData()
+		for _, d := range rpps {
+			patterns = append(patterns, d.Spec.IgnoreAttrs...)
+		}
+	}
+	return patterns
+
+}
+
 func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 	sp := self.SignPolicy.GetData()
 	conditions := []policy.BreakGlassCondition{}
@@ -483,11 +501,6 @@ func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionRespo
 
 func (self *VCheckContext) GetEnabledPlugins() map[string]bool {
 	return self.config.Policy.GetEnabledPlugins()
-}
-
-func (self *VCheckContext) GetIgnoreAttrs() *string {
-	// TODO: implement (replace *string with correct struct)
-	return nil
 }
 
 func (self *VCheckContext) checkIfProtected() (bool, error) {
