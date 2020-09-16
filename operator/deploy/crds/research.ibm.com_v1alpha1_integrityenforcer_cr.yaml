@@ -23,6 +23,11 @@ spec:
           name: HelmClusterSigner
           subject:
             email: cluster_signer@signer.com
+    certPoolPath: ""
+    chartPath: ""
+    chartRepo: ""
+    keyringPath: ""
+    verifyType: ""
     patch:
       enabled: true
     log:
@@ -30,15 +35,16 @@ spec:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       contextLog:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       logLevel: trace
   enforcerConfigCrName: ie-config
   globalConfig:
     openShift: true
-    detectionMode: false
   imagePullSecrets: []
   certPoolConfig:
     createIfNotExist: false

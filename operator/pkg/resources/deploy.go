@@ -43,62 +43,36 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		},
 	}
 
-	if cr.Spec.GlobalConfig.DetectionMode {
-		volumes = []v1.Volume{
-			SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
-			EmptyDirVolume("log-volume"),
-			EmptyDirVolume("tmp"),
-		}
-	} else {
-		volumes = []v1.Volume{
-			SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
-			SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
-			SecretVolume("ie-keyring-secret", cr.Spec.KeyRing.Name),
-			EmptyDirVolume("log-volume"),
-			EmptyDirVolume("tmp"),
-		}
+	volumes = []v1.Volume{
+		SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
+		SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
+		SecretVolume("ie-keyring-secret", cr.Spec.KeyRing.Name),
+		EmptyDirVolume("log-volume"),
+		EmptyDirVolume("tmp"),
 	}
 
-	if cr.Spec.GlobalConfig.DetectionMode {
-		servervolumemounts = []v1.VolumeMount{
-			{
-				MountPath: "/run/secrets/tls",
-				Name:      "ie-tls-certs",
-				ReadOnly:  true,
-			},
-			{
-				MountPath: "/tmp",
-				Name:      "tmp",
-			},
-			{
-				MountPath: "/ie-app/public",
-				Name:      "log-volume",
-			},
-		}
-	} else {
-		servervolumemounts = []v1.VolumeMount{
-			{
-				MountPath: "/ie-certpool-secret",
-				Name:      "ie-certpool-secret",
-			},
-			{
-				MountPath: "/keyring",
-				Name:      "ie-keyring-secret",
-			},
-			{
-				MountPath: "/run/secrets/tls",
-				Name:      "ie-tls-certs",
-				ReadOnly:  true,
-			},
-			{
-				MountPath: "/tmp",
-				Name:      "tmp",
-			},
-			{
-				MountPath: "/ie-app/public",
-				Name:      "log-volume",
-			},
-		}
+	servervolumemounts = []v1.VolumeMount{
+		{
+			MountPath: "/ie-certpool-secret",
+			Name:      "ie-certpool-secret",
+		},
+		{
+			MountPath: "/keyring",
+			Name:      "ie-keyring-secret",
+		},
+		{
+			MountPath: "/run/secrets/tls",
+			Name:      "ie-tls-certs",
+			ReadOnly:  true,
+		},
+		{
+			MountPath: "/tmp",
+			Name:      "tmp",
+		},
+		{
+			MountPath: "/ie-app/public",
+			Name:      "log-volume",
+		},
 	}
 
 	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {

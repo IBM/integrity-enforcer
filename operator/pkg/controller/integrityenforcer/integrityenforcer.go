@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pkg/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/pkg/resources"
@@ -180,6 +181,47 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *resear
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
 		"SignPolicy.Name", expected.Name)
+
+	// Set CR instance as the owner and controller
+	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
+	if err != nil {
+		reqLogger.Error(err, "Failed to define expected resource")
+		return reconcile.Result{}, err
+	}
+
+	// If default rpp does not exist, create it and requeue
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new resource")
+		err = r.client.Create(context.TODO(), expected)
+		if err != nil && errors.IsAlreadyExists(err) {
+			// Already exists from previous reconcile, requeue.
+			reqLogger.Info("Skip reconcile: resource already exists")
+			return reconcile.Result{Requeue: true}, nil
+		} else if err != nil {
+			reqLogger.Error(err, "Failed to create new resource")
+			return reconcile.Result{}, err
+		}
+		// Created successfully - return and requeue
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// No extra validation
+
+	// No reconcile was necessary
+	return reconcile.Result{}, nil
+
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	found := &rpp.VResourceProtectionProfile{}
+	expected := res.BuildDefaultResourceProtectionProfileForIE(instance)
+	reqLogger := log.WithValues(
+		"Instance.Name", instance.Name,
+		"DefaultResourceProtectionProfile.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
