@@ -501,7 +501,7 @@ func (self *SubjectCondition) Match(signer *common.SignerInfo) bool {
 		common.MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
 		common.MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
 		common.MatchPattern(self.Subject.CommonName, signer.CommonName) &&
-		common.MatchPattern(self.Subject.SerialNumber, signer.SerialNumber)
+		common.MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
 }
 
 type AllowUnverifiedCondition struct {

@@ -148,7 +148,7 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 		signType = rsig.SignatureTypePatch
 	}
 
-	var signItem rsig.SignItem
+	var signItem *rsig.SignItem
 
 	msg := ""
 	if scope == "" {
@@ -188,7 +188,7 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 		certB64 = base64.StdEncoding.EncodeToString(certPemBytes)
 	}
 
-	signItem = rsig.SignItem{
+	signItem = &rsig.SignItem{
 		MutableAttrs: mutableAttrs,
 		Signature:    sigB64,
 		Certificate:  certB64,
@@ -206,30 +206,30 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 			Name: rsName,
 		},
 		Spec: rsig.VResourceSignatureSpec{
-			Data: []rsig.SignItem{
+			Data: []*rsig.SignItem{
 				signItem,
 			},
 		},
 	}
 	rsigBytes, err := yaml.Marshal(rs)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in dumping ResourceSignature yaml; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in dumping VResourceSignature yaml; %s", err.Error()))
 	}
 	rsigNode, err := mapnode.NewFromYamlBytes(rsigBytes)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in loading ResourceSignature to mapnode; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in loading VResourceSignature to mapnode; %s", err.Error()))
 	}
 	rsigApiVersion := rsig.SchemeGroupVersion.String()
-	rsigKind := "ResourceSignature"
+	rsigKind := "VResourceSignature"
 	rsigMetaNodeStr := fmt.Sprintf("{\"apiVersion\":\"%s\",\"kind\":\"%s\"}", rsigApiVersion, rsigKind)
 	rsigMetaNodeBytes := []byte(rsigMetaNodeStr)
 	rsigMetaNode, err := mapnode.NewFromBytes(rsigMetaNodeBytes)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in loading metadata for ResourceSignature to mapnode; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in loading metadata for VResourceSignature to mapnode; %s", err.Error()))
 	}
 	mergedRsigNode, err := rsigNode.Merge(rsigMetaNode)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in merging ResourceSignature and metadata; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in merging VResourceSignature and metadata; %s", err.Error()))
 	}
 	mergedRsigNode = mergedRsigNode.Mask([]string{"status", "metadata.creationTimestamp"})
 	mergedRsigStr := mergedRsigNode.ToYaml()

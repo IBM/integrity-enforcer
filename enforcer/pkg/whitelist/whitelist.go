@@ -17,8 +17,9 @@
 package whitelist
 
 import (
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 )
 
 /**********************************************
@@ -59,19 +60,19 @@ func (wl *EnforcePolicyWhitelist) GenerateMaskKeys(namespace, name, kind, userna
 	maskKey := []string{}
 	for _, rule := range wl.Rule {
 		// request match
-		if !policy.MatchPattern(rule.Request.Name, name) {
+		if !common.MatchPattern(rule.Request.Name, name) {
 			continue
 		}
-		if !policy.MatchPattern(rule.Request.Kind, kind) {
+		if !common.MatchPattern(rule.Request.Kind, kind) {
 			continue
 		}
-		if !policy.MatchPattern(rule.Request.UserName, username) {
+		if !common.MatchPattern(rule.Request.UserName, username) {
 			continue
 		}
-		if !policy.MatchPattern(rule.Request.Namespace, namespace) {
+		if !common.MatchPattern(rule.Request.Namespace, namespace) {
 			continue
 		}
-		if !policy.MatchPatternWithArray(rule.Request.UserGroup, usergroups) {
+		if !common.MatchPatternWithArray(rule.Request.UserGroup, usergroups) {
 			continue
 		}
 		maskKey = append(maskKey, rule.Key...)

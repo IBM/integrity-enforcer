@@ -17,7 +17,12 @@
 package v1alpha1
 
 import (
+	"bytes"
 	"encoding/base64"
+	"fmt"
+
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	yaml "gopkg.in/yaml.v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -68,17 +73,31 @@ type VResourceSignature struct {
 }
 
 func (ss *VResourceSignature) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
-	message := ""
-	found := false
-	// TODO: implement
-	return message, found
+	si, _, found := ss.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Message, true
+	}
+	return "", false
 }
 
 func (ss *VResourceSignature) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
-	signature := ""
+	si, _, found := ss.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Signature, true
+	}
+	return "", false
+}
+
+func (ss *VResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, metav1.ObjectMeta, bool) {
+	signItem := &SignItem{}
+	rsigMeta := metav1.ObjectMeta{}
 	found := false
-	// TODO: implement
-	return signature, found
+	for _, si := range ss.Spec.Data {
+		if si.match(apiVersion, kind, name, namespace) {
+			return si, ss.ObjectMeta, true
+		}
+	}
+	return signItem, rsigMeta, found
 }
 
 func (ss *VResourceSignature) Validate() (bool, string) {
@@ -94,7 +113,7 @@ func (ss *VResourceSignature) Validate() (bool, string) {
 
 // VResourceSignatureSpec is a desired state description of VResourceSignature.
 type VResourceSignatureSpec struct {
-	Data []SignItem `json:"data"`
+	Data []*SignItem `json:"data"`
 }
 
 // VResourceSignature describes the lifecycle status of VResourceSignature.
@@ -110,28 +129,34 @@ type VResourceSignatureList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []VResourceSignature `json:"items"`
+	Items []*VResourceSignature `json:"items"`
 }
 
 func (ssl *VResourceSignatureList) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
-	message := ""
-	found := false
-	// TODO: implement
-	return message, found
+	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Message, true
+	}
+	return "", false
 }
 
 func (ssl *VResourceSignatureList) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
-	signature := ""
-	found := false
-	// TODO: implement
-	return signature, found
+	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Signature, true
+	}
+	return "", false
 }
 
-func (ssl *VResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (SignItem, metav1.ObjectMeta, bool) {
-	signItem := SignItem{}
+func (ssl *VResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, metav1.ObjectMeta, bool) {
+	signItem := &SignItem{}
 	rsigMeta := metav1.ObjectMeta{}
 	found := false
-	// TODO: implement
+	for _, ss := range ssl.Items {
+		if si, ssmeta, ok := ss.FindSignItem(apiVersion, kind, name, namespace); ok {
+			return si, ssmeta, true
+		}
+	}
 	return signItem, rsigMeta, found
 }
 
@@ -149,12 +174,51 @@ type ResourceInfo struct {
 	Kind       string `json:"kind,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Namespace  string `json:"namespace,omitempty"`
-	raw        string // raw yaml of single resource
+	raw        []byte // raw yaml of single resource
+}
+
+func (si *SignItem) match(apiVersion, kind, name, namespace string) bool {
+	for _, ri := range si.parseMessage() {
+		if ri.ApiVersion == apiVersion &&
+			ri.Kind == kind &&
+			ri.Name == name &&
+			(ri.Namespace == namespace || ri.Namespace == "") {
+			return true
+		}
+	}
+	return false
 }
 
 func (si *SignItem) parseMessage() []ResourceInfo {
-
-	return nil
+	msg := base64decode(si.Message)
+	r := bytes.NewReader([]byte(msg))
+	dec := yaml.NewDecoder(r)
+	var t map[interface{}]interface{}
+	resources := []ResourceInfo{}
+	for dec.Decode(&t) == nil {
+		t2 := convert(t)
+		tB, err := yaml.Marshal(t2)
+		if err != nil {
+			continue
+		}
+		n, err := mapnode.NewFromYamlBytes(tB)
+		if err != nil {
+			continue
+		}
+		apiVersion := n.GetString("apiVersion")
+		kind := n.GetString("kind")
+		name := n.GetString("metadata.name")
+		namespace := n.GetString("metadata.namespace")
+		tmp := ResourceInfo{
+			ApiVersion: apiVersion,
+			Kind:       kind,
+			Name:       name,
+			Namespace:  namespace,
+			raw:        tB,
+		}
+		resources = append(resources, tmp)
+	}
+	return resources
 }
 
 func base64decode(str string) string {
@@ -164,4 +228,17 @@ func base64decode(str string) string {
 	}
 	dec := string(decBytes)
 	return dec
+}
+
+func convert(m map[interface{}]interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+	for k, v := range m {
+		switch v2 := v.(type) {
+		case map[interface{}]interface{}:
+			res[fmt.Sprint(k)] = convert(v2)
+		default:
+			res[fmt.Sprint(k)] = v
+		}
+	}
+	return res
 }

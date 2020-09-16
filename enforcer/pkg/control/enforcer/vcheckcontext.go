@@ -173,14 +173,14 @@ func (self *VCheckContext) createPatch() []byte {
 }
 
 func (self *VCheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
-	reqc := self.ReqC
 	signPolicy := self.Loader.MergedSignPolicy()
-	resSigList := self.Loader.ResSigList(self.ReqC)
 	plugins := self.GetEnabledPlugins()
-	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, resSigList, plugins); err != nil {
+	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, plugins); err != nil {
 		return nil, err
 	} else {
-		return evaluator.Eval(reqc)
+		reqc := self.ReqC
+		resSigList := self.Loader.ResSigList(self.ReqC)
+		return evaluator.Eval(reqc, resSigList)
 	}
 }
 

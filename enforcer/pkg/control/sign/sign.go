@@ -75,8 +75,8 @@ type ConcreteSignPolicyEvaluator struct {
 	plugins map[string]bool
 }
 
-func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.VSignPolicy, plugins map[string]bool) (SignPolicy, error) {
-	return &ConcreteSignPolicy{
+func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.VSignPolicy, plugins map[string]bool) (SignPolicyEvaluator, error) {
+	return &ConcreteSignPolicyEvaluator{
 		config:  config,
 		policy:  policy,
 		plugins: plugins,

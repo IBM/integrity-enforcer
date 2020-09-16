@@ -322,10 +322,10 @@ func (self *ResSigLoader) Load() {
 
 	data := []*rsigapi.VResourceSignature{}
 	for _, d := range list1.Items {
-		data = append(data, &d)
+		data = append(data, d)
 	}
 	for _, d := range list2.Items {
-		data = append(data, &d)
+		data = append(data, d)
 	}
 	self.Data = data
 	return
