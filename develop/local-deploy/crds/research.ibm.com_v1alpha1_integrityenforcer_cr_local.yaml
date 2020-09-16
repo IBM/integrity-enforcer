@@ -24,6 +24,11 @@ spec:
         - name: "HelmClusterSigner"
           subjects:
           - email: cluster_signer@signer.com
+    certPoolPath: ""
+    chartPath: ""
+    chartRepo: ""
+    keyringPath: ""
+    verifyType: ""
     patch:
       enabled: true
     log:
@@ -31,10 +36,12 @@ spec:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: ''
       contextLog:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       logLevel: trace
   enforcerConfigCrName: ie-config
   globalConfig: 
@@ -59,7 +66,7 @@ spec:
       port: 9200
       scheme: http
     http:
-      enabled: true
+      enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
     image: ie-logging:local

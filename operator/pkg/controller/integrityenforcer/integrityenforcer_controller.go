@@ -169,13 +169,16 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
+	recResult, recErr = r.createOrUpdateDefaultResourceProtectionProfileCR(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	//Secret
-	if !instance.Spec.GlobalConfig.DetectionMode {
-		if instance.Spec.CertPool.CreateIfNotExist {
-			recResult, recErr = r.createOrUpdateKeyringSecret(instance)
-			if recErr != nil || recResult.Requeue {
-				return recResult, recErr
-			}
+	if instance.Spec.CertPool.CreateIfNotExist {
+		recResult, recErr = r.createOrUpdateKeyringSecret(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
 		}
 	}
 
