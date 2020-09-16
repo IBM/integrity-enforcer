@@ -231,7 +231,7 @@ func GetMAResult(ma4kInput *Ma4kInput, rules []*protect.AttrsPattern) (*MAResult
 func generateMaskKeys(rules []*protect.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
 	reqFields := map[string]string{}
 	reqFields["Namespace"] = namespace
-	reqFields["Name"] = namespace
+	reqFields["Name"] = name
 	reqFields["Kind"] = kind
 	reqFields["UserName"] = username
 	reqFields["UserGroups"] = strings.Join(usergroups, ",")
