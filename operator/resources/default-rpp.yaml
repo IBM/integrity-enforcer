@@ -1,8 +1,18 @@
 apiVersion: research.ibm.com/v1alpha1
 kind: VResourceProtectionProfile
 metadata:
-  name: default-resource-protection-profile
+  name: default-rpp
 spec:
+  ignoreAttrs:
+  - attrs:
+    - metadata.managedFields.*
+    - metadata.resourceVersion
+    - metadata.selfLink
+    - metadata.annotations.control-plane.alpha.kubernetes.io/leader
+    - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+    - metadata.finalizers*
+    match:
+      name: '*'
   ignoreServiceAccount: 
   - serviceAccountName:
     - system:admin
