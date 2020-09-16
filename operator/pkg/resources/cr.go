@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
@@ -28,9 +29,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const defaultRppName = "default-resource-protection-profile"
+const defaultRppName = "default-rpp"
+const defaultCrppName = "default-crpp"
 const signerPolicyName = "signer-policy"
 const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
+const defaultClusterResourceProtectionProfileYamlPath = "/resources/default-crpp.yaml"
 
 // enforcer config cr
 func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.EnforcerConfig {
@@ -105,4 +108,26 @@ func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEn
 	defaultrpp.ObjectMeta.Name = defaultRppName
 	defaultrpp.ObjectMeta.Namespace = cr.Namespace
 	return defaultrpp
+}
+
+// default crpp
+func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *crpp.VClusterResourceProtectionProfile {
+	var defaultcrpp *crpp.VClusterResourceProtectionProfile
+
+	// if cr.Spec.DefaultRpp != nil {
+	// 	defaultcrpp = cr.Spec.DefaultCrpp
+	// } else {
+	deafultCrppBytes, err := ioutil.ReadFile(defaultClusterResourceProtectionProfileYamlPath)
+	if err != nil {
+		//
+	}
+
+	err = yaml.Unmarshal(deafultCrppBytes, &defaultcrpp)
+	if err != nil {
+		//
+	}
+	// }
+
+	defaultcrpp.ObjectMeta.Name = defaultCrppName
+	return defaultcrpp
 }
