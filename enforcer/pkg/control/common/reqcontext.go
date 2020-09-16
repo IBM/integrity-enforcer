@@ -17,7 +17,6 @@
 package common
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -26,9 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -298,23 +295,6 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 
 	kind := pr.getValue("kind.kind")
 
-	hashType := ""
-	hashValue := ""
-	if releaseSecretBytes, _ := helm.FindReleaseSecret(namespace, kind, name, req.Object.Raw); releaseSecretBytes == nil {
-		hashType = HashTypeDefault
-		objNode, _ := mapnode.NewFromBytes(req.Object.Raw)
-		maskedObject := objNode.Mask(CommonMessageMask).ToJson()
-		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
-	} else {
-		if helm.IsReleaseSecret(kind, name) {
-			hashType = HashTypeHelmSecret
-		} else {
-			hashType = HashTypeHelmResource
-		}
-		maskedObject := getMaskedReleaseSecretString(releaseSecretBytes)
-		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
-	}
-
 	rc := &ReqContext{
 		DryRun:          *req.DryRun,
 		RawObject:       req.Object.Raw,
@@ -336,8 +316,6 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		Type:            pr.getValue("object.type"),
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
-		ObjectHashType:  hashType,
-		ObjectHash:      hashValue,
 	}
 
 	return rc
@@ -365,15 +343,4 @@ var CommonMessageMask = []string{
 	"metadata.resourceVersion",
 	"metadata.selfLink",
 	"metadata.uid",
-}
-
-func getMaskedReleaseSecretString(releaseSecretBytes []byte) string {
-	release := helm.DecodeReleaseSecretFromRawBytes(releaseSecretBytes).Data
-	maskedObject := ""
-	for _, tmp := range release.Chart.Templates {
-		tmpB, _ := json.Marshal(tmp)
-		maskedObject = maskedObject + string(tmpB) + "\n"
-	}
-	maskedObject = maskedObject + release.Manifest
-	return maskedObject
 }

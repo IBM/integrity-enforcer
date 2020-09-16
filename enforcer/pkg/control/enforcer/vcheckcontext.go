@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
@@ -34,7 +33,6 @@ import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 /**********************************************
@@ -123,196 +121,6 @@ func NewVCheckContext(config *config.EnforcerConfig) *VCheckContext {
 	return cc
 }
 
-func (self *VCheckContext) ProcessRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
-
-	// init
-	reqc := common.NewReqContext(req)
-	self.ReqC = reqc
-	if reqc.Namespace == "" {
-		self.ResourceScope = "Cluster"
-	} else {
-		self.ResourceScope = "Namespaced"
-	}
-
-	self.DryRun = self.checkIfDryRunAdmission()
-
-	if self.DryRun {
-		return createAdmissionResponse(true, "request is dry run")
-	}
-
-	self.Unprocessed = self.checkIfUnprocessedInIE()
-	if self.Unprocessed {
-		return createAdmissionResponse(true, "request is not processed by IE")
-	}
-
-	if self.checkIfIEResource() {
-		return self.processRequestForIEResource()
-	}
-
-	// Start IE world from here ...
-
-	//init loader
-	self.initLoader()
-
-	//init logger
-	logger.InitSessionLogger(self.ReqC.Namespace,
-		self.ReqC.Name,
-		self.ReqC.ResourceRef().ApiVersion,
-		self.ReqC.Kind,
-		self.ReqC.Operation)
-
-	if !self.config.Log.ConsoleLog.IsInScope(self.ReqC) {
-		self.ConsoleLogEnabled = true
-	}
-
-	if !self.config.Log.ContextLog.IsInScope(self.ReqC) {
-		self.ContextLogEnabled = true
-	}
-
-	self.logEntry()
-
-	requireChk := true
-
-	if ignoredSA, err := self.checkIfIgnoredSA(); err != nil {
-		self.abort("Error when checking if ignored service accounts", err)
-	} else if ignoredSA {
-		self.IgnoredSA = ignoredSA
-		requireChk = false
-	}
-
-	if !self.Aborted && requireChk {
-		if protected, err := self.checkIfProtected(); err != nil {
-			self.abort("Error when check if the resource is protected", err)
-		} else {
-			self.Protected = protected
-		}
-	}
-
-	allowed := true
-	evalReason := common.REASON_UNEXPECTED
-	var errMsg string
-	if !self.Aborted && self.Protected {
-		allowed = false
-
-		//init annotation store (singleton)
-		annotationStoreInstance = &ConcreteAnnotationStore{}
-
-		//evaluate sign policy
-		if !self.Aborted && !allowed {
-			if r, err := self.evalSignPolicy(); err != nil {
-				self.abort("Error when evaluating sign policy", err)
-			} else {
-				self.Result.SignPolicyEvalResult = r
-				if r.Checked && r.Allow {
-					allowed = true
-					evalReason = common.REASON_VALID_SIG
-				}
-				if r.Error != nil {
-					errMsg = r.Error.MakeMessage()
-					if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
-						evalReason = common.REASON_INVALID_SIG
-					} else if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
-						evalReason = common.REASON_NO_POLICY
-					} else if errMsg == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
-						evalReason = common.REASON_NO_SIG
-					} else {
-						evalReason = common.REASON_ERROR
-					}
-				}
-			}
-		}
-
-		//check mutation
-		if !self.Aborted && !allowed && self.ReqC.IsUpdateRequest() {
-			if r, err := self.evalMutation(); err != nil {
-				self.abort("Error when evaluating mutation", err)
-			} else {
-				self.Result.MutationEvalResult = r
-				if r.Checked && !r.IsMutated {
-					allowed = true
-					evalReason = common.REASON_NO_MUTATION
-				}
-			}
-		}
-	}
-
-	self.BreakGlassModeEnabled = self.CheckIfBreakGlassEnabled()
-	self.DetectOnlyModeEnabled = self.CheckIfDetectOnly()
-
-	/********************************************
-				Decision Step [3/3]
-
-		input: allowed, evalReason, errMsg (&matchedPolicy)
-		output: AdmissionResponse
-	********************************************/
-
-	if self.ReqC.IsDeleteRequest() {
-		self.Allow = true
-		self.Verified = true
-		self.ReasonCode = common.REASON_SKIP_DELETE
-		self.Message = common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message
-	} else if self.Aborted {
-		self.Allow = false
-		self.Verified = false
-		self.Message = self.AbortReason
-		self.ReasonCode = common.REASON_ABORTED
-	} else if allowed {
-		self.Allow = true
-		self.Verified = true
-		self.ReasonCode = evalReason
-		self.Message = common.ReasonCodeMap[evalReason].Message
-	} else {
-		self.Allow = false
-		self.Verified = false
-		self.Message = errMsg
-		self.ReasonCode = evalReason
-	}
-
-	if !self.Allow && self.DetectOnlyModeEnabled {
-		self.Allow = true
-		self.Verified = false
-		self.AllowByDetectOnlyMode = true
-		self.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
-		self.ReasonCode = common.REASON_DETECTION
-	} else if !self.Allow && self.BreakGlassModeEnabled {
-		self.Allow = true
-		self.Verified = false
-		self.AllowByBreakGlassMode = true
-		self.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
-		self.ReasonCode = common.REASON_UNVERIFIED
-	}
-
-	if evalReason == common.REASON_UNEXPECTED {
-		self.ReasonCode = evalReason
-	}
-
-	//create admission response
-	admissionResponse := createAdmissionResponse(self.Allow, self.Message)
-
-	patch := self.createPatch()
-
-	if !self.ReqC.IsDeleteRequest() && len(patch) > 0 {
-		admissionResponse.Patch = patch
-		admissionResponse.PatchType = func() *v1beta1.PatchType {
-			pt := v1beta1.PatchTypeJSONPatch
-			return &pt
-		}()
-	}
-
-	if !self.Allow {
-		self.updateRPP()
-	}
-
-	//log context
-	self.logContext()
-
-	//log exit
-	self.logExit()
-
-	return admissionResponse
-
-}
-
 func (self *VCheckContext) logEntry() {
 	if self.ConsoleLogEnabled {
 		sLogger := logger.GetSessionLogger()
@@ -336,14 +144,6 @@ func (self *VCheckContext) logExit() {
 			"aborted": self.Aborted,
 		}).Trace("New Admission Request Sent")
 	}
-}
-
-func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
-	return &v1beta1.AdmissionResponse{
-		Allowed: allowed,
-		Result: &metav1.Status{
-			Message: msg,
-		}}
 }
 
 func (self *VCheckContext) createPatch() []byte {
@@ -374,13 +174,13 @@ func (self *VCheckContext) createPatch() []byte {
 
 func (self *VCheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
-	signPolicy := self.GetVSignPolicy()
+	signPolicy := self.Loader.MergedSignPolicy()
 	resSigList := self.GetResourceSigantures()
 	plugins := self.GetEnabledPlugins()
-	if signPolicy, err := sign.NewSignPolicy(self.config, signPolicy, resSigList, plugins); err != nil {
+	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, resSigList, plugins); err != nil {
 		return nil, err
 	} else {
-		return signPolicy.Eval(reqc)
+		return evaluator.Eval(reqc)
 	}
 }
 
@@ -576,6 +376,10 @@ type Loader struct {
 	ResourceSignature *ctlconfig.ResSigLoader
 }
 
+func (self *Loader) UnprotectedRequestMatchPattern() []policy.RequestMatchPattern {
+	return self.Config.Policy.Ignore
+}
+
 func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
 	rules := []*protect.Rule{}
 	if resourceScope == "Namespaced" {
@@ -621,6 +425,16 @@ func (self *Loader) DetectOnlyMode() bool {
 	return self.Config.Policy.Mode == policy.DetectMode
 }
 
+func (self *Loader) MergedSignPolicy() *policy.VSignPolicy {
+	iepol := self.Config.Policy
+	spol := self.SignPolicy.GetData()
+
+	data := &policy.VSignPolicy{}
+	data = data.Merge(iepol.Sign)
+	data = data.Merge(spol.Spec.VSignPolicy)
+	return data
+}
+
 func (self *VCheckContext) initLoader() {
 	enforcerNamespace := self.config.Namespace
 	requestNamespace := self.ReqC.Namespace
@@ -641,7 +455,7 @@ func (self *VCheckContext) checkIfDryRunAdmission() bool {
 
 func (self *VCheckContext) checkIfUnprocessedInIE() bool {
 	reqc := self.ReqC
-	for _, d := range self.config.Policy.Ignore {
+	for _, d := range self.Loader.UnprotectedRequestMatchPattern() {
 		if d.Match(reqc) {
 			return true
 		}
@@ -659,16 +473,6 @@ func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionRespo
 	// TODO: implement
 	// with reqc + enforceconfig
 	return nil
-}
-
-func (self *VCheckContext) GetVSignPolicy() *policy.VSignPolicy {
-	iepol := self.config.Policy
-	spol := self.Loader.SignPolicy.GetData()
-
-	data := &policy.VSignPolicy{}
-	data = data.Merge(iepol.Sign)
-	data = data.Merge(spol.Spec.VSignPolicy)
-	return data
 }
 
 func (self *VCheckContext) GetEnabledPlugins() map[string]bool {

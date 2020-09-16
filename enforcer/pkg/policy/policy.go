@@ -322,8 +322,8 @@ func (self *VSignPolicy) Merge(data *VSignPolicy) *VSignPolicy {
 func (self *VSignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
-		included := MatchWithPatternArray(namespace, spc.Namespaces)
-		excluded := MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+		included := common.MatchWithPatternArray(namespace, spc.Namespaces)
+		excluded := common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
 		signerMatched := false
 		for _, signerName := range spc.Signers {
 			subjectConditions, ok := signerMap[signerName]
@@ -491,17 +491,17 @@ type SubjectCondition struct {
 }
 
 func (self *SubjectCondition) Match(signer *common.SignerInfo) bool {
-	return MatchPattern(self.Subject.Email, signer.Email) &&
-		MatchPattern(self.Subject.Uid, signer.Uid) &&
-		MatchPattern(self.Subject.Country, signer.Country) &&
-		MatchPattern(self.Subject.Organization, signer.Organization) &&
-		MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
-		MatchPattern(self.Subject.Locality, signer.Locality) &&
-		MatchPattern(self.Subject.Province, signer.Province) &&
-		MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
-		MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
-		MatchPattern(self.Subject.CommonName, signer.CommonName) &&
-		MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
+	return common.MatchPattern(self.Subject.Email, signer.Email) &&
+		common.MatchPattern(self.Subject.Uid, signer.Uid) &&
+		common.MatchPattern(self.Subject.Country, signer.Country) &&
+		common.MatchPattern(self.Subject.Organization, signer.Organization) &&
+		common.MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
+		common.MatchPattern(self.Subject.Locality, signer.Locality) &&
+		common.MatchPattern(self.Subject.Province, signer.Province) &&
+		common.MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
+		common.MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
+		common.MatchPattern(self.Subject.CommonName, signer.CommonName) &&
+		common.MatchPattern(self.Subject.SerialNumber, signer.SerialNumber)
 }
 
 type AllowUnverifiedCondition struct {
@@ -537,14 +537,14 @@ func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
 	}
 	apiVersion := gv.String()
 
-	return MatchPattern(v.Namespace, reqc.Namespace) &&
-		MatchPattern(v.Name, reqc.Name) &&
-		MatchPattern(v.Operation, reqc.Operation) &&
-		MatchPattern(v.Kind, reqc.Kind) &&
-		MatchPattern(v.ApiVersion, apiVersion) &&
-		MatchPattern(v.UserName, reqc.UserName) &&
-		MatchPattern(v.Type, reqc.Type) &&
-		MatchPatternWithArray(v.UserGroup, reqc.UserGroups)
+	return common.MatchPattern(v.Namespace, reqc.Namespace) &&
+		common.MatchPattern(v.Name, reqc.Name) &&
+		common.MatchPattern(v.Operation, reqc.Operation) &&
+		common.MatchPattern(v.Kind, reqc.Kind) &&
+		common.MatchPattern(v.ApiVersion, apiVersion) &&
+		common.MatchPattern(v.UserName, reqc.UserName) &&
+		common.MatchPattern(v.Type, reqc.Type) &&
+		common.MatchPatternWithArray(v.UserGroup, reqc.UserGroups)
 
 }
 

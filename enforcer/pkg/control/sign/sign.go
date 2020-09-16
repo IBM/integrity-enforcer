@@ -63,27 +63,27 @@ type GeneralSignature struct {
 
 ***********************************************/
 
-type SignPolicy interface {
-	Eval(reqc *common.ReqContext) (*common.SignPolicyEvalResult, error)
+// TODO: change this to evaluator, Eval(reqc, resSigList) or
+
+type SignPolicyEvaluator interface {
+	Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) (*common.SignPolicyEvalResult, error)
 }
 
-type ConcreteSignPolicy struct {
-	config     *config.EnforcerConfig
-	policy     *policy.VSignPolicy
-	resSigList *vrsig.VResourceSignatureList
-	plugins    map[string]bool
+type ConcreteSignPolicyEvaluator struct {
+	config  *config.EnforcerConfig
+	policy  *policy.VSignPolicy
+	plugins map[string]bool
 }
 
-func NewSignPolicy(config *config.EnforcerConfig, policy *policy.VSignPolicy, resSigList *vrsig.VResourceSignatureList, plugins map[string]bool) (SignPolicy, error) {
+func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.VSignPolicy, plugins map[string]bool) (SignPolicy, error) {
 	return &ConcreteSignPolicy{
-		config:     config,
-		policy:     policy,
-		resSigList: resSigList,
-		plugins:    plugins,
+		config:  config,
+		policy:  policy,
+		plugins: plugins,
 	}, nil
 }
 
-func (self *ConcreteSignPolicy) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext) *GeneralSignature {
+func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) *GeneralSignature {
 
 	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
@@ -115,9 +115,8 @@ func (self *ConcreteSignPolicy) GetResourceSignature(ref *common.ResourceRef, re
 	}
 
 	//2. pick ResourceSignature from custom resource if available
-	rsCR := self.resSigList
-	if rsCR != nil && len(rsCR.Items) > 0 {
-		si, _, found := rsCR.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
+	if resSigList != nil && len(resSigList.Items) > 0 {
+		si, _, found := resSigList.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
 		if found {
 			signature := base64decode(si.Signature)
 			certificate := base64decode(si.Certificate)
@@ -179,7 +178,7 @@ func (self *ConcreteSignPolicy) GetResourceSignature(ref *common.ResourceRef, re
 	// return nil
 }
 
-func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolicyEvalResult, error) {
+func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) (*common.SignPolicyEvalResult, error) {
 
 	if reqc.IsResourceSignatureRequest() {
 		var rsigObj *vrsig.VResourceSignature
@@ -199,7 +198,7 @@ func (self *ConcreteSignPolicy) Eval(reqc *common.ReqContext) (*common.SignPolic
 	ref := reqc.ResourceRef()
 
 	// find signature
-	rsig := self.GetResourceSignature(ref, reqc)
+	rsig := self.GetResourceSignature(ref, reqc, resSigList)
 	if rsig == nil {
 		return &common.SignPolicyEvalResult{
 			Allow:   false,

@@ -141,7 +141,6 @@ type SignItem struct {
 	MutableAttrs string `json:"mutableAttrs,omitempty"`
 	Signature    string `json:"signature"`
 	Certificate  string `json:"certificate"`
-	MatchMethod  string `json:"matchMethod"`
 	Type         string `json:"type"`
 }
 
@@ -154,7 +153,7 @@ type ResourceInfo struct {
 }
 
 func (si *SignItem) parseMessage() []ResourceInfo {
-	// TODO: implement
+
 	return nil
 }
 
