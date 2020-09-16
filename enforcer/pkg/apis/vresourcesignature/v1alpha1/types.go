@@ -88,16 +88,14 @@ func (ss *VResourceSignature) FindSignature(apiVersion, kind, name, namespace st
 	return "", false
 }
 
-func (ss *VResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, metav1.ObjectMeta, bool) {
+func (ss *VResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
 	signItem := &SignItem{}
-	rsigMeta := metav1.ObjectMeta{}
-	found := false
 	for _, si := range ss.Spec.Data {
-		if si.match(apiVersion, kind, name, namespace) {
-			return si, ss.ObjectMeta, true
+		if matched, yamlBytes := si.match(apiVersion, kind, name, namespace); matched {
+			return si, yamlBytes, true
 		}
 	}
-	return signItem, rsigMeta, found
+	return signItem, nil, false
 }
 
 func (ss *VResourceSignature) Validate() (bool, string) {
@@ -148,16 +146,14 @@ func (ssl *VResourceSignatureList) FindSignature(apiVersion, kind, name, namespa
 	return "", false
 }
 
-func (ssl *VResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, metav1.ObjectMeta, bool) {
+func (ssl *VResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
 	signItem := &SignItem{}
-	rsigMeta := metav1.ObjectMeta{}
-	found := false
 	for _, ss := range ssl.Items {
-		if si, ssmeta, ok := ss.FindSignItem(apiVersion, kind, name, namespace); ok {
-			return si, ssmeta, true
+		if si, yamlBytes, ok := ss.FindSignItem(apiVersion, kind, name, namespace); ok {
+			return si, yamlBytes, true
 		}
 	}
-	return signItem, rsigMeta, found
+	return signItem, nil, false
 }
 
 type SignItem struct {
@@ -177,16 +173,16 @@ type ResourceInfo struct {
 	raw        []byte // raw yaml of single resource
 }
 
-func (si *SignItem) match(apiVersion, kind, name, namespace string) bool {
+func (si *SignItem) match(apiVersion, kind, name, namespace string) (bool, []byte) {
 	for _, ri := range si.parseMessage() {
 		if ri.ApiVersion == apiVersion &&
 			ri.Kind == kind &&
 			ri.Name == name &&
 			(ri.Namespace == namespace || ri.Namespace == "") {
-			return true
+			return true, ri.raw
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (si *SignItem) parseMessage() []ResourceInfo {

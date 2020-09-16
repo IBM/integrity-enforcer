@@ -116,7 +116,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 
 	//2. pick ResourceSignature from custom resource if available
 	if resSigList != nil && len(resSigList.Items) > 0 {
-		si, _, found := resSigList.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
+		si, yamlBytes, found := resSigList.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
 		if found {
 			signature := base64decode(si.Signature)
 			certificate := base64decode(si.Certificate)
@@ -137,7 +137,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": si.MessageScope, "mutableAttrs": mutableAttrs},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "mutableAttrs": mutableAttrs},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}

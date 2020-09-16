@@ -70,6 +70,10 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 
 	if sig.option["matchRequired"] {
 		message, _ := sig.data["message"]
+		// use yamlBytes if single yaml data is extracted from ResourceSignature
+		if yamlBytes, ok := sig.data["yamlBytes"]; ok {
+			message = yamlBytes
+		}
 		mutableAttrs, _ := sig.data["mutableAttrs"]
 		matched := self.MatchMessage([]byte(message), reqc.RawObject, mutableAttrs, self.Namespace, sig.SignType)
 		if !matched {

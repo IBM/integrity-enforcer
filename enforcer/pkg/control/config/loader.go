@@ -19,6 +19,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
@@ -290,6 +291,8 @@ func (self *ResSigLoader) Load() {
 		}
 		logger.Debug("VResourceSignature reloaded.")
 		if len(list1.Items) > 0 {
+			tmpItems := sortByCreationTimestamp(list1.Items)
+			list1.Items = tmpItems
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
 		}
@@ -329,4 +332,15 @@ func (self *ResSigLoader) Load() {
 	}
 	self.Data = data
 	return
+}
+
+func sortByCreationTimestamp(items []*rsigapi.VResourceSignature) []*rsigapi.VResourceSignature {
+	items2 := make([]*rsigapi.VResourceSignature, len(items))
+	copy(items2, items)
+	sort.Slice(items2, func(i, j int) bool {
+		ti := items2[i].GetCreationTimestamp()
+		tj := items2[j].GetCreationTimestamp()
+		return ti.Time.After(tj.Time)
+	})
+	return items2
 }
