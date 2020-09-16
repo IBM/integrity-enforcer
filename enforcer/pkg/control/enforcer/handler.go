@@ -106,11 +106,11 @@ func (self *RequestHandler) Run(cc *VCheckContext, req *v1beta1.AdmissionRequest
 		cc.ReqC.Kind,
 		cc.ReqC.Operation)
 
-	if !cc.config.Log.ConsoleLog.IsInScope(cc.ReqC) {
+	if cc.config.Log.ConsoleLog.IsInScope(cc.ReqC) {
 		cc.ConsoleLogEnabled = true
 	}
 
-	if !cc.config.Log.ContextLog.IsInScope(cc.ReqC) {
+	if cc.config.Log.ContextLog.IsInScope(cc.ReqC) {
 		cc.ContextLogEnabled = true
 	}
 
