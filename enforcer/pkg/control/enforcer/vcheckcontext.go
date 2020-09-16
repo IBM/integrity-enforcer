@@ -175,7 +175,7 @@ func (self *VCheckContext) createPatch() []byte {
 func (self *VCheckContext) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
 	reqc := self.ReqC
 	signPolicy := self.Loader.MergedSignPolicy()
-	resSigList := self.GetResourceSigantures()
+	resSigList := self.Loader.ResSigList(self.ReqC)
 	plugins := self.GetEnabledPlugins()
 	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, resSigList, plugins); err != nil {
 		return nil, err
@@ -435,6 +435,12 @@ func (self *Loader) MergedSignPolicy() *policy.VSignPolicy {
 	return data
 }
 
+func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.VResourceSignatureList {
+	items := self.ResourceSignature.GetData()
+
+	return &rsig.VResourceSignatureList{Items: items}
+}
+
 func (self *VCheckContext) initLoader() {
 	enforcerNamespace := self.config.Namespace
 	requestNamespace := self.ReqC.Namespace
@@ -477,11 +483,6 @@ func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionRespo
 
 func (self *VCheckContext) GetEnabledPlugins() map[string]bool {
 	return self.config.Policy.GetEnabledPlugins()
-}
-
-func (self *VCheckContext) GetResourceSigantures() *rsig.VResourceSignatureList {
-	// TODO: implement
-	return nil
 }
 
 func (self *VCheckContext) GetIgnoreAttrs() *string {
