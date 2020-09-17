@@ -275,7 +275,7 @@ func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalRea
 		dr.Verified = false
 		dr.Message = self.ctx.AbortReason
 		dr.ReasonCode = common.REASON_ABORTED
-	} else if self.reqc.IsDeleteRequest() {
+	} else if self.reqc.IsDeleteRequest() && self.reqc.Kind != "VResourceSignature" {
 		dr.Allow = false
 		dr.Verified = true
 		dr.ReasonCode = common.REASON_BLOCK_DELETE
