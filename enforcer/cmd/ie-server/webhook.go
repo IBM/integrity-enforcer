@@ -65,11 +65,10 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 
 	//create context
 	reqHandler := enforcer.NewRequestHandler(acConfig.EnforcerConfig)
-	checkContext := reqHandler.InitCheckContext()
 	admissionRequest := admissionReviewReq.Request
 
 	//process request
-	admissionResponse := reqHandler.Run(checkContext, admissionRequest)
+	admissionResponse := reqHandler.Run(admissionRequest)
 
 	return admissionResponse
 

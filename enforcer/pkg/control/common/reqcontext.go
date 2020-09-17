@@ -51,6 +51,7 @@ type ObjectMetadata struct {
 }
 
 type ReqContext struct {
+	ResourceScope   string          `json:"resourceScope,omitempty"`
 	DryRun          bool            `json:"dryRun"`
 	RawObject       []byte          `json:"-"`
 	RawOldObject    []byte          `json:"-"`
@@ -295,10 +296,16 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 
 	kind := pr.getValue("kind.kind")
 
+	resourceScope := "Namespaced"
+	if namespace == "" {
+		resourceScope = "Cluster"
+	}
+
 	rc := &ReqContext{
 		DryRun:          *req.DryRun,
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
+		ResourceScope:   resourceScope,
 		RequestUid:      pr.UID,
 		RequestJsonStr:  pr.JsonStr,
 		Name:            name,
@@ -317,7 +324,6 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
 	}
-
 	return rc
 
 }

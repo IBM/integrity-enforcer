@@ -81,21 +81,20 @@ type PluginConfig struct {
 ***********************************************/
 
 type LogScopeConfig struct {
-	Enabled bool                         `json:"enabled,omitempty"`
-	InScope []policy.RequestMatchPattern `json:"inScope,omitempty"`
-	Ignore  []policy.RequestMatchPattern `json:"ignore,omitempty"`
+	Enabled bool                     `json:"enabled,omitempty"`
+	InScope []protect.RequestPattern `json:"inScope,omitempty"`
+	Ignore  []protect.RequestPattern `json:"ignore,omitempty"`
 }
 
 func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
 	if !sc.Enabled {
 		return false
 	}
-
+	reqFields := reqc.Map()
 	isInScope := false
 	if sc.InScope != nil {
 		for _, v := range sc.InScope {
-
-			if v.Match(reqc) {
+			if v.Match(reqFields) {
 				isInScope = true
 				break
 			}
@@ -105,7 +104,7 @@ func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
 	isIgnored := false
 	if sc.Ignore != nil {
 		for _, v := range sc.Ignore {
-			if v.Match(reqc) {
+			if v.Match(reqFields) {
 				isIgnored = true
 				break
 			}
