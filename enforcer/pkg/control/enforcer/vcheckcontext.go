@@ -93,34 +93,6 @@ type VCheckResult struct {
 	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
-func NewVCheckContext(config *config.EnforcerConfig) *VCheckContext {
-	cc := &VCheckContext{
-		config: config,
-		Loader: nil,
-
-		IgnoredSA: false,
-		Protected: false,
-		Aborted:   false,
-		Allow:     false,
-		Verified:  false,
-		Result: &CheckResult{
-			SignPolicyEvalResult: &common.SignPolicyEvalResult{
-				Allow:   false,
-				Checked: false,
-			},
-			ResolveOwnerResult: &common.ResolveOwnerResult{
-				Owners:  &common.OwnerList{},
-				Checked: false,
-			},
-			MutationEvalResult: &common.MutationEvalResult{
-				IsMutated: false,
-				Checked:   false,
-			},
-		},
-	}
-	return cc
-}
-
 func (self *VCheckContext) logEntry() {
 	if self.ConsoleLogEnabled {
 		sLogger := logger.GetSessionLogger()
@@ -377,8 +349,8 @@ type Loader struct {
 	ResourceSignature *ctlconfig.ResSigLoader
 }
 
-func (self *Loader) UnprotectedRequestMatchPattern() []policy.RequestMatchPattern {
-	return self.Config.Policy.Ignore
+func (self *Loader) UnprotectedRequestMatchPattern() []protect.RequestPattern {
+	return self.Config.Ignore
 }
 
 func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
@@ -440,15 +412,15 @@ func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 }
 
 func (self *Loader) DetectOnlyMode() bool {
-	return self.Config.Policy.Mode == policy.DetectMode
+	return self.Config.Mode == config.DetectMode
 }
 
 func (self *Loader) MergedSignPolicy() *policy.VSignPolicy {
-	iepol := self.Config.Policy
+	iepol := self.Config.SignPolicy
 	spol := self.SignPolicy.GetData()
 
 	data := &policy.VSignPolicy{}
-	data = data.Merge(iepol.Sign)
+	data = data.Merge(iepol)
 	data = data.Merge(spol.Spec.VSignPolicy)
 	return data
 }
@@ -480,7 +452,7 @@ func (self *VCheckContext) checkIfDryRunAdmission() bool {
 func (self *VCheckContext) checkIfUnprocessedInIE() bool {
 	reqc := self.ReqC
 	for _, d := range self.Loader.UnprotectedRequestMatchPattern() {
-		if d.Match(reqc) {
+		if d.Match(reqc.Map()) {
 			return true
 		}
 	}
@@ -500,7 +472,7 @@ func (self *VCheckContext) processRequestForIEResource() *v1beta1.AdmissionRespo
 }
 
 func (self *VCheckContext) GetEnabledPlugins() map[string]bool {
-	return self.config.Policy.GetEnabledPlugins()
+	return self.config.GetEnabledPlugins()
 }
 
 func (self *VCheckContext) checkIfProtected() (bool, error) {

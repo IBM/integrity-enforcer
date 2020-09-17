@@ -151,7 +151,8 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	if instance.Spec.EnforcerConfig.Policy.CheckPluginEnabled("helm") {
+	enabledPulgins := instance.Spec.EnforcerConfig.GetEnabledPlugins()
+	if enabledPulgins["helm"] {
 		recResult, recErr = r.createOrUpdateHelmReleaseMetadataCRD(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr

@@ -26,7 +26,6 @@ import (
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	"github.com/jinzhu/copier"
 )
 
 type VerifyType string
@@ -62,8 +61,6 @@ type GeneralSignature struct {
 				SignPolicy
 
 ***********************************************/
-
-// TODO: change this to evaluator, Eval(reqc, resSigList) or
 
 type SignPolicyEvaluator interface {
 	Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) (*common.SignPolicyEvalResult, error)
@@ -244,10 +241,8 @@ func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigLis
 	// signer
 	signer := sigVerifyResult.Signer
 
-	reqcForEval := makeReqcForEval(reqc, reqc.RawObject)
-
 	// check signer policy
-	signerMatched, matchedPolicy := self.policy.Match(reqcForEval.Namespace, signer)
+	signerMatched, matchedPolicy := self.policy.Match(reqc.Namespace, signer)
 	matchedPolicyStr := ""
 	if matchedPolicy != nil {
 		tmpMatchedPolicy, _ := json.Marshal(matchedPolicy)
@@ -273,32 +268,4 @@ func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigLis
 			},
 		}, nil
 	}
-}
-
-func makeReqcForEval(reqc *common.ReqContext, rawObj []byte) *common.ReqContext {
-	var err error
-	isResourceSignature := reqc.IsResourceSignatureRequest()
-
-	if !isResourceSignature {
-		return reqc
-	}
-
-	reqcForEval := &common.ReqContext{}
-	copier.Copy(&reqcForEval, &reqc)
-
-	if isResourceSignature {
-		var rsigObj *vrsig.VResourceSignature
-		err = json.Unmarshal(rawObj, &rsigObj)
-		if err == nil {
-
-			// TODO: override namespace with Parsed message in ResSig
-
-			// if rsigObj.Spec.Data[0].Metadata.Namespace != "" {
-			// 	reqcForEval.Namespace = rsigObj.Spec.Data[0].Metadata.Namespace
-			// }
-		} else {
-			logger.Error(err)
-		}
-	}
-	return reqcForEval
 }

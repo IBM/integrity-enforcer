@@ -6,24 +6,23 @@ spec:
   affinity: {}
   verifyType: x509
   enforcerConfig:
-    policy:
-      plugin:
-      - name: helm
-        enabled: false
-      sign:
-        policies:
-        - namespaces:
-          - "*"
-          signers:
-          - "ClusterSigner"
-          - "HelmClusterSigner"
+    plugin:
+    - name: helm
+      enabled: false
+    signPolicy:
+      policies:
+      - namespaces:
+        - "*"
         signers:
-        - name: "ClusterSigner"
-          subjects:
-          - commonName: "ClusterAdmin"
-        - name: "HelmClusterSigner"
-          subjects:
-          - email: cluster_signer@signer.com
+        - "ClusterSigner"
+        - "HelmClusterSigner"
+      signers:
+      - name: "ClusterSigner"
+        subjects:
+        - commonName: "ClusterAdmin"
+      - name: "HelmClusterSigner"
+        subjects:
+        - email: cluster_signer@signer.com
     patch:
       enabled: true
     log:
@@ -59,7 +58,7 @@ spec:
       port: 9200
       scheme: http
     http:
-      enabled: true
+      enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
     image: ie-logging:local

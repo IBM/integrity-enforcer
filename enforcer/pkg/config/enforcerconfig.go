@@ -20,7 +20,16 @@ import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	"github.com/jinzhu/copier"
+)
+
+type IntegrityEnforcerMode string
+
+const (
+	UnknownMode IntegrityEnforcerMode = ""
+	EnforceMode IntegrityEnforcerMode = "enforce"
+	DetectMode  IntegrityEnforcerMode = "detect"
 )
 
 type PatchConfig struct {
@@ -28,17 +37,24 @@ type PatchConfig struct {
 }
 
 type EnforcerConfig struct {
-	Patch              *PatchConfig                    `json:"patch,omitempty"`
-	Log                *LoggingScopeConfig             `json:"log,omitempty"`
-	Policy             *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
-	Namespace          string                          `json:"-"`
-	PolicyNamespace    string                          `json:"-"`
-	SignatureNamespace string                          `json:"-"`
-	VerifyType         string                          `json:"verifyType"`
-	CertPoolPath       string                          `json:"certPoolPath"`
-	KeyringPath        string                          `json:"keyringPath"`
-	ChartDir           string                          `json:"chartPath"`
-	ChartRepo          string                          `json:"chartRepo"`
+	Patch *PatchConfig        `json:"patch,omitempty"`
+	Log   *LoggingScopeConfig `json:"log,omitempty"`
+
+	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
+	Allow      []protect.RequestPattern `json:"allow,omitempty"`
+	Ignore     []protect.RequestPattern `json:"ignore,omitempty"`
+	SignPolicy *policy.VSignPolicy      `json:"signPolicy,omitempty"`
+	Mode       IntegrityEnforcerMode    `json:"mode,omitempty"`
+	Plugin     []PluginConfig           `json:"plugin,omitempty"`
+
+	Namespace          string `json:"-"`
+	PolicyNamespace    string `json:"-"`
+	SignatureNamespace string `json:"-"`
+	VerifyType         string `json:"verifyType"`
+	CertPoolPath       string `json:"certPoolPath"`
+	KeyringPath        string `json:"keyringPath"`
+	ChartDir           string `json:"chartPath"`
+	ChartRepo          string `json:"chartRepo"`
 }
 
 type LoggingScopeConfig struct {
@@ -51,6 +67,11 @@ type LoggingScopeConfig struct {
 	ConsoleLogFile       string          `json:"consoleLogFile,omitempty"`
 	ContextLogFile       string          `json:"contextLogFile,omitempty"`
 	ContextLogRotateSize int64           `json:"contextLogRotateSize,omitempty"`
+}
+
+type PluginConfig struct {
+	Name    string `json:"name,omitempty"`
+	Enabled bool   `json:"enabled,omitempty"`
 }
 
 /**********************************************
@@ -166,4 +187,14 @@ func (ec *EnforcerConfig) LoggerConfig() logger.LoggerConfig {
 func (ec *EnforcerConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	lc := ec.LogConfig()
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
+}
+
+func (ec *EnforcerConfig) GetEnabledPlugins() map[string]bool {
+	plugins := map[string]bool{}
+	for _, plg := range ec.Plugin {
+		if plg.Enabled {
+			plugins[plg.Name] = true
+		}
+	}
+	return plugins
 }
