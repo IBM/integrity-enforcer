@@ -66,21 +66,10 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		return createAdmissionResponse(true, "request is not processed by IE")
 	}
 
-	if self.checkIfIEResource() {
-		return self.processRequestForIEResource()
-	}
-
 	// Start IE world from here ...
 
 	//init loader
 	self.initLoader()
-
-	//init logger
-	logger.InitSessionLogger(reqc.Namespace,
-		reqc.Name,
-		reqc.ResourceRef().ApiVersion,
-		reqc.Kind,
-		reqc.Operation)
 
 	if self.config.Log.IncludeRequest {
 		self.ctx.IncludeRequest = true
@@ -94,27 +83,43 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		self.ctx.ContextLogEnabled = true
 	}
 
+	//init logger
+	logger.InitSessionLogger(reqc.Namespace,
+		reqc.Name,
+		reqc.ResourceRef().ApiVersion,
+		reqc.Kind,
+		reqc.Operation)
+
 	self.logEntry()
 
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
-
-	if ignoredSA, err := self.checkIfIgnoredSA(); err != nil {
-		self.abort("Error when checking if ignored service accounts", err)
-	} else if ignoredSA {
-		self.ctx.IgnoredSA = ignoredSA
-		allowed = true
-		evalReason = common.REASON_IGNORED_SA
-	}
-
-	if !self.ctx.Aborted && !allowed {
-		if protected, err := self.checkIfProtected(); err != nil {
-			self.abort("Error when check if the resource is protected", err)
+	if self.checkIfIEResource() {
+		self.ctx.IEResource = true
+		if self.checkIfIEAdminRequest() {
+			allowed = true
+			evalReason = common.REASON_IE_ADMIN
 		} else {
-			self.ctx.Protected = protected
-			if !protected {
-				allowed = true
-				evalReason = common.REASON_NOT_PROTECTED
+			self.ctx.Protected = true
+		}
+	} else {
+		if ignoredSA, err := self.checkIfIgnoredSA(); err != nil {
+			self.abort("Error when checking if ignored service accounts", err)
+		} else if ignoredSA {
+			self.ctx.IgnoredSA = ignoredSA
+			allowed = true
+			evalReason = common.REASON_IGNORED_SA
+		}
+
+		if !self.ctx.Aborted && !allowed {
+			if protected, err := self.checkIfProtected(); err != nil {
+				self.abort("Error when check if the resource is protected", err)
+			} else {
+				self.ctx.Protected = protected
+				if !protected {
+					allowed = true
+					evalReason = common.REASON_NOT_PROTECTED
+				}
 			}
 		}
 	}
@@ -148,7 +153,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		}
 
 		//check mutation
-		if !self.ctx.Aborted && !allowed && reqc.IsUpdateRequest() {
+		if !self.ctx.Aborted && !allowed && reqc.IsUpdateRequest() && !self.ctx.IEResource {
 			if r, err := self.evalMutation(); err != nil {
 				self.abort("Error when evaluating mutation", err)
 			} else {
@@ -164,52 +169,19 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	self.ctx.BreakGlassModeEnabled = self.CheckIfBreakGlassEnabled()
 	self.ctx.DetectOnlyModeEnabled = self.CheckIfDetectOnly()
 
-	/********************************************
-				Decision Step [3/3]
-
-		input: allowed, evalReason, errMsg (&matchedPolicy)
-		output: AdmissionResponse
-	********************************************/
-
-	if reqc.IsDeleteRequest() {
-		self.ctx.Allow = true
-		self.ctx.Verified = true
-		self.ctx.ReasonCode = common.REASON_SKIP_DELETE
-		self.ctx.Message = common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message
-	} else if self.ctx.Aborted {
-		self.ctx.Allow = false
-		self.ctx.Verified = false
-		self.ctx.Message = self.ctx.AbortReason
-		self.ctx.ReasonCode = common.REASON_ABORTED
-	} else if allowed {
-		self.ctx.Allow = true
-		self.ctx.Verified = true
-		self.ctx.ReasonCode = evalReason
-		self.ctx.Message = common.ReasonCodeMap[evalReason].Message
+	var dr *DecisionResult
+	if self.ctx.IEResource {
+		dr = self.evalFinalDecisionForIEResource(allowed, evalReason, errMsg)
 	} else {
-		self.ctx.Allow = false
-		self.ctx.Verified = false
-		self.ctx.Message = errMsg
-		self.ctx.ReasonCode = evalReason
+		dr = self.evalFinalDecision(allowed, evalReason, errMsg)
 	}
 
-	if !self.ctx.Allow && self.ctx.DetectOnlyModeEnabled {
-		self.ctx.Allow = true
-		self.ctx.Verified = false
-		self.ctx.AllowByDetectOnlyMode = true
-		self.ctx.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
-		self.ctx.ReasonCode = common.REASON_DETECTION
-	} else if !self.ctx.Allow && self.ctx.BreakGlassModeEnabled {
-		self.ctx.Allow = true
-		self.ctx.Verified = false
-		self.ctx.AllowByBreakGlassMode = true
-		self.ctx.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
-		self.ctx.ReasonCode = common.REASON_UNVERIFIED
-	}
-
-	if evalReason == common.REASON_UNEXPECTED {
-		self.ctx.ReasonCode = evalReason
-	}
+	self.ctx.Allow = dr.Allow
+	self.ctx.Verified = dr.Verified
+	self.ctx.ReasonCode = dr.ReasonCode
+	self.ctx.Message = dr.Message
+	self.ctx.AllowByDetectOnlyMode = dr.AllowByDetectOnlyMode
+	self.ctx.AllowByBreakGlassMode = dr.AllowByBreakGlassMode
 
 	//create admission response
 	admissionResponse := createAdmissionResponse(self.ctx.Allow, self.ctx.Message)
@@ -224,7 +196,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		}()
 	}
 
-	if !self.ctx.Allow {
+	if !self.ctx.Allow && !self.ctx.IEResource {
 		self.updateRPP()
 	}
 
@@ -236,6 +208,103 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	return admissionResponse
 
+}
+
+type DecisionResult struct {
+	Allow                 bool
+	Verified              bool
+	ReasonCode            int
+	Message               string
+	AllowByDetectOnlyMode bool
+	AllowByBreakGlassMode bool
+}
+
+func (self *RequestHandler) evalFinalDecision(allowed bool, evalReason int, errMsg string) *DecisionResult {
+
+	dr := &DecisionResult{}
+
+	if self.reqc.IsDeleteRequest() {
+		dr.Allow = true
+		dr.Verified = true
+		dr.ReasonCode = common.REASON_SKIP_DELETE
+		dr.Message = common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message
+	} else if self.ctx.Aborted {
+		dr.Allow = false
+		dr.Verified = false
+		dr.Message = self.ctx.AbortReason
+		dr.ReasonCode = common.REASON_ABORTED
+	} else if allowed {
+		dr.Allow = true
+		dr.Verified = true
+		dr.ReasonCode = evalReason
+		dr.Message = common.ReasonCodeMap[evalReason].Message
+	} else {
+		dr.Allow = false
+		dr.Verified = false
+		dr.Message = errMsg
+		dr.ReasonCode = evalReason
+	}
+
+	if !dr.Allow && self.ctx.DetectOnlyModeEnabled {
+		dr.Allow = true
+		dr.Verified = false
+		dr.AllowByDetectOnlyMode = true
+		dr.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
+		dr.ReasonCode = common.REASON_DETECTION
+	} else if !dr.Allow && self.ctx.BreakGlassModeEnabled {
+		dr.Allow = true
+		dr.Verified = false
+		dr.AllowByBreakGlassMode = true
+		dr.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
+		dr.ReasonCode = common.REASON_UNVERIFIED
+	}
+
+	if evalReason == common.REASON_UNEXPECTED {
+		dr.ReasonCode = evalReason
+	}
+
+	return dr
+}
+
+func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalReason int, errMsg string) *DecisionResult {
+
+	dr := &DecisionResult{}
+
+	if self.ctx.Aborted {
+		dr.Allow = false
+		dr.Verified = false
+		dr.Message = self.ctx.AbortReason
+		dr.ReasonCode = common.REASON_ABORTED
+	} else if self.reqc.IsDeleteRequest() {
+		dr.Allow = false
+		dr.Verified = true
+		dr.ReasonCode = common.REASON_BLOCK_DELETE
+		dr.Message = common.ReasonCodeMap[common.REASON_BLOCK_DELETE].Message
+	} else if allowed {
+		dr.Allow = true
+		dr.Verified = true
+		dr.ReasonCode = evalReason
+		dr.Message = common.ReasonCodeMap[evalReason].Message
+	} else {
+		dr.Allow = false
+		dr.Verified = false
+		dr.Message = errMsg
+		dr.ReasonCode = evalReason
+	}
+
+	if !dr.Allow && self.ctx.DetectOnlyModeEnabled {
+		dr.Allow = true
+		dr.Verified = false
+		dr.AllowByDetectOnlyMode = true
+		dr.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
+		dr.ReasonCode = common.REASON_DETECTION
+	}
+
+	if evalReason == common.REASON_UNEXPECTED {
+		dr.ReasonCode = evalReason
+	}
+
+	return dr
 }
 
 func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
@@ -356,15 +425,11 @@ func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 }
 
 func (self *RequestHandler) checkIfIEResource() bool {
-	// TODO: implement
-	// with reqc + enforceconfig
-	return false
+	return self.reqc.ApiGroup == "research.ibm.com"
 }
 
-func (self *RequestHandler) processRequestForIEResource() *v1beta1.AdmissionResponse {
-	// TODO: implement
-	// with reqc + enforceconfig
-	return nil
+func (self *RequestHandler) checkIfIEAdminRequest() bool {
+	return common.MatchPatternWithArray("system:masters", self.reqc.UserGroups)
 }
 
 func (self *RequestHandler) GetEnabledPlugins() map[string]bool {
