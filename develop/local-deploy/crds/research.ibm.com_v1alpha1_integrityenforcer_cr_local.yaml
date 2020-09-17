@@ -23,6 +23,13 @@ spec:
       - name: "HelmClusterSigner"
         subjects:
         - email: cluster_signer@signer.com
+    ignore:
+    - kind: Event
+    - kind: Lease
+    - kind: Endpoints
+    - kind: TokenReview
+    - kind: SubjectAccessReview
+    - kind: SelfSubjectAccessReview
     certPoolPath: ""
     chartPath: ""
     chartRepo: ""
