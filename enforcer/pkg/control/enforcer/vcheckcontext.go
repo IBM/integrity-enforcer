@@ -52,6 +52,7 @@ type VCheckContext struct {
 
 	IgnoredSA   bool   `json:"ignoredSA"`
 	Protected   bool   `json:"protected"`
+	IEResource  bool   `json:"ieresource"`
 	Allow       bool   `json:"allow"`
 	Verified    bool   `json:"verified"`
 	Aborted     bool   `json:"aborted"`
@@ -123,6 +124,7 @@ func (self *VCheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 		//context
 		"ignoreSA":    self.IgnoredSA,
 		"protected":   self.Protected,
+		"ieresource":  self.IEResource,
 		"allowed":     self.Allow,
 		"verified":    self.Verified,
 		"aborted":     self.Aborted,
