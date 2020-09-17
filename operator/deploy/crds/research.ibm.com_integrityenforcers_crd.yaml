@@ -613,6 +613,155 @@ spec:
                 name:
                   type: string
               type: object
+            defaultResourceProtectionProfile:
+              description: 'EnforcePolicy is the CRD. Use this command to generate
+                deepcopy for it: ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis
+                github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
+                For more details of code-generator, please visit https://github.com/kubernetes/code-generator
+                VResourceProtectionProfile is the CRD. Use this command to generate
+                deepcopy for it:'
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the
+                    latest internal value, and may reject unrecognized values. More
+                    info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  type: string
+                kind:
+                  description: 'Kind is a string value representing the REST resource
+                    this object represents. Servers may infer this from the endpoint
+                    the client submits requests to. Cannot be updated. In CamelCase.
+                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: VResourceProtectionProfileSpec defines the desired
+                    state of AppEnforcePolicy
+                  properties:
+                    checkPlatformRequests:
+                      type: boolean
+                    delete:
+                      type: boolean
+                    disabled:
+                      type: boolean
+                    ignoreAttrs:
+                      items:
+                        properties:
+                          attrs:
+                            items:
+                              type: string
+                            type: array
+                          match:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              scope:
+                                type: string
+                            type: object
+                        type: object
+                      type: array
+                    ignoreServiceAccount:
+                      items:
+                        properties:
+                          match:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              scope:
+                                type: string
+                            type: object
+                          serviceAccountName:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                    protectAttrs:
+                      items:
+                        properties:
+                          attrs:
+                            items:
+                              type: string
+                            type: array
+                          match:
+                            properties:
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              scope:
+                                type: string
+                            type: object
+                        type: object
+                      type: array
+                    rules:
+                      items:
+                        properties:
+                          exclude:
+                            items:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                kind:
+                                  type: string
+                                name:
+                                  type: string
+                                namespace:
+                                  type: string
+                                scope:
+                                  type: string
+                              type: object
+                            type: array
+                          match:
+                            items:
+                              properties:
+                                apiVersion:
+                                  type: string
+                                kind:
+                                  type: string
+                                name:
+                                  type: string
+                                namespace:
+                                  type: string
+                                scope:
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      type: array
+                  type: object
+                status:
+                  description: VResourceProtectionProfileStatus defines the observed
+                    state of AppEnforcePolicy
+                  properties:
+                    deniedRequests:
+                      items:
+                        properties:
+                          matchedRule:
+                            type: string
+                          request:
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+              type: object
             enforcerConfig:
               properties:
                 allow:
@@ -869,6 +1018,12 @@ spec:
                   type: object
                 verifyType:
                   type: string
+              required:
+              - certPoolPath
+              - chartPath
+              - chartRepo
+              - keyringPath
+              - verifyType
               type: object
             enforcerConfigCrName:
               type: string
@@ -878,8 +1033,6 @@ spec:
                   items:
                     type: string
                   type: array
-                detectionMode:
-                  type: boolean
                 noCertManager:
                   type: boolean
                 openShift:
@@ -961,21 +1114,13 @@ spec:
                   properties:
                     limits:
                       additionalProperties:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        type: string
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                     requests:
                       additionalProperties:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        type: string
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1311,21 +1456,13 @@ spec:
                   properties:
                     limits:
                       additionalProperties:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        type: string
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                     requests:
                       additionalProperties:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        type: string
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise

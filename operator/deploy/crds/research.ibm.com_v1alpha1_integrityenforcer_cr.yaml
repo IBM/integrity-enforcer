@@ -8,21 +8,27 @@ spec:
   enforcerConfig:
     policy:
       plugin:
-      - name: helm
-        enabled: false
-      signer:
-      - request:
-          namespace: '*'
-        condition:
-          name: ClusterSigner
-          subject:
-            commonName: "ClusterAdmin"
-      - request:
-          namespace: '*'
-        condition:
-          name: HelmClusterSigner
-          subject:
-            email: cluster_signer@signer.com
+    - name: helm
+      enabled: false
+    signPolicy:
+      policies:
+      - namespaces:
+        - "*"
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
+      signers:
+      - name: "ClusterSigner"
+        subjects:
+        - commonName: "ClusterAdmin"
+      - name: "HelmClusterSigner"
+        subjects:
+        - email: cluster_signer@signer.com
+    certPoolPath: ""
+    chartPath: ""
+    chartRepo: ""
+    keyringPath: ""
+    verifyType: ""
     patch:
       enabled: true
     log:
@@ -30,15 +36,16 @@ spec:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       contextLog:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       logLevel: trace
   enforcerConfigCrName: ie-config
   globalConfig:
     openShift: true
-    detectionMode: false
   imagePullSecrets: []
   certPoolConfig:
     createIfNotExist: false
