@@ -175,6 +175,11 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
+	recResult, recErr = r.createOrUpdateDefaultClusterResourceProtectionProfileCR(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	//Secret
 	if instance.Spec.CertPool.CreateIfNotExist {
 		recResult, recErr = r.createOrUpdateKeyringSecret(instance)

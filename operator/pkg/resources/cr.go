@@ -130,5 +130,6 @@ func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.Inte
 	}
 
 	defaultcrpp.ObjectMeta.Name = defaultCrppName
+	defaultcrpp.ObjectMeta.Namespace = cr.Namespace
 	return defaultcrpp
 }

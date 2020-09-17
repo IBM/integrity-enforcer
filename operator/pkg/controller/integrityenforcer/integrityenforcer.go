@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pkg/pgpkey"
@@ -230,8 +231,51 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultResourceProtectionProf
 		return reconcile.Result{}, err
 	}
 
-	// If PodSecurityPolicy does not exist, create it and requeue
+	// If RPP does not exist, create it and requeue
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new resource")
+		err = r.client.Create(context.TODO(), expected)
+		if err != nil && errors.IsAlreadyExists(err) {
+			// Already exists from previous reconcile, requeue.
+			reqLogger.Info("Skip reconcile: resource already exists")
+			return reconcile.Result{Requeue: true}, nil
+		} else if err != nil {
+			reqLogger.Error(err, "Failed to create new resource")
+			return reconcile.Result{}, err
+		}
+		// Created successfully - return and requeue
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// No extra validation
+
+	// No reconcile was necessary
+	return reconcile.Result{}, nil
+
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultClusterResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+
+	found := &crpp.VClusterResourceProtectionProfile{}
+	expected := res.BuildDefaultClusterResourceProtectionProfileForIE(instance)
+
+	reqLogger := log.WithValues(
+		"Instance.Name", instance.Name,
+		"DefaultClusterResourceProtectionProfile.Name", expected.Name)
+
+	// Set CR instance as the owner and controller
+	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
+	if err != nil {
+		reqLogger.Error(err, "Failed to define expected resource")
+		return reconcile.Result{}, err
+	}
+
+	// If CRPP does not exist, create it and requeue
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: ""}, found)
 
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new resource")
