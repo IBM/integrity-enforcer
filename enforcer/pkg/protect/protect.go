@@ -68,7 +68,11 @@ func (self *Rule) MatchWithRequest(reqFields map[string]string) bool {
 }
 
 func (self *RequestPattern) Match(reqFields map[string]string) bool {
-	v := reflect.Indirect(reflect.ValueOf(self))
+	p := reflect.ValueOf(self)
+	if p.IsNil() {
+		return false
+	}
+	v := reflect.Indirect(p)
 	t := v.Type()
 	matched := true
 	patternCount := 0
