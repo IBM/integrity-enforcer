@@ -27,6 +27,7 @@ import (
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const defaultRppName = "default-rpp"
@@ -34,6 +35,8 @@ const defaultCrppName = "default-crpp"
 const signerPolicyName = "signer-policy"
 const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
 const defaultClusterResourceProtectionProfileYamlPath = "/resources/default-crpp.yaml"
+
+var log = logf.Log.WithName("controller_integrityenforcer")
 
 // enforcer config cr
 func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.EnforcerConfig {
@@ -90,18 +93,19 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 // default rpp
 func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.VResourceProtectionProfile {
 	var defaultrpp *rpp.VResourceProtectionProfile
+	reqLogger := log.WithValues("BuildDefaultResourceProtectionProfile", defaultRppName)
 
 	if cr.Spec.DefaultRpp != nil {
 		defaultrpp = cr.Spec.DefaultRpp
 	} else {
 		deafultRppBytes, err := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
 		if err != nil {
-			//
+			reqLogger.Error(err, "Failed to read default rpp file")
 		}
 
 		err = yaml.Unmarshal(deafultRppBytes, &defaultrpp)
 		if err != nil {
-			//
+			reqLogger.Error(err, "Failed to unmarshal yaml")
 		}
 	}
 
@@ -113,20 +117,17 @@ func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEn
 // default crpp
 func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *crpp.VClusterResourceProtectionProfile {
 	var defaultcrpp *crpp.VClusterResourceProtectionProfile
+	reqLogger := log.WithValues("BuildDefaultClusterResourceProtectionProfile", defaultCrppName)
 
-	// if cr.Spec.DefaultRpp != nil {
-	// 	defaultcrpp = cr.Spec.DefaultCrpp
-	// } else {
 	deafultCrppBytes, err := ioutil.ReadFile(defaultClusterResourceProtectionProfileYamlPath)
 	if err != nil {
-		//
+		reqLogger.Error(err, "Failed to read default crpp file")
 	}
 
 	err = yaml.Unmarshal(deafultCrppBytes, &defaultcrpp)
 	if err != nil {
-		//
+		reqLogger.Error(err, "Failed to unmarshal yaml")
 	}
-	// }
 
 	defaultcrpp.ObjectMeta.Name = defaultCrppName
 	return defaultcrpp
