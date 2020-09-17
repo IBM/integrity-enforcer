@@ -654,6 +654,8 @@ spec:
                             type: array
                           match:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -662,7 +664,13 @@ spec:
                                 type: string
                               namespace:
                                 type: string
+                              operation:
+                                type: string
                               scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
                                 type: string
                             type: object
                         type: object
@@ -672,6 +680,8 @@ spec:
                         properties:
                           match:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -680,7 +690,13 @@ spec:
                                 type: string
                               namespace:
                                 type: string
+                              operation:
+                                type: string
                               scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
                                 type: string
                             type: object
                           serviceAccountName:
@@ -698,6 +714,8 @@ spec:
                             type: array
                           match:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -706,7 +724,13 @@ spec:
                                 type: string
                               namespace:
                                 type: string
+                              operation:
+                                type: string
                               scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
                                 type: string
                             type: object
                         type: object
@@ -717,6 +741,8 @@ spec:
                           exclude:
                             items:
                               properties:
+                                apiGroup:
+                                  type: string
                                 apiVersion:
                                   type: string
                                 kind:
@@ -725,13 +751,21 @@ spec:
                                   type: string
                                 namespace:
                                   type: string
+                                operation:
+                                  type: string
                                 scope:
+                                  type: string
+                                usergroup:
+                                  type: string
+                                username:
                                   type: string
                               type: object
                             type: array
                           match:
                             items:
                               properties:
+                                apiGroup:
+                                  type: string
                                 apiVersion:
                                   type: string
                                 kind:
@@ -740,7 +774,13 @@ spec:
                                   type: string
                                 namespace:
                                   type: string
+                                operation:
+                                  type: string
                                 scope:
+                                  type: string
+                                usergroup:
+                                  type: string
+                                username:
                                   type: string
                               type: object
                             type: array
@@ -828,6 +868,8 @@ spec:
                         ignore:
                           items:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -838,7 +880,7 @@ spec:
                                 type: string
                               operation:
                                 type: string
-                              type:
+                              scope:
                                 type: string
                               usergroup:
                                 type: string
@@ -849,6 +891,8 @@ spec:
                         inScope:
                           items:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -859,7 +903,7 @@ spec:
                                 type: string
                               operation:
                                 type: string
-                              type:
+                              scope:
                                 type: string
                               usergroup:
                                 type: string
@@ -879,6 +923,8 @@ spec:
                         ignore:
                           items:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -889,7 +935,7 @@ spec:
                                 type: string
                               operation:
                                 type: string
-                              type:
+                              scope:
                                 type: string
                               usergroup:
                                 type: string
@@ -900,6 +946,8 @@ spec:
                         inScope:
                           items:
                             properties:
+                              apiGroup:
+                                type: string
                               apiVersion:
                                 type: string
                               kind:
@@ -910,7 +958,7 @@ spec:
                                 type: string
                               operation:
                                 type: string
-                              type:
+                              scope:
                                 type: string
                               usergroup:
                                 type: string
