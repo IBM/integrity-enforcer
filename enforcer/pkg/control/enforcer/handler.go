@@ -464,12 +464,16 @@ func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
 	if resourceScope == "Namespaced" {
 		rpps := self.RPP.GetData()
 		for _, d := range rpps {
-			rules = append(rules, d.Spec.Rules...)
+			if !d.Spec.Disabled {
+				rules = append(rules, d.Spec.Rules...)
+			}
 		}
 	} else if resourceScope == "Cluster" {
 		rpps := self.CRPP.GetData()
 		for _, d := range rpps {
-			rules = append(rules, d.Spec.Rules...)
+			if !d.Spec.Disabled {
+				rules = append(rules, d.Spec.Rules...)
+			}
 		}
 	}
 	return rules
@@ -480,12 +484,16 @@ func (self *Loader) IgnoreServiceAccountPatterns(resourceScope string) []*protec
 	if resourceScope == "Namespaced" {
 		rpps := self.RPP.GetData()
 		for _, d := range rpps {
-			patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+			}
 		}
 	} else if resourceScope == "Cluster" {
 		rpps := self.CRPP.GetData()
 		for _, d := range rpps {
-			patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
+			}
 		}
 	}
 	return patterns
@@ -496,12 +504,16 @@ func (self *Loader) IgnoreAttrsPatterns(resourceScope string) []*protect.AttrsPa
 	if resourceScope == "Namespaced" {
 		rpps := self.RPP.GetData()
 		for _, d := range rpps {
-			patterns = append(patterns, d.Spec.IgnoreAttrs...)
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.IgnoreAttrs...)
+			}
 		}
 	} else if resourceScope == "Cluster" {
 		rpps := self.CRPP.GetData()
 		for _, d := range rpps {
-			patterns = append(patterns, d.Spec.IgnoreAttrs...)
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.IgnoreAttrs...)
+			}
 		}
 	}
 	return patterns
