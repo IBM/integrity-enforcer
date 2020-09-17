@@ -21,16 +21,6 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-// type PolicyType string
-
-// const (
-// 	UnknownPolicy PolicyType = ""
-// 	DefaultPolicy PolicyType = "DefaultPolicy"
-// 	IEPolicy      PolicyType = "IEPolicy"
-// 	SignerPolicy  PolicyType = "SignerPolicy"
-// 	CustomPolicy  PolicyType = "CustomPolicy"
-// )
-
 type ScopeType string
 
 const (
