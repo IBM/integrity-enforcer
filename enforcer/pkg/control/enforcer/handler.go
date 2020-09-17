@@ -96,28 +96,31 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	self.logEntry()
 
-	requireChk := true
+	allowed := false
+	evalReason := common.REASON_UNEXPECTED
 
 	if ignoredSA, err := self.checkIfIgnoredSA(); err != nil {
 		self.abort("Error when checking if ignored service accounts", err)
 	} else if ignoredSA {
 		self.ctx.IgnoredSA = ignoredSA
-		requireChk = false
+		allowed = true
+		evalReason = common.REASON_IGNORED_SA
 	}
 
-	if !self.ctx.Aborted && requireChk {
+	if !self.ctx.Aborted && !allowed {
 		if protected, err := self.checkIfProtected(); err != nil {
 			self.abort("Error when check if the resource is protected", err)
 		} else {
 			self.ctx.Protected = protected
+			if !protected {
+				allowed = true
+				evalReason = common.REASON_NOT_PROTECTED
+			}
 		}
 	}
 
-	allowed := true
-	evalReason := common.REASON_UNEXPECTED
 	var errMsg string
 	if !self.ctx.Aborted && self.ctx.Protected {
-		allowed = false
 
 		//evaluate sign policy
 		if !self.ctx.Aborted && !allowed {
