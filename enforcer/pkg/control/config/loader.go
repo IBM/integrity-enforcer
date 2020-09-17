@@ -24,6 +24,8 @@ import (
 
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
 
+	"log"
+
 	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
 	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
@@ -34,6 +36,9 @@ import (
 	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vsignpolicy/clientset/versioned/typed/vsignpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	ecfgclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/enforcerconfig/clientset/versioned/typed/enforcerconfig/v1alpha1"
+	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 
 	"k8s.io/client-go/rest"
 )
@@ -343,4 +348,25 @@ func sortByCreationTimestamp(items []*rsigapi.VResourceSignature) []*rsigapi.VRe
 		return ti.Time.After(tj.Time)
 	})
 	return items2
+}
+
+func LoadEnforceConfig(namespace, cmname string) *cfg.EnforcerConfig {
+
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil
+	}
+	clientset, err := ecfgclient.NewForConfig(config)
+	if err != nil {
+		log.Fatal(err)
+		return nil
+	}
+	ecres, err := clientset.EnforcerConfigs(namespace).Get(cmname, metav1.GetOptions{})
+	if err != nil {
+		log.Fatalln("failed to get EnforcerConfig:", err)
+		return nil
+	}
+
+	ec := ecres.Spec.EnforcerConfig
+	return ec
 }
