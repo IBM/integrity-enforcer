@@ -409,23 +409,30 @@ func (self *RequestHandler) checkIfIgnoredSA() (bool, error) {
 }
 
 func (self *RequestHandler) CheckIfBreakGlassEnabled() bool {
-	reqNs := self.reqc.Namespace
+
 	conditions := self.loader.BreakGlassConditions()
 	breakGlassEnabled := false
-	for _, d := range conditions {
-		if d.Scope == policy.ScopeNamespaced {
-			for _, ns := range d.Namespaces {
-				if reqNs == ns {
-					breakGlassEnabled = true
-					break
+	if self.reqc.ResourceScope == "Namespaced" {
+		reqNs := self.reqc.Namespace
+		for _, d := range conditions {
+			if d.Scope == policy.ScopeUndefined || d.Scope == policy.ScopeNamespaced {
+				for _, ns := range d.Namespaces {
+					if reqNs == ns {
+						breakGlassEnabled = true
+						break
+					}
 				}
 			}
-		} else {
-			//TODO need implement
-			//cluster scope
+			if breakGlassEnabled {
+				break
+			}
 		}
-		if breakGlassEnabled {
-			break
+	} else {
+		for _, d := range conditions {
+			if d.Scope == policy.ScopeCluster {
+				breakGlassEnabled = true
+				break
+			}
 		}
 	}
 	return breakGlassEnabled
