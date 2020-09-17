@@ -119,9 +119,6 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	if !self.ctx.Aborted && self.ctx.Protected {
 		allowed = false
 
-		//init annotation store (singleton)
-		annotationStoreInstance = &ConcreteAnnotationStore{}
-
 		//evaluate sign policy
 		if !self.ctx.Aborted && !allowed {
 			if r, err := self.evalSignPolicy(); err != nil {
