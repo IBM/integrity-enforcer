@@ -55,7 +55,7 @@ type IntegrityEnforcerSpec struct {
 
 	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
 	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
-	SignPolicy           *policy.VSignPolicy             `json:"signPolicy,omitempty"`
+	SignPolicy           *policy.SignPolicy             `json:"signPolicy,omitempty"`
 	DefaultRpp           *rpp.VResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
 
 	SignatureNamespace string `json:"signatureNamespace,omitempty"`

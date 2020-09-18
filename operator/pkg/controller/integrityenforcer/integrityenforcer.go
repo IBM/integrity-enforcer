@@ -36,7 +36,7 @@ import (
 	cert "github.com/IBM/integrity-enforcer/operator/pkg/cert"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
+	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -177,7 +177,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCR(instance *re
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &spol.VSignPolicy{}
+	found := &spol.SignPolicy{}
 	expected := res.BuildSignEnforcePolicyForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,

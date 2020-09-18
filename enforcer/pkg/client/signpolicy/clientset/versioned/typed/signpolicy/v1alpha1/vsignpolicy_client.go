@@ -19,14 +19,14 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/client/vsignpolicy/clientset/versioned/scheme"
+	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
 type ResearchV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	VSignPoliciesGetter
+	SignPoliciesGetter
 }
 
 // ResearchV1alpha1Client is used to interact with features provided by the research.ibm.com group.
@@ -34,8 +34,8 @@ type ResearchV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ResearchV1alpha1Client) VSignPolicies(namespace string) VSignPolicyInterface {
-	return newVSignPolicies(c, namespace)
+func (c *ResearchV1alpha1Client) SignPolicies(namespace string) SignPolicyInterface {
+	return newSignPolicies(c, namespace)
 }
 
 // NewForConfig creates a new ResearchV1alpha1Client for the given config.

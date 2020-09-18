@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package vsignpolicy
+package signpolicy
 
 const (
 	GroupName = "research.ibm.com"

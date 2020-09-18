@@ -22,7 +22,7 @@ import (
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
-	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
+	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/ghodss/yaml"
@@ -53,13 +53,13 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 }
 
 //sign enforce policy cr
-func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.VSignPolicy {
-	var signPolicy *policy.VSignPolicy
+func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.SignPolicy {
+	var signPolicy *policy.SignPolicy
 
 	if cr.Spec.SignPolicy != nil {
 		signPolicy = cr.Spec.SignPolicy
 	} else {
-		signPolicy = &policy.VSignPolicy{
+		signPolicy = &policy.SignPolicy{
 			Policies: []policy.SignPolicyCondition{
 				{
 					Namespaces: []string{"sample"},
@@ -78,13 +78,13 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 			},
 		}
 	}
-	epcr := &iespol.VSignPolicy{
+	epcr := &iespol.SignPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      signerPolicyName,
 			Namespace: cr.Namespace,
 		},
-		Spec: iespol.VSignPolicySpec{
-			VSignPolicy: signPolicy,
+		Spec: iespol.SignPolicySpec{
+			SignPolicy: signPolicy,
 		},
 	}
 	return epcr

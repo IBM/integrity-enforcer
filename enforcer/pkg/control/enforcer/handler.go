@@ -640,7 +640,7 @@ func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 	sp := self.SignPolicy.GetData()
 	conditions := []policy.BreakGlassCondition{}
 	if sp != nil {
-		conditions = append(conditions, sp.Spec.VSignPolicy.BreakGlass...)
+		conditions = append(conditions, sp.Spec.SignPolicy.BreakGlass...)
 	}
 	return conditions
 }
@@ -649,13 +649,13 @@ func (self *Loader) DetectOnlyMode() bool {
 	return self.Config.Mode == config.DetectMode
 }
 
-func (self *Loader) MergedSignPolicy() *policy.VSignPolicy {
+func (self *Loader) MergedSignPolicy() *policy.SignPolicy {
 	iepol := self.Config.SignPolicy
 	spol := self.SignPolicy.GetData()
 
-	data := &policy.VSignPolicy{}
+	data := &policy.SignPolicy{}
 	data = data.Merge(iepol)
-	data = data.Merge(spol.Spec.VSignPolicy)
+	data = data.Merge(spol.Spec.SignPolicy)
 	return data
 }
 

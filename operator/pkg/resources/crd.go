@@ -73,17 +73,17 @@ func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomRes
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vsignpolicies.research.ibm.com",
+			Name:      "signpolicies.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "VSignPolicy",
-				Plural:   "vsignpolicies",
-				ListKind: "VSignPolicyList",
-				Singular: "vsignpolicy",
+				Kind:     "SignPolicy",
+				Plural:   "signpolicies",
+				ListKind: "SignPolicyList",
+				Singular: "signpolicy",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{

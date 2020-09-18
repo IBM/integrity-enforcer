@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vsignpolicy/clientset/versioned/typed/vsignpolicy/v1alpha1"
+	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
@@ -28,8 +28,8 @@ type FakeResearchV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeResearchV1alpha1) VSignPolicies(namespace string) v1alpha1.VSignPolicyInterface {
-	return &FakeVSignPolicies{c, namespace}
+func (c *FakeResearchV1alpha1) SignPolicies(namespace string) v1alpha1.SignPolicyInterface {
+	return &FakeSignPolicies{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

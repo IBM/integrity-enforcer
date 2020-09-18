@@ -27,13 +27,13 @@ import (
 	"log"
 
 	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
-	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
 	rsigclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
+	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	crppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vclusterresourceprotectionprofile/clientset/versioned/typed/vclusterresourceprotectionprofile/v1alpha1"
 	rppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourceprotectionprofile/clientset/versioned/typed/vresourceprotectionprofile/v1alpha1"
-	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vsignpolicy/clientset/versioned/typed/vsignpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -197,7 +197,7 @@ type SignPolicyLoader struct {
 	enforcerNamespace string
 
 	Client *spolclient.ResearchV1alpha1Client
-	Data   *spolapi.VSignPolicy
+	Data   *spolapi.SignPolicy
 }
 
 func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
@@ -212,7 +212,7 @@ func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
 	}
 }
 
-func (self *SignPolicyLoader) GetData() *spolapi.VSignPolicy {
+func (self *SignPolicyLoader) GetData() *spolapi.SignPolicy {
 	if self.Data == nil {
 		self.Load()
 	}
@@ -221,17 +221,17 @@ func (self *SignPolicyLoader) GetData() *spolapi.VSignPolicy {
 
 func (self *SignPolicyLoader) Load() {
 	var err error
-	var list1 *spolapi.VSignPolicyList
+	var list1 *spolapi.SignPolicyList
 	var keyName string
 
 	keyName = fmt.Sprintf("SignPolicyLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.VSignPolicies(self.enforcerNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VSignPolicy:", err)
+			logger.Fatal("failed to get SignPolicy:", err)
 			return
 		}
-		logger.Debug("VSignPolicy reloaded.")
+		logger.Debug("SignPolicy reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -239,12 +239,12 @@ func (self *SignPolicyLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VSignPolicy:", err)
+			logger.Fatal("failed to Unmarshal cached SignPolicy:", err)
 			return
 		}
 	}
 
-	data := &spolapi.VSignPolicy{}
+	data := &spolapi.SignPolicy{}
 	if len(list1.Items) > 0 {
 		data = &(list1.Items[0])
 	}

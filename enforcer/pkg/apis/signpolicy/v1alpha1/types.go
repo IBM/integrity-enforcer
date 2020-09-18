@@ -21,39 +21,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// VSignPolicySpec defines the desired state of VSignPolicy
-type VSignPolicySpec struct {
-	VSignPolicy *policy.VSignPolicy `json:"policy,omitempty"`
+// SignPolicySpec defines the desired state of SignPolicy
+type SignPolicySpec struct {
+	SignPolicy *policy.SignPolicy `json:"policy,omitempty"`
 }
 
-// VSignPolicyStatus defines the observed state of VSignPolicy
-type VSignPolicyStatus struct {
+// SignPolicyStatus defines the observed state of SignPolicy
+type SignPolicyStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 }
 
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=vsignpolicy,scope=Namespaced
+// +resource:path=signpolicy,scope=Namespaced
 
 // EnforcePolicy is the CRD. Use this command to generate deepcopy for it:
 // ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
 // For more details of code-generator, please visit https://github.com/kubernetes/code-generator
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // EnforcePolicy is the CRD. Use this command to generate deepcopy for it:
-type VSignPolicy struct {
+type SignPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   VSignPolicySpec   `json:"spec,omitempty"`
-	Status VSignPolicyStatus `json:"status,omitempty"`
+	Spec   SignPolicySpec   `json:"spec,omitempty"`
+	Status SignPolicyStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// VSignPolicyList contains a list of EnforcePolicy
-type VSignPolicyList struct {
+// SignPolicyList contains a list of EnforcePolicy
+type SignPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []VSignPolicy `json:"items"`
+	Items           []SignPolicy `json:"items"`
 }
