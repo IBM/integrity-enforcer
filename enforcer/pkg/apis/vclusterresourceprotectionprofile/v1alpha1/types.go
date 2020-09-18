@@ -29,6 +29,7 @@ type VClusterResourceProtectionProfileSpec struct {
 	Rules                []*protect.Rule                 `json:"rules,omitempty"`
 	IgnoreServiceAccount []*protect.ServieAccountPattern `json:"ignoreServiceAccount,omitempty"`
 	ProtectAttrs         []*protect.AttrsPattern         `json:"protectAttrs,omitempty"`
+	UnprotectAttrs       []*protect.AttrsPattern         `json:"unprotectAttrs,omitempty"`
 	IgnoreAttrs          []*protect.AttrsPattern         `json:"ignoreAttrs,omitempty"`
 }
 
