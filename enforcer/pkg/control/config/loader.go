@@ -23,6 +23,7 @@ import (
 	"time"
 
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 
 	"log"
 
@@ -130,6 +131,28 @@ func (self *RPPLoader) Load() {
 	return
 }
 
+func (self *RPPLoader) GetProfileInterface() []protect.ProtectionProfile {
+	profiles := []protect.ProtectionProfile{}
+	for _, d := range self.GetData() {
+		profiles = append(profiles, d)
+	}
+	return profiles
+}
+
+func (self *RPPLoader) Update(profiles []protect.ProtectionProfile) error {
+	for _, profile := range profiles {
+		rpp, ok := profile.(*rppapi.ResourceProtectionProfile)
+		if !ok {
+			continue
+		}
+		_, err := self.Client.ResourceProtectionProfiles(rpp.GetNamespace()).Update(rpp)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ClusterResourceProtectionProfile
 
 type CRPPLoader struct {
@@ -188,6 +211,33 @@ func (self *CRPPLoader) Load() {
 	}
 	self.Data = data
 	return
+}
+
+func (self *CRPPLoader) GetProfileInterface() []protect.ProtectionProfile {
+	profiles := []protect.ProtectionProfile{}
+	for _, d := range self.GetData() {
+		profiles = append(profiles, d)
+	}
+	return profiles
+}
+
+func (self *CRPPLoader) Update(profiles []protect.ProtectionProfile) error {
+	for _, profile := range profiles {
+		crpp, ok := profile.(*crppapi.ClusterResourceProtectionProfile)
+		if !ok {
+			continue
+		}
+		_, err := self.Client.ClusterResourceProtectionProfiles().Update(crpp)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type ProtectionProfileLoader interface {
+	GetProfileInterface() []protect.ProtectionProfile
+	Update(profiles []protect.ProtectionProfile) error
 }
 
 // SignPolicy

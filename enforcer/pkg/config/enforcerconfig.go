@@ -43,7 +43,7 @@ type EnforcerConfig struct {
 	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
 	Allow      []protect.RequestPattern `json:"allow,omitempty"`
 	Ignore     []protect.RequestPattern `json:"ignore,omitempty"`
-	SignPolicy *policy.SignPolicy      `json:"signPolicy,omitempty"`
+	SignPolicy *policy.SignPolicy       `json:"signPolicy,omitempty"`
 	Mode       IntegrityEnforcerMode    `json:"mode,omitempty"`
 	Plugin     []PluginConfig           `json:"plugin,omitempty"`
 
@@ -58,6 +58,7 @@ type EnforcerConfig struct {
 
 	IEResource       string `json:"ieResource"`
 	IEAdminUserGroup string `json:"ieAdminUserGroup"`
+	IEServerUserName string `json:"ieServerUserName"`
 }
 
 type LoggingScopeConfig struct {

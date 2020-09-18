@@ -69,10 +69,10 @@ func (self *ResourceProtectionProfile) Match(reqFields map[string]string) (bool,
 	return false, nil
 }
 
-func (self *ResourceProtectionProfile) Update(reqFields map[string]string, matchedRule *protect.Rule) {
+func (self *ResourceProtectionProfile) Update(reqFields map[string]string, reason string, matchedRule *protect.Rule) {
 	results := self.Status.Results
 	newResult := &protect.Result{}
-	newResult.Update(reqFields, matchedRule)
+	newResult.Update(reqFields, reason, matchedRule)
 	results = append(results, newResult)
 	self.Status.Results = results
 	return
