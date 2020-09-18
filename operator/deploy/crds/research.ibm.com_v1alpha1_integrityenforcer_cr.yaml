@@ -127,3 +127,11 @@ spec:
   webhookConfigName: ie-webhook-config
   webhookServerTlsSecretName: ie-server-tls
   webhookServiceName: ie-server
+  webhookNamespacedResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+  webhookClusterResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]

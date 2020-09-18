@@ -51,12 +51,15 @@ func BuildServiceForCR(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Service {
 
 //webhook configuration
 func BuildMutatingWebhookConfigurationForIE(cr *researchv1alpha1.IntegrityEnforcer) *admv1.MutatingWebhookConfiguration {
-	var scopetype *admv1.ScopeType
-	var clusterscopetype *admv1.ScopeType
+
 	namespaced := admv1.NamespacedScope
 	cluster := admv1.ClusterScope
-	scopetype = &namespaced
-	clusterscopetype = &cluster
+
+	namespacedRule := cr.Spec.WebhookNamespacedResource
+	namespacedRule.Scope = &namespaced
+
+	clusterRule := cr.Spec.WebhookClusterResource
+	clusterRule.Scope = &cluster
 
 	var path *string
 	mutate := "/mutate"
@@ -98,35 +101,13 @@ func BuildMutatingWebhookConfigurationForIE(cr *researchv1alpha1.IntegrityEnforc
 						Operations: []admv1.OperationType{
 							admv1.Create, admv1.Delete, admv1.Update,
 						},
-						Rule: admv1.Rule{
-							APIGroups: []string{
-								"*",
-							},
-							APIVersions: []string{
-								"*",
-							},
-							Resources: []string{
-								"*",
-							},
-							Scope: scopetype, //admv1.NamespacedScope
-						},
+						Rule: namespacedRule,
 					},
 					{
 						Operations: []admv1.OperationType{
 							admv1.Create, admv1.Delete, admv1.Update,
 						},
-						Rule: admv1.Rule{
-							APIGroups: []string{
-								"*",
-							},
-							APIVersions: []string{
-								"*",
-							},
-							Resources: []string{
-								"*",
-							},
-							Scope: clusterscopetype, //admv1.Cluster
-						},
+						Rule: clusterRule,
 					},
 				},
 				SideEffects: &sideEffect,
