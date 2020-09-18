@@ -88,8 +88,18 @@ func (self *VSignPolicy) Merge(data *VSignPolicy) *VSignPolicy {
 func (self *VSignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
-		included := common.MatchWithPatternArray(namespace, spc.Namespaces)
-		excluded := common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+		var included, excluded bool
+		if namespace == "" {
+			if spc.Scope == ScopeCluster {
+				included = true
+				excluded = false
+			}
+		} else {
+			if spc.Scope != ScopeCluster {
+				included = common.MatchWithPatternArray(namespace, spc.Namespaces)
+				excluded = common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+			}
+		}
 		signerMatched := false
 		for _, signerName := range spc.Signers {
 			subjectConditions, ok := signerMap[signerName]
