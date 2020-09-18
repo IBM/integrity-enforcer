@@ -20,9 +20,9 @@ import (
 	"io/ioutil"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/ghodss/yaml"
@@ -91,8 +91,8 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 }
 
 // default rpp
-func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.VResourceProtectionProfile {
-	var defaultrpp *rpp.VResourceProtectionProfile
+func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.ResourceProtectionProfile {
+	var defaultrpp *rpp.ResourceProtectionProfile
 	reqLogger := log.WithValues("BuildDefaultResourceProtectionProfile", defaultRppName)
 
 	if cr.Spec.DefaultRpp != nil {
@@ -115,8 +115,8 @@ func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEn
 }
 
 // default crpp
-func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *crpp.VClusterResourceProtectionProfile {
-	var defaultcrpp *crpp.VClusterResourceProtectionProfile
+func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *crpp.ClusterResourceProtectionProfile {
+	var defaultcrpp *crpp.ClusterResourceProtectionProfile
 	reqLogger := log.WithValues("BuildDefaultClusterResourceProtectionProfile", defaultCrppName)
 
 	deafultCrppBytes, err := ioutil.ReadFile(defaultClusterResourceProtectionProfileYamlPath)
