@@ -425,11 +425,11 @@ func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 }
 
 func (self *RequestHandler) checkIfIEResource() bool {
-	return self.reqc.ApiGroup == "research.ibm.com"
+	return self.reqc.ApiGroup == self.config.IEResource //"research.ibm.com"
 }
 
 func (self *RequestHandler) checkIfIEAdminRequest() bool {
-	return common.MatchPatternWithArray("system:masters", self.reqc.UserGroups)
+	return common.MatchPatternWithArray(self.config.IEAdminUserGroup, self.reqc.UserGroups) //"system:masters"
 }
 
 func (self *RequestHandler) GetEnabledPlugins() map[string]bool {
