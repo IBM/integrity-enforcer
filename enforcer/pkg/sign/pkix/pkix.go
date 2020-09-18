@@ -22,7 +22,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -285,16 +284,10 @@ func VerifyCertificate(certPemBytes []byte, certDir string) (bool, string, error
 		Roots:     roots,
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
 	}
-	chains, err := cert.Verify(opts)
+	_, err = cert.Verify(opts)
 	if err != nil {
 		reasonFail = fmt.Sprintf("failed to verify certificate: %s", err.Error())
 		return false, reasonFail, nil
-	}
-	for _, c := range chains {
-		for _, ci := range c {
-			ciB, _ := json.Marshal(ci)
-			fmt.Println(string(ciB))
-		}
 	}
 
 	return true, "", nil
