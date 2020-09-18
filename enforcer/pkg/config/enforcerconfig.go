@@ -55,6 +55,9 @@ type EnforcerConfig struct {
 	KeyringPath        string `json:"keyringPath"`
 	ChartDir           string `json:"chartPath"`
 	ChartRepo          string `json:"chartRepo"`
+
+	IEResource       string `json:"ieResource"`
+	IEAdminUserGroup string `json:"ieAdminUserGroup"`
 }
 
 type LoggingScopeConfig struct {

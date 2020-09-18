@@ -23,13 +23,13 @@ import (
 
 // VClusterResourceProtectionProfileSpec defines the desired state of AppEnforcePolicy
 type VClusterResourceProtectionProfileSpec struct {
-	Disabled              bool `json:"disabled,omitempty"`
-	Delete                bool `json:"delete,omitempty"`
-	CheckPlatformRequests bool `json:"checkPlatformRequests,omitempty"`
+	Disabled bool `json:"disabled,omitempty"`
+	Delete   bool `json:"delete,omitempty"`
 
 	Rules                []*protect.Rule                 `json:"rules,omitempty"`
 	IgnoreServiceAccount []*protect.ServieAccountPattern `json:"ignoreServiceAccount,omitempty"`
 	ProtectAttrs         []*protect.AttrsPattern         `json:"protectAttrs,omitempty"`
+	UnprotectAttrs       []*protect.AttrsPattern         `json:"unprotectAttrs,omitempty"`
 	IgnoreAttrs          []*protect.AttrsPattern         `json:"ignoreAttrs,omitempty"`
 }
 

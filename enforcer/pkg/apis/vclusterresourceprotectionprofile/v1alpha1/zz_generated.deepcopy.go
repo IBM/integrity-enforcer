@@ -95,7 +95,7 @@ func (in *VClusterResourceProtectionProfileSpec) DeepCopyInto(out *VClusterResou
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				(*in).DeepCopyInto(*out)
+				*out = (*in).DeepCopy()
 			}
 		}
 	}
@@ -105,8 +105,7 @@ func (in *VClusterResourceProtectionProfileSpec) DeepCopyInto(out *VClusterResou
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(protect.ServieAccountPattern)
-				(*in).DeepCopyInto(*out)
+				*out = (*in).DeepCopy()
 			}
 		}
 	}
@@ -116,8 +115,7 @@ func (in *VClusterResourceProtectionProfileSpec) DeepCopyInto(out *VClusterResou
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(protect.AttrsPattern)
-				(*in).DeepCopyInto(*out)
+				*out = (*in).DeepCopy()
 			}
 		}
 	}
@@ -127,8 +125,7 @@ func (in *VClusterResourceProtectionProfileSpec) DeepCopyInto(out *VClusterResou
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(protect.AttrsPattern)
-				(*in).DeepCopyInto(*out)
+				*out = (*in).DeepCopy()
 			}
 		}
 	}
@@ -154,8 +151,7 @@ func (in *VClusterResourceProtectionProfileStatus) DeepCopyInto(out *VClusterRes
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(protect.Result)
-				**out = **in
+				*out = (*in).DeepCopy()
 			}
 		}
 	}

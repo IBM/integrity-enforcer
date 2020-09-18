@@ -24,6 +24,8 @@ spec:
       - name: "HelmClusterSigner"
         subjects:
         - email: cluster_signer@signer.com
+    ieResource: "research.ibm.com"
+    ieAdminUserGroup: "system:masters"
     ignore:
     - kind: Event
     - kind: Lease
