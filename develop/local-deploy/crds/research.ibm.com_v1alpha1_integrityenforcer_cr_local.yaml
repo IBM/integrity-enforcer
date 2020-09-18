@@ -131,4 +131,8 @@ spec:
   webhookClusterResource:
     apiGroups: ["*"]
     apiVersions: ["*"]
-    resources: ["*"]
+    resources: 
+    - podsecuritypolicies
+    - clusterrolebindings
+    - clusterroles
+    - vclusterresourceprotectionprofiles
