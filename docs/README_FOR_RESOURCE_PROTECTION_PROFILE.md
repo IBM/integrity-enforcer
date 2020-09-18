@@ -3,18 +3,19 @@
 This document describes how to set up ResourceProtectionProfile (RPP).
 
 RPP includes the following fields: 
-- __rules__
-- __ignoreServiceAccount__
-- __protectAttrs__
-- __ignoreAttrs__
 - __disabled__ 
 - __delete__ 
-- __checkPlatformRequests__
+- __rules__
+- __ignoreServiceAccount__
+- __unprotectAttrs__
+- __protectAttrs__
+- __ignoreAttrs__
+____
 
 ## rules
-You can list rules to protect resources or exclude from check.
-rule has `match` and `exclude` fields.  
-The rule can be defined with the following fields. In each field, values can be listed with "__,__" and "__*__" can be used as a wildcard.
+You can list rules to define protect resources. Rule has `match` and `exclude` fields. 
+If you want to exclude some resources from matched resources, you can set rules in `exclude` field.  
+The rules can be defined with the following fields. In each field, values can be listed with "__,__" and "__*__" can be used as a wildcard.
 
 ```
 namespace, name, operation, apiVersion, apiGroup, kind, username,
@@ -43,6 +44,7 @@ namespace, name, operation, apiVersion, apiGroup, kind, username,
       kind: "*"
 ```
 
+____
 
 ## ignoreServiceAccount
 The request is allowed if the username is defined in `serviceAccountName` field.
@@ -55,9 +57,11 @@ The request is allowed if the username is defined in `serviceAccountName` field.
     serviceAccountName:
     - system:serviceaccount:secure-ns:secure-operator
 ```
+____
 ## protectAttrs
 
-
+## unprotectAttrs
+____
 
 ## ignoreAttrs
 You can set rules to allow some changes in the resource.
@@ -71,16 +75,17 @@ You can set rules to allow some changes in the resource.
       name: protected-cm
       kind: ConfigMap
 ```
+____
+
 
 ## disabled
 This field is `false` by default.
+____
 
 ## delete
 This field is `false` by default.
 
-## checkPlatformRequests
-This field is `false` by default.
-If you want to prtect platform request, set `true`.
+____
 
 
 ## ResourceProtectionProfile example
