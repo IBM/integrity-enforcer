@@ -639,8 +639,6 @@ spec:
                   description: VResourceProtectionProfileSpec defines the desired
                     state of AppEnforcePolicy
                   properties:
-                    checkPlatformRequests:
-                      type: boolean
                     delete:
                       type: boolean
                     disabled:
@@ -786,6 +784,36 @@ spec:
                             type: array
                         type: object
                       type: array
+                    unprotectAttrs:
+                      items:
+                        properties:
+                          attrs:
+                            items:
+                              type: string
+                            type: array
+                          match:
+                            properties:
+                              apiGroup:
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                        type: object
+                      type: array
                   type: object
                 status:
                   description: VResourceProtectionProfileStatus defines the observed
@@ -833,6 +861,10 @@ spec:
                 chartPath:
                   type: string
                 chartRepo:
+                  type: string
+                ieAdminUserGroup:
+                  type: string
+                ieResource:
                   type: string
                 ignore:
                   items:
@@ -1070,6 +1102,8 @@ spec:
               - certPoolPath
               - chartPath
               - chartRepo
+              - ieAdminUserGroup
+              - ieResource
               - keyringPath
               - verifyType
               type: object
@@ -1756,8 +1790,88 @@ spec:
               type: array
             verifyType:
               type: string
+            webhookClusterResource:
+              description: Rule is a tuple of APIGroups, APIVersion, and Resources.It
+                is recommended to make sure that all the tuple expansions are valid.
+              properties:
+                apiGroups:
+                  description: APIGroups is the API groups the resources belong to.
+                    '*' is all groups. If '*' is present, the length of the slice
+                    must be one. Required.
+                  items:
+                    type: string
+                  type: array
+                apiVersions:
+                  description: APIVersions is the API versions the resources belong
+                    to. '*' is all versions. If '*' is present, the length of the
+                    slice must be one. Required.
+                  items:
+                    type: string
+                  type: array
+                resources:
+                  description: "Resources is a list of resources this rule applies
+                    to. \n For example: 'pods' means pods. 'pods/log' means the log
+                    subresource of pods. '*' means all resources, but not subresources.
+                    'pods/*' means all subresources of pods. '*/scale' means all scale
+                    subresources. '*/*' means all resources and their subresources.
+                    \n If wildcard is present, the validation rule will ensure resources
+                    do not overlap with each other. \n Depending on the enclosing
+                    object, subresources might not be allowed. Required."
+                  items:
+                    type: string
+                  type: array
+                scope:
+                  description: scope specifies the scope of this rule. Valid values
+                    are "Cluster", "Namespaced", and "*" "Cluster" means that only
+                    cluster-scoped resources will match this rule. Namespace API objects
+                    are cluster-scoped. "Namespaced" means that only namespaced resources
+                    will match this rule. "*" means that there are no scope restrictions.
+                    Subresources match the scope of their parent resource. Default
+                    is "*".
+                  type: string
+              type: object
             webhookConfigName:
               type: string
+            webhookNamespacedResource:
+              description: Rule is a tuple of APIGroups, APIVersion, and Resources.It
+                is recommended to make sure that all the tuple expansions are valid.
+              properties:
+                apiGroups:
+                  description: APIGroups is the API groups the resources belong to.
+                    '*' is all groups. If '*' is present, the length of the slice
+                    must be one. Required.
+                  items:
+                    type: string
+                  type: array
+                apiVersions:
+                  description: APIVersions is the API versions the resources belong
+                    to. '*' is all versions. If '*' is present, the length of the
+                    slice must be one. Required.
+                  items:
+                    type: string
+                  type: array
+                resources:
+                  description: "Resources is a list of resources this rule applies
+                    to. \n For example: 'pods' means pods. 'pods/log' means the log
+                    subresource of pods. '*' means all resources, but not subresources.
+                    'pods/*' means all subresources of pods. '*/scale' means all scale
+                    subresources. '*/*' means all resources and their subresources.
+                    \n If wildcard is present, the validation rule will ensure resources
+                    do not overlap with each other. \n Depending on the enclosing
+                    object, subresources might not be allowed. Required."
+                  items:
+                    type: string
+                  type: array
+                scope:
+                  description: scope specifies the scope of this rule. Valid values
+                    are "Cluster", "Namespaced", and "*" "Cluster" means that only
+                    cluster-scoped resources will match this rule. Namespace API objects
+                    are cluster-scoped. "Namespaced" means that only namespaced resources
+                    will match this rule. "*" means that there are no scope restrictions.
+                    Subresources match the scope of their parent resource. Default
+                    is "*".
+                  type: string
+              type: object
             webhookServerTlsSecretName:
               type: string
             webhookServiceName:
