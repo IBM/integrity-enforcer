@@ -37,3 +37,4 @@ replace (
 	k8s.io/code-generator => k8s.io/code-generator v0.16.5-beta.1
 	k8s.io/kubectl => k8s.io/kubectl v0.16.5-beta.1
 )
+

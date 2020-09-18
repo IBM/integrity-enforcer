@@ -25,7 +25,7 @@ import (
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pgp"
 	"github.com/IBM/integrity-enforcer/develop/signservice/signservice/pkg/pkix"
 
-	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
+	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	iectlsign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	iesign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
@@ -202,11 +202,11 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 
 	rsName := fmt.Sprintf("rsig-%s", rand.String(16))
 	// rsName := fmt.Sprintf("rsig-%s-%s-%s", namespace, strings.ToLower(kind), name)
-	rs := rsig.VResourceSignature{
+	rs := rsig.ResourceSignature{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: rsName,
 		},
-		Spec: rsig.VResourceSignatureSpec{
+		Spec: rsig.ResourceSignatureSpec{
 			Data: []*rsig.SignItem{
 				signItem,
 			},
@@ -214,23 +214,23 @@ func CreateResourceSignature(yamlBytes, signer, namespaceInQuery, scope string, 
 	}
 	rsigBytes, err := yaml.Marshal(rs)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in dumping VResourceSignature yaml; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in dumping ResourceSignature yaml; %s", err.Error()))
 	}
 	rsigNode, err := mapnode.NewFromYamlBytes(rsigBytes)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in loading VResourceSignature to mapnode; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in loading ResourceSignature to mapnode; %s", err.Error()))
 	}
 	rsigApiVersion := rsig.SchemeGroupVersion.String()
-	rsigKind := "VResourceSignature"
+	rsigKind := "ResourceSignature"
 	rsigMetaNodeStr := fmt.Sprintf("{\"apiVersion\":\"%s\",\"kind\":\"%s\"}", rsigApiVersion, rsigKind)
 	rsigMetaNodeBytes := []byte(rsigMetaNodeStr)
 	rsigMetaNode, err := mapnode.NewFromBytes(rsigMetaNodeBytes)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in loading metadata for VResourceSignature to mapnode; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in loading metadata for ResourceSignature to mapnode; %s", err.Error()))
 	}
 	mergedRsigNode, err := rsigNode.Merge(rsigMetaNode)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Error in merging VResourceSignature and metadata; %s", err.Error()))
+		return "", errors.New(fmt.Sprintf("Error in merging ResourceSignature and metadata; %s", err.Error()))
 	}
 	mergedRsigNode = mergedRsigNode.Mask([]string{"status", "metadata.creationTimestamp"})
 	mergedRsigStr := mergedRsigNode.ToYaml()

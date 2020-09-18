@@ -618,7 +618,7 @@ spec:
                 deepcopy for it: ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis
                 github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
                 For more details of code-generator, please visit https://github.com/kubernetes/code-generator
-                VResourceProtectionProfile is the CRD. Use this command to generate
+                ResourceProtectionProfile is the CRD. Use this command to generate
                 deepcopy for it:'
               properties:
                 apiVersion:
@@ -636,7 +636,7 @@ spec:
                 metadata:
                   type: object
                 spec:
-                  description: VResourceProtectionProfileSpec defines the desired
+                  description: ResourceProtectionProfileSpec defines the desired
                     state of AppEnforcePolicy
                   properties:
                     delete:
@@ -816,7 +816,7 @@ spec:
                       type: array
                   type: object
                 status:
-                  description: VResourceProtectionProfileStatus defines the observed
+                  description: ResourceProtectionProfileStatus defines the observed
                     state of AppEnforcePolicy
                   properties:
                     deniedRequests:

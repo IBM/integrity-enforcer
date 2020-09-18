@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
@@ -53,10 +53,10 @@ type IntegrityEnforcerSpec struct {
 	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
 	GlobalConfig GlobalConfig    `json:"globalConfig,omitempty"`
 
-	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
-	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
-	SignPolicy           *policy.VSignPolicy             `json:"signPolicy,omitempty"`
-	DefaultRpp           *rpp.VResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
+	EnforcerConfigCrName string                         `json:"enforcerConfigCrName,omitempty"`
+	EnforcerConfig       *iec.EnforcerConfig            `json:"enforcerConfig,omitempty"`
+	SignPolicy           *policy.SignPolicy             `json:"signPolicy,omitempty"`
+	DefaultRpp           *rpp.ResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
 
 	SignatureNamespace string `json:"signatureNamespace,omitempty"`
 	PolicyNamespace    string `json:"policyNamespace,omitempty"`

@@ -43,7 +43,7 @@ type EnforcerConfig struct {
 	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
 	Allow      []protect.RequestPattern `json:"allow,omitempty"`
 	Ignore     []protect.RequestPattern `json:"ignore,omitempty"`
-	SignPolicy *policy.VSignPolicy      `json:"signPolicy,omitempty"`
+	SignPolicy *policy.SignPolicy      `json:"signPolicy,omitempty"`
 	Mode       IntegrityEnforcerMode    `json:"mode,omitempty"`
 	Plugin     []PluginConfig           `json:"plugin,omitempty"`
 

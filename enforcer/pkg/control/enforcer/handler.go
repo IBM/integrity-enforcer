@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
+	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -275,7 +275,7 @@ func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalRea
 		dr.Verified = false
 		dr.Message = self.ctx.AbortReason
 		dr.ReasonCode = common.REASON_ABORTED
-	} else if self.reqc.IsDeleteRequest() && self.reqc.Kind != "VResourceSignature" {
+	} else if self.reqc.IsDeleteRequest() && self.reqc.Kind != "ResourceSignature" {
 		dr.Allow = false
 		dr.Verified = true
 		dr.ReasonCode = common.REASON_BLOCK_DELETE
@@ -640,7 +640,7 @@ func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 	sp := self.SignPolicy.GetData()
 	conditions := []policy.BreakGlassCondition{}
 	if sp != nil {
-		conditions = append(conditions, sp.Spec.VSignPolicy.BreakGlass...)
+		conditions = append(conditions, sp.Spec.SignPolicy.BreakGlass...)
 	}
 	return conditions
 }
@@ -649,18 +649,18 @@ func (self *Loader) DetectOnlyMode() bool {
 	return self.Config.Mode == config.DetectMode
 }
 
-func (self *Loader) MergedSignPolicy() *policy.VSignPolicy {
+func (self *Loader) MergedSignPolicy() *policy.SignPolicy {
 	iepol := self.Config.SignPolicy
 	spol := self.SignPolicy.GetData()
 
-	data := &policy.VSignPolicy{}
+	data := &policy.SignPolicy{}
 	data = data.Merge(iepol)
-	data = data.Merge(spol.Spec.VSignPolicy)
+	data = data.Merge(spol.Spec.SignPolicy)
 	return data
 }
 
-func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.VResourceSignatureList {
+func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.ResourceSignatureList {
 	items := self.ResourceSignature.GetData()
 
-	return &rsig.VResourceSignatureList{Items: items}
+	return &rsig.ResourceSignatureList{Items: items}
 }

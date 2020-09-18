@@ -73,17 +73,17 @@ func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomRes
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vsignpolicies.research.ibm.com",
+			Name:      "signpolicies.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "VSignPolicy",
-				Plural:   "vsignpolicies",
-				ListKind: "VSignPolicyList",
-				Singular: "vsignpolicy",
+				Kind:     "SignPolicy",
+				Plural:   "signpolicies",
+				ListKind: "SignPolicyList",
+				Singular: "signpolicy",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -203,17 +203,17 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vresourcesignatures.research.ibm.com",
+			Name:      "resourcesignatures.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "VResourceSignature",
-				Plural:   "vresourcesignatures",
-				ListKind: "VResourceSignatureList",
-				Singular: "vresourcesignature",
+				Kind:     "ResourceSignature",
+				Plural:   "resourcesignatures",
+				ListKind: "ResourceSignatureList",
+				Singular: "resourcesignature",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -283,17 +283,17 @@ func BuildResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vresourceprotectionprofiles.research.ibm.com",
+			Name:      "resourceprotectionprofiles.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "VResourceProtectionProfile",
-				Plural:   "vresourceprotectionprofiles",
-				ListKind: "VResourceProtectionProfileList",
-				Singular: "vresourceprotectionprofile",
+				Kind:     "ResourceProtectionProfile",
+				Plural:   "resourceprotectionprofiles",
+				ListKind: "ResourceProtectionProfileList",
+				Singular: "resourceprotectionprofile",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -323,17 +323,17 @@ func BuildClusterResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnfo
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vclusterresourceprotectionprofiles.research.ibm.com",
+			Name:      "clusterresourceprotectionprofiles.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "VClusterResourceProtectionProfile",
-				Plural:   "vclusterresourceprotectionprofiles",
-				ListKind: "VClusterResourceProtectionProfileList",
-				Singular: "vclusterresourceprotectionprofile",
+				Kind:     "ClusterResourceProtectionProfile",
+				Plural:   "clusterresourceprotectionprofiles",
+				ListKind: "ClusterResourceProtectionProfileList",
+				Singular: "clusterresourceprotectionprofile",
 			},
 			Scope: "Cluster",
 			Validation: &extv1.CustomResourceValidation{
