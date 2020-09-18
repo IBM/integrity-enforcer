@@ -74,8 +74,9 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		if yamlBytes, ok := sig.data["yamlBytes"]; ok {
 			message = yamlBytes
 		}
-		mutableAttrs, _ := sig.data["mutableAttrs"]
-		matched := self.MatchMessage([]byte(message), reqc.RawObject, mutableAttrs, self.Namespace, sig.SignType)
+		protectAttrs, _ := sig.data["protectAttrs"]
+		unprotectAttrs, _ := sig.data["unprotectAttrs"]
+		matched := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrs, unprotectAttrs, self.Namespace, sig.SignType)
 		if !matched {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
@@ -223,8 +224,8 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs, enforcerNamespace string, signType SignatureType) bool {
-	var mask []string
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs, enforcerNamespace string, signType SignatureType) bool {
+	var mask, focus []string
 	mask = getMaskDef("")
 
 	orgObj := []byte(message)
@@ -235,15 +236,17 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs,
 	}
 
 	addMask := []string{}
-	if mutableAttrs != "" {
-		orgMutableAttrs := orgNode.GetString("metadata.annotations.mutableAttrs")
-		if orgMutableAttrs == mutableAttrs {
-			addMask = mapnode.SplitCommaSeparatedKeys(mutableAttrs)
-		}
+	if unprotectAttrs != "" && protectAttrs == "" {
+		addMask = mapnode.SplitCommaSeparatedKeys(unprotectAttrs)
 	}
 	mask = append(mask, addMask...)
 
-	matched := matchContents(orgObj, reqObj, mask)
+	focus = []string{}
+	if protectAttrs != "" {
+		focus = mapnode.SplitCommaSeparatedKeys(protectAttrs)
+	}
+
+	matched := matchContents(orgObj, reqObj, focus, mask)
 	if matched {
 		logger.Debug("matched directly")
 	}
@@ -260,7 +263,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs,
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 
-		matched = matchContents(simObj, reqObj, mask)
+		matched = matchContents(simObj, reqObj, focus, mask)
 		if matched {
 			logger.Debug("matched by DryRunCreate()")
 		}
@@ -285,7 +288,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched = matchContents(simPatchedObj, reqObj, mask)
+		matched = matchContents(simPatchedObj, reqObj, focus, mask)
 		if matched {
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
@@ -307,7 +310,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, mutableAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched = matchContents(simPatchedObj, reqObj, mask)
+		matched = matchContents(simPatchedObj, reqObj, focus, mask)
 		if matched {
 			logger.Debug("matched by StrategicMergePatch()")
 		}
@@ -320,7 +323,7 @@ func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope s
 	mask = getMaskDef("")
 	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
 	mask = append(mask, scopeKeys...)
-	matched := matchContents(orgObj, rawObj, mask)
+	matched := matchContents(orgObj, rawObj, nil, mask)
 	return matched
 }
 
@@ -347,7 +350,7 @@ func getMaskDef(kind string) []string {
 	return masks
 }
 
-func matchContents(orgObj, reqObj []byte, mask []string) bool {
+func matchContents(orgObj, reqObj []byte, focus, mask []string) bool {
 	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error("Failed to load original message as *Node", string(orgObj))
@@ -367,7 +370,11 @@ func matchContents(orgObj, reqObj []byte, mask []string) bool {
 	if dr == nil {
 		matched = true
 	} else {
-		logger.Debug(dr.ToJson())
+		if len(focus) > 0 {
+			if !focusKeyExistInDiffResult(focus, dr) {
+				matched = true
+			}
+		}
 	}
 
 	return matched
@@ -399,6 +406,17 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 		}
 	}
 	return message
+}
+
+func focusKeyExistInDiffResult(focus []string, dr *mapnode.DiffResult) bool {
+	for _, diffFullKey := range dr.Keys() {
+		for _, focusKey := range focus {
+			if strings.HasPrefix(diffFullKey, focusKey) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func base64decode(str string) string {

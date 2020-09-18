@@ -19,6 +19,7 @@ package sign
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	vrsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
@@ -26,6 +27,7 @@ import (
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 )
 
 type VerifyType string
@@ -63,7 +65,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignPolicyEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) (*common.SignPolicyEvalResult, error)
+	Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error)
 }
 
 type ConcreteSignPolicyEvaluator struct {
@@ -80,9 +82,12 @@ func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.VSignP
 	}, nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) *GeneralSignature {
+func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) *GeneralSignature {
 
 	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
+
+	matchedProtectAttrs := strings.Join(findAttrsPattern(reqc, protectAttrs), ",")
+	matchedUnprotectAttrs := strings.Join(findAttrsPattern(reqc, unprotectAttrs), ",")
 
 	//1. pick ResourceSignature from metadata.annotation if available
 	if sigAnnotations.Signature != "" {
@@ -106,7 +111,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 		}
 		return &GeneralSignature{
 			SignType: signType,
-			data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope, "mutableAttrs": mutableAttrs},
+			data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope, "protectAttrs": matchedProtectAttrs, "unprotectAttrs": matchedUnprotectAttrs},
 			option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 		}
 	}
@@ -134,7 +139,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "mutableAttrs": mutableAttrs},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "protectAttrs": matchedProtectAttrs, "unprotectAttrs": matchedUnprotectAttrs},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -175,7 +180,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 	// return nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList) (*common.SignPolicyEvalResult, error) {
+func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error) {
 
 	if reqc.IsResourceSignatureRequest() {
 		var rsigObj *vrsig.VResourceSignature
@@ -195,7 +200,7 @@ func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigLis
 	ref := reqc.ResourceRef()
 
 	// find signature
-	rsig := self.GetResourceSignature(ref, reqc, resSigList)
+	rsig := self.GetResourceSignature(ref, reqc, resSigList, protectAttrs, unprotectAttrs)
 	if rsig == nil {
 		return &common.SignPolicyEvalResult{
 			Allow:   false,
@@ -268,4 +273,15 @@ func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigLis
 			},
 		}, nil
 	}
+}
+
+func findAttrsPattern(reqc *common.ReqContext, attrs []*protect.AttrsPattern) []string {
+	reqFields := reqc.Map()
+	masks := []string{}
+	for _, attr := range attrs {
+		if attr.Match.Match(reqFields) {
+			masks = append(masks, attr.Attrs...)
+		}
+	}
+	return masks
 }

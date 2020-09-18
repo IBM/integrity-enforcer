@@ -374,7 +374,9 @@ func (self *RequestHandler) evalSignPolicy() (*common.SignPolicyEvalResult, erro
 	} else {
 		reqc := self.reqc
 		resSigList := self.loader.ResSigList(reqc)
-		return evaluator.Eval(reqc, resSigList)
+		protectAttrs := self.loader.ProtectAttrsPatterns(reqc.ResourceScope)
+		unprotectAttrs := self.loader.UnprotectAttrsPatterns(reqc.ResourceScope)
+		return evaluator.Eval(reqc, resSigList, protectAttrs, unprotectAttrs)
 	}
 }
 

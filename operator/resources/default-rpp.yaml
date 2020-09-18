@@ -13,6 +13,11 @@ spec:
     - metadata.finalizers*
     match:
       name: '*'
+  protectAttrs:
+  - attrs:
+    - "spec.ports[].nodePort"
+    match:
+      kind: Service
   ignoreServiceAccount: 
   - serviceAccountName:
     - system:admin
