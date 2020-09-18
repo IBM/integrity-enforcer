@@ -26,14 +26,14 @@ import (
 
 	"log"
 
+	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
+	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
-	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
-	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
-	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
+	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
+	crppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/clusterresourceprotectionprofile/clientset/versioned/typed/clusterresourceprotectionprofile/v1alpha1"
+	rppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourceprotectionprofile/clientset/versioned/typed/resourceprotectionprofile/v1alpha1"
 	rsigclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
-	crppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vclusterresourceprotectionprofile/clientset/versioned/typed/vclusterresourceprotectionprofile/v1alpha1"
-	rppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourceprotectionprofile/clientset/versioned/typed/vresourceprotectionprofile/v1alpha1"
-	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vsignpolicy/clientset/versioned/typed/vsignpolicy/v1alpha1"
+	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -51,7 +51,7 @@ type RPPLoader struct {
 	interval          time.Duration
 
 	Client *rppclient.ResearchV1alpha1Client
-	Data   []*rppapi.VResourceProtectionProfile
+	Data   []*rppapi.ResourceProtectionProfile
 }
 
 func NewRPPLoader(enforcerNamespace, requestNamespace string) *RPPLoader {
@@ -67,7 +67,7 @@ func NewRPPLoader(enforcerNamespace, requestNamespace string) *RPPLoader {
 	}
 }
 
-func (self *RPPLoader) GetData() []*rppapi.VResourceProtectionProfile {
+func (self *RPPLoader) GetData() []*rppapi.ResourceProtectionProfile {
 	if len(self.Data) == 0 {
 		self.Load()
 	}
@@ -76,17 +76,17 @@ func (self *RPPLoader) GetData() []*rppapi.VResourceProtectionProfile {
 
 func (self *RPPLoader) Load() {
 	var err error
-	var list1, list2 *rppapi.VResourceProtectionProfileList
+	var list1, list2 *rppapi.ResourceProtectionProfileList
 	var keyName string
 
 	keyName = fmt.Sprintf("RPPLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.VResourceProtectionProfiles(self.enforcerNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.ResourceProtectionProfiles(self.enforcerNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VResourceProtectionProfile:", err)
+			logger.Fatal("failed to get ResourceProtectionProfile:", err)
 			return
 		}
-		logger.Debug("VResourceProtectionProfile reloaded.")
+		logger.Debug("ResourceProtectionProfile reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -94,19 +94,19 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VResourceProtectionProfile:", err)
+			logger.Fatal("failed to Unmarshal cached ResourceProtectionProfile:", err)
 			return
 		}
 	}
 
 	keyName = fmt.Sprintf("RPPLoader/%s/list", self.requestNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.VResourceProtectionProfiles(self.requestNamespace).List(metav1.ListOptions{})
+		list2, err = self.Client.ResourceProtectionProfiles(self.requestNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VResourceProtectionProfile:", err)
+			logger.Fatal("failed to get ResourceProtectionProfile:", err)
 			return
 		}
-		logger.Debug("VResourceProtectionProfile reloaded.")
+		logger.Debug("ResourceProtectionProfile reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list2)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -114,12 +114,12 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list2)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VResourceProtectionProfile:", err)
+			logger.Fatal("failed to Unmarshal cached ResourceProtectionProfile:", err)
 			return
 		}
 	}
 
-	data := []*rppapi.VResourceProtectionProfile{}
+	data := []*rppapi.ResourceProtectionProfile{}
 	for _, d := range list1.Items {
 		data = append(data, &d)
 	}
@@ -136,7 +136,7 @@ type CRPPLoader struct {
 	interval time.Duration
 
 	Client *crppclient.ResearchV1alpha1Client
-	Data   []*crppapi.VClusterResourceProtectionProfile
+	Data   []*crppapi.ClusterResourceProtectionProfile
 }
 
 func NewCRPPLoader() *CRPPLoader {
@@ -150,7 +150,7 @@ func NewCRPPLoader() *CRPPLoader {
 	}
 }
 
-func (self *CRPPLoader) GetData() []*crppapi.VClusterResourceProtectionProfile {
+func (self *CRPPLoader) GetData() []*crppapi.ClusterResourceProtectionProfile {
 	if len(self.Data) == 0 {
 		self.Load()
 	}
@@ -159,17 +159,17 @@ func (self *CRPPLoader) GetData() []*crppapi.VClusterResourceProtectionProfile {
 
 func (self *CRPPLoader) Load() {
 	var err error
-	var list1 *crppapi.VClusterResourceProtectionProfileList
+	var list1 *crppapi.ClusterResourceProtectionProfileList
 	var keyName string
 
 	keyName = "CRPPLoader/list"
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.VClusterResourceProtectionProfiles().List(metav1.ListOptions{})
+		list1, err = self.Client.ClusterResourceProtectionProfiles().List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VClusterResourceProtectionProfile:", err)
+			logger.Fatal("failed to get ClusterResourceProtectionProfile:", err)
 			return
 		}
-		logger.Debug("VClusterResourceProtectionProfile reloaded.")
+		logger.Debug("ClusterResourceProtectionProfile reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -177,12 +177,12 @@ func (self *CRPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VClusterResourceProtectionProfile:", err)
+			logger.Fatal("failed to Unmarshal cached ClusterResourceProtectionProfile:", err)
 			return
 		}
 	}
 
-	data := []*crppapi.VClusterResourceProtectionProfile{}
+	data := []*crppapi.ClusterResourceProtectionProfile{}
 	for _, d := range list1.Items {
 		data = append(data, &d)
 	}
@@ -197,7 +197,7 @@ type SignPolicyLoader struct {
 	enforcerNamespace string
 
 	Client *spolclient.ResearchV1alpha1Client
-	Data   *spolapi.VSignPolicy
+	Data   *spolapi.SignPolicy
 }
 
 func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
@@ -212,7 +212,7 @@ func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
 	}
 }
 
-func (self *SignPolicyLoader) GetData() *spolapi.VSignPolicy {
+func (self *SignPolicyLoader) GetData() *spolapi.SignPolicy {
 	if self.Data == nil {
 		self.Load()
 	}
@@ -221,17 +221,17 @@ func (self *SignPolicyLoader) GetData() *spolapi.VSignPolicy {
 
 func (self *SignPolicyLoader) Load() {
 	var err error
-	var list1 *spolapi.VSignPolicyList
+	var list1 *spolapi.SignPolicyList
 	var keyName string
 
 	keyName = fmt.Sprintf("SignPolicyLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.VSignPolicies(self.enforcerNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VSignPolicy:", err)
+			logger.Fatal("failed to get SignPolicy:", err)
 			return
 		}
-		logger.Debug("VSignPolicy reloaded.")
+		logger.Debug("SignPolicy reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -239,12 +239,12 @@ func (self *SignPolicyLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VSignPolicy:", err)
+			logger.Fatal("failed to Unmarshal cached SignPolicy:", err)
 			return
 		}
 	}
 
-	data := &spolapi.VSignPolicy{}
+	data := &spolapi.SignPolicy{}
 	if len(list1.Items) > 0 {
 		data = &(list1.Items[0])
 	}

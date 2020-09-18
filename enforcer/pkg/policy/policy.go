@@ -39,28 +39,28 @@ const (
 
 /**********************************************
 
-					VSignPolicy
+					SignPolicy
 
 ***********************************************/
 
-type VSignPolicy struct {
+type SignPolicy struct {
 	Policies    []SignPolicyCondition `json:"policies,omitempty"`
 	Signers     []SignerCondition     `json:"signers,omitempty"`
 	BreakGlass  []BreakGlassCondition `json:"breakGlass,omitempty"`
 	Description string                `json:"description,omitempty"`
 }
 
-func (p *VSignPolicy) DeepCopyInto(p2 *VSignPolicy) {
+func (p *SignPolicy) DeepCopyInto(p2 *SignPolicy) {
 	copier.Copy(&p2, &p)
 }
 
-func (p *VSignPolicy) DeepCopy() *VSignPolicy {
-	p2 := &VSignPolicy{}
+func (p *SignPolicy) DeepCopy() *SignPolicy {
+	p2 := &SignPolicy{}
 	p.DeepCopyInto(p2)
 	return p2
 }
 
-func (self *VSignPolicy) GetSignerMap() map[string][]SubjectCondition {
+func (self *SignPolicy) GetSignerMap() map[string][]SubjectCondition {
 	signerMap := map[string][]SubjectCondition{}
 	for _, si := range self.Signers {
 		tmpSC := []SubjectCondition{}
@@ -76,8 +76,8 @@ func (self *VSignPolicy) GetSignerMap() map[string][]SubjectCondition {
 	return signerMap
 }
 
-func (self *VSignPolicy) Merge(data *VSignPolicy) *VSignPolicy {
-	merged := &VSignPolicy{}
+func (self *SignPolicy) Merge(data *SignPolicy) *SignPolicy {
+	merged := &SignPolicy{}
 	merged.Policies = append(self.Policies, data.Policies...)
 	merged.Signers = append(self.Signers, data.Signers...)
 	merged.BreakGlass = append(self.BreakGlass, data.BreakGlass...)
@@ -85,7 +85,7 @@ func (self *VSignPolicy) Merge(data *VSignPolicy) *VSignPolicy {
 	return merged
 }
 
-func (self *VSignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
+func (self *SignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
 		var included, excluded bool

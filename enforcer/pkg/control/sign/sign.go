@@ -70,11 +70,11 @@ type SignPolicyEvaluator interface {
 
 type ConcreteSignPolicyEvaluator struct {
 	config  *config.EnforcerConfig
-	policy  *policy.VSignPolicy
+	policy  *policy.SignPolicy
 	plugins map[string]bool
 }
 
-func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.VSignPolicy, plugins map[string]bool) (SignPolicyEvaluator, error) {
+func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.SignPolicy, plugins map[string]bool) (SignPolicyEvaluator, error) {
 	return &ConcreteSignPolicyEvaluator{
 		config:  config,
 		policy:  policy,
