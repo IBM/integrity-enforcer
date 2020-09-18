@@ -26,13 +26,13 @@ import (
 
 	"log"
 
+	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
 	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
-	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
 	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vsignpolicy/v1alpha1"
+	rsigclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
 	crppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vclusterresourceprotectionprofile/clientset/versioned/typed/vclusterresourceprotectionprofile/v1alpha1"
 	rppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourceprotectionprofile/clientset/versioned/typed/vresourceprotectionprofile/v1alpha1"
-	rsigclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourcesignature/clientset/versioned/typed/vresourcesignature/v1alpha1"
 	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vsignpolicy/clientset/versioned/typed/vsignpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -260,7 +260,7 @@ type ResSigLoader struct {
 	requestNamespace   string
 
 	Client *rsigclient.ResearchV1alpha1Client
-	Data   []*rsigapi.VResourceSignature
+	Data   []*rsigapi.ResourceSignature
 }
 
 func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader {
@@ -275,7 +275,7 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 	}
 }
 
-func (self *ResSigLoader) GetData() []*rsigapi.VResourceSignature {
+func (self *ResSigLoader) GetData() []*rsigapi.ResourceSignature {
 	if len(self.Data) == 0 {
 		self.Load()
 	}
@@ -284,17 +284,17 @@ func (self *ResSigLoader) GetData() []*rsigapi.VResourceSignature {
 
 func (self *ResSigLoader) Load() {
 	var err error
-	var list1, list2 *rsigapi.VResourceSignatureList
+	var list1, list2 *rsigapi.ResourceSignatureList
 	var keyName string
 
 	keyName = fmt.Sprintf("ResSigLoader/%s/list", self.signatureNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.VResourceSignatures(self.signatureNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VResourceSignature:", err)
+			logger.Fatal("failed to get ResourceSignature:", err)
 			return
 		}
-		logger.Debug("VResourceSignature reloaded.")
+		logger.Debug("ResourceSignature reloaded.")
 		if len(list1.Items) > 0 {
 			tmpItems := sortByCreationTimestamp(list1.Items)
 			list1.Items = tmpItems
@@ -304,18 +304,18 @@ func (self *ResSigLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VResourceSignature:", err)
+			logger.Fatal("failed to Unmarshal cached ResourceSignature:", err)
 			return
 		}
 	}
 	keyName = fmt.Sprintf("ResSigLoader/%s/list", self.requestNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.VResourceSignatures(self.requestNamespace).List(metav1.ListOptions{})
+		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get VResourceSignature:", err)
+			logger.Fatal("failed to get ResourceSignature:", err)
 			return
 		}
-		logger.Debug("VResourceSignature reloaded.")
+		logger.Debug("ResourceSignature reloaded.")
 		if len(list2.Items) > 0 {
 			tmp, _ := json.Marshal(list2)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -323,12 +323,12 @@ func (self *ResSigLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list2)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached VResourceSignature:", err)
+			logger.Fatal("failed to Unmarshal cached ResourceSignature:", err)
 			return
 		}
 	}
 
-	data := []*rsigapi.VResourceSignature{}
+	data := []*rsigapi.ResourceSignature{}
 	for _, d := range list1.Items {
 		data = append(data, d)
 	}
@@ -339,8 +339,8 @@ func (self *ResSigLoader) Load() {
 	return
 }
 
-func sortByCreationTimestamp(items []*rsigapi.VResourceSignature) []*rsigapi.VResourceSignature {
-	items2 := make([]*rsigapi.VResourceSignature, len(items))
+func sortByCreationTimestamp(items []*rsigapi.ResourceSignature) []*rsigapi.ResourceSignature {
+	items2 := make([]*rsigapi.ResourceSignature, len(items))
 	copy(items2, items)
 	sort.Slice(items2, func(i, j int) bool {
 		ti := items2[i].GetCreationTimestamp()

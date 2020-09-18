@@ -56,24 +56,24 @@ const (
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=vresourcesignature,scope=Namespaced
+// +resource:path=resourcesignature,scope=Namespaced
 
-// VResourceSignature is the CRD. Use this command to generate deepcopy for it:
+// ResourceSignature is the CRD. Use this command to generate deepcopy for it:
 // ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
 // For more details of code-generator, please visit https://github.com/kubernetes/code-generator
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// VResourceSignature is the CRD. Use this command to generate deepcopy for it:
-type VResourceSignature struct {
+// ResourceSignature is the CRD. Use this command to generate deepcopy for it:
+type ResourceSignature struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	metav1.ObjectMeta `json:"metadata"`
-	// Specification of the desired behavior of VResourceSignature.
-	Spec VResourceSignatureSpec `json:"spec"`
-	// Observed status of VResourceSignature.
-	Status VResourceSignatureStatus `json:"status"`
+	// Specification of the desired behavior of ResourceSignature.
+	Spec ResourceSignatureSpec `json:"spec"`
+	// Observed status of ResourceSignature.
+	Status ResourceSignatureStatus `json:"status"`
 }
 
-func (ss *VResourceSignature) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
+func (ss *ResourceSignature) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
 	si, _, found := ss.FindSignItem(apiVersion, kind, name, namespace)
 	if found {
 		return si.Message, true
@@ -81,7 +81,7 @@ func (ss *VResourceSignature) FindMessage(apiVersion, kind, name, namespace stri
 	return "", false
 }
 
-func (ss *VResourceSignature) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
+func (ss *ResourceSignature) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
 	si, _, found := ss.FindSignItem(apiVersion, kind, name, namespace)
 	if found {
 		return si.Signature, true
@@ -89,7 +89,7 @@ func (ss *VResourceSignature) FindSignature(apiVersion, kind, name, namespace st
 	return "", false
 }
 
-func (ss *VResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
+func (ss *ResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
 	signItem := &SignItem{}
 	for _, si := range ss.Spec.Data {
 		if matched, yamlBytes := si.match(apiVersion, kind, name, namespace); matched {
@@ -99,39 +99,39 @@ func (ss *VResourceSignature) FindSignItem(apiVersion, kind, name, namespace str
 	return signItem, nil, false
 }
 
-func (ss *VResourceSignature) Validate() (bool, string) {
+func (ss *ResourceSignature) Validate() (bool, string) {
 	if ss == nil {
-		return false, "VResourceSignature Validation failed. ss is nil."
+		return false, "ResourceSignature Validation failed. ss is nil."
 	}
 	if ss.Spec.Data == nil {
-		return false, "VResourceSignature Validation failed. ss.Spec.Data is nil."
+		return false, "ResourceSignature Validation failed. ss.Spec.Data is nil."
 	}
 	// TODO: implement
 	return true, ""
 }
 
-// VResourceSignatureSpec is a desired state description of VResourceSignature.
-type VResourceSignatureSpec struct {
+// ResourceSignatureSpec is a desired state description of ResourceSignature.
+type ResourceSignatureSpec struct {
 	Data []*SignItem `json:"data"`
 }
 
-// VResourceSignature describes the lifecycle status of VResourceSignature.
-type VResourceSignatureStatus struct {
+// ResourceSignature describes the lifecycle status of ResourceSignature.
+type ResourceSignatureStatus struct {
 	State   string `json:"state"`
 	Message string `json:"message"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// VResourceSignatureList is a list of Workflow resources
-type VResourceSignatureList struct {
+// ResourceSignatureList is a list of Workflow resources
+type ResourceSignatureList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []*VResourceSignature `json:"items"`
+	Items []*ResourceSignature `json:"items"`
 }
 
-func (ssl *VResourceSignatureList) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
+func (ssl *ResourceSignatureList) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
 	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
 	if found {
 		return si.Message, true
@@ -139,7 +139,7 @@ func (ssl *VResourceSignatureList) FindMessage(apiVersion, kind, name, namespace
 	return "", false
 }
 
-func (ssl *VResourceSignatureList) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
+func (ssl *ResourceSignatureList) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
 	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
 	if found {
 		return si.Signature, true
@@ -147,7 +147,7 @@ func (ssl *VResourceSignatureList) FindSignature(apiVersion, kind, name, namespa
 	return "", false
 }
 
-func (ssl *VResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
+func (ssl *ResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
 	signItem := &SignItem{}
 	for _, ss := range ssl.Items {
 		if si, yamlBytes, ok := ss.FindSignItem(apiVersion, kind, name, namespace); ok {

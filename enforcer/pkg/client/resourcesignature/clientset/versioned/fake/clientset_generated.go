@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourcesignature/clientset/versioned"
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourcesignature/clientset/versioned/typed/vresourcesignature/v1alpha1"
-	fakeresearchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourcesignature/clientset/versioned/typed/vresourcesignature/v1alpha1/fake"
+	clientset "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned"
+	researchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
+	fakeresearchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package vresourcesignature
+package resourcesignature
 
 const (
 	GroupName = "research.ibm.com"

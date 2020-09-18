@@ -203,17 +203,17 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vresourcesignatures.research.ibm.com",
+			Name:      "resourcesignatures.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "VResourceSignature",
-				Plural:   "vresourcesignatures",
-				ListKind: "VResourceSignatureList",
-				Singular: "vresourcesignature",
+				Kind:     "ResourceSignature",
+				Plural:   "resourcesignatures",
+				ListKind: "ResourceSignatureList",
+				Singular: "resourcesignature",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{

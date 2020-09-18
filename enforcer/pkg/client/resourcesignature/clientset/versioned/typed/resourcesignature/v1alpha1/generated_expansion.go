@@ -18,4 +18,4 @@ limitations under the License.
 
 package v1alpha1
 
-type VResourceSignatureExpansion interface{}
+type ResourceSignatureExpansion interface{}

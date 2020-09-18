@@ -20,8 +20,8 @@ package versioned
 
 import (
 	"fmt"
+	researchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
 
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourcesignature/clientset/versioned/typed/vresourcesignature/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature"
+	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -45,8 +45,8 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&VResourceSignature{},
-		&VResourceSignatureList{},
+		&ResourceSignature{},
+		&ResourceSignatureList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/vresourcesignature/clientset/versioned/typed/vresourcesignature/v1alpha1"
+	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
@@ -28,8 +28,8 @@ type FakeResearchV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeResearchV1alpha1) VResourceSignatures(namespace string) v1alpha1.VResourceSignatureInterface {
-	return &FakeVResourceSignatures{c, namespace}
+func (c *FakeResearchV1alpha1) ResourceSignatures(namespace string) v1alpha1.ResourceSignatureInterface {
+	return &FakeResourceSignatures{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

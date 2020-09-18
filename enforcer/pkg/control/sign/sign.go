@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	vrsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourcesignature/v1alpha1"
+	vrsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
@@ -65,7 +65,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignPolicyEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error)
+	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error)
 }
 
 type ConcreteSignPolicyEvaluator struct {
@@ -82,7 +82,7 @@ func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.VSignP
 	}, nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) *GeneralSignature {
+func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) *GeneralSignature {
 
 	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
@@ -180,10 +180,10 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 	// return nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.VResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error) {
+func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error) {
 
 	if reqc.IsResourceSignatureRequest() {
-		var rsigObj *vrsig.VResourceSignature
+		var rsigObj *vrsig.ResourceSignature
 		json.Unmarshal(reqc.RawObject, &rsigObj)
 		if ok, reasonFail := rsigObj.Validate(); !ok {
 			return &common.SignPolicyEvalResult{
