@@ -23,6 +23,7 @@ import (
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	yaml "gopkg.in/yaml.v2"
+	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -188,12 +189,11 @@ func (si *SignItem) match(apiVersion, kind, name, namespace string) (bool, []byt
 func (si *SignItem) parseMessage() []ResourceInfo {
 	msg := base64decode(si.Message)
 	r := bytes.NewReader([]byte(msg))
-	dec := yaml.NewDecoder(r)
-	var t map[interface{}]interface{}
+	dec := k8syaml.NewYAMLToJSONDecoder(r)
+	var t interface{}
 	resources := []ResourceInfo{}
 	for dec.Decode(&t) == nil {
-		t2 := convert(t)
-		tB, err := yaml.Marshal(t2)
+		tB, err := yaml.Marshal(t)
 		if err != nil {
 			continue
 		}

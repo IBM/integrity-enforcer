@@ -592,6 +592,48 @@ func (self *Loader) IgnoreAttrsPatterns(resourceScope string) []*protect.AttrsPa
 
 }
 
+func (self *Loader) ProtectAttrsPatterns(resourceScope string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	if resourceScope == "Namespaced" {
+		rpps := self.RPP.GetData()
+		for _, d := range rpps {
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.ProtectAttrs...)
+			}
+		}
+	} else if resourceScope == "Cluster" {
+		rpps := self.CRPP.GetData()
+		for _, d := range rpps {
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.ProtectAttrs...)
+			}
+		}
+	}
+	return patterns
+
+}
+
+func (self *Loader) UnprotectAttrsPatterns(resourceScope string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	if resourceScope == "Namespaced" {
+		rpps := self.RPP.GetData()
+		for _, d := range rpps {
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.UnprotectAttrs...)
+			}
+		}
+	} else if resourceScope == "Cluster" {
+		rpps := self.CRPP.GetData()
+		for _, d := range rpps {
+			if !d.Spec.Disabled {
+				patterns = append(patterns, d.Spec.UnprotectAttrs...)
+			}
+		}
+	}
+	return patterns
+
+}
+
 func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 	sp := self.SignPolicy.GetData()
 	conditions := []policy.BreakGlassCondition{}
