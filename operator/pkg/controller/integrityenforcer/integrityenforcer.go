@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vclusterresourceprotectionprofile/v1alpha1"
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/vresourceprotectionprofile/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pkg/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/pkg/resources"
@@ -218,7 +218,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *resear
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &rpp.VResourceProtectionProfile{}
+	found := &rpp.ResourceProtectionProfile{}
 	expected := res.BuildDefaultResourceProtectionProfileForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
@@ -260,7 +260,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultResourceProtectionProf
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultClusterResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
 
-	found := &crpp.VClusterResourceProtectionProfile{}
+	found := &crpp.ClusterResourceProtectionProfile{}
 	expected := res.BuildDefaultClusterResourceProtectionProfileForIE(instance)
 
 	reqLogger := log.WithValues(

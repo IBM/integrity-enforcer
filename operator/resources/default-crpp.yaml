@@ -1,5 +1,5 @@
 apiVersion: research.ibm.com/v1alpha1
-kind: VClusterResourceProtectionProfile
+kind: ClusterResourceProtectionProfile
 metadata:
   name: default-crpp
 spec:
