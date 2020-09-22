@@ -96,7 +96,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	evalReason := common.REASON_UNEXPECTED
 	if self.checkIfIEResource() {
 		self.ctx.IEResource = true
-		if self.checkIfIEAdminRequest() {
+		if self.checkIfIEAdminRequest() || self.checkIfIEServerRequest() {
 			allowed = true
 			evalReason = common.REASON_IE_ADMIN
 		} else {
@@ -197,7 +197,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	if !self.ctx.Allow && !self.ctx.IEResource {
-		self.updateRPP()
+		self.updateProtectionProfileStatus(self.ctx.Message)
 	}
 
 	//log context
@@ -434,6 +434,10 @@ func (self *RequestHandler) checkIfIEAdminRequest() bool {
 	return common.MatchPatternWithArray(self.config.IEAdminUserGroup, self.reqc.UserGroups) //"system:masters"
 }
 
+func (self *RequestHandler) checkIfIEServerRequest() bool {
+	return common.MatchPattern(self.config.IEServerUserName, self.reqc.UserName) //"service account for integrity-enforcer"
+}
+
 func (self *RequestHandler) GetEnabledPlugins() map[string]bool {
 	return self.config.GetEnabledPlugins()
 }
@@ -509,10 +513,11 @@ func (self *RequestHandler) CheckIfDetectOnly() bool {
 	return self.loader.DetectOnlyMode()
 }
 
-func (self *RequestHandler) updateRPP() error {
-	// TODO: implement
-	// self.protectRule.Update(self.ReqC.Map(), self.MatchedRPP)
-	return nil
+func (self *RequestHandler) updateProtectionProfileStatus(msg string) {
+	err := self.loader.updateProtectionProfileStatus(self.reqc, msg)
+	if err != nil {
+		logger.Error("Failed to update status in ProtectionProfile; ", err)
+	}
 }
 
 /**********************************************
@@ -551,6 +556,34 @@ func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
 		}
 	}
 	return rules
+}
+
+func (self *Loader) updateProtectionProfileStatus(reqc *common.ReqContext, msg string) error {
+	var profileLoader ctlconfig.ProtectionProfileLoader
+	resourceScope := reqc.ResourceScope
+	if resourceScope == "Namespaced" {
+		profileLoader = self.RPP
+	} else if resourceScope == "Cluster" {
+		profileLoader = self.CRPP
+	}
+
+	profiles := profileLoader.GetProfileInterface()
+	if len(profiles) == 0 {
+		return nil
+	}
+
+	// update contents (in memory)
+	reqFields := reqc.Map()
+	updatedProfiles := []protect.ProtectionProfile{}
+	for _, profile := range profiles {
+		if matched, matchedRule := profile.Match(reqFields); matched {
+			profile.Update(reqFields, msg, matchedRule)
+			updatedProfiles = append(updatedProfiles, profile)
+		}
+	}
+
+	// update profile resource in k8s
+	return profileLoader.Update(updatedProfiles)
 }
 
 func (self *Loader) IgnoreServiceAccountPatterns(resourceScope string) []*protect.ServieAccountPattern {

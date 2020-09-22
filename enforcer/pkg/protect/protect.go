@@ -128,10 +128,11 @@ func (self *Request) String() string {
 
 type Result struct {
 	Request     string `json:"request,omitempty"`
+	Reason      string `json:"reason,omitempty"`
 	MatchedRule string `json:"matchedRule,omitempty"`
 }
 
-func (self *Result) Update(reqFields map[string]string, matchedRule *Rule) {
+func (self *Result) Update(reqFields map[string]string, reason string, matchedRule *Rule) {
 	tmp := &Request{}
 	v := reflect.Indirect(reflect.ValueOf(tmp))
 	t := v.Type()
@@ -149,6 +150,7 @@ func (self *Result) Update(reqFields map[string]string, matchedRule *Rule) {
 		}
 	}
 	self.Request = tmp.String()
+	self.Reason = reason
 	self.MatchedRule = matchedRule.String()
 	return
 }
@@ -201,4 +203,9 @@ func (p *Result) DeepCopy() *Result {
 	p2 := &Result{}
 	p.DeepCopyInto(p2)
 	return p2
+}
+
+type ProtectionProfile interface {
+	Match(reqFields map[string]string) (bool, *Rule)
+	Update(reqFields map[string]string, reason string, matchedRule *Rule)
 }
