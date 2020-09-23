@@ -1,8 +1,10 @@
 # Protect resources on ROKS
 
-This document describes the steps required to use Integrity Enforcer (IE) on your RedHat OpenShift (including ROKS) to protect resources
+This document describes the steps required to use Integrity Enforcer (IE) on your RedHat OpenShift (including ROKS) to protect resources.
 
-The steps in this document include 
+First setup `integrity-enforcer` as described [here](README_EASY_SETUP.md)
+
+The steps for protecting resources include:
 - Step 1. Setup a ResourceProtectionProfile.
 - Step 2. Specify a resource to be protected.
 - Step 3. Create and store a ResourceSignature.
@@ -15,13 +17,13 @@ The steps in this document include
 Define which reources should be protected as a ResourceProtectionProfile 
 
    1. Specify a ResourceProtectionProfile
-    To protect resources such as ConfigMap, Deployment, and Service in namespace `secure-ns`, create a ResourceProtectionProfile as below (sample-rpp.yaml):
+    To protect resources such as ConfigMap, Deployment, and Service in namespace `secure-ns`, create a ResourceProtectionProfile as below (/tmp/sample-rpp.yaml):
 
         ```
         apiVersion: research.ibm.com/v1alpha1
         kind: ResourceProtectionProfile
         metadata:
-        name: sample-rpp
+          name: sample-rpp
         spec:
         rules:
         - match:
@@ -35,15 +37,15 @@ Define which reources should be protected as a ResourceProtectionProfile
    2. Store ResourceProtectionProfile in namespace `secure-ns` in the cluster.
 
         ```
-        $ oc create -f sample-rpp.yaml -n secure-ns
+        $ oc create -f /tmp/sample-rpp.yaml -n secure-ns
         resourceprotectionprofile.research.ibm.com/sample-rpp created
         ```
 
 ## Step 2. Specify a resource to be protected
 
-1. Specify a ConfigMap resource in namespace `secure-ns` 
+1. Specify a ConfigMap resource in a namespace `secure-ns` 
     
-    E.g. The following snippet (test-cm.yaml) shows a spec of a ConfigMap `test-cm`
+    E.g. The following snippet (/tmp/test-cm.yaml) shows a spec of a ConfigMap `test-cm`
 
     ```
     apiVersion: v1
@@ -57,10 +59,10 @@ Define which reources should be protected as a ResourceProtectionProfile
     ```
 2. Try to create ConfigMap resource `test-cm` shown above (test-cm.yaml) in the namespace `secure-ns`
 
-    Run the command below to create this ConfigMap, but it fails because no signature for this resource is not stored in the cluster.
+    Run the command below to create ConfigMap `test-cm`, but it fails because no signature for this resource is stored in the cluster.
 
     ```
-    $ oc create -f test-cm.yaml -n secure-ns
+    $ oc create -f /tmp/test-cm.yaml -n secure-ns
     Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
     ```
 
@@ -68,7 +70,8 @@ Define which reources should be protected as a ResourceProtectionProfile
 
 1. Generate a ResourceSignature with the script: https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh
 
-    Setup signer in `gpg-sign-config.sh`
+    Setup a signer in https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-sign-config.sh
+
     ```
     #!/bin/bash
     SIGNER=signer@enterprise.com
@@ -79,7 +82,7 @@ Define which reources should be protected as a ResourceProtectionProfile
     $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
     ```
 
-    Content of generated ResourceSinature `test-cm-rs.yaml`:
+    Content of the generated ResourceSinature `/tmp/test-cm-rs.yaml`:
     
     ```
       apiVersion: research.ibm.com/v1alpha1
@@ -99,26 +102,26 @@ Define which reources should be protected as a ResourceProtectionProfile
 2. Store the ResourceSignature in a cluster
 
     ```
-    $ oc create -f test-cm-rs.yaml -n integrity-enforcer-ns
+    $ oc create -f /tmp/test-cm-rs.yaml -n integrity-enforcer-ns
     resourcesignature.research.ibm.com/rsig-test-cm created
     ```
 
 
-## Step 3. Create a resource
+## Step 4. Create a resource
 
 1. After successfull creation of ResourceSignature, now create the resource that need to be protected (shown in Step 2)
 
     Run the command below to create this ConfigMap, it should be successful this time because a corresponding ResourceSignature is available in the cluster.
     ```
-    $ oc create -f test-cm.yaml -n secure-ns
+    $ oc create -f /tmp/test-cm.yaml -n secure-ns
     configmap/test-cm created
     ```
 
-## Step 4. Check status on ResourceProtectionProfile (with cap)
+## Step 5. Check status on ResourceProtectionProfile (with cap)
 
 
 
-## Step 5. Check logs (server, forwarder)
+## Step 6. Check logs (server, forwarder)
 1. Check why IE allowed/denied the requests.
 
    Run the script below to check why IE allowed/denied the requests
@@ -152,5 +155,5 @@ Define which reources should be protected as a ResourceProtectionProfile
     
     ```
     $ ./scripts/log_logging.sh 
-    2020-09-23 02:45:19.729197700 +0000 fw.events: {"abortReason":"","aborted":false,"allowed":false,"apiGroup":"","apiVersion":"v1","breakglass":false,"claim.ownerApiVersion":"","claim.ownerKind":"","claim.ownerName":"","claim.ownerNamespace":"secure-ns","creator":"","detectOnly":false,"ieresource":false,"ignoreSA":false,"kind":"ConfigMap","ma.checked":"false","ma.diff":"","ma.errOccured":false,"ma.filtered":"","ma.mutated":"false","maIntegrity.serviceAccount":"","maIntegrity.signature":"","msg":"Failed to verify signature; Signature is invalid","name":"test-cm","namespace":"secure-ns","objLabels":"","objMetaName":"test-cm","operation":"CREATE","org.ownerApiVersion":"","org.ownerKind":"","org.ownerName":"","org.ownerNamespace":"secure-ns","own.errOccured":false,"own.owners":"null","own.verified":false,"protected":true,"reasonCode":"invalid-signature","request.dump":"","request.objectHash":"","request.objectHashType":"","request.uid":"bdb62f22-22f8-4a4d-9ead-cc034e4ce07b","requestScope":"Namespaced","sessionTrace":"time=\"2020-09-23T02:45:19Z\" level=trace msg=\"New Admission Request Sent\" aborted=false allowed=true apiVersion=research.ibm.com/v1alpha1 kind=ResourceProtectionProfile name=sample-rpp namespace=secure-ns operation=UPDATE\n","sig.allow":false,"sig.errMsg":"","sig.errOccured":true,"sig.errReason":"Failed to verify signature; Signature is invalid","timestamp":"2020-09-23T02:45:19.728Z","type":"","userInfo":"{\"username\":\"IAM#gajan@jp.ibm.com\",\"groups\":[\"admin\",\"ie-group\",\"system:authenticated\"]}","userName":"IAM#gajan@jp.ibm.com","verified":false}
+    2020-09-23 02:45:19.729197700 +0000 fw.events: {"abortReason":"","aborted":false,"allowed":false,"apiGroup":"","apiVersion":"v1","breakglass":false,"claim.ownerApiVersion":"","claim.ownerKind":"","claim.ownerName":"","claim.ownerNamespace":"secure-ns","creator":"","detectOnly":false,"ieresource":false,"ignoreSA":false,"kind":"ConfigMap","ma.checked":"false","ma.diff":"","ma.errOccured":false,"ma.filtered":"","ma.mutated":"false","maIntegrity.serviceAccount":"","maIntegrity.signature":"","msg":"Failed to verify signature; Signature is invalid","name":"test-cm","namespace":"secure-ns","objLabels":"","objMetaName":"test-cm","operation":"CREATE","org.ownerApiVersion":"","org.ownerKind":"","org.ownerName":"","org.ownerNamespace":"secure-ns","own.errOccured":false,"own.owners":"null","own.verified":false,"protected":true,"reasonCode":"invalid-signature","request.dump":"","request.objectHash":"","request.objectHashType":"","request.uid":"bdb62f22-22f8-4a4d-9ead-cc034e4ce07b","requestScope":"Namespaced","sessionTrace":"time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=research.ibm.com/v1alpha1 kind=ResourceProtectionProfile name=sample-rpp namespace=secure-ns operation=UPDATE\n","sig.allow":false,"sig.errMsg":"","sig.errOccured":true,"sig.errReason":"Failed to verify signature; Signature is invalid","timestamp":"2020-09-23T02:45:19.728Z","type":"","userInfo":"{"username":"IAM#gajan@jp.ibm.com","groups":["admin","ie-group","system:authenticated"]}","userName":"IAM#gajan@jp.ibm.com","verified":false}
     ```

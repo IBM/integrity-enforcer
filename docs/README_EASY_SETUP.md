@@ -17,9 +17,9 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
     oc project integrity-enforcer-ns
     ```
 
- 3. Setup environment
+3. Setup environment
     
-    - `IE_ENV=remote` refers to the cluster RedHat OpenShift cluster including ROKS
+    - `IE_ENV=remote` refers to a RedHat OpenShift cluster
     - `IE_NS=integrity-enforcer-ns` refers to a namespace where IE to be deployed
     - `IE_REPO_ROOT` refers to root directory of the cloned `integrity-enforcer` source repository
 
@@ -35,18 +35,19 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
 
     1. export key
 
+        E.g. The following shows a pubkey for a signer identified by email `signer@enterprise.com` is exported as a key stored in `~/.gnupg/pubring.gpg`.
         ```
         $ gpg --export signer@enterprise.com > ~/.gnupg/pubring.gpg
         $ cat ~/.gnupg/pubring.gpg | base64
         ```
-    2.  embed it to `keyring-secret` as follows:   
+    2.  embed encoded content of `~/.gnupg/pubring.gpg` to `keyring-secret` as follows:   
 
         E.g.: key-ring.yaml 
         ```
         apiVersion: v1
         kind: Secret
         metadata:
-        name: keyring-secret
+          name: keyring-secret
         type: Opaque
         data:
             pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
@@ -56,11 +57,12 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
         ```
         $ oc create -f key-ring.yaml -n integrity-enforcer-ns
         ```      
+
 5. Configure SignPolicy in `integrity-enforcer` Custom Resource file
    
-   Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify signer for a namespace `secure-ns`
+   Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify a signer for a namespace `secure-ns`
 
-   Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be created in namespace `secure-ns`.
+   Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be created in a namespace `secure-ns`.
    
    ```
        signPolicy:
@@ -81,7 +83,9 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
         - name: "HelmClusterSigner"
           subjects:
           - email: cluster_signer@signer.com
-        -   
+        - name: service-a 
+          subjects:
+          - email: signer@enterprise.com  
 
    ```
 
@@ -93,12 +97,10 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
 
 7. Confirm if `integrity-enforcer` is running properly.
     
-    Check if there are two pods running in `integrity-enforcer-ns`: 
-      - `integrity-enforcer-operator` 
-      - `integrity-enforcer-server` 
+   Check if there are two pods running in the namespace `integrity-enforcer-ns`: 
         
       ```
-      $ oc get pod -n integrity-enforcer
+      $ oc get pod -n integrity-enforcer-ns
       integrity-enforcer-operator-c4699c95c-4p8wp   1/1     Running   0          5m
       integrity-enforcer-server-85c787bf8c-h5bnj    2/2     Running   0          82m
       ```
