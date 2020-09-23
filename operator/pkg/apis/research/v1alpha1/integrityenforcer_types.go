@@ -22,6 +22,7 @@ import (
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -75,6 +76,8 @@ type SecurityConfig struct {
 	ClusterRoleBinding             string                 `json:"clusterRoleBinding,omitempty"`
 	PodSecurityPolicyName          string                 `json:"podSecurityPolicyName,omitempty"`
 	PodSecurityContext             *v1.PodSecurityContext `json:"securityContext,omitempty"`
+	IEAdminSubjects                []rbacv1.Subject       `json:"ieAdminSubjects,omitempty"`
+	AutoIEAdminCreationDisabled    bool                   `json:"autoIEAdminRoleCreationDisabled,omitempty"`
 }
 
 type GlobalConfig struct {

@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pkg/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/pkg/resources"
@@ -349,7 +349,6 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSCC(instance *researchv1alpha
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdateServiceAccount(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-
 	expected := res.BuildServiceAccountForIE(instance)
 	found := &corev1.ServiceAccount{}
 
@@ -391,9 +390,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateServiceAccount(instance *rese
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRole(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRole(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRole) (reconcile.Result, error) {
 
-	expected := res.BuildClusterRoleForIE(instance)
 	found := &rbacv1.ClusterRole{}
 
 	reqLogger := log.WithValues(
@@ -435,9 +433,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRole(instance *researc
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBinding(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBinding(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRoleBinding) (reconcile.Result, error) {
 
-	expected := res.BuildClusterRoleBindingForIE(instance)
 	found := &rbacv1.ClusterRoleBinding{}
 
 	reqLogger := log.WithValues(
@@ -478,9 +475,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBinding(instance *
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateRole(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRole(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.Role) (reconcile.Result, error) {
 
-	expected := res.BuildRoleForIE(instance)
 	found := &rbacv1.Role{}
 
 	reqLogger := log.WithValues(
@@ -522,9 +518,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateRole(instance *researchv1alph
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBinding(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBinding(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.RoleBinding) (reconcile.Result, error) {
 
-	expected := res.BuildRoleBindingForIE(instance)
 	found := &rbacv1.RoleBinding{}
 
 	reqLogger := log.WithValues(
@@ -563,6 +558,56 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBinding(instance *researc
 	// No reconcile was necessary
 	return reconcile.Result{}, nil
 
+}
+
+// ie-admin
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBindingForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleBindingForIEAdmin(instance)
+	return r.createOrUpdateClusterRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBindingForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleBindingForIEAdmin(instance)
+	return r.createOrUpdateRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleForIEAdmin(instance)
+	return r.createOrUpdateRole(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleForIEAdmin(instance)
+	return r.createOrUpdateClusterRole(instance, expected)
+}
+
+// for ie
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBindingForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleBindingForIE(instance)
+	return r.createOrUpdateClusterRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBindingForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleBindingForIE(instance)
+	return r.createOrUpdateRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleForIE(instance)
+	return r.createOrUpdateRole(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleForIE(instance)
+	return r.createOrUpdateClusterRole(instance, expected)
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdatePodSecurityPolicy(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
