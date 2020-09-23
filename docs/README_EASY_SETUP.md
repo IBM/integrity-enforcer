@@ -19,9 +19,9 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
 
  3. Setup environment
     
-    - IE_ENV=local (Minikube) or IE_ENV=remote (ROKS, OpenShift) refers to the cluster
-    - IE_NS=integrity-enforcer-ns refers to a namespace where IE to be deployed
-    - IE_REPO_ROOT refers to root directory of the cloned `integrity-enforcer` source repository
+    - `IE_ENV=remote` refers to the cluster RedHat OpenShift cluster including ROKS
+    - `IE_NS=integrity-enforcer-ns` refers to a namespace where IE to be deployed
+    - `IE_REPO_ROOT` refers to root directory of the cloned `integrity-enforcer` source repository
 
     ```
     $ export IE_ENV=remote 
@@ -55,21 +55,35 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
      3. create `keyring-secret` in namespace `IE_NS` in the cluster.
         ```
         $ oc create -f key-ring.yaml -n integrity-enforcer-ns
-        ```   
+        ```      
+5. Configure SignPolicy in `integrity-enforcer` Custom Resource file
+   
+   Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify signer for a namespace `secure-ns`
 
-5. Config `integrity-enforcer` Custom Resource file
+   Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be created in namespace `secure-ns`.
+   
+   ```
+       signPolicy:
+        policies:
+        - namespaces:
+            - "*"
+            signers:
+            - "ClusterSigner"
+            - "HelmClusterSigner"
+        - namespaces:
+            - secure-ns
+            signers:
+            - service-a    
+        signers:
+        - name: "ClusterSigner"
+          subjects:
+          - commonName: "ClusterAdmin"
+        - name: "HelmClusterSigner"
+          subjects:
+          - email: cluster_signer@signer.com
+        -   
 
-   Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify or change the following settings.
-
-   1. signPolicy
-      
-   2. enforcerConfig
-
-   3. ieAdminUserGroup (default = system:masters group)
-
-   4. verifyType (pgp or x509)
-      
-      Set `spec.verifyType=pgp` when using PGP for signing resources.
+   ```
 
 6. Execute the following script to deploy `integrity-enforcer`
 
@@ -79,27 +93,15 @@ This document describe steps for deploying Integrity Enforcer (IE) on your RedHa
 
 7. Confirm if `integrity-enforcer` is running properly.
     
-   1. Check if there are two pods running in `IE_NS`: 
+    Check if there are two pods running in `integrity-enforcer-ns`: 
       - `integrity-enforcer-operator` 
       - `integrity-enforcer-server` 
         
       ```
-      $ oc get pod | grep integrity-enforcer
+      $ oc get pod -n integrity-enforcer
       integrity-enforcer-operator-c4699c95c-4p8wp   1/1     Running   0          5m
       integrity-enforcer-server-85c787bf8c-h5bnj    2/2     Running   0          82m
       ```
-
-   2. Check logs of the pod: `integrity-enforcer-operator-c4699c95c-4p8wp` and confirm all IE resources are successfully created.
-
-        ```
-        $ oc logs integrity-enforcer-operator-c4699c95c-4p8wp -f
-        ```
-
-   3. Check logs of the pod: `integrity-enforcer-server-85c787bf8c-h5bnj` and confirm IE server successfully initilized.
-
-        ```
-        $ oc logs integrity-enforcer-server-85c787bf8c-h5bnj -f -c server
-        ``` 
 
 ---
 
