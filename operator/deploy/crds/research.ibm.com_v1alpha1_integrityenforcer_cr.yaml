@@ -4,7 +4,7 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  verifyType: x509
+  verifyType: pgp
   enforcerConfig:
     policy:
       plugin:
@@ -26,7 +26,7 @@ spec:
         - email: cluster_signer@signer.com
     ieResource: "research.ibm.com"
     ieAdminUserGroup: "system:masters"
-    ieServerUserName: system:serviceaccount:integrity-enforcer-ns:ie-sa
+    ieServerUserName: ""
     ignore:
     - kind: Event
     - kind: Lease

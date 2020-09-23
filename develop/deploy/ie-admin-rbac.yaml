@@ -14,6 +14,10 @@ rules:
     - create
     - delete
     - update
+    - get
+    - list
+    - watch
+    - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -30,6 +34,10 @@ rules:
     - create
     - delete
     - update
+    - get
+    - list
+    - watch
+    - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

@@ -265,7 +265,7 @@ func BuildRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 					"signpolicies",
 				},
 				Verbs: []string{
-					"update", "create", "delete",
+					"update", "create", "delete", "get", "list", "watch", "patch",
 				},
 			},
 		},
@@ -322,7 +322,7 @@ func BuildClusterRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.
 					"clusterresourceprotectionprofiles",
 				},
 				Verbs: []string{
-					"update", "create", "delete",
+					"update", "create", "delete", "get", "list", "watch", "patch",
 				},
 			},
 		},
