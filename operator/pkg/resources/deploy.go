@@ -91,8 +91,8 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		Image:           cr.Spec.Server.Image,
 		ImagePullPolicy: cr.Spec.Server.ImagePullPolicy,
 		ReadinessProbe: &v1.Probe{
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       5,
+			InitialDelaySeconds: 30,
+			PeriodSeconds:       30,
 			Handler: v1.Handler{
 				Exec: &v1.ExecAction{
 					Command: []string{
