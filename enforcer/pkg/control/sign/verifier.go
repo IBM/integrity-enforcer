@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"strings"
 
+	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/plugins/helm"
 	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
 )
@@ -451,10 +452,11 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext)
 	var vsinfo *common.SignerInfo
 	var retErr error
 
+	rlsStr, _ := sig.data["releaseSecret"]
+	hrmStr, _ := sig.data["helmReleaseMetadata"]
+
 	if sig.option["matchRequired"] {
-		rls, _ := sig.data["releaseSecret"]
-		hrm, _ := sig.data["helmReleaseMetadata"]
-		matched := helm.MatchReleaseSecret(rls, hrm)
+		matched := helm.MatchReleaseSecret(rlsStr, hrmStr)
 		if !matched {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
@@ -468,33 +470,47 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext)
 	}
 
 	if self.VerifyType == VerifyTypePGP {
-		message := sig.data["message"]
-		signature := sig.data["signature"]
-		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyringPath, message, signature)
+		var hrmObj *hrm.HelmReleaseMetadata
+		err := json.Unmarshal([]byte(hrmStr), &hrmObj)
 		if err != nil {
+			msg := fmt.Sprintf("Error occured in helm chart verification; %s", err.Error())
 			vcerr = &common.CheckError{
-				Msg:    "Error occured in signature verification",
-				Reason: reasonFail,
-				Error:  err,
+				Msg:    msg,
+				Reason: msg,
+				Error:  fmt.Errorf("%s", msg),
 			}
 			vsinfo = nil
 			retErr = err
-		} else if ok {
-			vcerr = nil
-			vsinfo = &common.SignerInfo{
-				Email:   signer.Email,
-				Name:    signer.Name,
-				Comment: signer.Comment,
-			}
-			retErr = nil
 		} else {
-			vcerr = &common.CheckError{
-				Msg:    "Failed to verify signature",
-				Reason: reasonFail,
-				Error:  nil,
+
+			helmChart := hrmObj.Spec.Chart
+			helmProv := hrmObj.Spec.Prov
+			ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyringPath)
+			if err != nil {
+				vcerr = &common.CheckError{
+					Msg:    "Error occured in helm chart verification",
+					Reason: reasonFail,
+					Error:  err,
+				}
+				vsinfo = nil
+				retErr = err
+			} else if ok {
+				vcerr = nil
+				vsinfo = &common.SignerInfo{
+					Email:   signer.Email,
+					Name:    signer.Name,
+					Comment: signer.Comment,
+				}
+				retErr = nil
+			} else {
+				vcerr = &common.CheckError{
+					Msg:    "Failed to verify helm chart and its provenance",
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
+				retErr = nil
 			}
-			vsinfo = nil
-			retErr = nil
 		}
 
 	} else if self.VerifyType == VerifyTypeX509 {
