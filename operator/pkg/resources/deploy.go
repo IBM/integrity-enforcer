@@ -51,28 +51,50 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		EmptyDirVolume("tmp"),
 	}
 
-	servervolumemounts = []v1.VolumeMount{
-		{
-			MountPath: "/ie-certpool-secret",
-			Name:      "ie-certpool-secret",
-		},
-		{
-			MountPath: "/keyring",
-			Name:      "ie-keyring-secret",
-		},
-		{
-			MountPath: "/run/secrets/tls",
-			Name:      "ie-tls-certs",
-			ReadOnly:  true,
-		},
-		{
-			MountPath: "/tmp",
-			Name:      "tmp",
-		},
-		{
-			MountPath: "/ie-app/public",
-			Name:      "log-volume",
-		},
+	if cr.Spec.VerifyType == "pgp" {
+		servervolumemounts = []v1.VolumeMount{
+			{
+				MountPath: "/keyring",
+				Name:      "ie-keyring-secret",
+			},
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
+	} else {
+		servervolumemounts = []v1.VolumeMount{
+			{
+				MountPath: "/ie-certpool-secret",
+				Name:      "ie-certpool-secret",
+			},
+			{
+				MountPath: "/keyring",
+				Name:      "ie-keyring-secret",
+			},
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
 	}
 
 	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {

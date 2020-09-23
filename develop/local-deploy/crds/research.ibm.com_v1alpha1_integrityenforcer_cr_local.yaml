@@ -4,7 +4,7 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  verifyType: pgp
+  verifyType: pgp # x509
   enforcerConfig:
     plugin:
     - name: helm
