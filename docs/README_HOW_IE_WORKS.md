@@ -174,6 +174,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 ​
 ### Protect Resources with Integrity Enforcer
 ​
+
 This section describes the steps required to use Integrity Enforcer (IE) on your RedHat OpenShift (including ROKS) to protect resources.
 
 The steps for protecting resources include:
