@@ -240,6 +240,120 @@ func BuildRoleBindingForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.RoleB
 	return rolebinding
 }
 
+//role
+func BuildRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ie-admin-role",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"integrityenforcers",
+					"enforcerconfigs",
+					"signpolicies",
+				},
+				Verbs: []string{
+					"update", "create", "delete",
+				},
+			},
+		},
+	}
+	return role
+}
+
+//role-binding
+func BuildRoleBindingForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.RoleBinding {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	rolebinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ie-admin-rolebinding",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Subjects: cr.Spec.Security.IEAdminSubjects,
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "ie-admin-role",
+		},
+	}
+	return rolebinding
+}
+
+//role
+func BuildClusterRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRole {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ie-admin-clusterrole",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"resourceprotectionprofiles",
+					"resourcesignatures",
+					"clusterresourceprotectionprofiles",
+				},
+				Verbs: []string{
+					"update", "create", "delete",
+				},
+			},
+		},
+	}
+	return role
+}
+
+//role-binding
+func BuildClusterRoleBindingForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRoleBinding {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	rolebinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ie-admin-clusterrolebinding",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Subjects: cr.Spec.Security.IEAdminSubjects,
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "ie-admin-clusterrole",
+		},
+	}
+	return rolebinding
+}
+
 //pod security policy
 func BuildPodSecurityPolicy(cr *researchv1alpha1.IntegrityEnforcer) *policyv1.PodSecurityPolicy {
 	labels := map[string]string{

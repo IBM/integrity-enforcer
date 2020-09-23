@@ -25,6 +25,7 @@ spec:
         - email: cluster_signer@signer.com
     ieResource: "research.ibm.com"
     ieAdminUserGroup: "system:masters"
+    ieServerUserName: system:serviceaccount:integrity-enforcer-ns:ie-sa
     ignore:
     - kind: Event
     - kind: Lease
@@ -101,6 +102,11 @@ spec:
       runAsUser: 1000580000
     securityContextConstraintsName:  ie-scc
     serviceAccountName: ie-sa
+    ieAdminSubjects:
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Group
+        name: system:masters
+    autoIEAdminRoleCreationDisabled: false
   selector:
     app: ie-server
   server:
