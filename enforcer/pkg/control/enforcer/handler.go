@@ -264,8 +264,8 @@ func (self *RequestHandler) evalFinalDecision(allowed bool, evalReason int, errM
 		dr.Allow = true
 		dr.Verified = false
 		dr.AllowByBreakGlassMode = true
-		dr.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
-		dr.ReasonCode = common.REASON_UNVERIFIED
+		dr.Message = common.ReasonCodeMap[common.REASON_BREAK_GLASS].Message
+		dr.ReasonCode = common.REASON_BREAK_GLASS
 	}
 
 	if evalReason == common.REASON_UNEXPECTED {

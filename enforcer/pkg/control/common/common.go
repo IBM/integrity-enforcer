@@ -381,7 +381,7 @@ const (
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
 	REASON_ABORTED
-	REASON_UNVERIFIED
+	REASON_BREAK_GLASS
 	REASON_DETECTION
 	REASON_INVALID_SIG
 	REASON_NO_SIG
@@ -443,9 +443,9 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "aborted",
 		Code:    "aborted",
 	},
-	REASON_UNVERIFIED: {
-		Message: "allowed by allowUnverified policy",
-		Code:    "unverified",
+	REASON_BREAK_GLASS: {
+		Message: "allowed by breakglass mode",
+		Code:    "breakglass",
 	},
 	REASON_DETECTION: {
 		Message: "allowed by detection mode",
