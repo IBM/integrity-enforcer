@@ -1,4 +1,4 @@
-## ResourceSignature
+## How to Sign Resources
 
 ### Prerequisites
 
