@@ -87,10 +87,9 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     ```
 
 3. Define a public key secret for verifying signature by IE.
+    IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources. We describe signing resources using PGP key as follows.
 
-    IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources.
-
-    1. If you do not have a PGP key, generate PGP key as follows.
+    1. If you do not have a PGP key, generate PGP key as shown below.
    
         Use your `name` and `email` to generate PGP key using the following command
         ```
@@ -136,11 +135,13 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
             pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
         ```
 
-     4. Create `sig-verify-secret` in a namespace `integrity-enforcer-ns` in the cluster.
+    4. Create `sig-verify-secret` in a namespace `integrity-enforcer-ns` in the cluster.
 
         ```
         $ oc create -f  /tmp/sig-verify-secret.yaml -n integrity-enforcer-ns
-        ```      
+        ```
+
+
 
 
 4. Define which signers (identified by email) should sign the resources in a specific namespace.

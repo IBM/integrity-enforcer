@@ -135,20 +135,21 @@ The sample Tekton signing pipeline would pull sources of an application from a s
 
 
 5. Deploy Pipeline resources in the cluster
-   
-   ```
-   $ cd develop/signing-pipeline/tekton-pipeline
-   $ oc create -f admin-role.yaml -n artifact-signing-ns
-   $ oc create -f registry-secret.yaml -n artifact-signing-ns
-   $ oc create -f git-credentials.yaml -n artifact-signing-ns
-   $ oc create -f kubeconfig-secret.yaml -n artifact-signing-ns
-   $ oc create -f pipeline.yaml -n artifact-signing-ns
-   $ oc create -f task-clone-repo.yaml -n artifact-signing-ns
-   $ oc create -f task-sign-repo.yaml -n artifact-signing-ns
-   $ oc create -f openshift-pvc.yaml -n artifact-signing-ns
-   ```
 
-5. Run the Signing pipline as follows:
+      ```
+      $ cd develop/signing-pipeline/tekton-pipeline
+      $ oc create -f admin-role.yaml -n artifact-signing-ns
+      $ oc create -f registry-secret.yaml -n artifact-signing-ns
+      $ oc create -f git-credentials.yaml -n artifact-signing-ns
+      $ oc create -f kubeconfig-secret.yaml -n artifact-signing-ns
+      $ oc create -f pipeline.yaml -n artifact-signing-ns
+      $ oc create -f task-clone-repo.yaml -n artifact-signing-ns
+      $ oc create -f task-sign-repo.yaml -n artifact-signing-ns
+      $ oc create -f openshift-pvc.yaml -n artifact-signing-ns
+      ```
+
+
+6. Run the Signing pipline as follows:
 
     In the target cluster, in which the sample application to be deployed,  create a namespace `sample-app-ns`  (if not exist).
 
