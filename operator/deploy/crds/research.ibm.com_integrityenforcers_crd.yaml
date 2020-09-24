@@ -1017,6 +1017,8 @@ spec:
                   type: object
                 mode:
                   type: string
+                namespace:
+                  type: string
                 patch:
                   properties:
                     enabled:
@@ -1100,16 +1102,11 @@ spec:
                         type: object
                       type: array
                   type: object
+                signatureNamespace:
+                  type: string
                 verifyType:
                   type: string
               required:
-              - certPoolPath
-              - chartPath
-              - chartRepo
-              - ieAdminUserGroup
-              - ieResource
-              - ieServerUserName
-              - keyringPath
               - verifyType
               type: object
             enforcerConfigCrName:
@@ -1201,13 +1198,21 @@ spec:
                   properties:
                     limits:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                     requests:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1361,8 +1366,6 @@ spec:
               additionalProperties:
                 type: string
               type: object
-            policyNamespace:
-              type: string
             regKeySecret:
               properties:
                 name:
@@ -1576,13 +1579,21 @@ spec:
                   properties:
                     limits:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
                     requests:
                       additionalProperties:
-                        type: string
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1785,8 +1796,6 @@ spec:
                     type: object
                   type: array
               type: object
-            signatureNamespace:
-              type: string
             tolerations:
               items:
                 description: The pod this Toleration is attached to tolerates any
@@ -1826,8 +1835,6 @@ spec:
                     type: string
                 type: object
               type: array
-            verifyType:
-              type: string
             webhookClusterResource:
               description: Rule is a tuple of APIGroups, APIVersion, and Resources.It
                 is recommended to make sure that all the tuple expansions are valid.

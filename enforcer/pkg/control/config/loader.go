@@ -321,6 +321,7 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 	return &ResSigLoader{
 		interval:           interval,
 		signatureNamespace: signatureNamespace,
+		requestNamespace:   requestNamespace,
 		Client:             client,
 	}
 }
@@ -346,8 +347,6 @@ func (self *ResSigLoader) Load() {
 		}
 		logger.Debug("ResourceSignature reloaded.")
 		if len(list1.Items) > 0 {
-			tmpItems := sortByCreationTimestamp(list1.Items)
-			list1.Items = tmpItems
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
 		}
@@ -385,7 +384,8 @@ func (self *ResSigLoader) Load() {
 	for _, d := range list2.Items {
 		data = append(data, d)
 	}
-	self.Data = data
+	sortedData := sortByCreationTimestamp(data)
+	self.Data = sortedData
 	return
 }
 

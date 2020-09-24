@@ -106,7 +106,6 @@ func (ss *ResourceSignature) Validate() (bool, string) {
 	if ss.Spec.Data == nil {
 		return false, "ResourceSignature Validation failed. ss.Spec.Data is nil."
 	}
-	// TODO: implement
 	return true, ""
 }
 

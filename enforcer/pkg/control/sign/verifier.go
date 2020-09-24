@@ -469,7 +469,9 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext)
 		}
 	}
 
-	if self.VerifyType == VerifyTypePGP {
+	// verify helm chart with prov in HelmReleaseMetadata.
+	// helm provenance supports only PGP Verification.
+	if self.VerifyType == VerifyTypePGP || self.VerifyType == VerifyTypeX509 {
 		var hrmObj *hrm.HelmReleaseMetadata
 		err := json.Unmarshal([]byte(hrmStr), &hrmObj)
 		if err != nil {
@@ -505,60 +507,6 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext)
 			} else {
 				vcerr = &common.CheckError{
 					Msg:    "Failed to verify helm chart and its provenance",
-					Reason: reasonFail,
-					Error:  nil,
-				}
-				vsinfo = nil
-				retErr = nil
-			}
-		}
-
-	} else if self.VerifyType == VerifyTypeX509 {
-		certificate := []byte(sig.data["certificate"])
-		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, self.CertPoolPath)
-		if err != nil {
-			vcerr = &common.CheckError{
-				Msg:    "Error occured in certificate verification",
-				Reason: reasonFail,
-				Error:  err,
-			}
-			vsinfo = nil
-			retErr = err
-		} else if !certOk {
-			vcerr = &common.CheckError{
-				Msg:    "Failed to verify certificate",
-				Reason: reasonFail,
-				Error:  nil,
-			}
-			vsinfo = nil
-			retErr = nil
-		} else {
-			cert, err := pkix.ParseCertificate(certificate)
-			if err != nil {
-				logger.Error("Failed to parse certificate; ", err)
-			}
-			pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
-			if err != nil {
-				logger.Error("Failed to get public key from certificate; ", err)
-			}
-			message := []byte(sig.data["message"])
-			signature := []byte(sig.data["signature"])
-			sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
-			if err != nil {
-				vcerr = &common.CheckError{
-					Msg:    "Error occured in signature verification",
-					Reason: reasonFail,
-					Error:  err,
-				}
-				vsinfo = nil
-				retErr = err
-			} else if sigOk {
-				vcerr = nil
-				vsinfo = common.NewSignerInfoFromCert(cert)
-				retErr = nil
-			} else {
-				vcerr = &common.CheckError{
-					Msg:    "Failed to verify signature",
 					Reason: reasonFail,
 					Error:  nil,
 				}

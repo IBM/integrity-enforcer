@@ -47,18 +47,17 @@ type EnforcerConfig struct {
 	Mode       IntegrityEnforcerMode    `json:"mode,omitempty"`
 	Plugin     []PluginConfig           `json:"plugin,omitempty"`
 
-	Namespace          string `json:"-"`
-	PolicyNamespace    string `json:"-"`
-	SignatureNamespace string `json:"-"`
+	Namespace          string `json:"namespace,omitempty"`
+	SignatureNamespace string `json:"signatureNamespace,omitempty"`
 	VerifyType         string `json:"verifyType"`
-	CertPoolPath       string `json:"certPoolPath"`
-	KeyringPath        string `json:"keyringPath"`
-	ChartDir           string `json:"chartPath"`
-	ChartRepo          string `json:"chartRepo"`
+	CertPoolPath       string `json:"certPoolPath,omitempty"`
+	KeyringPath        string `json:"keyringPath,omitempty"`
+	ChartDir           string `json:"chartPath,omitempty"`
+	ChartRepo          string `json:"chartRepo,omitempty"`
 
-	IEResource       string `json:"ieResource"`
-	IEAdminUserGroup string `json:"ieAdminUserGroup"`
-	IEServerUserName string `json:"ieServerUserName"`
+	IEResource       string `json:"ieResource,omitempty"`
+	IEAdminUserGroup string `json:"ieAdminUserGroup,omitempty"`
+	IEServerUserName string `json:"ieServerUserName,omitempty"`
 }
 
 type LoggingScopeConfig struct {
