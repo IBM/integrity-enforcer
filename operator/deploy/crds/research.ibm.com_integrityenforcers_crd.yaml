@@ -1202,7 +1202,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        # x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
@@ -1212,7 +1212,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        # x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1356,12 +1356,12 @@ spec:
                 Important: Run "operator-sdk generate k8s" to regenerate code after
                 modifying this file Add custom validation using kubebuilder tags:
                 https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
-              x-kubernetes-int-or-string: true
+              # x-kubernetes-int-or-string: true
             maxUnavailable:
               anyOf:
               - type: integer
               - type: string
-              x-kubernetes-int-or-string: true
+              # x-kubernetes-int-or-string: true
             nodeSelector:
               additionalProperties:
                 type: string
@@ -1583,7 +1583,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        # x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
@@ -1593,7 +1593,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
+                        # x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
