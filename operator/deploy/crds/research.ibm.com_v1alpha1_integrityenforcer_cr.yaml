@@ -4,8 +4,8 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  verifyType: pgp
   enforcerConfig:
+    verifyType: pgp
     policy:
       plugin:
       - name: helm
@@ -26,7 +26,6 @@ spec:
         - email: cluster_signer@signer.com
     ieResource: "research.ibm.com"
     ieAdminUserGroup: "system:masters"
-    ieServerUserName: ""
     ignore:
     - kind: Event
     - kind: Lease
@@ -34,11 +33,6 @@ spec:
     - kind: TokenReview
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
-    certPoolPath: ""
-    chartPath: ""
-    chartRepo: ""
-    keyringPath: ""
-    verifyType: ""
     patch:
       enabled: true
     log:
@@ -128,8 +122,6 @@ spec:
         cpu: 200m
         memory: 256Mi
     securityContext: {}
-  signatureNamespace: ie-sign
-  policyNamespace: ie-policy
   webhookConfigName: ie-webhook-config
   webhookServerTlsSecretName: ie-server-tls
   webhookServiceName: ie-server
