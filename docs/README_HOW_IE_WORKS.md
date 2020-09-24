@@ -22,7 +22,7 @@ IE can be deployed with operator. We have verified the feasibility on the follow
 ​
 
 ## How Integrity Enforcer works
-- Resources to be protected in each namespace can be defined in the custom resource called `ResourceProtectionProfile`. For example, The following snippet shows an example definition of protected resources in a namespace. ConfigMap, Depoloyment, and Service in a namespace `secure-ns` which is protected by IE, so any request to create/update resources is verified with signature.  (see [rpp/crpp](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
+- Resources to be protected in each namespace can be defined in the custom resource called `ResourceProtectionProfile`. For example, The following snippet shows an example definition of protected resources in a namespace. ConfigMap, Depoloyment, and Service in a namespace `secure-ns` which is protected by IE, so any request to create/update resources is verified with signature.  (see [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
 ​
     ```
         apiVersion: research.ibm.com/v1alpha1
@@ -41,8 +41,8 @@ IE can be deployed with operator. We have verified the feasibility on the follow
     ```
 ​
 - Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
-- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [sign policy](README_CONFIG_SIGNER_POLICY.md).)
-- Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [resource signature](README_RESOURCE_SIGNATURE.md))
+- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [Sign Policy](README_CONFIG_SIGNER_POLICY.md).)
+- Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [How to Sign Resources](README_RESOURCE_SIGNATURE.md))
 - Integrity Enforcer admission controller is installed in a dedicated namespace (e.g. `integrity-enforcer-ns` in this document). It can be installed by operator. (see installation instructions)
 ​
 ---
@@ -87,6 +87,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     ```
 
 3. Define a public key secret for verifying signature by IE.
+    
     IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources. We describe signing resources using PGP key as follows.
 
     1. If you do not have a PGP key, generate PGP key as shown below.
@@ -141,16 +142,13 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
         $ oc create -f  /tmp/sig-verify-secret.yaml -n integrity-enforcer-ns
         ```
 
-
-
-
 4. Define which signers (identified by email) should sign the resources in a specific namespace.
 
    Configure signPolicy in the following `integrity-enforcer` Custom Resource file:
    
    Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify a signer for a namespace `secure-ns`.
 
-   Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
+   Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
    
    ```
        signPolicy:
@@ -163,7 +161,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
         - namespaces:
             - secure-ns
             signers:
-            - service-a    
+            - signer-a    
         signers:
         - name: "ClusterSigner"
           subjects:
@@ -171,7 +169,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
         - name: "HelmClusterSigner"
           subjects:
           - email: cluster_signer@signer.com
-        - name: service-a 
+        - name: signer-a 
           subjects:
           - email: signer@enterprise.com  
 
@@ -189,11 +187,13 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
     The following example shows how to set up a local envionement.
     Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
+    
     ```
     $ export IE_ENV=remote 
     $ export IE_NS=integrity-enforcer-ns
     $ export IE_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
     ``` 
+
 
     Execute the following script to deploy IE in a cluster.
     ```
@@ -229,19 +229,18 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. secure-ns) on your RedHat OpenShift (including ROKS).
 
 The steps for protecting resources include:
-- Step 1. Setup a ResourceProtectionProfile.
-- Step 2. Specify a resource to be protected.
-- Step 3. Create and store a ResourceSignature.
-- Step 4. Create a resource.
-- Step 5. Check status on ResourceProtectionProfile (with cap).
-- Step 6. Check logs (server, forwarder).
+- Step 1. Define which reource(s) should be protected.
+- Step 2. Create a resource with signature .
+- Step 3. Check status on ResourceProtectionProfile (with cap).
+- Step 4. Check logs (server, forwarder).
 
 ---
-#### Step.1 Define which reource(s) should be protected in a specific namespace
+#### Step.1 Define which reource(s) should be protected
  
    1. Create Resource Protection Profile
-    You can define which resources should be protected with signature in IE. For resources (e.g. ConfigMap, Deployment, Service etc. ) in namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace.
-    Example belows illustrates a custom resource `ResourceProtectionProfile` to protect resources such as ConfigMap, Deployment, and Service in namespace `secure-ns`.
+
+      You can define which resources should be protected with signature in IE. For resources (e.g. ConfigMap, Deployment, Service etc. ) in namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace.
+      Example below illustrates a custom resource `ResourceProtectionProfile` to protect resources such as ConfigMap, Deployment, and Service in a namespace `secure-ns`.
 
         ```
         apiVersion: research.ibm.com/v1alpha1
@@ -258,18 +257,19 @@ The steps for protecting resources include:
             - namespace: secure-ns
               kind: Service
         ```
-   2. Store ResourceProtectionProfile in namespace `secure-ns` in the cluster.
+   2. Store ResourceProtectionProfile in a namespace `secure-ns` in the cluster.
 
         ```
         $ oc create -f /tmp/sample-rpp.yaml -n secure-ns
         resourceprotectionprofile.research.ibm.com/sample-rpp created
         ```
 
-#### Step 2. Specify a resource to be protected
 
-1. Specify a ConfigMap resource in a namespace `secure-ns` 
-    
-    E.g. The following snippet (/tmp/test-cm.yaml) shows a spec of a ConfigMap `test-cm`
+#### Step 2. Create a resource with signature 
+
+1. Specify a ConfigMap resource.
+
+    The following snippet (/tmp/test-cm.yaml) shows a spec of a ConfigMap `test-cm`.
 
     ```
     apiVersion: v1
@@ -281,7 +281,8 @@ The steps for protecting resources include:
         key2: val2
         key4: val4
     ```
-2. Try to create ConfigMap resource `test-cm` shown above (/tmp/test-cm.yaml) in the namespace `secure-ns`
+
+2. Try to create ConfigMap resource `test-cm` shown above (/tmp/test-cm.yaml) in the namespace `secure-ns`, before creating a signature.
 
     Run the command below to create ConfigMap `test-cm`, but it fails because no signature for this resource is stored in the cluster.
 
@@ -290,26 +291,31 @@ The steps for protecting resources include:
     Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
     ```
 
-#### Step 3. Create and store a signature for a resource
+3. Generate a signature for a resource 
 
-1. Generate a signature for a resource with the script: https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh
+    To generate a signature for a resource,  we use a utility [script](https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh)
 
-    Setup a signer in https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-sign-config.sh
+    We setup a signer in the [config file](https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-sign-config.sh)
 
-    E.g. Configure `signer@enterprise.com` as `SIGNER` in the configuration file.
+    The following shows the content of config file: `gpg-sign-config.sh`  which configures `signer@enterprise.com` as `SIGNER`.
+
     ```
     #!/bin/bash
     SIGNER=signer@enterprise.com
     ```
 
-    Run the following script to generate a signature which would be stored in a file `/tmp/single-rsc-rs.yaml` (`ResourceSignature`)
+    Run the following script to generate a signature
+      - `gpg-sign-config.sh`:  Config file to specify a signer
+      - `/tmp/test-cm.yaml`:  A resource file to be signed, which may include specification for a single resource or multiple resources
+      - `/tmp/test-cm-rs.yaml`: A custom resource `ResourceSignature` generated that includes signature for the resource
+
     ```
     $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
     ```
 
     Generated signature for a resource is included in a custom resource `ResourceSignature`.
 
-    Structure of generated `ResourceSinature` in `/tmp/single-rsc-rs.yaml`:
+    Structure of generated `ResourceSinature` in `/tmp/test-cm-rs.yaml`:
     
     ```
       apiVersion: research.ibm.com/v1alpha1
@@ -326,42 +332,49 @@ The steps for protecting resources include:
             type: resource
     ```
     
-2. Store the generated signature for a resource to be protected in a specific namespace in a cluster
-
+4. Store the generated signature in a cluster.
+    
+    After creating the ResourceSignature in a cluster, the corresponding resource can be created successfully after successfull signature verification by IE.
+    
     ```
     $ oc create -f /tmp/test-cm-rs.yaml -n integrity-enforcer-ns
     resourcesignature.research.ibm.com/rsig-test-cm created
     ```
 
+5. Create a resource in a specific namespace after creating the signature in the cluster.
 
-#### Step 4. Create a resource in a specific namespace
-
-1. After successfull creation of signature in a cluster, now create the resource that need to be protected (shown in Step 2)
-
-    Run the command below to create this ConfigMap, it should be successful this time because a corresponding ResourceSignature is available in the cluster.
+    Run the command below to create a ConfigMap resource (/tmp/test-cm.yaml), it should be successful this time because a corresponding ResourceSignature is available in the cluster.
     ```
     $ oc create -f /tmp/test-cm.yaml -n secure-ns
     configmap/test-cm created
     ```
 
-#### Step 5. Check status on ResourceProtectionProfile (with cap)
+#### Step 3. Check status on ResourceProtectionProfile (with cap)
+
+    
+    ```
+    $ oc get ResourceProtectionProfile.research.ibm.com  sample-rpp -n secure-ns -o json | jq -r .status
+
+    {
+      "deniedRequests": [
+        {
+          "matchedRule": "{\"match\":[{\"namespace\":\"secure-ns\",\"kind\":\"ConfigMap\"},{\"namespace\":\"secure-ns\",\"kind\":\"HelmReleaseMetadata\"},{\"namespace\":\"secure-ns\",\"kind\":\"Service\"},{\"namespace\":\"secure-ns\",\"kind\":\"Secret\",\"name\":\"sh.helm.release.*\"}]}",
+          "reason": "No signature found",
+          "request": "{\"operation\":\"CREATE\",\"namespace\":\"secure-ns\",\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"test-cm\",\"userName\":\"kube:admin\"}"
+        },
+        {
+          "matchedRule": "{\"match\":[{\"namespace\":\"secure-ns\",\"kind\":\"ConfigMap\"},{\"namespace\":\"secure-ns\",\"kind\":\"HelmReleaseMetadata\"},{\"namespace\":\"secure-ns\",\"kind\":\"Service\"},{\"namespace\":\"secure-ns\",\"kind\":\"Secret\",\"name\":\"sh.helm.release.*\"}]}",
+          "reason": "No signer policies met this resource. this resource is signed by hirokuni.kitahara1@ibm.com",
+          "request": "{\"operation\":\"CREATE\",\"namespace\":\"secure-ns\",\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"test-cm\",\"userName\":\"kube:admin\"}"
+        }
+      ]
+    }
+    ```
+
+#### Step 4. Check logs (server, forwarder)
 
 
-
-#### Step 6. Check logs (server, forwarder)
-1. Check why IE allowed/denied the requests.
-
-  IE server component generates event logs regarding requests allowed/denied with the reason while processing admission requests in a cluster. Event logs of IE server could be retrived using a script called [`/watch_events.sh `](../script//watch_events.sh).
-
-   Run the script below to check why IE allowed/denied the requests
-   ```
-   $ cd integrity-enforcer
-   $ ./scripts/watch_events.sh
-   secure-ns    false   false   ConfigMap   test-cm CREATE  IAM#gajan@jp.ibm.com    No signature found   no-signature
-
-   ```
-
-2. Check logs generated by IE
+1. Check logs generated by IE
 
    IE server component generates logs while processing admission requests in a cluster.  Logs of IE server could be retrived using a script called [`log_server.sh `](../script/log_server.sh).
 
@@ -382,7 +395,7 @@ The steps for protecting resources include:
     }
 
     ```
-3. Check detail logs forwarded by IE to a data store
+2. Check detail logs forwarded by IE to a data store
 
     IE server component generates detail logs while processing admission requests in a cluster. Detail logs of IE server could be retrived using a script called [`log_logging.sh  `](../script/log_logging.sh).
 

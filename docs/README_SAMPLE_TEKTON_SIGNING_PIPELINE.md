@@ -1,37 +1,38 @@
-## Tekton Signing Pipeline
+## Example Tekton Signing Pipeline
 
 This section describe the steps for preparing a Tekton signing pipeline to sign resources of a sample application and deploy them in a cluster protected by Integrity Enforcer (IE).
  
 
-### Prerequisites
--   A cluster (RedHat OpenShift cluster including ROKS) for deploying sample application, where IE is installed.  (Target cluster)
+### Prerequisites for setting up an example Tekton signing pipeline
+-   Prepare a cluster (RedHat OpenShift cluster including ROKS) for deploying sample application.  
+      -  Let us call this a Target cluster where a sample application to be deployed via Tekton signing pipeline
+      -  Setup IE with PGP signature verifcation enbled in a target cluster (see [documentation](README_HOW_IE_WORKS.md)).
+      -  Signing task in the example Tekton signing pipeline would require to access the IE secret that includes a pubkey ring for verifying signatures of resources that need to be protected by IE.
+      (see [documentation](README_RESOURCE_SIGNATURE.md))
+      - Make sure signer (e.g. `signer@enterprise.com`) used in IE secret that includes a pubkey ring for verifying signatures of resources should be used for running Tekton signing pipeline. (see [documentation](README_RESOURCE_SIGNATURE.md))
+      -  Prepare namespace in a target cluster where a sample application to be deployed.
+         ```
+         $ oc create namespace sample-app-ns
+         ```
 
--   A cluster (RedHat OpenShift cluster including ROKS) for deploying Tekton signing pipeline.
+-  Prepare a cluster (RedHat OpenShift cluster including ROKS) for deploying and executing the example Tekton signing pipeline.
+      -  Install Tekton in a cluser, in which Tekton pipeline would run.
 
--   Setup IE in a target cluster where a sample application to be deployed via Tekton signing pipeline (see [documentation](README_HOW_IE_WORKS.md)).
+         E.g.: See [How to install Tekton on OpenShift](https://docs.openshift.com/container-platform/4.5/pipelines/installing-pipelines.html#installing-pipelines)
 
--  Prepare namespace in a target cluster where a sample application to be deployed.
+      -  Prepare `registry-secret` in namespace `sample-app-ns` to pull the container image for the sample application.
 
-   ```
-    $ oc create namespace sample-app-ns
-   ```
--  Prepare `registry-secret` in namespace `sample-app-ns` to pull the container image for the sample application.
+         E.g. A registry secret (registry-secret.yaml) is shown below:
 
-   E.g. A registry secret (registry-secret.yaml) is shown below:
-
-   ```
-    apiVersion: v1
-    kind: Secret
-    metadata:
-        name: registry-secret
-    type: kubernetes.io/dockerconfigjson
-    data:
-      .dockerconfigjson:  eyJhdXRocyI6eyJ1cy5pY3IuaW8iOnsidXNlcm5hbWUiOiJpYW ...
-   ```
-
--  Install Tekton in a cluser, in which Tekton pipeline would run.
-
-   E.g.: See [How to install Tekton on OpenShift](https://docs.openshift.com/container-platform/4.5/pipelines/installing-pipelines.html#installing-pipelines)
+         ```
+         apiVersion: v1
+         kind: Secret
+         metadata:
+            name: registry-secret
+         type: kubernetes.io/dockerconfigjson
+         data:
+            .dockerconfigjson:  eyJhdXRocyI6eyJ1cy5pY3IuaW8iOnsidXNlcm5hbWUiOiJpYW ...
+         ```
 
 -  Setup a sample application Git repository using source code for the [sample application](../develop/signing-pipeline/sample-app).
    
@@ -180,8 +181,28 @@ The sample Tekton signing pipeline would pull sources of an application from a s
 
      Successful completion of Tekton signing pipeline run would deploy the signed resources of the sample application to the target cluster
 
+
+      In the taget cluster, check if resource signature is successfully deployed.
+      ```
+      $ oc get resourcesignature.research.ibm.com rsig-ie-sample-app -n integrity-enforcer-ns
+      NAME                 AGE
+      rsig-ie-sample-app   29s
+
+      ```
      In the taget cluster, check if the sample application is successfully deployed.
 
       ```
-      $ oc get pod -n sample-app-ns
+      $ oc get all -n sample-app-ns
+      NAME                                READY   STATUS    RESTARTS   AGE
+      pod/ie-sample-app-7c55bcf4d-kjtc4   1/1     Running   0          9s
+      pod/ie-sample-app-7c55bcf4d-l57hq   1/1     Running   0          9s
+
+      NAME                        TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+      service/ie-sample-service   NodePort   172.30.73.12   <none>        80:31619/TCP   9s
+
+      NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
+      deployment.apps/ie-sample-app   2/2     2            2           9s
+
+      NAME                                      DESIRED   CURRENT   READY   AGE
+      replicaset.apps/ie-sample-app-7c55bcf4d   2         2         2       10s
       ```
