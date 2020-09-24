@@ -177,29 +177,30 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
 5. Install IE to a cluster
 
-    IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../script/install_enforcer.sh).
+   IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../script/install_enforcer.sh).
     
-    Before executing the script `install_enforcer.sh`, setup local environment as follows:
+   Before executing the script `install_enforcer.sh`, setup local environment as follows:
       - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
       - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
       - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository>`
 
 
-    The following example shows how to set up a local envionement.
-    Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
+   The following example shows how to set up a local envionement.
+   Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
     
-    ```
-    $ export IE_ENV=remote 
-    $ export IE_NS=integrity-enforcer-ns
-    $ export IE_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
-    ``` 
+      ```
+      $ export IE_ENV=remote 
+      $ export IE_NS=integrity-enforcer-ns
+      $ export IE_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
+      ``` 
 
 
-    Execute the following script to deploy IE in a cluster.
-    ```
-    $ cd integrity-enforcer
-    $ ./scripts/install_enforcer.sh
-    ```
+   Execute the following script to deploy IE in a cluster.
+   
+      ```
+      $ cd integrity-enforcer
+      $ ./scripts/install_enforcer.sh
+      ```
 
 6. Confirm if `integrity-enforcer` is running successfully in a cluster.
     
@@ -305,13 +306,13 @@ The steps for protecting resources include:
     ```
 
     Run the following script to generate a signature
-      - `gpg-sign-config.sh`:  Config file to specify a signer
-      - `/tmp/test-cm.yaml`:  A resource file to be signed, which may include specification for a single resource or multiple resources
-      - `/tmp/test-cm-rs.yaml`: A custom resource `ResourceSignature` generated that includes signature for the resource
-
+ 
     ```
     $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
     ```
+      - `gpg-sign-config.sh`:  Config file to specify a signer
+      - `/tmp/test-cm.yaml`:  A resource file to be signed
+      - `/tmp/test-cm-rs.yaml`: A custom resource file `ResourceSignature` generated
 
     Generated signature for a resource is included in a custom resource `ResourceSignature`.
 
@@ -351,24 +352,27 @@ The steps for protecting resources include:
 
 #### Step 3. Check status on ResourceProtectionProfile (with cap)
 
-    
+  We can check the status ResourceProtectionProfile resource created in the cluster.
+
+  The following example shows which requests are denied by IE for this ResourceProtectionProfile. see [documentation](README_FOR_RESOURCE_PROTECTION_PROFILE.md)
+
     ```
     $ oc get ResourceProtectionProfile.research.ibm.com  sample-rpp -n secure-ns -o json | jq -r .status
 
-    {
-      "deniedRequests": [
-        {
-          "matchedRule": "{\"match\":[{\"namespace\":\"secure-ns\",\"kind\":\"ConfigMap\"},{\"namespace\":\"secure-ns\",\"kind\":\"HelmReleaseMetadata\"},{\"namespace\":\"secure-ns\",\"kind\":\"Service\"},{\"namespace\":\"secure-ns\",\"kind\":\"Secret\",\"name\":\"sh.helm.release.*\"}]}",
-          "reason": "No signature found",
-          "request": "{\"operation\":\"CREATE\",\"namespace\":\"secure-ns\",\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"test-cm\",\"userName\":\"kube:admin\"}"
-        },
-        {
-          "matchedRule": "{\"match\":[{\"namespace\":\"secure-ns\",\"kind\":\"ConfigMap\"},{\"namespace\":\"secure-ns\",\"kind\":\"HelmReleaseMetadata\"},{\"namespace\":\"secure-ns\",\"kind\":\"Service\"},{\"namespace\":\"secure-ns\",\"kind\":\"Secret\",\"name\":\"sh.helm.release.*\"}]}",
-          "reason": "No signer policies met this resource. this resource is signed by hirokuni.kitahara1@ibm.com",
-          "request": "{\"operation\":\"CREATE\",\"namespace\":\"secure-ns\",\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"test-cm\",\"userName\":\"kube:admin\"}"
-        }
-      ]
-    }
+      {
+        "deniedRequests": [
+          {
+            "matchedRule": "{\"match\":[{\"namespace\":\"secure-ns\",\"kind\":\"ConfigMap\"},{\"namespace\":\"secure-ns\",\"kind\":\"HelmReleaseMetadata\"},{\"namespace\":\"secure-ns\",\"kind\":\"Service\"},{\"namespace\":\"secure-ns\",\"kind\":\"Secret\",\"name\":\"sh.helm.release.*\"}]}",
+            "reason": "No signature found",
+            "request": "{\"operation\":\"CREATE\",\"namespace\":\"secure-ns\",\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"test-cm\",\"userName\":\"kube:admin\"}"
+          },
+          {
+            "matchedRule": "{\"match\":[{\"namespace\":\"secure-ns\",\"kind\":\"ConfigMap\"},{\"namespace\":\"secure-ns\",\"kind\":\"HelmReleaseMetadata\"},{\"namespace\":\"secure-ns\",\"kind\":\"Service\"},{\"namespace\":\"secure-ns\",\"kind\":\"Secret\",\"name\":\"sh.helm.release.*\"}]}",
+            "reason": "No signer policies met this resource. this resource is signed by signer@sampleenterprse.com",
+            "request": "{\"operation\":\"CREATE\",\"namespace\":\"secure-ns\",\"apiVersion\":\"v1\",\"kind\":\"ConfigMap\",\"name\":\"test-cm\",\"userName\":\"kube:admin\"}"
+          }
+        ]
+      }
     ```
 
 #### Step 4. Check logs (server, forwarder)

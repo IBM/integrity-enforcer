@@ -153,10 +153,10 @@ The sample Tekton signing pipeline would pull sources of an application from a s
 
 6. Run the example Tekton signing pipline as follows:
 
-    In the cluster, run the pipeline by passing the required parameters as follows.
+   In the cluster, run the pipeline by passing the required parameters as follows.
 
-    ```
-    $ tkn pipeline start pipeline-ie \
+      ```
+      $ tkn pipeline start pipeline-ie \
         -p pipeline-pvc="pipeline-pvc" \
         -p git-url="https://github.com/sample-demo/sample-app.git" \
         -p git-branch="master" \
@@ -165,32 +165,35 @@ The sample Tekton signing pipeline would pull sources of an application from a s
         -p signer-email="signer@enterprise.com"\
         -p deploy-namespace="sample-app-ns" \
         -s ie-signing-pipline-admin                                                                                                                                       
-     ```
+      ```
 
-     Check the list of pipelineruns
-     ```
-     $ tkn pipelinerun list
-      NAME                    STARTED          DURATION     STATUS
-      pipeline-ie-run-jllw7   9 minutes ago    24 seconds   Succeeded
-     ```
+   Check the list of pipelineruns
+   
+      ```
+      $ tkn pipelinerun list
+       NAME                    STARTED          DURATION     STATUS
+       pipeline-ie-run-jllw7   9 minutes ago    24 seconds   Succeeded
+      ```
 
-     Check the logs of pipelinerun to see if it successfully completed
-     ```
-     $ tkn pipelinerun logs pipeline-ie-run-jllw7 -f -n artifact-signing-ns
+   Check the logs of pipelinerun to see if it successfully completed
+   
+      ```
+      $ tkn pipelinerun logs pipeline-ie-run-jllw7 -f -n artifact-signing-ns
 
-     ```
+      ```
 
-     Successful completion of Tekton signing pipeline run would deploy the signed resources of the sample application to the target cluster
+   Successful completion of Tekton signing pipeline run would deploy the signed resources of the sample application to the target cluster
 
 
-      In the taget cluster, check if resource signature is successfully deployed.
+   In the target cluster, check if resource signature is successfully deployed.
+   
       ```
       $ oc get resourcesignature.research.ibm.com rsig-ie-sample-app -n integrity-enforcer-ns
       NAME                 AGE
       rsig-ie-sample-app   29s
 
       ```
-     In the taget cluster, check if the sample application is successfully deployed.
+   In the target cluster, check if the sample application is successfully deployed.
 
       ```
       $ oc get all -n sample-app-ns
