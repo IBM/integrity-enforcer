@@ -12,8 +12,7 @@
   - Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 
 # Quick Start
-  see documentation [here](README_QUICK_START.md)
+  see documentation [here](README_HOW_IE_WORKS.md)
  
-# Integrity Enforcement with IE
-  If you would like to check how IE's integrity enforcement works, see documentaion [here](README_INTEGRITY_ENFORCEMENT.md)
+
   

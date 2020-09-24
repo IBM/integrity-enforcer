@@ -20,8 +20,9 @@ IE can be deployed with operator. We have verified the feasibility on the follow
 - RedHat OpenShift 4.3 on IBM Cloud (ROKS)
 - Minikube v1.18.2
 ​
+
 ## How Integrity Enforcer works
-- Resources to be protected in each namespace can be defined in the custom resource called `ResourceProtectionProfile`. For example, The following snippet shows an example definition of protected resources in a namespace. ConfigMap, Depoloyment, and Service in a namespace `secure-ns` which is protected by IE, so any request to create/update resources is verified with signature.  (see rpp/crpp)
+- Resources to be protected in each namespace can be defined in the custom resource called `ResourceProtectionProfile`. For example, The following snippet shows an example definition of protected resources in a namespace. ConfigMap, Depoloyment, and Service in a namespace `secure-ns` which is protected by IE, so any request to create/update resources is verified with signature.  (see [rpp/crpp](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
 ​
     ```
         apiVersion: research.ibm.com/v1alpha1
@@ -40,14 +41,14 @@ IE can be deployed with operator. We have verified the feasibility on the follow
     ```
 ​
 - Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
-- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see sign policy.)
-- Signature is provided in the form of separate signature resource or annotation attached to the resource. (see resource signature)
-- Integrity Enforcer admission controller is installed in a dedicated namespace (e.g. `integrity-enforcer-ns` in this document). It can be installed by operator. (see installation)
+- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [sign policy](README_CONFIG_SIGNER_POLICY.md).)
+- Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [resource signature](README_RESOURCE_SIGNATURE.md))
+- Integrity Enforcer admission controller is installed in a dedicated namespace (e.g. `integrity-enforcer-ns` in this document). It can be installed by operator. (see installation instructions)
 ​
 ---
 
 ## Installation Instructions
-​
+
 ### Prerequisites
 ​
 The following prerequisites must be satisfied to deploy IE on a cluster.
@@ -71,11 +72,11 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     /home/gajan/go/src/github.com/IBM/integrity-enforcer
     ```
 
-    Note the absolute path of cloned `integrity-enforcer` directory.
+    Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
     
-2.  Prepare a namespace to deploy IE. 
+2. Prepare a namespace to deploy IE. 
 
-    The following example show that we use `integrity-enforcer-ns` as default namespace for IE. 
+    The following example show that we use `integrity-enforcer-ns` as default namespace for deploying IE. 
     ```
     oc create ns integrity-enforcer-ns
     ```
@@ -85,7 +86,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     oc project integrity-enforcer-ns
     ```
 
-4. Define a public key secret for verifying signature by IE.
+3. Define a public key secret for verifying signature by IE.
 
     IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources.
 
@@ -108,7 +109,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
         sub   rsa3072 2020-09-24 [E]
         ```
 
-    2. Once you have a PGP key, export it as follows.
+    2. Once you have a PGP key, export it as a file.
 
         The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `~/.gnupg/pubring.gpg`.
 
@@ -116,8 +117,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
         $ gpg --export signer@enterprise.com > ~/.gnupg/pubring.gpg
         ```
         
-        
-    2.  Define a secret that includes a pubkey ring for verifying signatures of resources  
+    3.  Define a secret that includes a pubkey ring for verifying signatures of resources  
         
         The encoded content of `~/.gnupg/pubring.gpg` can be retrived by using the following command:
         ```
@@ -136,13 +136,14 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
             pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
         ```
 
-     3. Create `sig-verify-secret` in a namespace `integrity-enforcer-ns` in the cluster.
+     4. Create `sig-verify-secret` in a namespace `integrity-enforcer-ns` in the cluster.
 
         ```
         $ oc create -f  /tmp/sig-verify-secret.yaml -n integrity-enforcer-ns
         ```      
 
-5. Define which signers (identified by email) should sign the resources in a specific namespace.
+
+4. Define which signers (identified by email) should sign the resources in a specific namespace.
 
    Configure signPolicy in the following `integrity-enforcer` Custom Resource file:
    
@@ -175,17 +176,18 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
    ```
 
-6. Install IE to a cluster
+5. Install IE to a cluster
 
-    IE can be installed to cluster using a series of steps which are bundled in a script `./scripts/install_enforcer.sh`.
+    IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../script/install_enforcer.sh).
     
-    Before execute the script `./scripts/install_enforcer.sh`, setup local environment as follows:
+    Before executing the script `install_enforcer.sh`, setup local environment as follows:
       - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
       - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
       - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository>`
 
-    The following example shows how to set up a local envionement.
 
+    The following example shows how to set up a local envionement.
+    Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
     ```
     $ export IE_ENV=remote 
     $ export IE_NS=integrity-enforcer-ns
@@ -198,7 +200,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     $ ./scripts/install_enforcer.sh
     ```
 
-7. Confirm if `integrity-enforcer` is running successfully in a cluster.
+6. Confirm if `integrity-enforcer` is running successfully in a cluster.
     
    Check if there are two pods running in the namespace `integrity-enforcer-ns`: 
         
@@ -209,14 +211,17 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
       ```
 
 
-8. Clean up `integrity-enforcer` from a cluster
-  
-    Execute the following script to remove all resources related to IE deployment from cluster.
+7. Clean up `integrity-enforcer` from a cluster
+    
+    IE can be removed  from a cluster using a series of steps which are bundled in a script called [`delete_enforcer.sh`](../script/delete_enforcer.sh).
+
+    Execute the following script to remove IE from cluster.
     ```
     $ cd integrity-enforcer
     $ ./scripts/delete_enforcer.sh
     ```
 ​
+
 ### Protect Resources with Integrity Enforcer
 ​
 
@@ -284,7 +289,7 @@ The steps for protecting resources include:
     Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
     ```
 
-#### Step 3. Create and store a ResourceSignature
+#### Step 3. Create and store a signature for a resource
 
 1. Generate a signature for a resource with the script: https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh
 
@@ -345,18 +350,24 @@ The steps for protecting resources include:
 #### Step 6. Check logs (server, forwarder)
 1. Check why IE allowed/denied the requests.
 
+  IE server component generates event logs regarding requests allowed/denied with the reason while processing admission requests in a cluster. Event logs of IE server could be retrived using a script called [`/watch_events.sh `](../script//watch_events.sh).
+
    Run the script below to check why IE allowed/denied the requests
    ```
+   $ cd integrity-enforcer
    $ ./scripts/watch_events.sh
    secure-ns    false   false   ConfigMap   test-cm CREATE  IAM#gajan@jp.ibm.com    No signature found   no-signature
 
    ```
 
-2. Check detail logs generated by IE
+2. Check logs generated by IE
 
-   Run the script below to check the log generated by IE when processing individual request to create/update resources. 
+   IE server component generates logs while processing admission requests in a cluster.  Logs of IE server could be retrived using a script called [`log_server.sh `](../script/log_server.sh).
+
+   Run the script below to check the log generated by IE server when processing individual request to create/update resources. 
 
     ```
+    $ cd integrity-enforcer
     $ ./scripts/log_server.sh 
     {
     "apiVersion": "rbac.authorization.k8s.io/v1",
@@ -372,9 +383,12 @@ The steps for protecting resources include:
     ```
 3. Check detail logs forwarded by IE to a data store
 
+    IE server component generates detail logs while processing admission requests in a cluster. Detail logs of IE server could be retrived using a script called [`log_logging.sh  `](../script/log_logging.sh).
+
     Run the script below to check the log forwarded by IE when processing individual request to create/update resources. 
     
     ```
+    $ cd integrity-enforcer
     $ ./scripts/log_logging.sh 
     2020-09-23 02:45:19.729197700 +0000 fw.events: {
     "abortReason":"",

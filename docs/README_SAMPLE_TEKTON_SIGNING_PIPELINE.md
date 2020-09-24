@@ -1,21 +1,90 @@
 ## Tekton Signing Pipeline
 
+This section describe the steps for preparing a Tekton signing pipeline to sign resources of a sample application and deploy them in a cluster protected by Integrity Enforcer (IE).
+ 
+
 ### Prerequisites
--  Install Tekton in the cluser, in which Tekton pipeline would run
+-   A cluster (RedHat OpenShift cluster including ROKS) for deploying sample application, where IE is installed.  (Target cluster)
+
+-   A cluster (RedHat OpenShift cluster including ROKS) for deploying Tekton signing pipeline.
+
+-   Setup IE in a target cluster where a sample application to be deployed via Tekton signing pipeline (see [documentation](README_HOW_IE_WORKS.md)).
+
+-  Prepare namespace in a target cluster where a sample application to be deployed.
+
+   ```
+    $ oc create namespace sample-app-ns
+   ```
+-  Prepare `registry-secret` in namespace `sample-app-ns` to pull the container image for the sample application.
+
+   E.g. A registry secret (registry-secret.yaml) is shown below:
+
+   ```
+    apiVersion: v1
+    kind: Secret
+    metadata:
+        name: registry-secret
+    type: kubernetes.io/dockerconfigjson
+    data:
+      .dockerconfigjson:  eyJhdXRocyI6eyJ1cy5pY3IuaW8iOnsidXNlcm5hbWUiOiJpYW ...
+   ```
+
+-  Install Tekton in a cluser, in which Tekton pipeline would run.
+
    E.g.: See [How to install Tekton on OpenShift](https://docs.openshift.com/container-platform/4.5/pipelines/installing-pipelines.html#installing-pipelines)
 
--  Setup a sample application Git repository
+-  Setup a sample application Git repository using source code for the [sample application](../develop/signing-pipeline/sample-app).
    
-    
-### Setup a sample Tekton signing pipline 
+   Executing the example Tekton signing pipeline would require a sample application Git repository as an input parameter.
 
-This pipeline would sign resources cloned from  a sample application repository and deploy them to a cluster protected by `integrity-enforcer`
+   The following shows the content of a sample application which includes
+    -  Dockerfile (to build a container image for the sample application)
+    -  Server.py (script to create a simple Python based Http server)
+    -  deployment.yaml (resources for the sameple application that need to be protected)
+    -  .ie-sign-config.json (configuration file to specify which resources to be signed by the Tekton signing pipeline)
+
+      ```
+      $ cd /integrity-enforcer/develop/signing-pipeline/sample-app
+      $ tree
+      .
+      ├── .ie-sign-config.json
+      ├── app
+      │   ├── Dockerfile
+      │   └── server.py
+      └── deployment.yml
+
+      ```
+
+   Configure `.ie-sign-config.json` to specify which resources to be signed by the Tekton signing pipeline.
+
+   The following example shows we configured `deployment.yml` to be signed by Tekton signing pipeline.
+
+   ```
+   $ cat .ie-sign-config.json
+   resourcefile:
+   - deployment.yml
+   ```
+   
+   Prepare a container image for the sameple application and push it to regsitry. Note that 
+   ```
+   $ cd /integrity-enforcer/develop/signing-pipeline/sample-app
+   $ docker build -t docker.io/pipeline-demo/sample-app:rc1 .
+   $ docker push docker.io/pipeline-demo/sample-app:rc1
+   ```
+
+
+### Setup a sample Tekton signing pipline 
 
 This section describe steps for deploying and running a Tekton pipeline in an OpenShift cluster to sign resources of an application to be deployed in a target cluster.
 
-The sample pipeline would pull sources of an application from a specified Git repository and sign YAML files in the cloned repository and deploy them to a target cluster protected by `integrity-enforcer-ns`
+The sample Tekton signing pipeline would pull sources of an application from a specified Git repository and sign specified YAML resources in the cloned repository and deploy them to a target cluster protected by `integrity-enforcer-ns`
 
 1. Create a namespace `artifact-signing-ns` in a cluster where the pipeline would run. The sample pipeline would be deployed in this namespace.
+
+   ```
+    $ oc create namespace artifact-signing-ns
+    $ oc project artifact-signing-ns
+   ```
 
 2. Create a Secret resource called `registry-secret` in namespace `artifact-signing-ns` to pull container images required to run the pipeline from a container registry
    
@@ -107,3 +176,11 @@ The sample pipeline would pull sources of an application from a specified Git re
      $ tkn pipelinerun logs pipeline-ie-run-jllw7 -f -n artifact-signing-ns
 
      ```
+
+     Successful completion of Tekton signing pipeline run would deploy the signed resources of the sample application to the target cluster
+
+     In the taget cluster, check if the sample application is successfully deployed.
+
+      ```
+      $ oc get pod -n sample-app-ns
+      ```
