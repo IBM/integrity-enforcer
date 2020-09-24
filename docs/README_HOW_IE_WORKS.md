@@ -178,12 +178,11 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 5. Install IE to a cluster
 
    IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../script/install_enforcer.sh).
-    
+
    Before executing the script `install_enforcer.sh`, setup local environment as follows:
       - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
       - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
-      - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository>`
-
+      - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository`
 
    The following example shows how to set up a local envionement.
    Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
@@ -300,38 +299,40 @@ The steps for protecting resources include:
 
     The following shows the content of config file: `gpg-sign-config.sh`  which configures `signer@enterprise.com` as `SIGNER`.
 
-    ```
-    #!/bin/bash
-    SIGNER=signer@enterprise.com
-    ```
+      ```
+      #!/bin/bash
+      SIGNER=signer@enterprise.com
+      ```
 
     Run the following script to generate a signature
- 
-    ```
-    $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
-    ```
-      - `gpg-sign-config.sh`:  Config file to specify a signer
-      - `/tmp/test-cm.yaml`:  A resource file to be signed
-      - `/tmp/test-cm-rs.yaml`: A custom resource file `ResourceSignature` generated
+  
+      ```
+      $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
+      ```
+      Utility script can be used by specifying paremeters such as:
+        - `gpg-sign-config.sh`:  Config file to specify a signer
+        - `/tmp/test-cm.yaml`:  A resource file to be signed
+        - `/tmp/test-cm-rs.yaml`: A custom resource file `ResourceSignature` generated
+
 
     Generated signature for a resource is included in a custom resource `ResourceSignature`.
 
     Structure of generated `ResourceSinature` in `/tmp/test-cm-rs.yaml`:
     
-    ```
-      apiVersion: research.ibm.com/v1alpha1
-      kind: ResourceSignature
-      metadata:
-        annotations:
-          messageScope: spec
-          signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t ...
-        name: rsig-test-cm
-      spec:
-        data:
-          - message: YXBpVmVyc2lvbjogdjEKa2luZDogQ29u ...
+      ```
+        apiVersion: research.ibm.com/v1alpha1
+        kind: ResourceSignature
+        metadata:
+          annotations:
+            messageScope: spec
             signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t ...
-            type: resource
-    ```
+          name: rsig-test-cm
+        spec:
+          data:
+            - message: YXBpVmVyc2lvbjogdjEKa2luZDogQ29u ...
+              signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t ...
+              type: resource
+      ```
     
 4. Store the generated signature in a cluster.
     
@@ -356,7 +357,7 @@ The steps for protecting resources include:
 
   The following example shows which requests are denied by IE for this ResourceProtectionProfile. see [documentation](README_FOR_RESOURCE_PROTECTION_PROFILE.md)
 
-    ```
+    
     $ oc get ResourceProtectionProfile.research.ibm.com  sample-rpp -n secure-ns -o json | jq -r .status
 
       {
@@ -373,7 +374,7 @@ The steps for protecting resources include:
           }
         ]
       }
-    ```
+    
 
 #### Step 4. Check logs (server, forwarder)
 
