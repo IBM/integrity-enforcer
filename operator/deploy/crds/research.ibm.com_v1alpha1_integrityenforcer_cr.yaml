@@ -5,10 +5,9 @@ metadata:
 spec:
   affinity: {}
   enforcerConfig:
-    verifyType: pgp
-    policy:
-      plugin:
-      - name: helm
+    verifyType: pgp # x509
+    plugin:
+    - name: helm
       enabled: false
     signPolicy:
       policies:

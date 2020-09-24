@@ -25,7 +25,6 @@ spec:
         - email: cluster_signer@signer.com
     ieResource: "research.ibm.com"
     ieAdminUserGroup: "system:masters"
-    ieServerUserName: ""
     ignore:
     - kind: Event
     - kind: Lease
