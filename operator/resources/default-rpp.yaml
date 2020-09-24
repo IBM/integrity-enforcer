@@ -15,6 +15,11 @@ spec:
       name: '*'
   - attrs:
     - secrets.0.name
+    - secrets.1.name
+    - secrets.2.name
+    - imagePullSecrets.0.name
+    - imagePullSecrets.1.name
+    - imagePullSecrets.2.name
     match:
       kind: ServiceAccount
   protectAttrs:
