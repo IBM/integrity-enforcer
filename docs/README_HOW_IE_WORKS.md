@@ -65,47 +65,67 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     git clone this repository and moved to `integrity-enforcer` directory
 
     ```
-    git clone https://github.com/IBM/integrity-enforcer.git
-    cd integrity-enforcer
+    $ git clone https://github.com/IBM/integrity-enforcer.git
+    $ cd integrity-enforcer
+    $ pwd
+    /home/gajan/go/src/github.com/IBM/integrity-enforcer
     ```
-    
 
-2.  Prepare a namespace to deploy IE. Use `integrity-enforcer-ns` as default
+    Note the absolute path of cloned `integrity-enforcer` directory.
     
-    Create a namespace (if not exist) in a cluster and switch to ie namespace
+2.  Prepare a namespace to deploy IE. 
 
+    The following example show that we use `integrity-enforcer-ns` as default namespace for IE. 
     ```
     oc create ns integrity-enforcer-ns
+    ```
+    We swtich to  `integrity-enforcer-ns` namespace.
+
+    ```
     oc project integrity-enforcer-ns
     ```
 
-3. Setup local environment to enable deployment of IE
-    
-    The following environment setup shoulw be done before installing IE in a cluster.
-    - `IE_ENV=remote` refers to a RedHat OpenShift cluster
-    - `IE_NS=integrity-enforcer-ns` refers to a namespace where IE to be deployed
-    - `IE_REPO_ROOT` refers to root directory of the cloned `integrity-enforcer` source repository
+4. Define a public key secret for verifying signature by IE.
 
-    ```
-    $ export IE_ENV=remote 
-    $ export IE_NS=integrity-enforcer-ns
-    $ export IE_REPO_ROOT= <root directory of `integrity-enforcer`>
-    ```  
+    IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources.
 
-4. Define a public key for verifying signature by IE.
+    1. If you do not have a PGP key, generate PGP key as follows.
+   
+        Use your `name` and `email` to generate PGP key using the following command
+        ```
+        $ gpg --full-generate-key
+        ```
 
-    IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected. 
+        Confirm if key is avaialble in keyring. The following example shows a PGP key is successfully generated using email `signer@enterprise.com`
+        ```
+        $ gpg -k signer@enterprise.com
+        gpg: checking the trustdb
+        gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+        gpg: depth: 0  valid:   2  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 2u
+        pub   rsa3072 2020-09-24 [SC]
+              FE866F3F88FCDAF42BB1B1ED23EC90D3DAD9A6C0
+        uid           [ultimate] signer@enterprise.com <signer@enterprise.com>
+        sub   rsa3072 2020-09-24 [E]
+        ```
 
-    1. export key
+    2. Once you have a PGP key, export it as follows.
 
-        E.g. The following shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported as a key stored in `~/.gnupg/pubring.gpg`.
+        The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `~/.gnupg/pubring.gpg`.
+
         ```
         $ gpg --export signer@enterprise.com > ~/.gnupg/pubring.gpg
+        ```
+        
+        
+    2.  Define a secret that includes a pubkey ring for verifying signatures of resources  
+        
+        The encoded content of `~/.gnupg/pubring.gpg` can be retrived by using the following command:
+        ```
         $ cat ~/.gnupg/pubring.gpg | base64
         ```
-    2.  embed encoded content of `~/.gnupg/pubring.gpg` to `/tmp/sig-verify-secret.yaml` as follows:   
 
-        E.g.:  /tmp/sig-verify-secret.yaml 
+        Once you have the encoded content of `~/.gnupg/pubring.gpg`, embed it to `/tmp/sig-verify-secret.yaml` as follows.
+
         ```
         apiVersion: v1
         kind: Secret
@@ -116,7 +136,8 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
             pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
         ```
 
-     3. create `sig-verify-secret` in namespace `integrity-enforcer-ns` in the cluster.
+     3. Create `sig-verify-secret` in a namespace `integrity-enforcer-ns` in the cluster.
+
         ```
         $ oc create -f  /tmp/sig-verify-secret.yaml -n integrity-enforcer-ns
         ```      
@@ -125,7 +146,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
    Configure signPolicy in the following `integrity-enforcer` Custom Resource file:
    
-   Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify a signer for a namespace `secure-ns`
+   Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify a signer for a namespace `secure-ns`.
 
    Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
    
@@ -156,10 +177,25 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
 6. Install IE to a cluster
 
-    Execute the following script to deploy `integrity-enforcer`
+    IE can be installed to cluster using a series of steps which are bundled in a script `./scripts/install_enforcer.sh`.
+    
+    Before execute the script `./scripts/install_enforcer.sh`, setup local environment as follows:
+      - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
+      - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
+      - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository>`
+
+    The following example shows how to set up a local envionement.
 
     ```
-    ./scripts/install_enforcer.sh
+    $ export IE_ENV=remote 
+    $ export IE_NS=integrity-enforcer-ns
+    $ export IE_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
+    ``` 
+
+    Execute the following script to deploy IE in a cluster.
+    ```
+    $ cd integrity-enforcer
+    $ ./scripts/install_enforcer.sh
     ```
 
 7. Confirm if `integrity-enforcer` is running successfully in a cluster.
