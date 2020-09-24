@@ -36,6 +36,8 @@ const defaultCrppName = "default-crpp"
 const signerPolicyName = "signer-policy"
 const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
 const defaultClusterResourceProtectionProfileYamlPath = "/resources/default-crpp.yaml"
+const defaultCertPoolPath = "/ie-certpool-secret/"
+const defaultKeyringPath = "/keyring/pubring.gpg"
 
 var log = logf.Log.WithName("controller_integrityenforcer")
 
@@ -50,9 +52,22 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 			EnforcerConfig: cr.Spec.EnforcerConfig,
 		},
 	}
+	if ecc.Spec.EnforcerConfig.Namespace == "" {
+		ecc.Spec.EnforcerConfig.Namespace = cr.Namespace
+	}
+	if ecc.Spec.EnforcerConfig.SignatureNamespace == "" {
+		ecc.Spec.EnforcerConfig.SignatureNamespace = cr.Namespace
+	}
 	if ecc.Spec.EnforcerConfig.IEServerUserName == "" {
 		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
 	}
+	if ecc.Spec.EnforcerConfig.CertPoolPath == "" {
+		ecc.Spec.EnforcerConfig.CertPoolPath = defaultCertPoolPath
+	}
+	if ecc.Spec.EnforcerConfig.KeyringPath == "" {
+		ecc.Spec.EnforcerConfig.KeyringPath = defaultKeyringPath
+	}
+
 	return ecc
 }
 

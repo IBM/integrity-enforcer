@@ -46,7 +46,6 @@ type IntegrityEnforcerSpec struct {
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Security     SecurityConfig  `json:"security,omitempty"`
-	VerifyType   string          `json:"verifyType,omitempty"`
 	KeyRing      KeyRingConfig   `json:"keyRingConfig,omitempty"`
 	CertPool     CertPoolConfig  `json:"certPoolConfig,omitempty"`
 	Server       ServerContainer `json:"server,omitempty"`
@@ -58,9 +57,6 @@ type IntegrityEnforcerSpec struct {
 	EnforcerConfig       *iec.EnforcerConfig            `json:"enforcerConfig,omitempty"`
 	SignPolicy           *policy.SignPolicy             `json:"signPolicy,omitempty"`
 	DefaultRpp           *rpp.ResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
-
-	SignatureNamespace string `json:"signatureNamespace,omitempty"`
-	PolicyNamespace    string `json:"policyNamespace,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`

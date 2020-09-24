@@ -21,7 +21,9 @@
 package v1alpha1
 
 import (
+	resourceprotectionprofilev1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -232,6 +234,13 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 		in, out := &in.SignPolicy, &out.SignPolicy
 		*out = (*in).DeepCopy()
 	}
+	if in.DefaultRpp != nil {
+		in, out := &in.DefaultRpp, &out.DefaultRpp
+		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfile)
+		(*in).DeepCopyInto(*out)
+	}
+	in.WebhookNamespacedResource.DeepCopyInto(&out.WebhookNamespacedResource)
+	in.WebhookClusterResource.DeepCopyInto(&out.WebhookClusterResource)
 	return
 }
 
@@ -342,6 +351,11 @@ func (in *SecurityConfig) DeepCopyInto(out *SecurityConfig) {
 		in, out := &in.PodSecurityContext, &out.PodSecurityContext
 		*out = new(v1.PodSecurityContext)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.IEAdminSubjects != nil {
+		in, out := &in.IEAdminSubjects, &out.IEAdminSubjects
+		*out = make([]rbacv1.Subject, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

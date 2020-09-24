@@ -4,8 +4,8 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  verifyType: pgp # x509
   enforcerConfig:
+    verifyType: pgp # x509
     plugin:
     - name: helm
       enabled: false
@@ -33,11 +33,6 @@ spec:
     - kind: TokenReview
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
-    certPoolPath: ""
-    chartPath: ""
-    chartRepo: ""
-    keyringPath: ""
-    verifyType: ""
     patch:
       enabled: true
     log:
@@ -125,8 +120,6 @@ spec:
         cpu: 200m
         memory: 256Mi
     securityContext: {}
-  signatureNamespace: ie-sign
-  policyNamespace: ie-policy
   webhookConfigName: ie-webhook-config
   webhookServerTlsSecretName: ie-server-tls
   webhookServiceName: ie-server

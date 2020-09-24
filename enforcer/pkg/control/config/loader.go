@@ -321,6 +321,7 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 	return &ResSigLoader{
 		interval:           interval,
 		signatureNamespace: signatureNamespace,
+		requestNamespace:   requestNamespace,
 		Client:             client,
 	}
 }

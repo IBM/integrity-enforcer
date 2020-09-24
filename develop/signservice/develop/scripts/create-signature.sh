@@ -50,7 +50,7 @@ if [[ "$status_code" -ne 200 ]] ; then
 fi
 
 file_option="'yaml=@"$YAML_PATH"'"
-url_option="'"$SIGNSERVICE_URL"/sign?signer="$SIGNER_STRING"&namespace="$RESOURCE_NS"&scope="$SCOPE_STRING"'"
+url_option="'"$SIGNSERVICE_URL"/pgpsign?signer="$SIGNER_STRING"&namespace="$RESOURCE_NS"&scope="$SCOPE_STRING"'"
 
 rsig_yaml=`sh -c "curl -sk -X POST -F ${file_option} ${url_option}"`
 
