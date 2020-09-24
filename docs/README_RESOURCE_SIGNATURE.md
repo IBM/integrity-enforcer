@@ -1,8 +1,11 @@
 ## How to Sign Resources
 
-### Prerequisites
+### Define a public key for verifying signature by IE.
 
-1. Generate GNUPG key (with your email address). E.g.: signer@enterprise.com
+   
+1. Generate GNUPG key (with your email address). 
+   
+    E.g.: signer@enterprise.com
     ```
     gpg --full-generate-key
     ```
@@ -11,18 +14,20 @@
     ```
     gpg -k signer@enterprise.com
     ```
-2. Setup IE secret called `sig-verify-secret` (pubkey ring)
-
+2. Define a public key for verifying signature by IE.
+   
     IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.
 
     1. export key
 
-        E.g. The following shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported as a key stored in `~/.gnupg/pubring.gpg`.
+        E.g. The following shows a pubkey for a signer identified by an email `signer@enterprise.com` 
+        
+        Export pbkey and store it in `~/.gnupg/pubring.gpg`.
         ```
         $ gpg --export signer@enterprise.com > ~/.gnupg/pubring.gpg
         $ cat ~/.gnupg/pubring.gpg | base64
         ```
-    2.  embed encoded content of `~/.gnupg/pubring.gpg` to `sig-verify-secret` as follows:   
+    2.  embed encoded content of `~/.gnupg/pubring.gpg` to `/tmp/sig-verify-secret.yaml` as follows:   
 
         E.g.:  /tmp/sig-verify-secret.yaml 
         ```
@@ -35,14 +40,16 @@
             pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
         ```
 
-     3. create `sig-verify-secret` in namespace `IE_NS` in the cluster.
+     3. create secret `sig-verify-secret` in namespace `integrity-enforcer-ns` in the cluster.
         ```
         $ oc create -f  /tmp/sig-verify-secret.yaml -n integrity-enforcer-ns
         ```      
 
-### Generate a ResourceSignature
+---
 
-1. Specify a ConfigMap resource as follows 
+### Generate signature for a resource to be protected in a namespace
+
+1. Specify a ConfigMap resource to be protected 
     
     E.g. The following snippet (/tmp/single-rsc.yaml) shows a spec of a ConfigMap `sample-cm`
 
@@ -57,24 +64,26 @@
         key4: val4
     ```
 
-2. Generate a ResourceSignature with the script: https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh
+2. Generate a signature for a resource with the script: https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh
 
     Setup a signer in https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-sign-config.sh
 
-    E.g. Configure `signer@enterprise.com` as SIGNER in the configuration file. 
+    E.g. Configure `signer@enterprise.com` as `SIGNER` in the configuration file. 
     ```
     #!/bin/bash
     SIGNER=signer@enterprise.com
     ```
 
-    Run the following script to generate a ResourceSignature which would be stored in a file `/tmp/single-rsc-rs.yaml`
+    Run the following script to generate a signature which would be stored in a file `/tmp/single-rsc-rs.yaml` (`ResourceSignature`)
     ```
     $ cd integrity-enforcer
     $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/single-rsc.yaml /tmp/single-rsc-rs.yaml
     ```
 
-2. Structure of generated ResourceSinature in `/tmp/single-rsc-rs.yaml`:
+3. Generated signature for a resource is included in a custom resource `ResourceSignature`
     
+    Structure of generated `ResourceSinature` in `/tmp/single-rsc-rs.yaml`:
+
     ```
       apiVersion: research.ibm.com/v1alpha1
       kind: ResourceSignature
@@ -90,8 +99,8 @@
             type: resource
     ```
     
-3. Message signed
-
+4. Message signed
+    
     1. Single resource (`/tmp/single-rsc.yaml`)
         
         You can create a ResourceSignature for a single resource YAML file.
