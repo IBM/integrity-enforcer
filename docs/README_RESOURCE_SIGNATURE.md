@@ -62,20 +62,18 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
 
 1. Specify a ConfigMap resource 
     
-    E.g. The following snippet (/tmp/single-rsc.yaml) shows a spec of a ConfigMap `test-cm`
+   The following snippet (/tmp/single-rsc.yaml) shows a spec of a ConfigMap `test-cm`
+   ```
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+      name: test-cm
+   data:
+      key1: val1
+      key2: val2
+      key4: val4   
 
-    ```
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-        name: test-cm
-    data:
-        key1: val1
-        key2: val2
-        key4: val4
-    ```
-
-
+   ```
 2. Try to create ConfigMap resource `test-cm` shown above (/tmp/single-rsc.yaml) in the namespace `secure-ns`, before creating a signature.
 
     Run the command below to create ConfigMap `test-cm`, but it fails because no signature for this resource is stored in the cluster.
@@ -144,7 +142,7 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
     ```
     
     
-4. Message signed
+6. Message signed
     
     1. Single resource (`/tmp/single-rsc.yaml`)
         

@@ -4,8 +4,9 @@ This section describe the steps for preparing a Tekton signing pipeline to sign 
  
 
 ### Prerequisites for setting up an example Tekton signing pipeline
+-   Install Tekton CLI in the local environment where the exmple Tekton pipline would be triggered.
 -   Prepare a cluster (RedHat OpenShift cluster including ROKS) for deploying sample application.  
-      -  Let us call this a Target cluster where a sample application to be deployed via Tekton signing pipeline
+      -  Let us call this a `target` cluster where a sample application to be deployed via Tekton signing pipeline
       -  Setup IE with PGP signature verifcation enbled in a target cluster (see [documentation](README_HOW_IE_WORKS.md)).
       -  Signing task in the example Tekton signing pipeline would require to access the IE secret that includes a pubkey ring for verifying signatures of resources that need to be protected by IE.
       (see [documentation](README_RESOURCE_SIGNATURE.md))
@@ -150,17 +151,17 @@ The sample Tekton signing pipeline would pull sources of an application from a s
       ```
 
 
-6. Run the Signing pipline as follows:
+6. Run the example Tekton signing pipline as follows:
 
-    In the target cluster, in which the sample application to be deployed,  create a namespace `sample-app-ns`  (if not exist).
+    In the cluster, run the pipeline by passing the required parameters as follows.
 
     ```
     $ tkn pipeline start pipeline-ie \
         -p pipeline-pvc="pipeline-pvc" \
-        -p git-url="...." \
+        -p git-url="https://github.com/sample-demo/sample-app.git" \
         -p git-branch="master" \
-        -p git-username="....." \
-        -p git-token="9056f0e68d89888de9fffbbd8f759f74d2cc3fcf" \
+        -p git-username="sample-user" \
+        -p git-token="9056f0e68d89888de9fffb..........." \
         -p signer-email="signer@enterprise.com"\
         -p deploy-namespace="sample-app-ns" \
         -s ie-signing-pipline-admin                                                                                                                                       

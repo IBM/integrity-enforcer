@@ -11,8 +11,8 @@ $ oc get signpolicies.research.ibm.com signer-policy -n integrity-enforcer-ns -o
 You can configure the policy by adding the following snipet to `/tmp/sign-policy.yaml`
     
 Example below is to define
-- signer `service-a` is identified when email of subject of signature is `signer@enterprise.com`
-- signer `service-a` is approved signer for the resources to be created in namespace `secure-ns`.
+- signer `signer-a` is identified when email of subject of signature is `signer@enterprise.com`
+- signer `signer-a` is approved signer for the resources to be created in namespace `secure-ns`.
     
 ```yaml
 spec:
@@ -21,9 +21,9 @@ spec:
     - namespaces:
       - secure-ns
       signers:
-      - service-a
+      - signer-a
     signers:
-    - name: service-a
+    - name: signer-a
       subjects:
       - email: signer@enterprise.com
 ```
