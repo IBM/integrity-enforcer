@@ -46,12 +46,6 @@ const (
 	SignatureTypeHelm             SignatureType = "Helm"
 )
 
-// TODO: should be moved
-const (
-	helmReleaseMetadataAPIVersion = "research.ibm.com/v1alpha1"
-	helmReleaseMetadataKind       = "HelmReleaseMetadata"
-)
-
 /**********************************************
 
 				GeneralSignature
