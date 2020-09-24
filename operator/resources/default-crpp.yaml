@@ -63,3 +63,4 @@ spec:
     - system:serviceaccount:openshift-machine-api:machine-api-operator
     - system:serviceaccount:openshift-machine-config-operator:machine-config-controller
     - system:serviceaccount:openshift-machine-api:machine-api-controllers
+    - system:serviceaccount:ibm-system:olm-operator-serviceaccount
