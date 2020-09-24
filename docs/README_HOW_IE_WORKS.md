@@ -180,48 +180,42 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
    IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../script/install_enforcer.sh).
 
    Before executing the script `install_enforcer.sh`, setup local environment as follows:
-      - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
-      - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
-      - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository`
+        - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
+        - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
+        - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository`
 
    The following example shows how to set up a local envionement.
    Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
-    
+      
       ```
       $ export IE_ENV=remote 
       $ export IE_NS=integrity-enforcer-ns
       $ export IE_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
       ``` 
-
-
    Execute the following script to deploy IE in a cluster.
-   
+
       ```
       $ cd integrity-enforcer
       $ ./scripts/install_enforcer.sh
       ```
 
-6. Confirm if `integrity-enforcer` is running successfully in a cluster.
-    
+​6. Confirm if `integrity-enforcer` is running successfully in a cluster.
+
    Check if there are two pods running in the namespace `integrity-enforcer-ns`: 
-        
       ```
       $ oc get pod -n integrity-enforcer-ns
       integrity-enforcer-operator-c4699c95c-4p8wp   1/1     Running   0          5m
       integrity-enforcer-server-85c787bf8c-h5bnj    2/2     Running   0          82m
       ```
 
-
 7. Clean up `integrity-enforcer` from a cluster
-    
-    IE can be removed  from a cluster using a series of steps which are bundled in a script called [`delete_enforcer.sh`](../script/delete_enforcer.sh).
 
-    Execute the following script to remove IE from cluster.
-    ```
-    $ cd integrity-enforcer
-    $ ./scripts/delete_enforcer.sh
-    ```
-​
+   IE can be removed  from a cluster using a series of steps which are bundled in a script called [`delete_enforcer.sh`](../script/delete_enforcer.sh).
+   Execute the following script to remove IE from cluster.
+      ```
+      $ cd integrity-enforcer
+      $ ./scripts/delete_enforcer.sh
+      ```
 
 ### Protect Resources with Integrity Enforcer
 ​

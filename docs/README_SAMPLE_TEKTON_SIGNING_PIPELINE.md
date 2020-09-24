@@ -123,8 +123,8 @@ The sample Tekton signing pipeline would pull sources of an application from a s
    
 4. Specify a Secret resource called `git-credentials` in namespace `artifact-signing-ns` to access the target Git repository where the application is hosted. 
  
-    E.g.: A git-credentials (git-credentials.yaml) is shown below
-    ```
+   E.g.: A git-credentials (git-credentials.yaml) is shown below
+   ```
     apiVersion: v1
     kind: Secret
     metadata:
@@ -133,12 +133,10 @@ The sample Tekton signing pipeline would pull sources of an application from a s
     data:
        username: Z2FqYW5....
        password: OTA1NmYwZTY...
-    ```
-
-
+   ```
 5. Deploy Pipeline resources in the cluster
 
-      ```
+   ```
       $ cd develop/signing-pipeline/tekton-pipeline
       $ oc create -f admin-role.yaml -n artifact-signing-ns
       $ oc create -f registry-secret.yaml -n artifact-signing-ns
@@ -148,14 +146,12 @@ The sample Tekton signing pipeline would pull sources of an application from a s
       $ oc create -f task-clone-repo.yaml -n artifact-signing-ns
       $ oc create -f task-sign-repo.yaml -n artifact-signing-ns
       $ oc create -f openshift-pvc.yaml -n artifact-signing-ns
-      ```
-
-
+   ```
 6. Run the example Tekton signing pipline as follows:
 
-   In the cluster, run the pipeline by passing the required parameters as follows.
+   In the cluster, using Tekton CLI, run the pipeline by passing the required parameters as follows.
 
-      ```
+   ```
       $ tkn pipeline start pipeline-ie \
         -p pipeline-pvc="pipeline-pvc" \
         -p git-url="https://github.com/sample-demo/sample-app.git" \
@@ -164,38 +160,38 @@ The sample Tekton signing pipeline would pull sources of an application from a s
         -p git-token="9056f0e68d89888de9fffb..........." \
         -p signer-email="signer@enterprise.com"\
         -p deploy-namespace="sample-app-ns" \
-        -s ie-signing-pipline-admin                                                                                                                                       
-      ```
+        -s ie-signing-pipline-admin              
+   ```
 
    Check the list of pipelineruns
    
-      ```
+   ```
       $ tkn pipelinerun list
        NAME                    STARTED          DURATION     STATUS
        pipeline-ie-run-jllw7   9 minutes ago    24 seconds   Succeeded
-      ```
+   ```
 
    Check the logs of pipelinerun to see if it successfully completed
    
-      ```
+   ```
       $ tkn pipelinerun logs pipeline-ie-run-jllw7 -f -n artifact-signing-ns
 
-      ```
+   ```
 
-   Successful completion of Tekton signing pipeline run would deploy the signed resources of the sample application to the target cluster
-
-
+   Successful completion of Tekton signing pipeline run would deploy the signed resources of the sample application to the target cluster.
+   
    In the target cluster, check if resource signature is successfully deployed.
    
-      ```
+   ```
       $ oc get resourcesignature.research.ibm.com rsig-ie-sample-app -n integrity-enforcer-ns
       NAME                 AGE
       rsig-ie-sample-app   29s
 
-      ```
+   ```
+      
    In the target cluster, check if the sample application is successfully deployed.
 
-      ```
+   ```
       $ oc get all -n sample-app-ns
       NAME                                READY   STATUS    RESTARTS   AGE
       pod/ie-sample-app-7c55bcf4d-kjtc4   1/1     Running   0          9s
@@ -209,4 +205,4 @@ The sample Tekton signing pipeline would pull sources of an application from a s
 
       NAME                                      DESIRED   CURRENT   READY   AGE
       replicaset.apps/ie-sample-app-7c55bcf4d   2         2         2       10s
-      ```
+   ```
