@@ -13,6 +13,10 @@ spec:
     - metadata.finalizers*
     match:
       name: '*'
+  - attrs:
+    - secrets.0.name
+    match:
+      kind: ServiceAccount
   protectAttrs:
   - attrs:
     - "spec.ports[].nodePort"

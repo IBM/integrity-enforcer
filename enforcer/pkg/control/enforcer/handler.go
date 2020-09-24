@@ -206,7 +206,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	if !self.ctx.Allow && !self.ctx.IEResource {
-		self.updateProtectionProfileStatus(self.ctx.Message)
+		// self.updateProtectionProfileStatus(self.ctx.Message)
 	}
 
 	//log context

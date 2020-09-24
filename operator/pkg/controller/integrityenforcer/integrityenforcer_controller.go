@@ -226,7 +226,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	//Role Binding
-	recResult, recErr = r.createOrUpdateClusterRoleBindingForIE(instance)
+	recResult, recErr = r.createOrUpdateRoleBindingForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
