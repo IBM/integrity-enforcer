@@ -41,13 +41,13 @@ import (
 
 /**********************************************
 
-				VCheckContext
+				RequestHandler
 
 ***********************************************/
 
 type RequestHandler struct {
 	config *config.EnforcerConfig
-	ctx    *VCheckContext
+	ctx    *CheckContext
 	loader *Loader
 	reqc   *common.ReqContext
 }
