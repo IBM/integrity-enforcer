@@ -4,8 +4,8 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  verifyType: x509
   enforcerConfig:
+    verifyType: pgp # x509
     plugin:
     - name: helm
       enabled: false
@@ -24,7 +24,7 @@ spec:
         subjects:
         - email: cluster_signer@signer.com
     ieResource: "research.ibm.com"
-    ieAdminUserGroup: "system:masters"
+    ieAdminUserGroup: "system:masters,system:cluster-admins"
     ignore:
     - kind: Event
     - kind: Lease
@@ -32,11 +32,6 @@ spec:
     - kind: TokenReview
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
-    certPoolPath: ""
-    chartPath: ""
-    chartRepo: ""
-    keyringPath: ""
-    verifyType: ""
     patch:
       enabled: true
     log:
@@ -101,6 +96,11 @@ spec:
       runAsUser: 1000580000
     securityContextConstraintsName:  ie-scc
     serviceAccountName: ie-sa
+    ieAdminSubjects:
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Group
+        name: system:masters
+    autoIEAdminRoleCreationDisabled: false
   selector:
     app: ie-server
   server:
@@ -119,8 +119,6 @@ spec:
         cpu: 200m
         memory: 256Mi
     securityContext: {}
-  signatureNamespace: ie-sign
-  policyNamespace: ie-policy
   webhookConfigName: ie-webhook-config
   webhookServerTlsSecretName: ie-server-tls
   webhookServiceName: ie-server

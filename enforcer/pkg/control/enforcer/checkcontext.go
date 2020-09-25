@@ -28,23 +28,11 @@ import (
 
 /**********************************************
 
-				CheckResult
+				CheckContext
 
 ***********************************************/
 
-type CheckResult struct {
-	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
-}
-
-/**********************************************
-
-				VCheckContext
-
-***********************************************/
-
-type VCheckContext struct {
+type CheckContext struct {
 	DetectOnlyModeEnabled bool `json:"detectOnly"`
 	BreakGlassModeEnabled bool `json:"breakGlass"`
 
@@ -69,14 +57,14 @@ type VCheckContext struct {
 	AllowByDetectOnlyMode bool `json:"allowByDetectOnlyMode"`
 }
 
-type VCheckResult struct {
+type CheckResult struct {
 	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
 	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
 	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
 }
 
-func InitCheckContext(config *config.EnforcerConfig) *VCheckContext {
-	cc := &VCheckContext{
+func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
+	cc := &CheckContext{
 		IgnoredSA: false,
 		Protected: false,
 		Aborted:   false,
@@ -100,7 +88,7 @@ func InitCheckContext(config *config.EnforcerConfig) *VCheckContext {
 	return cc
 }
 
-func (self *VCheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
+func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 
 	// cc := self
 	logRecord := map[string]interface{}{

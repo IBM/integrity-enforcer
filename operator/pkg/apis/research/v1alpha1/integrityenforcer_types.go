@@ -22,6 +22,7 @@ import (
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -45,7 +46,6 @@ type IntegrityEnforcerSpec struct {
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Security     SecurityConfig  `json:"security,omitempty"`
-	VerifyType   string          `json:"verifyType,omitempty"`
 	KeyRing      KeyRingConfig   `json:"keyRingConfig,omitempty"`
 	CertPool     CertPoolConfig  `json:"certPoolConfig,omitempty"`
 	Server       ServerContainer `json:"server,omitempty"`
@@ -57,9 +57,6 @@ type IntegrityEnforcerSpec struct {
 	EnforcerConfig       *iec.EnforcerConfig            `json:"enforcerConfig,omitempty"`
 	SignPolicy           *policy.SignPolicy             `json:"signPolicy,omitempty"`
 	DefaultRpp           *rpp.ResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
-
-	SignatureNamespace string `json:"signatureNamespace,omitempty"`
-	PolicyNamespace    string `json:"policyNamespace,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
@@ -75,6 +72,8 @@ type SecurityConfig struct {
 	ClusterRoleBinding             string                 `json:"clusterRoleBinding,omitempty"`
 	PodSecurityPolicyName          string                 `json:"podSecurityPolicyName,omitempty"`
 	PodSecurityContext             *v1.PodSecurityContext `json:"securityContext,omitempty"`
+	IEAdminSubjects                []rbacv1.Subject       `json:"ieAdminSubjects,omitempty"`
+	AutoIEAdminCreationDisabled    bool                   `json:"autoIEAdminRoleCreationDisabled,omitempty"`
 }
 
 type GlobalConfig struct {

@@ -24,8 +24,8 @@ import (
 	vrsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/plugins/helm"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 )
@@ -156,21 +156,20 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 		}
 		if rsecBytes != nil {
 			hrmSigs, err := helm.GetHelmReleaseMetadata(rsecBytes)
-			if err == nil {
-				message := hrmSigs[0]
-				signature := hrmSigs[1]
-				certificate := hrmSigs[2]
-				rls := hrmSigs[3]
-				hrm := hrmSigs[4]
+			if err == nil && len(hrmSigs) == 2 {
+				rls := hrmSigs[0]
+				hrm := hrmSigs[1]
 				eCfg := true
+
 				return &GeneralSignature{
 					SignType: SignatureTypeHelm,
-					data:     map[string]string{"message": message, "signature": signature, "certificate": certificate, "releaseSecret": rls, "helmReleaseMetadata": hrm},
+					data:     map[string]string{"releaseSecret": rls, "helmReleaseMetadata": hrm},
 					option:   map[string]bool{"emptyConfig": eCfg, "matchRequired": true},
 				}
 			} else {
 				logger.Error(fmt.Sprintf("Error occured in getting signature from helm release metadata; %s", err.Error()))
 				return nil
+
 			}
 		}
 	}

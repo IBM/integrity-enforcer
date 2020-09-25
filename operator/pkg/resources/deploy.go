@@ -51,28 +51,50 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		EmptyDirVolume("tmp"),
 	}
 
-	servervolumemounts = []v1.VolumeMount{
-		{
-			MountPath: "/ie-certpool-secret",
-			Name:      "ie-certpool-secret",
-		},
-		{
-			MountPath: "/keyring",
-			Name:      "ie-keyring-secret",
-		},
-		{
-			MountPath: "/run/secrets/tls",
-			Name:      "ie-tls-certs",
-			ReadOnly:  true,
-		},
-		{
-			MountPath: "/tmp",
-			Name:      "tmp",
-		},
-		{
-			MountPath: "/ie-app/public",
-			Name:      "log-volume",
-		},
+	if cr.Spec.EnforcerConfig.VerifyType == "pgp" {
+		servervolumemounts = []v1.VolumeMount{
+			{
+				MountPath: "/keyring",
+				Name:      "ie-keyring-secret",
+			},
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
+	} else {
+		servervolumemounts = []v1.VolumeMount{
+			{
+				MountPath: "/ie-certpool-secret",
+				Name:      "ie-certpool-secret",
+			},
+			{
+				MountPath: "/keyring",
+				Name:      "ie-keyring-secret",
+			},
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
 	}
 
 	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
@@ -111,28 +133,16 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		VolumeMounts: servervolumemounts,
 		Env: []v1.EnvVar{
 			{
-				Name:  "CHART_BASE_URL",
-				Value: cr.Spec.Server.ChartBaseUrl,
-			},
-			{
 				Name:  "ENFORCER_NS",
 				Value: cr.Namespace,
 			},
 			{
-				Name:  "SIGNATURE_NS",
-				Value: cr.Spec.SignatureNamespace,
-			},
-			{
-				Name:  "VERIFY_TYPE",
-				Value: cr.Spec.VerifyType,
-			},
-			{
-				Name:  "POLICY_NS",
-				Value: cr.Spec.PolicyNamespace,
-			},
-			{
 				Name:  "ENFORCER_CONFIG_NAME",
 				Value: cr.Spec.EnforcerConfigCrName,
+			},
+			{
+				Name:  "CHART_BASE_URL",
+				Value: cr.Spec.Server.ChartBaseUrl,
 			},
 			{
 				Name:  "ENFORCER_CM_RELOAD_SEC",
@@ -141,10 +151,6 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			{
 				Name:  "ENFORCE_POLICY_RELOAD_SEC",
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcePolicyReloadSec)),
-			},
-			{
-				Name:  "PACKAGE_DIR",
-				Value: "/tmp",
 			},
 		},
 		Resources: cr.Spec.Server.Resources,

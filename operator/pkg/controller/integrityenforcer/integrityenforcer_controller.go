@@ -208,27 +208,54 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	//Cluster Role
-	recResult, recErr = r.createOrUpdateClusterRole(instance)
+	recResult, recErr = r.createOrUpdateClusterRoleForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Cluster Role Binding
-	recResult, recErr = r.createOrUpdateClusterRoleBinding(instance)
+	recResult, recErr = r.createOrUpdateClusterRoleBindingForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Role
-	recResult, recErr = r.createOrUpdateRole(instance)
+	recResult, recErr = r.createOrUpdateRoleForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Role Binding
-	recResult, recErr = r.createOrUpdateRoleBinding(instance)
+	recResult, recErr = r.createOrUpdateRoleBindingForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
+	}
+
+	// ie-admin
+	if !instance.Spec.Security.AutoIEAdminCreationDisabled {
+		//Cluster Role
+		recResult, recErr = r.createOrUpdateClusterRoleForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Cluster Role Binding
+		recResult, recErr = r.createOrUpdateClusterRoleBindingForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Role
+		recResult, recErr = r.createOrUpdateRoleForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Role Binding
+		recResult, recErr = r.createOrUpdateRoleBindingForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
 	}
 
 	// Pod Security Policy (PSP)

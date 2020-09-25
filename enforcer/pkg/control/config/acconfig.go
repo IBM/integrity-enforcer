@@ -63,42 +63,16 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 
 	if renew {
 		enforcerNs := os.Getenv("ENFORCER_NS")
-		signatureNs := os.Getenv("SIGNATURE_NS")
-		policyNs := os.Getenv("POLICY_NS")
 		enforcerConfigName := os.Getenv("ENFORCER_CONFIG_NAME")
 		enforcerConfig := LoadEnforceConfig(enforcerNs, enforcerConfigName)
 
-		verifyType := os.Getenv("VERIFY_TYPE")
-		if verifyType == "" {
-			verifyType = "x509" // default value, TODO: change the default value to "pgp"
-		}
-		certPoolPath := os.Getenv("CERT_POOL_PATH")
-		if certPoolPath == "" {
-			certPoolPath = "/ie-certpool-secret/" // default value
-		}
-		keyringPath := os.Getenv("KEYRING_PATH")
-		if keyringPath == "" {
-			keyringPath = "/keyring/pubring.gpg" // default value
-		}
-		chartDir := os.Getenv("CHART_DIR")
-		if chartDir == "" {
-			chartDir = "/tmp/"
-		}
 		chartRepo := os.Getenv("CHART_BASE_URL")
 		if chartRepo == "" {
 			chartRepo = ""
 		}
 
 		if enforcerConfig != nil {
-			enforcerConfig.Namespace = enforcerNs
-			enforcerConfig.PolicyNamespace = policyNs
-			enforcerConfig.SignatureNamespace = signatureNs
-			enforcerConfig.VerifyType = verifyType
-			enforcerConfig.CertPoolPath = certPoolPath
-			enforcerConfig.KeyringPath = keyringPath
-			enforcerConfig.ChartDir = chartDir
 			enforcerConfig.ChartRepo = chartRepo
-
 			ac.EnforcerConfig = enforcerConfig
 			ac.lastUpdated = t
 		}

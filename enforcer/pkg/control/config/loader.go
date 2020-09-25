@@ -84,7 +84,7 @@ func (self *RPPLoader) Load() {
 	if cached := cache.GetString(keyName); cached == "" {
 		list1, err = self.Client.ResourceProtectionProfiles(self.enforcerNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get ResourceProtectionProfile:", err)
+			logger.Error("failed to get ResourceProtectionProfile:", err)
 			return
 		}
 		logger.Debug("ResourceProtectionProfile reloaded.")
@@ -95,7 +95,7 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached ResourceProtectionProfile:", err)
+			logger.Error("failed to Unmarshal cached ResourceProtectionProfile:", err)
 			return
 		}
 	}
@@ -104,7 +104,7 @@ func (self *RPPLoader) Load() {
 	if cached := cache.GetString(keyName); cached == "" {
 		list2, err = self.Client.ResourceProtectionProfiles(self.requestNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get ResourceProtectionProfile:", err)
+			logger.Error("failed to get ResourceProtectionProfile:", err)
 			return
 		}
 		logger.Debug("ResourceProtectionProfile reloaded.")
@@ -115,7 +115,7 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list2)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached ResourceProtectionProfile:", err)
+			logger.Error("failed to Unmarshal cached ResourceProtectionProfile:", err)
 			return
 		}
 	}
@@ -189,7 +189,7 @@ func (self *CRPPLoader) Load() {
 	if cached := cache.GetString(keyName); cached == "" {
 		list1, err = self.Client.ClusterResourceProtectionProfiles().List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get ClusterResourceProtectionProfile:", err)
+			logger.Error("failed to get ClusterResourceProtectionProfile:", err)
 			return
 		}
 		logger.Debug("ClusterResourceProtectionProfile reloaded.")
@@ -200,7 +200,7 @@ func (self *CRPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached ClusterResourceProtectionProfile:", err)
+			logger.Error("failed to Unmarshal cached ClusterResourceProtectionProfile:", err)
 			return
 		}
 	}
@@ -278,7 +278,7 @@ func (self *SignPolicyLoader) Load() {
 	if cached := cache.GetString(keyName); cached == "" {
 		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get SignPolicy:", err)
+			logger.Error("failed to get SignPolicy:", err)
 			return
 		}
 		logger.Debug("SignPolicy reloaded.")
@@ -289,7 +289,7 @@ func (self *SignPolicyLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached SignPolicy:", err)
+			logger.Error("failed to Unmarshal cached SignPolicy:", err)
 			return
 		}
 	}
@@ -321,6 +321,7 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 	return &ResSigLoader{
 		interval:           interval,
 		signatureNamespace: signatureNamespace,
+		requestNamespace:   requestNamespace,
 		Client:             client,
 	}
 }
@@ -341,20 +342,18 @@ func (self *ResSigLoader) Load() {
 	if cached := cache.GetString(keyName); cached == "" {
 		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get ResourceSignature:", err)
+			logger.Error("failed to get ResourceSignature:", err)
 			return
 		}
 		logger.Debug("ResourceSignature reloaded.")
 		if len(list1.Items) > 0 {
-			tmpItems := sortByCreationTimestamp(list1.Items)
-			list1.Items = tmpItems
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
 		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached ResourceSignature:", err)
+			logger.Error("failed to Unmarshal cached ResourceSignature:", err)
 			return
 		}
 	}
@@ -362,7 +361,7 @@ func (self *ResSigLoader) Load() {
 	if cached := cache.GetString(keyName); cached == "" {
 		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(metav1.ListOptions{})
 		if err != nil {
-			logger.Fatal("failed to get ResourceSignature:", err)
+			logger.Error("failed to get ResourceSignature:", err)
 			return
 		}
 		logger.Debug("ResourceSignature reloaded.")
@@ -373,7 +372,7 @@ func (self *ResSigLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list2)
 		if err != nil {
-			logger.Fatal("failed to Unmarshal cached ResourceSignature:", err)
+			logger.Error("failed to Unmarshal cached ResourceSignature:", err)
 			return
 		}
 	}
@@ -385,7 +384,8 @@ func (self *ResSigLoader) Load() {
 	for _, d := range list2.Items {
 		data = append(data, d)
 	}
-	self.Data = data
+	sortedData := sortByCreationTimestamp(data)
+	self.Data = sortedData
 	return
 }
 

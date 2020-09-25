@@ -345,6 +345,7 @@ var CommonMessageMask = []string{
 	"metadata.managedFields",
 	"metadata.creationTimestamp",
 	"metadata.generation",
+	"metadata.annotations.deprecated.daemonset.template.generation",
 	"metadata.namespace",
 	"metadata.resourceVersion",
 	"metadata.selfLink",

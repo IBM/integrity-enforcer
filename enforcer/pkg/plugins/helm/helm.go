@@ -24,13 +24,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
+	hrmclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
+	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/provenance"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -43,6 +46,8 @@ import (
 
 const releaseSecretPrefix = "sh.helm.release.v1"
 const releaseSecretType = "helm.sh/release.v1"
+
+const tempDir = "/tmp/"
 
 type ReleaseObject struct {
 	Data *release.Release `json:"data"`
@@ -135,6 +140,7 @@ func VerifyPackage(filePath, provPath, keyringPath string) (*sign.Signer, error)
 	if err != nil {
 		return nil, err
 	}
+
 	veri, _ := sig.Verify(filePath, provPath)
 	if veri.SignedBy == nil {
 		return nil, nil
@@ -199,6 +205,103 @@ func getChartFiles(pkgFileUrl, pkgProvUrl, pkgFilePath, pkgProvPath string) (boo
 		cache.Set(pkgProvUrl, pkgProvPath, nil)
 	}
 	return true, nil
+}
+
+func GetHelmReleaseMetadata(rawBytes []byte) ([]string, error) {
+	rlsObj := DecodeReleaseSecretFromRawBytes(rawBytes)
+	rls := rlsObj.Data
+	namespace := rls.Namespace
+	name := rls.Name
+
+	rlsBytes, _ := json.Marshal(rls)
+
+	config, _ := kubeutil.GetKubeConfig()
+	hrmclient, _ := hrmclient.NewForConfig(config)
+
+	hrm, err := hrmclient.HelmReleaseMetadatas(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get HelmReleaseMetadata: %s", err)
+	}
+
+	hlmBytes, _ := json.Marshal(hrm)
+
+	return []string{string(rlsBytes), string(hlmBytes)}, nil
+}
+
+func MatchReleaseSecret(rls, hrm string) bool {
+	if rls == "" || hrm == "" {
+		logger.Error("rls and hrm must not empty: rls: ", rls, ", hrm: ", hrm)
+		return false
+	}
+
+	var rlsObj *release.Release
+	err := json.Unmarshal([]byte(rls), &rlsObj)
+	if err != nil {
+		logger.Error("Failed to load rls;", err.Error())
+		return false
+	}
+
+	rlsManifest := rlsObj.Manifest
+	rlsChart := rlsObj.Chart
+	rlsConfig := rlsObj.Config
+
+	hrmNode, err := mapnode.NewFromBytes([]byte(hrm))
+	if err != nil {
+		logger.Error("Failed to load hrm;", err.Error())
+		return false
+	}
+
+	// HelmReleaseMetadata.Spec.Manifest is []byte, but it is converted to string at json.Marshal()
+	hrmManifestB64 := hrmNode.GetString("spec.manifest")
+	hrmChartB64 := hrmNode.GetString("spec.chart")
+	hrmConfigB64 := hrmNode.GetString("spec.config")
+
+	hrmManifest := base64decode(hrmManifestB64)
+	hrmChartTgzBytes := []byte(base64decode(hrmChartB64))
+	hrmConfigYamlBytes := []byte(base64decode(hrmConfigB64))
+
+	if rlsManifest != hrmManifest {
+		logger.Debug("manifest in release secret:", rlsManifest)
+		logger.Debug("manifest in helm release metadata:", hrmManifest)
+		return false
+	}
+
+	tmpPkgFile := "/tmp/tmp.tgz"
+	ioutil.WriteFile(tmpPkgFile, hrmChartTgzBytes, 0644)
+
+	hrmChart, err := loader.Load(tmpPkgFile)
+	if err != nil {
+		logger.Error("Failed to load Chart file of hrm;", err.Error())
+		return false
+	}
+
+	rlsChartBytes, _ := json.Marshal(rlsChart)
+	hrmChartBytes, _ := json.Marshal(hrmChart)
+
+	if string(rlsChartBytes) != string(rlsChartBytes) {
+		logger.Debug("chart in release secret:", rlsChartBytes)
+		logger.Debug("chart in helm release metadata:", hrmChartBytes)
+		return false
+	}
+
+	rlsConfigNode, err := mapnode.NewFromMap(rlsConfig)
+	if err != nil {
+		logger.Error("Failed to load Config in release secret;", err.Error())
+		return false
+	}
+	hrmConfigNode, err := mapnode.NewFromYamlBytes(hrmConfigYamlBytes)
+	if err != nil {
+		logger.Error("Failed to load Config in helm release metadata;", err.Error())
+		return false
+	}
+
+	dr := rlsConfigNode.Diff(hrmConfigNode)
+	if dr != nil {
+		logger.Debug("values.yaml is not identical. diffs: ", dr.ToJson())
+		return false
+	}
+
+	return true
 }
 
 func FindReleaseSecret(namespace, kind, name string, rawObj []byte) ([]byte, error) {
@@ -292,4 +395,57 @@ func matchWithManifest(requestObject, manifestObject []byte) bool {
 
 func IsReleaseSecret(kind, name string) bool {
 	return (kind == "Secret" && strings.HasPrefix(name, releaseSecretPrefix))
+}
+
+func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) string {
+	message := ""
+	node, err := mapnode.NewFromBytes(rawObj)
+	if err != nil {
+		return ""
+	}
+	if mutableAttrs != "" {
+		mutableAttrs = strings.ReplaceAll(mutableAttrs, "\n", "")
+		mask := strings.Split(mutableAttrs, ",")
+		for i := range mask {
+			mask[i] = strings.Trim(mask[i], " ")
+		}
+		node = node.Mask(mask)
+	}
+	if filter == "" {
+		message = node.ToJson() + "\n"
+	} else {
+		filterKeys := mapnode.SplitCommaSeparatedKeys(filter)
+		for _, k := range filterKeys {
+			subNodeList := node.MultipleSubNode(k)
+			for _, subNode := range subNodeList {
+				message += subNode.ToJson() + "\n"
+			}
+		}
+	}
+	return message
+}
+
+func VerifyChartAndProv(chart, prov []byte, keyringPath string) (bool, *sign.Signer, string, error) {
+	chartPath := filepath.Join(tempDir, "chart.tgz")
+	provPath := filepath.Join(tempDir, "chart.tgz.prov")
+	err := ioutil.WriteFile(chartPath, chart, 0644)
+	if err != nil {
+		msg := fmt.Sprintf("Error in verifying chart file; %s", err.Error())
+		return false, nil, msg, fmt.Errorf("%s", msg)
+	}
+	err = ioutil.WriteFile(provPath, prov, 0644)
+	if err != nil {
+		msg := fmt.Sprintf("Error in verifying chart file; %s", err.Error())
+		return false, nil, msg, fmt.Errorf("%s", msg)
+	}
+	signer, err := VerifyPackage(chartPath, provPath, keyringPath)
+	if err != nil {
+		msg := fmt.Sprintf("Error in verifying chart file; %s", err.Error())
+		return false, nil, msg, fmt.Errorf("%s", msg)
+	} else if signer == nil {
+		msg := fmt.Sprintf("Failed to verify helm chart and its provenance.")
+		return false, nil, msg, nil
+	} else {
+		return true, signer, "", nil
+	}
 }

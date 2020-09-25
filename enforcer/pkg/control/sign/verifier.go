@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"strings"
 
+	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/plugins/helm"
 	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
 )
@@ -76,12 +77,13 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		}
 		protectAttrs, _ := sig.data["protectAttrs"]
 		unprotectAttrs, _ := sig.data["unprotectAttrs"]
-		matched := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrs, unprotectAttrs, self.Namespace, sig.SignType)
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrs, unprotectAttrs, self.Namespace, sig.SignType)
 		if !matched {
+			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
 				Error: &common.CheckError{
-					Msg:    "Message in ResourceSignature is not identical with the requested object",
-					Reason: "Message in ResourceSignature is not identical with the requested object",
+					Msg:    msg,
+					Reason: msg,
 					Error:  nil,
 				},
 				Signer: nil,
@@ -224,15 +226,17 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs, enforcerNamespace string, signType SignatureType) bool {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs, enforcerNamespace string, signType SignatureType) (bool, string) {
 	var mask, focus []string
+	matched := false
+	diffStr := ""
 	mask = getMaskDef("")
 
 	orgObj := []byte(message)
 	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error in loading orgNode: %s", err.Error()))
-		return false
+		return false, ""
 	}
 
 	addMask := []string{}
@@ -246,7 +250,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		focus = mapnode.SplitCommaSeparatedKeys(protectAttrs)
 	}
 
-	matched := matchContents(orgObj, reqObj, focus, mask)
+	matched, diffStr = matchContents(orgObj, reqObj, focus, mask)
 	if matched {
 		logger.Debug("matched directly")
 	}
@@ -256,14 +260,14 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), enforcerNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate: %s", err.Error()))
-			return false
+			return false, ""
 		}
 		mask = getMaskDef("")
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 
-		matched = matchContents(simObj, reqObj, focus, mask)
+		matched, diffStr = matchContents(simObj, reqObj, focus, mask)
 		if matched {
 			logger.Debug("matched by DryRunCreate()")
 		}
@@ -275,20 +279,20 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		_, patchedBytes, err := kubeutil.GetApplyPatchBytes(orgObj, reqNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
-			return false
+			return false, ""
 		}
 		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
 		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
 		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
-			return false
+			return false, ""
 		}
 		mask = getMaskDef("")
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched = matchContents(simPatchedObj, reqObj, focus, mask)
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask)
 		if matched {
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
@@ -297,25 +301,25 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		patchedBytes, err := kubeutil.StrategicMergePatch(reqObj, orgObj, "")
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
-			return false
+			return false, ""
 		}
 		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
 		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
 		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
-			return false
+			return false, ""
 		}
 		mask = getMaskDef("")
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched = matchContents(simPatchedObj, reqObj, focus, mask)
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask)
 		if matched {
 			logger.Debug("matched by StrategicMergePatch()")
 		}
 	}
-	return matched
+	return matched, diffStr
 }
 
 func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string) bool {
@@ -323,7 +327,7 @@ func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope s
 	mask = getMaskDef("")
 	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
 	mask = append(mask, scopeKeys...)
-	matched := matchContents(orgObj, rawObj, nil, mask)
+	matched, _ := matchContents(orgObj, rawObj, nil, mask)
 	return matched
 }
 
@@ -350,16 +354,16 @@ func getMaskDef(kind string) []string {
 	return masks
 }
 
-func matchContents(orgObj, reqObj []byte, focus, mask []string) bool {
+func matchContents(orgObj, reqObj []byte, focus, mask []string) (bool, string) {
 	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error("Failed to load original message as *Node", string(orgObj))
-		return false
+		return false, ""
 	}
 	reqNode, err := mapnode.NewFromBytes(reqObj)
 	if err != nil {
 		logger.Error("Failed to load requested object as *Node", string(reqObj))
-		return false
+		return false, ""
 	}
 
 	matched := false
@@ -367,6 +371,8 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string) bool {
 	maskedReqNode := reqNode.Mask(mask)
 
 	dr := maskedOrgNode.Diff(maskedReqNode)
+	diffStr := ""
+
 	if dr == nil {
 		matched = true
 	} else {
@@ -377,7 +383,11 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string) bool {
 		}
 	}
 
-	return matched
+	if !matched && dr != nil {
+		diffStr = dr.String()
+	}
+
+	return matched, diffStr
 }
 
 func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) string {
@@ -451,10 +461,11 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext)
 	var vsinfo *common.SignerInfo
 	var retErr error
 
+	rlsStr, _ := sig.data["releaseSecret"]
+	hrmStr, _ := sig.data["helmReleaseMetadata"]
+
 	if sig.option["matchRequired"] {
-		rls, _ := sig.data["releaseSecret"]
-		hrm, _ := sig.data["helmReleaseMetadata"]
-		matched := helm.MatchReleaseSecret(rls, hrm)
+		matched := helm.MatchReleaseSecret(rlsStr, hrmStr)
 		if !matched {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
@@ -467,82 +478,44 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext)
 		}
 	}
 
-	if self.VerifyType == VerifyTypePGP {
-		message := sig.data["message"]
-		signature := sig.data["signature"]
-		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyringPath, message, signature)
+	// verify helm chart with prov in HelmReleaseMetadata.
+	// helm provenance supports only PGP Verification.
+	if self.VerifyType == VerifyTypePGP || self.VerifyType == VerifyTypeX509 {
+		var hrmObj *hrm.HelmReleaseMetadata
+		err := json.Unmarshal([]byte(hrmStr), &hrmObj)
 		if err != nil {
+			msg := fmt.Sprintf("Error occured in helm chart verification; %s", err.Error())
 			vcerr = &common.CheckError{
-				Msg:    "Error occured in signature verification",
-				Reason: reasonFail,
-				Error:  err,
+				Msg:    msg,
+				Reason: msg,
+				Error:  fmt.Errorf("%s", msg),
 			}
 			vsinfo = nil
 			retErr = err
-		} else if ok {
-			vcerr = nil
-			vsinfo = &common.SignerInfo{
-				Email:   signer.Email,
-				Name:    signer.Name,
-				Comment: signer.Comment,
-			}
-			retErr = nil
 		} else {
-			vcerr = &common.CheckError{
-				Msg:    "Failed to verify signature",
-				Reason: reasonFail,
-				Error:  nil,
-			}
-			vsinfo = nil
-			retErr = nil
-		}
 
-	} else if self.VerifyType == VerifyTypeX509 {
-		certificate := []byte(sig.data["certificate"])
-		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, self.CertPoolPath)
-		if err != nil {
-			vcerr = &common.CheckError{
-				Msg:    "Error occured in certificate verification",
-				Reason: reasonFail,
-				Error:  err,
-			}
-			vsinfo = nil
-			retErr = err
-		} else if !certOk {
-			vcerr = &common.CheckError{
-				Msg:    "Failed to verify certificate",
-				Reason: reasonFail,
-				Error:  nil,
-			}
-			vsinfo = nil
-			retErr = nil
-		} else {
-			cert, err := pkix.ParseCertificate(certificate)
-			if err != nil {
-				logger.Error("Failed to parse certificate; ", err)
-			}
-			pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
-			if err != nil {
-				logger.Error("Failed to get public key from certificate; ", err)
-			}
-			message := []byte(sig.data["message"])
-			signature := []byte(sig.data["signature"])
-			sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+			helmChart := hrmObj.Spec.Chart
+			helmProv := hrmObj.Spec.Prov
+			ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyringPath)
 			if err != nil {
 				vcerr = &common.CheckError{
-					Msg:    "Error occured in signature verification",
+					Msg:    "Error occured in helm chart verification",
 					Reason: reasonFail,
 					Error:  err,
 				}
 				vsinfo = nil
 				retErr = err
-			} else if sigOk {
+			} else if ok {
 				vcerr = nil
-				vsinfo = common.NewSignerInfoFromCert(cert)
+				vsinfo = &common.SignerInfo{
+					Email:   signer.Email,
+					Name:    signer.Name,
+					Comment: signer.Comment,
+				}
 				retErr = nil
 			} else {
 				vcerr = &common.CheckError{
-					Msg:    "Failed to verify signature",
+					Msg:    "Failed to verify helm chart and its provenance",
 					Reason: reasonFail,
 					Error:  nil,
 				}

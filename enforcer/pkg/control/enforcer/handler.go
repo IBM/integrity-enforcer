@@ -17,10 +17,15 @@
 package enforcer
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
+	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
@@ -36,13 +41,13 @@ import (
 
 /**********************************************
 
-				VCheckContext
+				RequestHandler
 
 ***********************************************/
 
 type RequestHandler struct {
 	config *config.EnforcerConfig
-	ctx    *VCheckContext
+	ctx    *CheckContext
 	loader *Loader
 	reqc   *common.ReqContext
 }
@@ -95,6 +100,10 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
 	if self.checkIfIEResource() {
+		if ok, msg := self.validateIEResource(); !ok {
+			return createAdmissionResponse(false, msg)
+		}
+
 		self.ctx.IEResource = true
 		if self.checkIfIEAdminRequest() || self.checkIfIEServerRequest() {
 			allowed = true
@@ -197,7 +206,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	if !self.ctx.Allow && !self.ctx.IEResource {
-		self.updateProtectionProfileStatus(self.ctx.Message)
+		// self.updateProtectionProfileStatus(self.ctx.Message)
 	}
 
 	//log context
@@ -255,8 +264,8 @@ func (self *RequestHandler) evalFinalDecision(allowed bool, evalReason int, errM
 		dr.Allow = true
 		dr.Verified = false
 		dr.AllowByBreakGlassMode = true
-		dr.Message = common.ReasonCodeMap[common.REASON_UNVERIFIED].Message
-		dr.ReasonCode = common.REASON_UNVERIFIED
+		dr.Message = common.ReasonCodeMap[common.REASON_BREAK_GLASS].Message
+		dr.ReasonCode = common.REASON_BREAK_GLASS
 	}
 
 	if evalReason == common.REASON_UNEXPECTED {
@@ -275,7 +284,7 @@ func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalRea
 		dr.Verified = false
 		dr.Message = self.ctx.AbortReason
 		dr.ReasonCode = common.REASON_ABORTED
-	} else if self.reqc.IsDeleteRequest() && self.reqc.Kind != "ResourceSignature" {
+	} else if self.reqc.IsDeleteRequest() && self.reqc.Kind != "ResourceSignature" && !self.checkIfIEAdminRequest() && !self.checkIfIEServerRequest() {
 		dr.Allow = false
 		dr.Verified = true
 		dr.ReasonCode = common.REASON_BLOCK_DELETE
@@ -305,6 +314,41 @@ func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalRea
 	}
 
 	return dr
+}
+
+func (self *RequestHandler) validateIEResource() (bool, string) {
+	if self.reqc.IsDeleteRequest() {
+		return true, ""
+	}
+	rawObj := self.reqc.RawObject
+	kind := self.reqc.Kind
+	if kind == "SignPolicy" {
+		var obj *spol.SignPolicy
+		if err := json.Unmarshal(rawObj, &obj); err != nil {
+			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		}
+	} else if kind == "ResourceProtectionProfile" {
+		var obj *rpp.ResourceProtectionProfile
+		if err := json.Unmarshal(rawObj, &obj); err != nil {
+			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		}
+	} else if kind == "ClusterResourceProtectionProfile" {
+		var obj *crpp.ClusterResourceProtectionProfile
+		if err := json.Unmarshal(rawObj, &obj); err != nil {
+			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		}
+	} else if kind == "ResourceSignature" {
+		var obj *rsig.ResourceSignature
+		if err := json.Unmarshal(rawObj, &obj); err != nil {
+			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		}
+	} else if kind == "HelmReleaseMetadata" {
+		var obj *hrm.HelmReleaseMetadata
+		if err := json.Unmarshal(rawObj, &obj); err != nil {
+			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		}
+	}
+	return true, ""
 }
 
 func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
