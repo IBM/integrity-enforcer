@@ -28,7 +28,9 @@ spec:
     match:
       kind: Service
   ignoreServiceAccount: 
-  - serviceAccountName:
+  - match: 
+      kind: "*"
+    serviceAccountName:
     - system:admin
     - system:apiserver
     - system:kube-scheduler
@@ -78,6 +80,13 @@ spec:
     - system:serviceaccount:openshift-machine-config-operator:machine-config-controller
     - system:serviceaccount:openshift-machine-api:machine-api-controllers
     - system:serviceaccount:ibm-system:olm-operator-serviceaccount
+    - system:serviceaccount:openshift-cluster-storage-operator:csi-snapshot-controller-operator
+    - system:serviceaccount:openshift-kube-controller-manager:localhost-recovery-client
+    - system:serviceaccount:openshift-kube-storage-version-migrator-operator:kube-storage-version-migrator-operator
+    - system:serviceaccount:openshift-etcd-operator:etcd-operator
+    - system:serviceaccount:openshift-service-ca:service-ca
+    - system:serviceaccount:openshift-config-operator:openshift-config-operator
+    - system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
   - match: 
       kind: ControllerRevision, Pod
     serviceAccountName:
@@ -99,7 +108,6 @@ spec:
     - system:serviceaccount:openshift-service-catalog-controller-manager-operator:openshift-service-catalog-controller-manager-operator
   - match: 
       namespace: openshift-console-operator, openshift-console
-      kind: ConfigMap
     serviceAccountName:
     - system:serviceaccount:openshift-console-operator:console-operator
   - match: 

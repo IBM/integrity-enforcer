@@ -14,7 +14,9 @@ spec:
     match:
       name: '*'
   ignoreServiceAccount: 
-  - serviceAccountName:
+  - match: 
+      kind: "*"
+    serviceAccountName:
     - system:admin
     - system:apiserver
     - system:kube-scheduler
@@ -64,3 +66,6 @@ spec:
     - system:serviceaccount:openshift-machine-config-operator:machine-config-controller
     - system:serviceaccount:openshift-machine-api:machine-api-controllers
     - system:serviceaccount:ibm-system:olm-operator-serviceaccount
+    - system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    - system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
+    - system:serviceaccount:tigera-operator:tigera-operator
