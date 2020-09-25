@@ -6,10 +6,12 @@ Integrity Enforcer (IE) is a tool for built-in preventive integrity control for 
 ​
 The goal of Integrity Enforcer is to provide assurance of the integrity of Kubernetes resources.  
 ​
+
 Resources on a Kubernetes cluster are defined in various form of artifacts such as YAML files, Helm charts, Operator, etc., but those artifacts may be altered maliciously or unintentionally before deploying them to cluster. 
 This could be an integrity issue. For example, some artifact may be modified to inject malicous scripts and configurations inside in stealthy manner, then admin deploys it without knowing the falsification.
 ​
-IE provides signature-based assurance of integrity for Kubernetes resources at cluster side. IE works as an Admission Controller which handles all incoming Kubernetes admission requests, verifies if the requests attached a signature, and blocks any unauthorized requests according to the enforce policy before actually pursisting in EtcD. 
+
+IE provides signature-based assurance of integrity for Kubernetes resources at cluster side. IE works as an Admission Controller which handles all incoming Kubernetes admission requests, verifies if the requests attached a signature, and blocks any unauthorized requests according to the enforce policy before actually persisting in etcd. 
 ​
 ## Supported Platforms
 ​
@@ -22,7 +24,7 @@ IE can be deployed with operator. We have verified the feasibility on the follow
 ​
 
 ## How Integrity Enforcer works
-- Resources to be protected in each namespace can be defined in the custom resource called `ResourceProtectionProfile`. For example, The following snippet shows an example definition of protected resources in a namespace. ConfigMap, Depoloyment, and Service in a namespace `secure-ns` which is protected by IE, so any request to create/update resources is verified with signature.  (see [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
+- Resources to be protected in each namespace can be defined in the custom resource called `ResourceProtectionProfile`. For example, The following snippet shows an example definition of protected resources in a namespace. `ResourceProtectionProfile` definition includes resources such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by IE, so any request to create/update resources is verified with signature.  (see [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
 ​
     ```
         apiVersion: research.ibm.com/v1alpha1
@@ -52,10 +54,10 @@ IE can be deployed with operator. We have verified the feasibility on the follow
 ### Prerequisites
 ​
 The following prerequisites must be satisfied to deploy IE on a cluster.
-- A Kubernetes cluster and cluster admin access to the cluster to use oc or kubectl command
+- A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
 - Prepare a namespace to deploy IE. Use `integrity-enforcer-ns` as default.
 - All requests to namespaces with label integrity-enforced=true are passed to IE.
-- A secret resource (ie-certpool-secret / kubring-secret) which contains public key and certificates should be setup for enabling signature verification by IE.
+- A secret resource (ie-certpool-secret / sig-verify-secret) which contains public key and certificates should be setup for enabling signature verification by IE.
 
 ### Install Integrity Enforcer
 ​
@@ -69,7 +71,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
     $ git clone https://github.com/IBM/integrity-enforcer.git
     $ cd integrity-enforcer
     $ pwd
-    /home/gajan/go/src/github.com/IBM/integrity-enforcer
+    /home/user/go/src/github.com/IBM/integrity-enforcer
     ```
 
     Note the absolute path of root directory of the cloned `integrity-enforcer` git repository.
@@ -124,7 +126,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
         $ cat ~/.gnupg/pubring.gpg | base64
         ```
 
-        Once you have the encoded content of `~/.gnupg/pubring.gpg`, embed it to `/tmp/sig-verify-secret.yaml` as follows.
+        Once you have the encoded content of `~/.gnupg/pubring.gpg`, embed it to `pubring.gpg` field in `/tmp/sig-verify-secret.yaml` as follows.
 
         ```
         apiVersion: v1
@@ -177,7 +179,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
 5. Install IE to a cluster
 
-   IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../script/install_enforcer.sh).
+   IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../scripts/install_enforcer.sh).
 
    Before executing the script `install_enforcer.sh`, setup local environment as follows:
         - `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
@@ -190,7 +192,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
       ```
       $ export IE_ENV=remote 
       $ export IE_NS=integrity-enforcer-ns
-      $ export IE_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
+      $ export IE_REPO_ROOT=/home/user/go/src/github.com/IBM/integrity-enforcer
       ``` 
    Execute the following script to deploy IE in a cluster.
 
@@ -198,8 +200,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
       $ cd integrity-enforcer
       $ ./scripts/install_enforcer.sh
       ```
-
-​6. Confirm if `integrity-enforcer` is running successfully in a cluster.
+6. Confirm  if `integrity-enforcer` is running successfully in a cluster.
 
    Check if there are two pods running in the namespace `integrity-enforcer-ns`: 
       ```
@@ -210,17 +211,18 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your Re
 
 7. Clean up `integrity-enforcer` from a cluster
 
-   IE can be removed  from a cluster using a series of steps which are bundled in a script called [`delete_enforcer.sh`](../script/delete_enforcer.sh).
+   IE can be removed  from a cluster using a series of steps which are bundled in a script called [`delete_enforcer.sh`](../scripts/delete_enforcer.sh).
    Execute the following script to remove IE from cluster.
       ```
       $ cd integrity-enforcer
       $ ./scripts/delete_enforcer.sh
       ```
 
+
 ### Protect Resources with Integrity Enforcer
 ​
 
-This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. secure-ns) on your RedHat OpenShift (including ROKS).
+This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your RedHat OpenShift (including ROKS).
 
 The steps for protecting resources include:
 - Step 1. Define which reource(s) should be protected.
@@ -233,7 +235,7 @@ The steps for protecting resources include:
  
    1. Create Resource Protection Profile
 
-      You can define which resources should be protected with signature in IE. For resources (e.g. ConfigMap, Deployment, Service etc. ) in namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace.
+      You can define which resources should be protected with signature in a cluster by IE. For resources (e.g. ConfigMap, Deployment, Service etc.) in a namespace, a custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace.
       Example below illustrates a custom resource `ResourceProtectionProfile` to protect resources such as ConfigMap, Deployment, and Service in a namespace `secure-ns`.
 
         ```
@@ -251,8 +253,9 @@ The steps for protecting resources include:
             - namespace: secure-ns
               kind: Service
         ```
-   2. Store ResourceProtectionProfile in a namespace `secure-ns` in the cluster.
+   2. Store `ResourceProtectionProfile` in a namespace `secure-ns` in the cluster.
 
+        Once you store a `ResourceProtectionProfile` in a namespace, the specified resources in the namespace would be protected by IE.
         ```
         $ oc create -f /tmp/sample-rpp.yaml -n secure-ns
         resourceprotectionprofile.research.ibm.com/sample-rpp created
@@ -261,7 +264,7 @@ The steps for protecting resources include:
 
 #### Step 2. Create a resource with signature 
 
-1. Specify a ConfigMap resource.
+1. Define a ConfigMap resource.
 
     The following snippet (/tmp/test-cm.yaml) shows a spec of a ConfigMap `test-cm`.
 
@@ -276,9 +279,9 @@ The steps for protecting resources include:
         key4: val4
     ```
 
-2. Try to create ConfigMap resource `test-cm` shown above (/tmp/test-cm.yaml) in the namespace `secure-ns`, before creating a signature.
+2. Try to create ConfigMap resource `test-cm` shown above (`/tmp/test-cm.yaml`) in the namespace `secure-ns`, before creating a signature.
 
-    Run the command below to create ConfigMap `test-cm`, but it fails because no signature for this resource is stored in the cluster.
+    Run the command below to create the ConfigMap `test-cm`, but it fails because no signature for this resource is stored in the cluster.
 
     ```
     $ oc create -f /tmp/test-cm.yaml -n secure-ns
@@ -287,9 +290,9 @@ The steps for protecting resources include:
 
 3. Generate a signature for a resource 
 
-    To generate a signature for a resource,  we use a utility [script](https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh)
+    To generate a signature for a resource,  we use a utility [script](../scripts/gpg-rs-sign.sh)
 
-    We setup a signer in the [config file](https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-sign-config.sh)
+    Before executing the script, We setup a signer in the [config file](../scripts/gpg-sign-config.sh)
 
     The following shows the content of config file: `gpg-sign-config.sh`  which configures `signer@enterprise.com` as `SIGNER`.
 
@@ -298,15 +301,16 @@ The steps for protecting resources include:
       SIGNER=signer@enterprise.com
       ```
 
-    Run the following script to generate a signature
+    Execute the following script to generate a signature
   
       ```
       $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
       ```
-      Utility script can be used by specifying paremeters such as:
-        - `gpg-sign-config.sh`:  Config file to specify a signer
-        - `/tmp/test-cm.yaml`:  A resource file to be signed
-        - `/tmp/test-cm-rs.yaml`: A custom resource file `ResourceSignature` generated
+    
+    We specify the following paremeters when executing utility [script](../scripts/gpg-rs-sign.sh):
+    -  `gpg-sign-config.sh`:  Config file to specify a signer
+    -  `/tmp/test-cm.yaml`:  A resource file to be signed
+    -  `/tmp/test-cm-rs.yaml`:  A custom resource file `ResourceSignature` to be generated
 
 
     Generated signature for a resource is included in a custom resource `ResourceSignature`.
@@ -337,7 +341,7 @@ The steps for protecting resources include:
     resourcesignature.research.ibm.com/rsig-test-cm created
     ```
 
-5. Create a resource in a specific namespace after creating the signature in the cluster.
+5. Create a resource in the chosen namespace after creating the signature in the cluster.
 
     Run the command below to create a ConfigMap resource (/tmp/test-cm.yaml), it should be successful this time because a corresponding ResourceSignature is available in the cluster.
     ```
@@ -345,11 +349,11 @@ The steps for protecting resources include:
     configmap/test-cm created
     ```
 
-#### Step 3. Check status on ResourceProtectionProfile (with cap)
+#### Step 3. Check status on `ResourceProtectionProfile` (with cap)
 
-  We can check the status ResourceProtectionProfile resource created in the cluster.
+  We can check the status property of `ResourceProtectionProfile` resource created in the cluster.
 
-  The following example shows which requests are denied by IE for this ResourceProtectionProfile. see [documentation](README_FOR_RESOURCE_PROTECTION_PROFILE.md)
+  The following example shows status which includes which requests are denied by IE for this ResourceProtectionProfile. see [documentation](README_FOR_RESOURCE_PROTECTION_PROFILE.md)
 
     
     $ oc get ResourceProtectionProfile.research.ibm.com  sample-rpp -n secure-ns -o json | jq -r .status
@@ -375,7 +379,7 @@ The steps for protecting resources include:
 
 1. Check logs generated by IE
 
-   IE server component generates logs while processing admission requests in a cluster.  Logs of IE server could be retrived using a script called [`log_server.sh `](../script/log_server.sh).
+   IE server component generates logs while processing admission requests in a cluster. Logs of IE server could be retrived by executing a script called [`log_server.sh `](../script/log_server.sh).
 
    Run the script below to check the log generated by IE server when processing individual request to create/update resources. 
 
@@ -396,7 +400,7 @@ The steps for protecting resources include:
     ```
 2. Check detail logs forwarded by IE to a data store
 
-    IE server component generates detail logs while processing admission requests in a cluster. Detail logs of IE server could be retrived using a script called [`log_logging.sh  `](../script/log_logging.sh).
+    IE server component generates detail logs while processing admission requests in a cluster. Detail logs of IE server could be retrived by executing a script called [`log_logging.sh  `](../script/log_logging.sh).
 
     Run the script below to check the log forwarded by IE when processing individual request to create/update resources. 
     

@@ -6,12 +6,13 @@ This section describe the steps for preparing a Tekton signing pipeline to sign 
 ### Prerequisites for setting up an example Tekton signing pipeline
 -   Install Tekton CLI in the local environment where the exmple Tekton pipline would be triggered.
 -   Prepare a cluster (RedHat OpenShift cluster including ROKS) for deploying sample application.  
-      -  Let us call this a `target` cluster where a sample application to be deployed via Tekton signing pipeline
+      -  Let us call this a `target` cluster where a sample application to be deployed via a sample Tekton signing pipeline.
       -  Setup IE with PGP signature verifcation enbled in a target cluster (see [documentation](README_HOW_IE_WORKS.md)).
       -  Signing task in the example Tekton signing pipeline would require to access the IE secret that includes a pubkey ring for verifying signatures of resources that need to be protected by IE.
       (see [documentation](README_RESOURCE_SIGNATURE.md))
-      - Make sure signer (e.g. `signer@enterprise.com`) used in IE secret that includes a pubkey ring for verifying signatures of resources should be used for running Tekton signing pipeline. (see [documentation](README_RESOURCE_SIGNATURE.md))
-      -  Prepare namespace in a target cluster where a sample application to be deployed.
+      -  Make sure signer (e.g. `signer@enterprise.com`) used in IE secret that includes a pubkey ring for verifying signatures of resources should be used for running Tekton signing pipeline. (see [documentation](README_RESOURCE_SIGNATURE.md))
+      -  Prepare namespace in the target cluster where a sample application to be deployed.
+      
          ```
          $ oc create namespace sample-app-ns
          ```
@@ -37,7 +38,7 @@ This section describe the steps for preparing a Tekton signing pipeline to sign 
 
 -  Setup a sample application Git repository using source code for the [sample application](../develop/signing-pipeline/sample-app).
    
-   Executing the example Tekton signing pipeline would require a sample application Git repository as an input parameter.
+   Executing the example Tekton signing pipeline would require a sample application stored in Git repository so that it could clone the resources.
 
    The following shows the content of a sample application which includes
     -  Dockerfile (to build a container image for the sample application)
@@ -57,9 +58,9 @@ This section describe the steps for preparing a Tekton signing pipeline to sign 
 
       ```
 
-   Configure `.ie-sign-config.json` to specify which resources to be signed by the Tekton signing pipeline.
+   In the Git repository for a sample application, configure `.ie-sign-config.json` to specify which resources to be signed by the Tekton signing pipeline.
 
-   The following example shows we configured `deployment.yml` to be signed by Tekton signing pipeline.
+   The following example shows we configured `deployment.yml` for a sample application to be signed by Tekton signing pipeline.
 
    ```
    $ cat .ie-sign-config.json
@@ -67,7 +68,13 @@ This section describe the steps for preparing a Tekton signing pipeline to sign 
    - deployment.yml
    ```
    
-   Prepare a container image for the sameple application and push it to regsitry. Note that 
+   Tekton signing pipeline would sign specified resources of a sameple application cloned from a repostiory and deploy it to a cluster. 
+
+   Deployment of a sample application requires a container image that can be pulled from a container registry.
+
+   The following shows how to prepare a container image for the sameple application and push it to regsitry. 
+   In the sample application directory, execute `docker build` and `docker push` the following commands with required container image name and tag.
+
    ```
    $ cd /integrity-enforcer/develop/signing-pipeline/sample-app
    $ docker build -t docker.io/pipeline-demo/sample-app:rc1 .
@@ -104,12 +111,12 @@ The sample Tekton signing pipeline would pull sources of an application from a s
 
 3. Specify a Secret resource called `kubeconfig-secret` in namespace `artifact-signing-ns` to access the target cluster where the application should be deployed.
 
-   Get the encoded content of kubeconfig for the target cluster
+   After coonnecting to the target cluster, get the encoded content of kubeconfig for the target cluster as follows.
    ```
    $ oc config view --minify=true | base64
    ```
    
-   Embed it in `kubeconfig-secret.yaml`.
+   Embed the encoded content of kubeconfig for the target cluster in `kubeconfig-secret.yaml`.
    E.g. A kubeconfig-secret (kubeconfig-secret.yaml) is shown below:
     ```   
     apiVersion: v1
@@ -123,7 +130,10 @@ The sample Tekton signing pipeline would pull sources of an application from a s
    
 4. Specify a Secret resource called `git-credentials` in namespace `artifact-signing-ns` to access the target Git repository where the application is hosted. 
  
-   E.g.: A git-credentials (git-credentials.yaml) is shown below
+   Setup a `personal accesss token` to access the target Git repository where the sample application is hosted.
+
+   E.g.: A git-credentials (git-credentials.yaml) belows shows that encoded `personal accesss token` as `password` and encoded usename as `username`.
+
    ```
     apiVersion: v1
     kind: Secret
@@ -134,10 +144,13 @@ The sample Tekton signing pipeline would pull sources of an application from a s
        username: Z2FqYW5....
        password: OTA1NmYwZTY...
    ```
-5. Deploy Pipeline resources in the cluster
+
+5. Setup the sameple Tekton signing pipline in a cluster
+
+   Deploy the sameple Tekton signing pipline resources in the cluster as follows.
 
    ```
-      $ cd develop/signing-pipeline/tekton-pipeline
+      $ cd example/signing-pipeline/tekton-pipeline
       $ oc create -f admin-role.yaml -n artifact-signing-ns
       $ oc create -f registry-secret.yaml -n artifact-signing-ns
       $ oc create -f git-credentials.yaml -n artifact-signing-ns
@@ -147,6 +160,7 @@ The sample Tekton signing pipeline would pull sources of an application from a s
       $ oc create -f task-sign-repo.yaml -n artifact-signing-ns
       $ oc create -f openshift-pvc.yaml -n artifact-signing-ns
    ```
+
 6. Run the example Tekton signing pipline as follows:
 
    In the cluster, using Tekton CLI, run the pipeline by passing the required parameters as follows.
@@ -162,6 +176,16 @@ The sample Tekton signing pipeline would pull sources of an application from a s
         -p deploy-namespace="sample-app-ns" \
         -s ie-signing-pipline-admin              
    ```
+
+   We pass the following parameters:
+      - `pipeline-pvc`:   A `Persistent Volume Claim` for executing the pipeline task, defined in a [resource](../example/signing-pipeline/tekton-pipeline/openshift-pvc.yaml)
+      -  `git-url`:  A sample application Github repository URL
+      -  `git-branch`: A sample application Github repository branch
+      -  `git-username`: Username to access the sample application Github repository
+      -  `git-token`: Personal access token to access the sample application Github repository
+      -  `signer-email`: A specifid `signer` which is already setup in IE (see [documentation](README_RESOURCE_SIGNATURE.md)
+      -  `deploy-namespace`: The namespace in the target cluster where the target application would be deployed
+      -  `ie-signing-pipline-admin`: Service account name setup in resource (../example/signing-pipeline/tekton-pipeline/admin-role.yaml)
 
    Check the list of pipelineruns
    

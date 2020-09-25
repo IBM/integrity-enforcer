@@ -2,8 +2,8 @@
 
 ### Define signer for each namespaces
 
-SignPolicy is custom resource to define who can be valid signer for each namespace or for cluster scope resources. 
-Only a SignPolicy resource is defined in IE namespace and initial resource is created during installation. You can get it by 
+SignPolicy is a custom resource to define who can be a valid signer for resources in a namespace or for cluster scope resources. 
+Only a SignPolicy resource is defined in IE namespace (`integrity-enforcer-ns` in this documentation)and initial SignPolicy resource is created during IE installation. You can access it by 
 ```
 $ oc get signpolicies.research.ibm.com signer-policy -n integrity-enforcer-ns -o yaml > /tmp/sign-policy.yaml
 ```
@@ -30,13 +30,13 @@ spec:
 
 For matching signer, you can use the following attributes: `email`, `uid`, `country`, `organization`, `organizationalUnit`, `locality`, `province`, `streetAddress`, `postalCode`, `commonName` and `serialNumber`.
 
-Then, this policy is applied back by 
+Then, this policy is applied back to a cluster by:
 
 ```
 $ oc apply -f /tmp/sign-policy.yaml -n integrity-enforcer-ns signpolicy.research.ibm.com/signer-policy configured
 ```
 
-You can define namespace matcher by using `excludeNamespaces`. For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces. 
+You can define namespace matcher by using `excludeNamespaces`. For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`. 
 
 ```yaml
 policies:
@@ -57,7 +57,7 @@ policies:
 ```
 
 ### Define Signer for cluster-scope resources
-You can define signer for cluster-scope resources similarily. Signer `signer-a` and `signer-b` can sign cluster-scope resources in the example below.
+You can define a signer for cluster-scope resources similarily. Signer `signer-a` and `signer-b` can sign cluster-scope resources in the example below.
 
 ```yaml
 policies:
@@ -68,7 +68,7 @@ policies:
 ```
 
 ### Break Glass
-When you need to disabe blocking by signature verification in certain namespace, you can enable break glass mode, which means the request to the namespace without valid signature is allowed during the break glass on. For example, break glass on `secure-ns` namespace can be set on by 
+When you need to disable blocking by signature verification in a certain namespace, you can enable break glass mode, which means the request to the namespace without valid signature is allowed during the break glass on. For example, break glass on `secure-ns` namespace can be set on by 
 
 ```
 spec:

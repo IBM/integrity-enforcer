@@ -72,9 +72,8 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
       key1: val1
       key2: val2
       key4: val4   
-
    ```
-2. Try to create ConfigMap resource `test-cm` shown above (/tmp/single-rsc.yaml) in the namespace `secure-ns`, before creating a signature.
+2. Try to create ConfigMap resource `test-cm` shown above (/`tmp/single-rsc.yaml`) in the namespace `secure-ns`, before creating a signature.
 
     Run the command below to create ConfigMap `test-cm`, but it fails because no signature for this resource is stored in the cluster.
 
@@ -85,9 +84,9 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
 
 3. Generate a signature for a resource 
 
-    To generate a signature for a resource,  we use a utility [script](https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-rs-sign.sh)
+    To generate a signature for a resource,  we use a utility [script](../scripts/gpg-rs-sign.sh)
 
-    We setup a signer in the [config file](https://github.ibm.com/mutation-advisor/ciso-css-sign/blob/master/gpg-sign-config.sh)
+    We setup a signer in the [config file](../scripts/gpg-sign-config.sh)
 
     The following shows the content of config file: `gpg-sign-config.sh`  which configures `signer@enterprise.com` as `SIGNER`.
 
@@ -97,13 +96,14 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
     ```
 
     Run the following script to generate a signature
-      - `gpg-sign-config.sh`:  Config file to specify a signer
-      - `/tmp/single-rsc.yaml`:  A resource file to be signed, which may include specification for a single resource or multiple resources
-      - `/tmp/single-rsc-rs.yaml`: A custom resource `ResourceSignature` generated that includes signature for the resource
 
     ```
     $ ./scripts/gpg-rs-sign.sh gpg-sign-config.sh /tmp/single-rsc.yaml /tmp/single-rsc-rs.yaml
     ```
+    We pass the following paraemeters when executing a utility [script](../scripts/gpg-rs-sign.sh)
+      - `gpg-sign-config.sh`:  Config file to specify a signer
+      - `/tmp/single-rsc.yaml`:  A resource file to be signed, which may include specification for a single resource or multiple resources
+      - `/tmp/single-rsc-rs.yaml`: A custom resource `ResourceSignature` generated that includes signature for the resource
 
     Generated signature for a resource is included in a custom resource `ResourceSignature`.
 
@@ -126,12 +126,13 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
     
 4. Store the generated signature in a cluster.
     
-    After creating the ResourceSignature in a cluster, the corresponding resource can be created successfully after successfull signature verification by IE.
+    Run the command below to store a `ResourceSignature` in a cluster
     
     ```
     $ oc create -f /tmp/single-rsc-rs.yaml -n integrity-enforcer-ns
     resourcesignature.research.ibm.com/rsig-test-cm created
     ```
+   After creating the `ResourceSignature` in a cluster, the corresponding resource can be created successfully after successfull signature verification by IE.
 
 5. Create a resource in a specific namespace after creating the signature in the cluster.
 
@@ -141,9 +142,10 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
     configmap/test-cm created
     ```
     
-    
 6. Message signed
     
+    `ResourceSignature` resource has a `message` field which refers to the encoded content of a resource file to be signed.  A resource file may include a specification for single resource (e.g. `/tmp/single-rsc.yaml`) or multiple resources (e.g. `/tmp/multi-rsc.yaml`).
+
     1. Single resource (`/tmp/single-rsc.yaml`)
         
         You can create a ResourceSignature for a single resource YAML file.
@@ -159,6 +161,11 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
             key1: val1
             key2: val2
             key4: val4
+        ```
+
+        The encoded content of `/tmp/single-rsc.yaml` can be retrived by using the following command:
+        ```
+        $ cat /tmp/single-rsc.yaml | base64
         ```
 
     2. Muli resource (`/tmp/multi-rsc.yaml`)
@@ -223,4 +230,10 @@ IE requires a secret that includes a pubkey ring for verifying signatures of res
           ie-app.properties: |
             message= This application has been signed.
         ```
+
+        The encoded content of `/tmp/multi-rsc.yaml` can be retrived by using the following command:
+        ```
+        $ cat /tmp/multi-rsc.yaml | base64
+        ```
+        
     3. Helm release metadata yaml

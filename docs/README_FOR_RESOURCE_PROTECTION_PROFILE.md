@@ -2,7 +2,7 @@
 
 
 ### Create Resource Protection Profile
-You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace. The example below shows definition to protect `ConfigMap` and `Service` resource in `secure-ns` namespace. Only a RPP can be defined in each namespace.
+You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace. The example below shows a definition to protect `ConfigMap` and `Service` resource in `secure-ns` namespace. Only a single RPP can be defined in each namespace.
 
     ```
     apiVersion: research.ibm.com/v1alpha1
@@ -25,7 +25,7 @@ oc apply -f sample-rpp.yaml -n secure-ns
 
 This profile become effective in IE instantly for evaluating any further incoming admission requests. 
 
-You can create these resource with valid signature even if you are not in cluster-admin role. It should be signed by a valid signer defined in the [Sign Policy](http://xxx). 
+You can create these resource with valid signature even if you are not in cluster-admin role. It should be signed by a valid signer defined in the [Sign Policy](README_CONFIG_SIGNER_POLICY.md). 
  
 ### Rule Syntax
 You can list rules to define protect resources. 
@@ -59,9 +59,9 @@ Another example below is the rule below covers any resources in the same namespa
 
 The resources covered by the rule above cannot be created/updated without signature, but you may want to define cases for allowing requests in certain situations. 
 
-You can use `ignoreServiceAccount` to define service accounts is allowed to request for matched resources. For example, any requests by `secure-operator` service account is allowed in in `secure-ns` 
+You can use `ignoreServiceAccount` to define service accounts are allowed to request for matched resources. For example, any requests by `secure-operator` service account is allowed in `secure-ns` 
 
-### example
+### Example allow pattern
 ```
   ignoreServiceAccount:
   - match: 
@@ -83,7 +83,7 @@ You can also set rules to allow some changes in the resource even without valid 
 
 
 
-### cluster scope
+### Cluster scope
 For cluster-scope resources, cluster scope custom resource `ClusterResourceProtectionProfile` (CRPP) are used. The example below shows definition to protect ClusterRoleBinding resource `sample-crb`.
 
 ```
@@ -106,7 +106,7 @@ Cluster default RPP and CRPP are predefined in IE namespace. They are automatica
 
 Default RPP/CRPP includes
 - service accounts which are considered as platform operator.
-- changes which is considered as expected normal platform behavior. 
+- changes which are considered as expected normal platform behavior. 
 
 ### Delete/Disable RPP
 
