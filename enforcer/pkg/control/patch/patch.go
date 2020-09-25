@@ -28,6 +28,8 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
+// Return value is a document of JSON Patch.
+// JSON Patch format is specified in RFC 6902 from the IETF.
 func CreatePatch(name, reqJson string, labels map[string]string, deleteKeys []string) []byte {
 
 	var patch []PatchOperation
@@ -50,6 +52,14 @@ func CreatePatch(name, reqJson string, labels map[string]string, deleteKeys []st
 				}
 
 				addMap := make(map[string]string)
+
+				if labelsDataMap, ok := labelsData.Value().(map[string]interface{}); ok {
+					for key, val := range labelsDataMap {
+						if valStr, ok2 := val.(string); ok2 {
+							addMap[key] = valStr
+						}
+					}
+				}
 				for key, value := range labels {
 					if !labelsData.Get(key).Exists() {
 						addMap[key] = value
@@ -63,7 +73,6 @@ func CreatePatch(name, reqJson string, labels map[string]string, deleteKeys []st
 						Value: addMap,
 					})
 				}
-
 			} else {
 				patch = append(patch, PatchOperation{
 					Op:    "add",

@@ -181,20 +181,6 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 
 func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error) {
 
-	if reqc.IsResourceSignatureRequest() {
-		var rsigObj *vrsig.ResourceSignature
-		json.Unmarshal(reqc.RawObject, &rsigObj)
-		if ok, reasonFail := rsigObj.Validate(); !ok {
-			return &common.SignPolicyEvalResult{
-				Allow:   false,
-				Checked: true,
-				Error: &common.CheckError{
-					Reason: fmt.Sprintf("Schema Error for %s; %s", common.SignatureCustomResourceKind, reasonFail),
-				},
-			}, nil
-		}
-	}
-
 	// eval sign policy
 	ref := reqc.ResourceRef()
 
