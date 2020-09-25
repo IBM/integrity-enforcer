@@ -20,27 +20,45 @@ import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	"github.com/jinzhu/copier"
+)
+
+type IntegrityEnforcerMode string
+
+const (
+	UnknownMode IntegrityEnforcerMode = ""
+	EnforceMode IntegrityEnforcerMode = "enforce"
+	DetectMode  IntegrityEnforcerMode = "detect"
 )
 
 type PatchConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-type SignStoreConfig struct {
+type EnforcerConfig struct {
+	Patch *PatchConfig        `json:"patch,omitempty"`
+	Log   *LoggingScopeConfig `json:"log,omitempty"`
+
+	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
+	Allow      []protect.RequestPattern `json:"allow,omitempty"`
+	Ignore     []protect.RequestPattern `json:"ignore,omitempty"`
+	SignPolicy *policy.SignPolicy       `json:"signPolicy,omitempty"`
+	Mode       IntegrityEnforcerMode    `json:"mode,omitempty"`
+	Plugin     []PluginConfig           `json:"plugin,omitempty"`
+
+	Namespace          string `json:"-"`
+	PolicyNamespace    string `json:"-"`
+	SignatureNamespace string `json:"-"`
+	VerifyType         string `json:"verifyType"`
 	CertPoolPath       string `json:"certPoolPath"`
 	KeyringPath        string `json:"keyringPath"`
 	ChartDir           string `json:"chartPath"`
 	ChartRepo          string `json:"chartRepo"`
-	SignatureNamespace string `json:"signatureNamespace"`
-}
 
-type EnforcerConfig struct {
-	Patch           *PatchConfig        `json:"patch,omitempty"`
-	Log             *LoggingScopeConfig `json:"log,omitempty"`
-	SignStore       *SignStoreConfig    `json:"-"`
-	Namespace       string              `json:"-"`
-	PolicyNamespace string              `json:"-"`
+	IEResource       string `json:"ieResource"`
+	IEAdminUserGroup string `json:"ieAdminUserGroup"`
+	IEServerUserName string `json:"ieServerUserName"`
 }
 
 type LoggingScopeConfig struct {
@@ -55,6 +73,11 @@ type LoggingScopeConfig struct {
 	ContextLogRotateSize int64           `json:"contextLogRotateSize,omitempty"`
 }
 
+type PluginConfig struct {
+	Name    string `json:"name,omitempty"`
+	Enabled bool   `json:"enabled,omitempty"`
+}
+
 /**********************************************
 
 				LogScopeConfig
@@ -62,21 +85,20 @@ type LoggingScopeConfig struct {
 ***********************************************/
 
 type LogScopeConfig struct {
-	Enabled bool                         `json:"enabled,omitempty"`
-	InScope []policy.RequestMatchPattern `json:"inScope,omitempty"`
-	Ignore  []policy.RequestMatchPattern `json:"ignore,omitempty"`
+	Enabled bool                     `json:"enabled,omitempty"`
+	InScope []protect.RequestPattern `json:"inScope,omitempty"`
+	Ignore  []protect.RequestPattern `json:"ignore,omitempty"`
 }
 
 func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
 	if !sc.Enabled {
 		return false
 	}
-
+	reqFields := reqc.Map()
 	isInScope := false
 	if sc.InScope != nil {
 		for _, v := range sc.InScope {
-
-			if v.Match(reqc) {
+			if v.Match(reqFields) {
 				isInScope = true
 				break
 			}
@@ -86,7 +108,7 @@ func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
 	isIgnored := false
 	if sc.Ignore != nil {
 		for _, v := range sc.Ignore {
-			if v.Match(reqc) {
+			if v.Match(reqFields) {
 				isIgnored = true
 				break
 			}
@@ -151,7 +173,7 @@ func (ec *EnforcerConfig) LogConfig() *LoggingScopeConfig {
 }
 
 func (ec *EnforcerConfig) DeepCopyInto(ec2 *EnforcerConfig) {
-	copier.Copy(&ec, &ec2)
+	copier.Copy(&ec2, &ec)
 }
 
 func (ec *EnforcerConfig) DeepCopy() *EnforcerConfig {
@@ -168,4 +190,14 @@ func (ec *EnforcerConfig) LoggerConfig() logger.LoggerConfig {
 func (ec *EnforcerConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	lc := ec.LogConfig()
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
+}
+
+func (ec *EnforcerConfig) GetEnabledPlugins() map[string]bool {
+	plugins := map[string]bool{}
+	for _, plg := range ec.Plugin {
+		if plg.Enabled {
+			plugins[plg.Name] = true
+		}
+	}
+	return plugins
 }

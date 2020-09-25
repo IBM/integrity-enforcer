@@ -33,7 +33,6 @@ import (
 )
 
 var acConfig *config.AdmissionControlConfig
-var policyLoader *config.PolicyLoader
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -54,9 +53,6 @@ func init() {
 	cfgBytes, _ := json.Marshal(acConfig)
 	logger.Trace(string(cfgBytes))
 	logger.Info("EnforcerConfig is loaded.")
-
-	policyLoader = config.NewPolicyLoader(acConfig.EnforcerConfig.Namespace, acConfig.EnforcerConfig.PolicyNamespace)
-	logger.Info("PolicyLoader is ready.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
@@ -68,10 +64,11 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 	}
 
 	//create context
-	cc := enforcer.NewCheckContext(acConfig.EnforcerConfig, policyLoader)
+	reqHandler := enforcer.NewRequestHandler(acConfig.EnforcerConfig)
+	admissionRequest := admissionReviewReq.Request
 
 	//process request
-	admissionResponse := cc.ProcessRequest(admissionReviewReq.Request)
+	admissionResponse := reqHandler.Run(admissionRequest)
 
 	return admissionResponse
 

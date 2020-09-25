@@ -43,62 +43,36 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		},
 	}
 
-	if cr.Spec.GlobalConfig.DetectionMode {
-		volumes = []v1.Volume{
-			SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
-			EmptyDirVolume("log-volume"),
-			EmptyDirVolume("tmp"),
-		}
-	} else {
-		volumes = []v1.Volume{
-			SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
-			SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
-			SecretVolume("ie-keyring-secret", cr.Spec.KeyRing.Name),
-			EmptyDirVolume("log-volume"),
-			EmptyDirVolume("tmp"),
-		}
+	volumes = []v1.Volume{
+		SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
+		SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
+		SecretVolume("ie-keyring-secret", cr.Spec.KeyRing.Name),
+		EmptyDirVolume("log-volume"),
+		EmptyDirVolume("tmp"),
 	}
 
-	if cr.Spec.GlobalConfig.DetectionMode {
-		servervolumemounts = []v1.VolumeMount{
-			{
-				MountPath: "/run/secrets/tls",
-				Name:      "ie-tls-certs",
-				ReadOnly:  true,
-			},
-			{
-				MountPath: "/tmp",
-				Name:      "tmp",
-			},
-			{
-				MountPath: "/ie-app/public",
-				Name:      "log-volume",
-			},
-		}
-	} else {
-		servervolumemounts = []v1.VolumeMount{
-			{
-				MountPath: "/ie-certpool-secret",
-				Name:      "ie-certpool-secret",
-			},
-			{
-				MountPath: "/keyring",
-				Name:      "ie-keyring-secret",
-			},
-			{
-				MountPath: "/run/secrets/tls",
-				Name:      "ie-tls-certs",
-				ReadOnly:  true,
-			},
-			{
-				MountPath: "/tmp",
-				Name:      "tmp",
-			},
-			{
-				MountPath: "/ie-app/public",
-				Name:      "log-volume",
-			},
-		}
+	servervolumemounts = []v1.VolumeMount{
+		{
+			MountPath: "/ie-certpool-secret",
+			Name:      "ie-certpool-secret",
+		},
+		{
+			MountPath: "/keyring",
+			Name:      "ie-keyring-secret",
+		},
+		{
+			MountPath: "/run/secrets/tls",
+			Name:      "ie-tls-certs",
+			ReadOnly:  true,
+		},
+		{
+			MountPath: "/tmp",
+			Name:      "tmp",
+		},
+		{
+			MountPath: "/ie-app/public",
+			Name:      "log-volume",
+		},
 	}
 
 	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
@@ -149,6 +123,10 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				Value: cr.Spec.SignatureNamespace,
 			},
 			{
+				Name:  "VERIFY_TYPE",
+				Value: cr.Spec.VerifyType,
+			},
+			{
 				Name:  "POLICY_NS",
 				Value: cr.Spec.PolicyNamespace,
 			},
@@ -159,10 +137,6 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			{
 				Name:  "ENFORCER_CM_RELOAD_SEC",
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcerCmReloadSec)),
-			},
-			{
-				Name:  "ENFORCE_POLICY_NAME",
-				Value: cr.Spec.EnforcePolicyCrName,
 			},
 			{
 				Name:  "ENFORCE_POLICY_RELOAD_SEC",
@@ -186,6 +160,14 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			{
 				Name:  "STDOUT_ENABLED",
 				Value: strconv.FormatBool(cr.Spec.Logger.StdOutput),
+			},
+			{
+				Name:  "HTTPOUT_ENABLED",
+				Value: strconv.FormatBool(cr.Spec.Logger.HttpConfig.Enabled),
+			},
+			{
+				Name:  "HTTPOUT_ENDPOINT_URL",
+				Value: cr.Spec.Logger.HttpConfig.Endpoint,
 			},
 			{
 				Name:  "ES_ENABLED",

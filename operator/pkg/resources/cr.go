@@ -17,23 +17,27 @@
 package resources
 
 import (
+	"fmt"
 	"io/ioutil"
 
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	iedpol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/iedefaultpolicy/v1alpha1"
-	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/iesignerpolicy/v1alpha1"
-	iepol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/integrityenforcerpolicy/v1alpha1"
-	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const iePolicyName = "ie-policy"
-const defaultPolicyName = "default-policy"
+const defaultRppName = "default-rpp"
+const defaultCrppName = "default-crpp"
 const signerPolicyName = "signer-policy"
-const defaultPolicyYamlPath = "/resources/default-policy.yaml"
+const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
+const defaultClusterResourceProtectionProfileYamlPath = "/resources/default-crpp.yaml"
+
+var log = logf.Log.WithName("controller_integrityenforcer")
 
 // enforcer config cr
 func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.EnforcerConfig {
@@ -43,102 +47,93 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 			Namespace: cr.Namespace,
 		},
 		Spec: ec.EnforcerConfigSpec{
-			EnforcerConfig: &cr.Spec.EnforcerConfig,
+			EnforcerConfig: cr.Spec.EnforcerConfig,
 		},
+	}
+	if ecc.Spec.EnforcerConfig.IEServerUserName == "" {
+		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
 	}
 	return ecc
 }
 
-//signer enforce policy cr
-func BuildSignerEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.IESignerPolicy {
-	var signerPolicy *policy.IESignerPolicy
+//sign enforce policy cr
+func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.SignPolicy {
+	var signPolicy *policy.SignPolicy
 
-	if cr.Spec.SignerPolicy != nil {
-		signerPolicy = &policy.IESignerPolicy{
-			Signer:     cr.Spec.SignerPolicy.Signer,
-			PolicyType: policy.SignerPolicy,
-		}
+	if cr.Spec.SignPolicy != nil {
+		signPolicy = cr.Spec.SignPolicy
 	} else {
-		signerPolicy = &policy.IESignerPolicy{
-			Signer: []policy.SignerMatchPattern{
+		signPolicy = &policy.SignPolicy{
+			Policies: []policy.SignPolicyCondition{
 				{
-					Request: policy.RequestMatchPattern{Namespace: "sample"},
-					Condition: policy.SubjectCondition{
-						Name:    "SampleSigner",
-						Subject: policy.SubjectMatchPattern{CommonName: "sample"},
+					Namespaces: []string{"sample"},
+					Signers:    []string{"SampleSigner"},
+				},
+			},
+			Signers: []policy.SignerCondition{
+				{
+					Name: "SampleSigner",
+					Subjects: []policy.SubjectMatchPattern{
+						{
+							CommonName: "sample",
+						},
 					},
 				},
 			},
-			PolicyType: policy.SignerPolicy,
 		}
 	}
-	epcr := &iespol.IESignerPolicy{
+	epcr := &iespol.SignPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      signerPolicyName,
 			Namespace: cr.Namespace,
 		},
-		Spec: iespol.IESignerPolicySpec{
-			IESignerPolicy: signerPolicy,
+		Spec: iespol.SignPolicySpec{
+			SignPolicy: signPolicy,
 		},
 	}
 	return epcr
 }
 
-//default enforce policy cr
-func BuildDefaultEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iedpol.IEDefaultPolicy {
-	var defaultPolicy *iedpol.IEDefaultPolicy
-	if cr.Spec.DefaultPolicy != nil {
-		defPolInCR := cr.Spec.DefaultPolicy
-		defPolInCR.PolicyType = policy.DefaultPolicy
-		defaultPolicy = &iedpol.IEDefaultPolicy{
-			Spec: iedpol.IEDefaultPolicySpec{
-				IEDefaultPolicy: defPolInCR,
-			},
-		}
+// default rpp
+func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.ResourceProtectionProfile {
+	var defaultrpp *rpp.ResourceProtectionProfile
+	reqLogger := log.WithValues("BuildDefaultResourceProtectionProfile", defaultRppName)
+
+	if cr.Spec.DefaultRpp != nil {
+		defaultrpp = cr.Spec.DefaultRpp
 	} else {
-		deafultPolicyBytes, err := ioutil.ReadFile(defaultPolicyYamlPath)
+		deafultRppBytes, err := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
 		if err != nil {
-			//
+			reqLogger.Error(err, "Failed to read default rpp file")
 		}
 
-		err = yaml.Unmarshal(deafultPolicyBytes, &defaultPolicy)
+		err = yaml.Unmarshal(deafultRppBytes, &defaultrpp)
 		if err != nil {
-			//
+			reqLogger.Error(err, "Failed to unmarshal yaml")
 		}
 	}
-	defaultPolicy.ObjectMeta.Name = defaultPolicyName
-	defaultPolicy.ObjectMeta.Namespace = cr.Namespace
-	return defaultPolicy
+
+	defaultrpp.ObjectMeta.Name = defaultRppName
+	defaultrpp.ObjectMeta.Namespace = cr.Namespace
+	return defaultrpp
 }
 
-// ie policy cr
-func BuildIntegrityEnforcerPolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iepol.IntegrityEnforcerPolicy {
-	pol := cr.Spec.EnforcePolicy
-	pol.PolicyType = policy.IEPolicy
-	epcr := &iepol.IntegrityEnforcerPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      iePolicyName,
-			Namespace: cr.Namespace,
-		},
-		Spec: iepol.IntegrityEnforcerPolicySpec{
-			IntegrityEnforcerPolicy: pol,
-		},
+// default crpp
+func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *crpp.ClusterResourceProtectionProfile {
+	var defaultcrpp *crpp.ClusterResourceProtectionProfile
+	reqLogger := log.WithValues("BuildDefaultClusterResourceProtectionProfile", defaultCrppName)
+
+	deafultCrppBytes, err := ioutil.ReadFile(defaultClusterResourceProtectionProfileYamlPath)
+	if err != nil {
+		reqLogger.Error(err, "Failed to read default crpp file")
 	}
-	return epcr
-}
 
-// resource signature cr
-func BuildResourceSignatureForCR(cr *researchv1alpha1.IntegrityEnforcer) *rs.ResourceSignature {
-	// rscr := &rs.ResourceSignature{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name: cr.Spec.ResourceSignatureName,
-	// 	},
-	// 	Spec: rs.ResourceSignatureSpec{
-	// 		Data: []rs.SignItem{
+	err = yaml.Unmarshal(deafultCrppBytes, &defaultcrpp)
+	if err != nil {
+		reqLogger.Error(err, "Failed to unmarshal yaml")
+	}
 
-	// 		},
-	// 	},
-	// }
-	// return rscr
-	return nil
+	defaultcrpp.ObjectMeta.Name = defaultCrppName
+	defaultcrpp.ObjectMeta.Namespace = cr.Namespace
+	return defaultcrpp
 }

@@ -4,21 +4,27 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  enforcePolicy:
-    allow: {}
-    signer:
-    - request:
-        namespace: '*'
-      condition:
-        name: ClusterSigner
-        subject:
-          commonName: "ClusterAdmin"
-    - request:
-        namespace: '*'
-      condition:
-        name: HelmClusterSigner
-        subject:
-          email: cluster_signer@signer.com
+  verifyType: x509
+  enforcerConfig:
+    plugin:
+    - name: helm
+      enabled: false
+    signPolicy:
+      policies:
+      - namespaces:
+        - "*"
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
+      signers:
+      - name: "ClusterSigner"
+        subjects:
+        - commonName: "ClusterAdmin"
+      - name: "HelmClusterSigner"
+        subjects:
+        - email: cluster_signer@signer.com
+    ieResource: "research.ibm.com"
+    ieAdminUserGroup: "system:masters"
     ignore:
     - kind: Event
     - kind: Lease
@@ -26,23 +32,25 @@ spec:
     - kind: TokenReview
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
-    - namespace: '-'
-    plugin:
-    - name: helm
-      enabled: false
-  enforcerConfig:
+    certPoolPath: ""
+    chartPath: ""
+    chartRepo: ""
+    keyringPath: ""
+    verifyType: ""
+    patch:
+      enabled: true
     log:
       consoleLog:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       contextLog:
         enabled: true
         inScope:
         - namespace: '*'
+        - namespace: '-'
       logLevel: trace
-    patch:
-      enabled: true
   enforcerConfigCrName: ie-config
   globalConfig: 
     detectionMode: false
@@ -65,6 +73,9 @@ spec:
       indexPrefix: ac-log
       port: 9200
       scheme: http
+    http:
+      enabled: false
+      endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
     image: ie-logging:local
     imagePullPolicy: IfNotPresent
@@ -113,3 +124,15 @@ spec:
   webhookConfigName: ie-webhook-config
   webhookServerTlsSecretName: ie-server-tls
   webhookServiceName: ie-server
+  webhookNamespacedResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+  webhookClusterResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: 
+    - podsecuritypolicies
+    - clusterrolebindings
+    - clusterroles
+    - clusterresourceprotectionprofiles

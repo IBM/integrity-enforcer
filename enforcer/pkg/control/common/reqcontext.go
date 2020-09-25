@@ -17,17 +17,15 @@
 package common
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -53,6 +51,8 @@ type ObjectMetadata struct {
 }
 
 type ReqContext struct {
+	ResourceScope   string          `json:"resourceScope,omitempty"`
+	DryRun          bool            `json:"dryRun"`
 	RawObject       []byte          `json:"-"`
 	RawOldObject    []byte          `json:"-"`
 	RequestJsonStr  string          `json:"request"`
@@ -99,6 +99,23 @@ func (reqc *ReqContext) ResourceRef() *ResourceRef {
 	}
 }
 
+func (reqc *ReqContext) Map() map[string]string {
+	m := map[string]string{}
+	v := reflect.Indirect(reflect.ValueOf(reqc))
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		f := v.Field(i)
+		itf := f.Interface()
+		if value, ok := itf.(string); ok {
+			filedName := t.Field(i).Name
+			m[filedName] = value
+		} else {
+			continue
+		}
+	}
+	return m
+}
+
 func (reqc *ReqContext) GroupVersion() string {
 	return schema.GroupVersion{Group: reqc.ApiGroup, Version: reqc.ApiVersion}.String()
 }
@@ -131,7 +148,7 @@ func (rc *ReqContext) IsIEDefaultPolicyRequest() bool {
 	return rc.GroupVersion() == DefaultPolicyCustomResourceAPIVersion && rc.Kind == DefaultPolicyCustomResourceKind
 }
 
-func (rc *ReqContext) IsIESignerPolicyRequest() bool {
+func (rc *ReqContext) IsSignPolicyRequest() bool {
 	return rc.GroupVersion() == SignerPolicyCustomResourceAPIVersion && rc.Kind == SignerPolicyCustomResourceKind
 }
 
@@ -279,26 +296,16 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 
 	kind := pr.getValue("kind.kind")
 
-	hashType := ""
-	hashValue := ""
-	if releaseSecretBytes, _ := helm.FindReleaseSecret(namespace, kind, name, req.Object.Raw); releaseSecretBytes == nil {
-		hashType = HashTypeDefault
-		objNode, _ := mapnode.NewFromBytes(req.Object.Raw)
-		maskedObject := objNode.Mask(CommonMessageMask).ToJson()
-		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
-	} else {
-		if helm.IsReleaseSecret(kind, name) {
-			hashType = HashTypeHelmSecret
-		} else {
-			hashType = HashTypeHelmResource
-		}
-		maskedObject := getMaskedReleaseSecretString(releaseSecretBytes)
-		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
+	resourceScope := "Namespaced"
+	if namespace == "" {
+		resourceScope = "Cluster"
 	}
 
 	rc := &ReqContext{
+		DryRun:          *req.DryRun,
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
+		ResourceScope:   resourceScope,
 		RequestUid:      pr.UID,
 		RequestJsonStr:  pr.JsonStr,
 		Name:            name,
@@ -316,10 +323,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		Type:            pr.getValue("object.type"),
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
-		ObjectHashType:  hashType,
-		ObjectHash:      hashValue,
 	}
-
 	return rc
 
 }
@@ -345,15 +349,4 @@ var CommonMessageMask = []string{
 	"metadata.resourceVersion",
 	"metadata.selfLink",
 	"metadata.uid",
-}
-
-func getMaskedReleaseSecretString(releaseSecretBytes []byte) string {
-	release := helm.DecodeReleaseSecretFromRawBytes(releaseSecretBytes).Data
-	maskedObject := ""
-	for _, tmp := range release.Chart.Templates {
-		tmpB, _ := json.Marshal(tmp)
-		maskedObject = maskedObject + string(tmpB) + "\n"
-	}
-	maskedObject = maskedObject + release.Manifest
-	return maskedObject
 }

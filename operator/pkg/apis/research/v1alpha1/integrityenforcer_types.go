@@ -17,8 +17,10 @@
 package v1alpha1
 
 import (
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
@@ -43,6 +45,7 @@ type IntegrityEnforcerSpec struct {
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Security     SecurityConfig  `json:"security,omitempty"`
+	VerifyType   string          `json:"verifyType,omitempty"`
 	KeyRing      KeyRingConfig   `json:"keyRingConfig,omitempty"`
 	CertPool     CertPoolConfig  `json:"certPoolConfig,omitempty"`
 	Server       ServerContainer `json:"server,omitempty"`
@@ -50,19 +53,19 @@ type IntegrityEnforcerSpec struct {
 	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
 	GlobalConfig GlobalConfig    `json:"globalConfig,omitempty"`
 
-	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
-	EnforcerConfig       iec.EnforcerConfig              `json:"enforcerConfig,omitempty"`
-	EnforcePolicyCrName  string                          `json:"enforcePolicyCrName,omitempty"`
-	EnforcePolicy        *policy.IntegrityEnforcerPolicy `json:"enforcePolicy,omitempty"`
-	DefaultPolicy        *policy.IEDefaultPolicy         `json:"defaultPolicy,omitempty"`
-	SignerPolicy         *policy.IESignerPolicy          `json:"signerPolicy,omitempty"`
+	EnforcerConfigCrName string                         `json:"enforcerConfigCrName,omitempty"`
+	EnforcerConfig       *iec.EnforcerConfig            `json:"enforcerConfig,omitempty"`
+	SignPolicy           *policy.SignPolicy             `json:"signPolicy,omitempty"`
+	DefaultRpp           *rpp.ResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
 
 	SignatureNamespace string `json:"signatureNamespace,omitempty"`
 	PolicyNamespace    string `json:"policyNamespace,omitempty"`
 
-	WebhookServerTlsSecretName string `json:"webhookServerTlsSecretName,omitempty"`
-	WebhookServiceName         string `json:"webhookServiceName,omitempty"`
-	WebhookConfigName          string `json:"webhookConfigName,omitempty"`
+	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
+	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
+	WebhookConfigName          string     `json:"webhookConfigName,omitempty"`
+	WebhookNamespacedResource  admv1.Rule `json:"webhookNamespacedResource,omitempty"`
+	WebhookClusterResource     admv1.Rule `json:"webhookClusterResource,omitempty"`
 }
 
 type SecurityConfig struct {
@@ -79,7 +82,6 @@ type GlobalConfig struct {
 	NoCertManager bool     `json:"noCertManager,omitempty"`
 	OpenShift     bool     `json:"openShift,omitempty"`
 	Roks          bool     `json:"roks,omitempty"`
-	DetectionMode bool     `json:"detectionMode,omitempty"`
 }
 
 type RegKeySecret struct {
@@ -119,6 +121,7 @@ type LoggerContainer struct {
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
 	StdOutput       bool                    `json:"stdOutput,omitempty"`
+	HttpConfig      *HttpConfig             `json:"http,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 	EsConfig        *EsConfig               `json:"es,omitempty"`
 	EsSecretName    string                  `json:"esSecretName,omitempty"`
@@ -134,6 +137,19 @@ type EsConfig struct {
 	ClientKey   string `json:"clientKey,omitempty"`
 	ClientCert  string `json:"clientCert,omitempty"`
 	CaFile      string `json:"caFile,omitempty"`
+}
+
+type HttpConfig struct {
+	Enabled  bool   `json:"enabled,omitempty"`
+	Endpoint string `json:"endpoint,omitempty"`
+	// Scheme      string `json:"scheme,omitempty"`
+	// Host        string `json:"host,omitempty"`
+	// Port        int32  `json:"port,omitempty"`
+	// SslVerify   bool   `json:"sslVerify,omitempty"`
+	// IndexPrefix string `json:"indexPrefix,omitempty"`
+	// ClientKey   string `json:"clientKey,omitempty"`
+	// ClientCert  string `json:"clientCert,omitempty"`
+	// CaFile      string `json:"caFile,omitempty"`
 }
 
 // IntegrityEnforcerStatus defines the observed state of IntegrityEnforcer

@@ -17,7 +17,13 @@
 package v1alpha1
 
 import (
+	"bytes"
 	"encoding/base64"
+	"fmt"
+
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	yaml "gopkg.in/yaml.v2"
+	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -68,35 +74,29 @@ type ResourceSignature struct {
 }
 
 func (ss *ResourceSignature) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
-	message := ""
-	found := false
-	for _, sii := range ss.Spec.Data {
-		apiVerOk := (sii.ApiVersion == apiVersion)
-		kindOk := (sii.Kind == kind)
-		nameOk := (sii.Metadata.Name == name)
-		nsOk := (sii.Metadata.Namespace == namespace)
-		if apiVerOk && kindOk && nameOk && nsOk {
-			message = sii.Message
-			found = true
-		}
+	si, _, found := ss.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Message, true
 	}
-	return message, found
+	return "", false
 }
 
 func (ss *ResourceSignature) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
-	signature := ""
-	found := false
-	for _, sii := range ss.Spec.Data {
-		apiVerOk := (sii.ApiVersion == apiVersion)
-		kindOk := (sii.Kind == kind)
-		nameOk := (sii.Metadata.Name == name)
-		nsOk := (sii.Metadata.Namespace == namespace)
-		if apiVerOk && kindOk && nameOk && nsOk {
-			signature = sii.Signature
-			found = true
+	si, _, found := ss.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Signature, true
+	}
+	return "", false
+}
+
+func (ss *ResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
+	signItem := &SignItem{}
+	for _, si := range ss.Spec.Data {
+		if matched, yamlBytes := si.match(apiVersion, kind, name, namespace); matched {
+			return si, yamlBytes, true
 		}
 	}
-	return signature, found
+	return signItem, nil, false
 }
 
 func (ss *ResourceSignature) Validate() (bool, string) {
@@ -106,43 +106,13 @@ func (ss *ResourceSignature) Validate() (bool, string) {
 	if ss.Spec.Data == nil {
 		return false, "ResourceSignature Validation failed. ss.Spec.Data is nil."
 	}
-	for _, sii := range ss.Spec.Data {
-		apiVerOk := (sii.ApiVersion != "")
-		kindOk := (sii.Kind != "")
-		nameOk := (sii.Metadata.Name != "")
-		// nsOk := (sii.Metadata.Namespace != "")
-		sigOk := (sii.Signature != "" && base64decode(sii.Signature) != "")
-		msgOk := (sii.Message != "" && base64decode(sii.Message) != "")
-		scopeOk := (sii.MessageScope != "")
-		if apiVerOk && kindOk && nameOk && sigOk && (msgOk || scopeOk) {
-			continue
-		} else {
-			msg := ""
-			if !apiVerOk {
-				msg += "apiVersion, "
-			}
-			if !kindOk {
-				msg += "kind, "
-			}
-			if !nameOk {
-				msg += "metadata.name, "
-			}
-			if !sigOk {
-				msg += "signature (base64 encoded), "
-			}
-			if !msgOk && !scopeOk {
-				msg += "message (base64 encoded) or messageScope, "
-			}
-			msg += "is required."
-			return false, msg
-		}
-	}
+	// TODO: implement
 	return true, ""
 }
 
 // ResourceSignatureSpec is a desired state description of ResourceSignature.
 type ResourceSignatureSpec struct {
-	Data []SignItem `json:"data"`
+	Data []*SignItem `json:"data"`
 }
 
 // ResourceSignature describes the lifecycle status of ResourceSignature.
@@ -158,94 +128,93 @@ type ResourceSignatureList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []ResourceSignature `json:"items"`
+	Items []*ResourceSignature `json:"items"`
 }
 
 func (ssl *ResourceSignatureList) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
-	message := ""
-	found := false
-	for _, ss := range ssl.Items {
-		for _, sii := range ss.Spec.Data {
-			apiVerOk := (sii.ApiVersion == apiVersion)
-			kindOk := (sii.Kind == kind)
-			nameOk := (sii.Metadata.Name == name)
-			nsOk := (sii.Metadata.Namespace == namespace)
-			if apiVerOk && kindOk && nameOk && nsOk {
-				message = sii.Message
-				found = true
-				break
-			}
-		}
-		if found {
-			break
-		}
+	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Message, true
 	}
-	return message, found
+	return "", false
 }
 
 func (ssl *ResourceSignatureList) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
-	signature := ""
-	found := false
-	for _, ss := range ssl.Items {
-		for _, sii := range ss.Spec.Data {
-			apiVerOk := (sii.ApiVersion == apiVersion)
-			kindOk := (sii.Kind == kind)
-			nameOk := (sii.Metadata.Name == name)
-			nsOk := (sii.Metadata.Namespace == namespace)
-			if apiVerOk && kindOk && nameOk && nsOk {
-				signature = sii.Signature
-				found = true
-				break
-			}
-		}
-		if found {
-			break
-		}
+	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
+	if found {
+		return si.Signature, true
 	}
-	return signature, found
+	return "", false
 }
 
-func (ssl *ResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (SignItem, metav1.ObjectMeta, bool) {
-	signItem := SignItem{}
-	rsigMeta := metav1.ObjectMeta{}
-	found := false
+func (ssl *ResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
+	signItem := &SignItem{}
 	for _, ss := range ssl.Items {
-		for _, sii := range ss.Spec.Data {
-			apiVerOk := (sii.ApiVersion == apiVersion)
-			kindOk := (sii.Kind == kind)
-			nameOk := (sii.Metadata.Name == name)
-			nsOk := (sii.Metadata.Namespace == namespace)
-			if apiVerOk && kindOk && nameOk && nsOk {
-				signItem = sii
-				rsigMeta = ss.ObjectMeta
-				found = true
-				break
-			}
-		}
-		if found {
-			break
+		if si, yamlBytes, ok := ss.FindSignItem(apiVersion, kind, name, namespace); ok {
+			return si, yamlBytes, true
 		}
 	}
-	return signItem, rsigMeta, found
+	return signItem, nil, false
 }
 
 type SignItem struct {
-	ApiVersion   string       `json:"apiVersion"`
-	Kind         string       `json:"kind"`
-	Metadata     SignItemMeta `json:"metadata"`
-	Message      string       `json:"message,omitempty"`
-	MessageScope string       `json:"messageScope,omitempty"`
-	MutableAttrs string       `json:"mutableAttrs,omitempty"`
-	Signature    string       `json:"signature"`
-	Certificate  string       `json:"certificate"`
-	MatchMethod  string       `json:"matchMethod"`
-	Type         string       `json:"type"`
-	CustomFilter []string     `json:"customFilter,omitempty"`
+	Message      string `json:"message,omitempty"`
+	MessageScope string `json:"messageScope,omitempty"`
+	MutableAttrs string `json:"mutableAttrs,omitempty"`
+	Signature    string `json:"signature"`
+	Certificate  string `json:"certificate"`
+	Type         string `json:"type"`
 }
 
-type SignItemMeta struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
+type ResourceInfo struct {
+	ApiVersion string `json:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	raw        []byte // raw yaml of single resource
+}
+
+func (si *SignItem) match(apiVersion, kind, name, namespace string) (bool, []byte) {
+	for _, ri := range si.parseMessage() {
+		if ri.ApiVersion == apiVersion &&
+			ri.Kind == kind &&
+			ri.Name == name &&
+			(ri.Namespace == namespace || ri.Namespace == "") {
+			return true, ri.raw
+		}
+	}
+	return false, nil
+}
+
+func (si *SignItem) parseMessage() []ResourceInfo {
+	msg := base64decode(si.Message)
+	r := bytes.NewReader([]byte(msg))
+	dec := k8syaml.NewYAMLToJSONDecoder(r)
+	var t interface{}
+	resources := []ResourceInfo{}
+	for dec.Decode(&t) == nil {
+		tB, err := yaml.Marshal(t)
+		if err != nil {
+			continue
+		}
+		n, err := mapnode.NewFromYamlBytes(tB)
+		if err != nil {
+			continue
+		}
+		apiVersion := n.GetString("apiVersion")
+		kind := n.GetString("kind")
+		name := n.GetString("metadata.name")
+		namespace := n.GetString("metadata.namespace")
+		tmp := ResourceInfo{
+			ApiVersion: apiVersion,
+			Kind:       kind,
+			Name:       name,
+			Namespace:  namespace,
+			raw:        tB,
+		}
+		resources = append(resources, tmp)
+	}
+	return resources
 }
 
 func base64decode(str string) string {
@@ -255,4 +224,17 @@ func base64decode(str string) string {
 	}
 	dec := string(decBytes)
 	return dec
+}
+
+func convert(m map[interface{}]interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+	for k, v := range m {
+		switch v2 := v.(type) {
+		case map[interface{}]interface{}:
+			res[fmt.Sprint(k)] = convert(v2)
+		default:
+			res[fmt.Sprint(k)] = v
+		}
+	}
+	return res
 }

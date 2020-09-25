@@ -17,23 +17,22 @@
 package enforcer
 
 import (
+	"strings"
+
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	whitelist "github.com/IBM/integrity-enforcer/enforcer/pkg/whitelist"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, policyList *policy.PolicyList) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, rules []*protect.AttrsPattern) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policyList *policy.PolicyList) (*common.MutationEvalResult, error) {
-
-	policy := policyList.GetAllowChange()
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, rules []*protect.AttrsPattern) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -95,18 +94,17 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policyList *p
 	}
 
 	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj, self.VerifiedOwners)
-	if mr, err := GetMAResult(ma4kInput, policy); err != nil {
+
+	if mr, err := GetMAResult(ma4kInput, rules); err != nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "Error when checking mutation",
 		}
 		return maResult, nil
 	} else {
-		matchedPolicy := policyList.FindMatchedChangePolicy(reqc, mr.MatchedKeys).String()
 		maResult.IsMutated = mr.IsMutated
 		maResult.Diff = mr.Diff
 		maResult.Filtered = mr.Filtered
-		maResult.MatchedPolicy = matchedPolicy
 		maResult.Checked = mr.Checked
 		maResult.Error = &common.CheckError{
 			Error:  mr.Error,
@@ -183,7 +181,7 @@ func MutationMessage(resourceName string, diffResult []mapnode.Difference) (msg 
 	return msg
 }
 
-func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (*MAResult, error) {
+func GetMAResult(ma4kInput *Ma4kInput, rules []*protect.AttrsPattern) (*MAResult, error) {
 	mr := &MAResult{}
 	oldObject, _ := mapnode.NewFromMap(ma4kInput.Before)
 	newObject, _ := mapnode.NewFromMap(ma4kInput.After)
@@ -195,9 +193,11 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	username := ma4kInput.UserName
 	userGroups := ma4kInput.UserGroups
 
-	allWhitelist := whitelist.NewEPW()
-	allWhitelist.Rule = policy
-	allMaskKeys := allWhitelist.GenerateMaskKeys(namespace, name, kind, username, userGroups)
+	// allWhitelist := whitelist.NewEPW()
+	// allWhitelist.Rule = policy
+
+	allMaskKeys := generateMaskKeys(rules,
+		namespace, name, kind, username, userGroups)
 
 	// diff
 	dr := oldObject.Diff(newObject)
@@ -226,4 +226,21 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	msg := MutationMessage(ma4kInput.Name, unfiltered.Items)
 	mr.Msg = msg
 	return mr, nil
+}
+
+func generateMaskKeys(rules []*protect.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
+	reqFields := map[string]string{}
+	reqFields["Namespace"] = namespace
+	reqFields["Name"] = name
+	reqFields["Kind"] = kind
+	reqFields["UserName"] = username
+	reqFields["UserGroups"] = strings.Join(usergroups, ",")
+
+	maskKey := []string{}
+	for _, rule := range rules {
+		if rule.Match.Match(reqFields) {
+			maskKey = append(maskKey, rule.Attrs...)
+		}
+	}
+	return maskKey
 }

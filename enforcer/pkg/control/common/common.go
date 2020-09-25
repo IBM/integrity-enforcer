@@ -34,7 +34,7 @@ const (
 	DefaultPolicyCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
 	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
 	SignerPolicyCustomResourceAPIVersion  = "research.ibm.com/v1alpha1"
-	SignerPolicyCustomResourceKind        = "IESignerPolicy"
+	SignerPolicyCustomResourceKind        = "SignPolicy"
 	AppPolicyCustomResourceAPIVersion     = "research.ibm.com/v1alpha1"
 	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
 )
@@ -354,12 +354,11 @@ func (self *OwnerList) VerifiedOwners() []*Owner {
 }
 
 type MutationEvalResult struct {
-	IsMutated     bool        `json:"isMutated"`
-	Diff          string      `json:"diff"`
-	Filtered      string      `json:"filtered"`
-	Checked       bool        `json:"checked"`
-	MatchedPolicy string      `json:"matchedPolicy"`
-	Error         *CheckError `json:"error"`
+	IsMutated bool        `json:"isMutated"`
+	Diff      string      `json:"diff"`
+	Filtered  string      `json:"filtered"`
+	Checked   bool        `json:"checked"`
+	Error     *CheckError `json:"error"`
 }
 
 type ReasonCode struct {
@@ -375,6 +374,10 @@ const (
 	REASON_UPDATE_BY_SA
 	REASON_VERIFIED_SA
 	REASON_NO_MUTATION
+	REASON_IE_ADMIN
+	REASON_IGNORED_SA
+	REASON_NOT_PROTECTED
+	REASON_BLOCK_DELETE
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
 	REASON_ABORTED
@@ -416,9 +419,21 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "allowed because no mutation found",
 		Code:    "no-mutation",
 	},
-	REASON_NOT_ENFORCED: {
-		Message: "not enforced",
-		Code:    "not-enforced",
+	REASON_IE_ADMIN: {
+		Message: "IE admin operation",
+		Code:    "ie-admin",
+	},
+	REASON_IGNORED_SA: {
+		Message: "ignored sa",
+		Code:    "ignored-sa",
+	},
+	REASON_NOT_PROTECTED: {
+		Message: "not protected",
+		Code:    "unprotected",
+	},
+	REASON_BLOCK_DELETE: {
+		Message: "block delete IE resouce",
+		Code:    "block-delete",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",
