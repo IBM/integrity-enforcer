@@ -1,47 +1,57 @@
 
 
-## Custom Resource: IntegrityEnforcer 
+# Custom Resource: IntegrityEnforcer
 
-IE can be deployed with operator. You can configure IntegrityEnforcer custom resource to define the configuration of IE. 
+IE can be deployed with operator. You can configure IntegrityEnforcer custom resource to define the configuration of IE.
 
-### Type of Signature Verification
+## Type of Signature Verification
 
-IE supports two modes of signature verification. 
-- `pgp`: use [gpg key]((https://www.gnupg.org/index.html)) for signing. certificate is not used. 
-- `x509`: use signing key with X509 public key certificate. 
+IE supports two modes of signature verification.
+- `pgp`: use [gpg key](https://www.gnupg.org/index.html) for signing. certificate is not used.
+- `x509`: use signing key with X509 public key certificate.
 
 `spec.verifyType` should be set either `pgp` (default) or `x509`.
-```
+
+```yaml
 apiVersion: research.ibm.com/v1alpha1
 kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server
 spec:
-  verifyType: pgp
+  enforcerConfig:
+    verifyType: pgp
 ```
 
-### Enable Helm plugin
+## Enable Helm plugin
 
-You can enable Helm plugin to support verification of Helm provenance and integrity (https://helm.sh/docs/topics/provenance/). By enabling this, Helm package installation is verified with its provenance file. 
+You can enable Helm plugin to support verification of Helm provenance and integrity (https://helm.sh/docs/topics/provenance/). By enabling this, Helm package installation is verified with its provenance file.
 
-package signature ()
-
-```
+```yaml
 spec:
   enforcerConfig:
     policy:
       plugin:
       - name: helm
-      enabled: false
+        enabled: false
 ```
 
-### Cluster signer 
+## Cluster signer
 
-for resources and helm resources
-```
+You can define cluster-wide signer for signing any resources on cluster.
+
+```yaml
 spec:
   enforcerConfig:
     signPolicy:
+      - namespaces:
+        - "*"
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
+      - scope: Cluster
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
       signers:
       - name: "ClusterSigner"
         subjects:
@@ -51,10 +61,10 @@ spec:
         - email: cluster_signer@signer.com
 ```
 
+## Unprocessed Requests
+Some resources are not relevant to the signature-based protection by IE. The resources defined here are not processed in IE admission controller (always returns `allowed`).
 
-### Unprocessed Requests
-define which resouces in admission requests should not be processed in IE. 
-```
+```yaml
 spec:
   enforcerConfig:
     ignore:
@@ -66,26 +76,28 @@ spec:
     - kind: SelfSubjectAccessReview
 ```
 
-### IE Run mode
-mode = enforce or detect
-```
+## IE Run mode
+You can set run mode. Two modes are available. `enforce` mode is default. `detect` mode always allows any admission request, but signature verification is conducted and logged for all protected resources. `enforce` is set unless specified.
+
+```yaml
 spec:
   enforcerConfig:
     mode: "detect"
 ```
 
-### Install on OpenShift
+## Install on OpenShift
 
-enable auto deploy scc
-```
+When deploying OpenShift cluster, this should be set `true` (default). Then, SecurityContextConstratint (SCC) will be deployed automatically during installation. For IKS or Minikube, this should be set to `false`.
+
+```yaml
 spec:
   globalConfig:
     openShift: true
 ```
 
-### Signature Verification Key
+## Signature Verification Key
 
-```
+```yaml
 spec:
   certPoolConfig:
     createIfNotExist: false
@@ -97,17 +109,19 @@ spec:
     name: keyring-secret
 ```
 
-### IE admin
+## IE admin
 
-IE Admin users
-```
+Specify user group for IE admin. The following values are default.
+
+```yaml
 spec:
   enforcerConfig:
-    ieAdminUserGroup: "system:masters"
+    ieAdminUserGroup: "system:masters,system:cluster-admins"
 ```
 
-IE Admin role
-```
+Also, you can define IE admin role. This role will be created automatically during installation when `autoIEAdminRoleCreationDisabled` is `false` (default).
+
+```yaml
 spec
   security
     ieAdminSubjects:
@@ -118,10 +132,12 @@ spec
 ```
 
 
-### Webhook configuration
+## Webhook configuration
 
-```
-spec
+You can specify webhook filter configuration for processing requests in IE. As default, all requests for namespaced resources and selected cluster-scope resources are forwarded to IE. If you want to protect a resource by IE, it must be covered with this filter condition.
+
+```yaml
+spec:
   webhookNamespacedResource:
     apiGroups: ["*"]
     apiVersions: ["*"]
@@ -129,7 +145,7 @@ spec
   webhookClusterResource:
     apiGroups: ["*"]
     apiVersions: ["*"]
-    resources: 
+    resources:
     - podsecuritypolicies
     - clusterrolebindings
     - clusterroles
@@ -138,9 +154,21 @@ spec
 
 ## Logging
 
+Console log includes stdout logging from IE server. Context log includes admission control results. Both are enabled as default. You can specify namespaces in scope. `'*'` is wildcard. `'-'` is empty stiring, which implies cluster-scope resource.
+```yaml
+spec:
+  enforcerConfig:
+    log:
+      consoleLog:
+        enabled: true
+        inScope:
+        - namespace: '*'
+        - namespace: '-'
+      contextLog:
+        enabled: true
+        inScope:
+        - namespace: '*'
+        - namespace: '-'
+      logLevel: info
+```
 
-### logging scope
-
-### server log
-
-### forwarder log
