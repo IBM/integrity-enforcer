@@ -16,6 +16,10 @@ spec:
         signers:
         - "ClusterSigner"
         - "HelmClusterSigner"
+      - scope: Cluster
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
       signers:
       - name: "ClusterSigner"
         subjects:
@@ -45,7 +49,7 @@ spec:
         inScope:
         - namespace: '*'
         - namespace: '-'
-      logLevel: trace
+      logLevel: info
   enforcerConfigCrName: ie-config
   globalConfig:
     openShift: true

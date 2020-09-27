@@ -5,7 +5,7 @@
 The following prerequisites must be satisfied to deploy IE on a cluster.
 - A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
 - Prepare a namespace to deploy IE. (We will use `integrity-enforcer-ns` namespace in this document.)
-- All requests to namespaces with label integrity-enforced=true are passed to IE. You can set label to a namespace `secure-ns` by 
+- All requests to namespaces with label integrity-enforced=true are passed to IE. You can set label to a namespace `secure-ns` by
   ```
   kubectl label namespace secure-ns integrity-enforced=true
   ```
@@ -34,7 +34,7 @@ In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
 ### Prepape namespace for installing IE
 
-You can deploy IE to any namespace. In this document, we will use `integrity-enforcer-ns` to deploy IE. 
+You can deploy IE to any namespace. In this document, we will use `integrity-enforcer-ns` to deploy IE.
 ```
 oc create ns integrity-enforcer-ns
 oc project integrity-enforcer-ns
@@ -51,9 +51,9 @@ First, you need to export public key to a file. The following example shows a pu
 $ gpg --export signer@enterprise.com > /tmp/pubring.gpg
 ```
 
-If you do not have any PGP key or you want to use new key, generate new one and export it to a file. See [this GitHub document](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/generating-a-new-gpg-key). 
+If you do not have any PGP key or you want to use new key, generate new one and export it to a file. See [this GitHub document](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/generating-a-new-gpg-key).
 
-Then, create a secret that includes a pubkey ring for verifying signatures of resources  
+Then, create a secret that includes a pubkey ring for verifying signatures of resources
 
 ```
 oc create secret generic --save-config keyring-secret  -n integrity-enforcer-ns --from-file=/tmp/pubring.gpg
@@ -63,7 +63,7 @@ oc create secret generic --save-config keyring-secret  -n integrity-enforcer-ns 
 
 
 You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Enforcer. For that, configure signPolicy in the following Integrity Enforcer Custom Resource [file](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
-   
+
 ```yaml
 # Edit operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml
 
@@ -109,12 +109,12 @@ IE can be installed to a cluster using a series of steps which are bundled in a 
 - `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
 - `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository`
 
-Example: 
+Example:
 ```
-$ export IE_ENV=remote 
+$ export IE_ENV=remote
 $ export IE_NS=integrity-enforcer-ns
 $ export IE_REPO_ROOT=/home/repo/integrity-enforcer
-``` 
+```
 
 Then, execute the following script to deploy IE in a cluster.
 
@@ -143,7 +143,7 @@ The steps for protecting resources include:
 
 ### Define which reource(s) should be protected
 
-You can define which resources should be protected with signature in a cluster by IE. A custom resource `ResourceProtectionProfile` (RPP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RPP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature. 
+You can define which resources should be protected with signature in a cluster by IE. A custom resource `ResourceProtectionProfile` (RPP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RPP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
@@ -164,9 +164,9 @@ resourceprotectionprofile.research.ibm.com/sample-rpp created
 
 See [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail specs.
 
-### Create a resource with signature 
+### Create a resource with signature
 
-Any configmap cannot be created without signature in `secure-ns` namespace. Run the following command to create a sample configmap. 
+Any configmap cannot be created without signature in `secure-ns` namespace. Run the following command to create a sample configmap.
 
 ```
 cat << EOF > /tmp/test-cm.yaml
@@ -199,7 +199,7 @@ $ ./scripts/gpg-rs-sign.sh signer@enterprise.com /tmp/test-cm.yaml /tmp/test-cm-
 ```
 
 
-Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature` which includes signature of the input yaml. 
+Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature` which includes signature of the input yaml.
 
 
 ```yaml
@@ -218,7 +218,7 @@ spec:
 ```
 
 
-Create this resource. 
+Create this resource.
 ```
 $ oc create -f /tmp/test-cm-rs.yaml -n secure-ns
 resourcesignature.research.ibm.com/rsig-test-cm created
@@ -233,11 +233,11 @@ configmap/test-cm created
 ```
 
 
-IE generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IE server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
+IE generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IE server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
 
 ```
 $ cd integrity-enforcer
-$ ./scripts/log_server.sh 
+$ ./scripts/log_server.sh
 {
   "apiVersion": "rbac.authorization.k8s.io/v1",
   "kind": "ClusterRole",
@@ -251,7 +251,7 @@ $ ./scripts/log_server.sh
 ...
 ```
 
-If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).    
+If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
 ```json
 {
   "abortReason": "",

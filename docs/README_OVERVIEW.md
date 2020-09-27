@@ -1,12 +1,11 @@
-## Overview 
-​
+# Overview
 ## Goal
 ​
-The goal of Integrity Enforcer is to provide assurance of the integrity of Kubernetes resources.  
+The goal of Integrity Enforcer is to provide assurance of the integrity of Kubernetes resources.
 
 Integrity Enforcer is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) on Kubernetes cluster.
 ​
-Resources on a Kubernetes cluster are defined in various form of artifacts such as YAML files, Helm charts, Operator, etc., but those artifacts may be altered maliciously or unintentionally before deploying them to cluster. 
+Resources on a Kubernetes cluster are defined in various form of artifacts such as YAML files, Helm charts, Operator, etc., but those artifacts may be altered maliciously or unintentionally before deploying them to cluster.
 This could be an integrity issue. For example, some artifact may be modified to inject malicous scripts and configurations inside in stealthy manner, then admininstrator may be in risk of deploying it without knowing the falsification.
 
 Integrity Enforcer (IE) provides signature-based assurance of integrity for Kubernetes resources at cluster side. IE works as an Admission Controller which handles all incoming Kubernetes admission requests, verifies if the requests attached a signature, and blocks any unauthorized requests according to the enforce policy before actually persisting in etcd. IE will helps cluster adminstrator to ensure
@@ -19,7 +18,7 @@ Integrity Enforcer (IE) provides signature-based assurance of integrity for Kube
 
 ## Supported Platforms
 ​
-Integrity Enforcer works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
+Integrity Enforcer works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design.
 IE can be deployed with operator. We have verified the feasibility on the following platforms:
 ​
 - [RedHat OpenShift 4.5](https://www.openshift.com/)
