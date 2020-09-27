@@ -1,19 +1,5 @@
-# Integrity Enforcer
-   
-## Integrity Enforcer (IE)
-Integrity Enforcer is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) on Kubernetes cluster.
-
-Integrity Enforcer's capabilities are 
-
-- Allow to deploy authorized application pakcages only
-- Allow to use signed deployment params only
-- Zero-drift in resource configuration unless whitelisted
-- Perform all integrity verification on cluster (admission controller, not in client side)
-- Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
-
-## Quick Start
-See [Quick Start](README_QUICK.md)
-  
+## Overview 
+​
 ## Goal
 ​
 The goal of Integrity Enforcer is to provide assurance of the integrity of Kubernetes resources.  
@@ -66,6 +52,3 @@ IE can be deployed with operator. We have verified the feasibility on the follow
 - Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [How to Sign Resources](README_RESOURCE_SIGNATURE.md))
 - Integrity Enforcer admission controller is installed in a dedicated namespace (e.g. `integrity-enforcer-ns` in this document). It can be installed by operator. (see [Integrity Enforcer Custom Resource](README_IE_OPERATOR_CR.md) for detail install options.)
 ​
-## Quick Start
-See [Quick Start](README_QUICK.md)
-  

@@ -2,12 +2,7 @@
 
 CMDNAME=`basename $0`
 if [ $# -ne 3 ]; then
-  echo "Usage: $CMDNAME <config> <input> <output>" 1>&2
-  exit 1
-fi
-
-if [ ! -e $1 ]; then
-  echo "$1 does not exist"
+  echo "Usage: $CMDNAME <signer> <input> <output>" 1>&2
   exit 1
 fi
 
@@ -16,20 +11,9 @@ if [ ! -e $2 ]; then
   exit 1
 fi
 
-CONFIG_FILE=$1
+SIGNER=$1
 INPUT_FILE=$2
 OUTPUT_FILE=$3
-
-source $CONFIG_FILE
-
-if [ -z "${SIGNER}" ] ; then
-  echo "config is not set"
-  exit 1
-fi
-
-# parameters:
-echo SIGNER: $SIGNER
-
 
 # compute signature (and encoded message and certificate)
 cat <<EOF > $OUTPUT_FILE

@@ -1,6 +1,7 @@
 # Summary
 
-* [Overview](README_HOW_IE_WORKS.md)
+* [Overview](README_OVERVIEW.md)
+* [Quick Start](README_QUICK.md)
 * [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md)
 * [Sign Policy](README_CONFIG_SIGNER_POLICY.md)
 * [How to Sign Resources](README_RESOURCE_SIGNATURE.md)
