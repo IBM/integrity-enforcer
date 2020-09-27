@@ -52,8 +52,9 @@ spec:
       logLevel: info
   enforcerConfigCrName: ie-config
   globalConfig:
-    openShift: true
-  imagePullSecrets: []
+    openShift: false
+  # imagePullSecrets:
+  # - name: mappregkey
   certPoolConfig:
     createIfNotExist: false
     keyValue: test
@@ -76,7 +77,7 @@ spec:
       enabled: false
       endpoint: http://sample-http-server
     esSecretName: es-tls-certs
-    image: integrityenforcer/ie-logging:0.0.1
+    image: integrityenforcer/ie-logging:0.0.3rc2
     imagePullPolicy: Always
     name: forwarder
     resources:
@@ -113,7 +114,7 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     enforcePolicyReloadSec: 10
-    image: integrityenforcer/ie-server:0.0.1
+    image: integrityenforcer/ie-server:0.0.3rc2
     imagePullPolicy: Always
     name: server
     port: 8443
