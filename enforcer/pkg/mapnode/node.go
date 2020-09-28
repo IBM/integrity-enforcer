@@ -305,7 +305,7 @@ func (n *Node) recursiveMask(currentPath string, maskKeys []string) *Node {
 				currentKey = fmt.Sprintf("%s.%s", currentPath, k)
 			}
 
-			if keyExistsInList(maskKeys, currentKey) {
+			if matched, _ := keyExistsInList(maskKeys, currentKey); matched {
 				continue
 			}
 			mn := v.recursiveMask(currentKey, maskKeys)
@@ -324,7 +324,7 @@ func (n *Node) recursiveMask(currentPath string, maskKeys []string) *Node {
 			} else {
 				currentKey = fmt.Sprintf("%s.%s", currentPath, k)
 			}
-			if keyExistsInList(maskKeys, currentKey) {
+			if matched, _ := keyExistsInList(maskKeys, currentKey); matched {
 				continue
 			}
 			mn := v.recursiveMask(currentKey, maskKeys)

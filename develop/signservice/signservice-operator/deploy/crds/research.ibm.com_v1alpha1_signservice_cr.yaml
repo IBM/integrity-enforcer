@@ -37,7 +37,7 @@ spec:
   invalidSigners:
   - invalid_signer@invalid.signer.com
   signService:
-    image: integrityenforcer/ie-signservice:0.0.1
+    image: integrityenforcer/ie-signservice:0.0.3
     imagePullPolicy: Always
     port: 8180
     resources:

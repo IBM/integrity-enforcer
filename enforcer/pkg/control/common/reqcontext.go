@@ -17,17 +17,15 @@
 package common
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/helm"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -49,9 +47,12 @@ type ObjectMetadata struct {
 	K8sServiceAccountUid  string              `json:"k8sServiceAccountUid"`
 	OwnerRef              *ResourceRef        `json:"ownerRef"`
 	Annotations           *ResourceAnnotation `json:"annotations"`
+	Labels                *ResourceLabel      `json:"labels"`
 }
 
 type ReqContext struct {
+	ResourceScope   string          `json:"resourceScope,omitempty"`
+	DryRun          bool            `json:"dryRun"`
 	RawObject       []byte          `json:"-"`
 	RawOldObject    []byte          `json:"-"`
 	RequestJsonStr  string          `json:"request"`
@@ -98,6 +99,23 @@ func (reqc *ReqContext) ResourceRef() *ResourceRef {
 	}
 }
 
+func (reqc *ReqContext) Map() map[string]string {
+	m := map[string]string{}
+	v := reflect.Indirect(reflect.ValueOf(reqc))
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		f := v.Field(i)
+		itf := f.Interface()
+		if value, ok := itf.(string); ok {
+			filedName := t.Field(i).Name
+			m[filedName] = value
+		} else {
+			continue
+		}
+	}
+	return m
+}
+
 func (reqc *ReqContext) GroupVersion() string {
 	return schema.GroupVersion{Group: reqc.ApiGroup, Version: reqc.ApiVersion}.String()
 }
@@ -120,6 +138,22 @@ func (rc *ReqContext) IsCreator() bool {
 
 func (rc *ReqContext) IsEnforcePolicyRequest() bool {
 	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsIEPolicyRequest() bool {
+	return rc.GroupVersion() == IEPolicyCustomResourceAPIVersion && rc.Kind == IEPolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsIEDefaultPolicyRequest() bool {
+	return rc.GroupVersion() == DefaultPolicyCustomResourceAPIVersion && rc.Kind == DefaultPolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsSignPolicyRequest() bool {
+	return rc.GroupVersion() == SignerPolicyCustomResourceAPIVersion && rc.Kind == SignerPolicyCustomResourceKind
+}
+
+func (rc *ReqContext) IsAppEnforcePolicyRequest() bool {
+	return rc.GroupVersion() == AppPolicyCustomResourceAPIVersion && rc.Kind == AppPolicyCustomResourceKind
 }
 
 func (rc *ReqContext) IsResourceSignatureRequest() bool {
@@ -187,6 +221,20 @@ func (pr *ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	}
 }
 
+func (pr *ParsedRequest) getLabels(path string) *ResourceLabel {
+	var r map[string]string = map[string]string{}
+	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
+		m := w.Map()
+		for k := range m {
+			v := m[k]
+			r[k] = v.String()
+		}
+	}
+	return &ResourceLabel{
+		values: r,
+	}
+}
+
 func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v := w.String()
@@ -226,6 +274,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		K8sServiceAccountName: pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.name"),
 		K8sServiceAccountUid:  pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.uid"),
 		Annotations:           pr.getAnnotations("oldObject.metadata.annotations"),
+		Labels:                pr.getLabels("oldObject.metadata.labels"),
 		OwnerRef: &ResourceRef{
 			Kind:       pr.getValue("oldObject.metadata.ownerReferences.0.kind"),
 			Name:       pr.getValue("oldObject.metadata.ownerReferences.0.name"),
@@ -236,6 +285,7 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 
 	claimedMetadata := &ObjectMetadata{
 		Annotations: pr.getAnnotations("object.metadata.annotations"),
+		Labels:      pr.getLabels("object.metadata.labels"),
 		OwnerRef: &ResourceRef{
 			Kind:       pr.getValue("object.metadata.ownerReferences.0.kind"),
 			Name:       pr.getValue("object.metadata.ownerReferences.0.name"),
@@ -246,26 +296,16 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 
 	kind := pr.getValue("kind.kind")
 
-	hashType := ""
-	hashValue := ""
-	if releaseSecretBytes, _ := helm.FindReleaseSecret(namespace, kind, name, req.Object.Raw); releaseSecretBytes == nil {
-		hashType = HashTypeDefault
-		objNode, _ := mapnode.NewFromBytes(req.Object.Raw)
-		maskedObject := objNode.Mask(CommonMessageMask).ToJson()
-		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
-	} else {
-		if helm.IsReleaseSecret(kind, name) {
-			hashType = HashTypeHelmSecret
-		} else {
-			hashType = HashTypeHelmResource
-		}
-		maskedObject := getMaskedReleaseSecretString(releaseSecretBytes)
-		hashValue = fmt.Sprintf("%x", sha256.Sum256([]byte(maskedObject)))
+	resourceScope := "Namespaced"
+	if namespace == "" {
+		resourceScope = "Cluster"
 	}
 
 	rc := &ReqContext{
+		DryRun:          *req.DryRun,
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
+		ResourceScope:   resourceScope,
 		RequestUid:      pr.UID,
 		RequestJsonStr:  pr.JsonStr,
 		Name:            name,
@@ -283,18 +323,14 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		Type:            pr.getValue("object.type"),
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
-		ObjectHashType:  hashType,
-		ObjectHash:      hashValue,
 	}
-
 	return rc
 
 }
 
 var CommonMessageMask = []string{
-	"metadata.annotations.integrityVerified",
-	"metadata.annotations.integrityUnverified",
-	"metadata.annotations.ie-createdBy",
+	fmt.Sprintf("metadata.labels.\"%s\"", ResourceIntegrityLabelKey),
+	fmt.Sprintf("metadata.labels.\"%s\"", ReasonLabelKey),
 	"metadata.annotations.sigOwnerApiVersion",
 	"metadata.annotations.sigOwnerKind",
 	"metadata.annotations.sigOwnerName",
@@ -309,19 +345,9 @@ var CommonMessageMask = []string{
 	"metadata.managedFields",
 	"metadata.creationTimestamp",
 	"metadata.generation",
+	"metadata.annotations.deprecated.daemonset.template.generation",
 	"metadata.namespace",
 	"metadata.resourceVersion",
 	"metadata.selfLink",
 	"metadata.uid",
-}
-
-func getMaskedReleaseSecretString(releaseSecretBytes []byte) string {
-	release := helm.DecodeReleaseSecretFromRawBytes(releaseSecretBytes).Data
-	maskedObject := ""
-	for _, tmp := range release.Chart.Templates {
-		tmpB, _ := json.Marshal(tmp)
-		maskedObject = maskedObject + string(tmpB) + "\n"
-	}
-	maskedObject = maskedObject + release.Manifest
-	return maskedObject
 }

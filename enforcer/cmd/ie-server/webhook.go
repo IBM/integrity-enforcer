@@ -46,8 +46,8 @@ type WebhookServer struct {
 func init() {
 	acConfig = config.NewAdmissionControlConfig()
 	acConfig.InitEnforcerConfig()
-	logger.InitContextLogger(acConfig.ContextLoggerConfig)
-	logger.InitServerLogger(acConfig.LoggerConfig)
+	logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
+	logger.InitServerLogger(acConfig.EnforcerConfig.LoggerConfig())
 	logger.Info("Integrity Enforcer has been started.")
 
 	cfgBytes, _ := json.Marshal(acConfig)
@@ -59,17 +59,16 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 
 	renew := acConfig.InitEnforcerConfig()
 	if renew {
-		logger.InitContextLogger(acConfig.ContextLoggerConfig)
-		logger.InitServerLogger(acConfig.LoggerConfig)
+		logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
+		logger.InitServerLogger(acConfig.EnforcerConfig.LoggerConfig())
 	}
 
-	enforcePolicy := acConfig.LoadEnforcePolicy()
-
 	//create context
-	cc := enforcer.NewCheckContext(acConfig.EnforcerConfig, enforcePolicy)
+	reqHandler := enforcer.NewRequestHandler(acConfig.EnforcerConfig)
+	admissionRequest := admissionReviewReq.Request
 
 	//process request
-	admissionResponse := cc.ProcessRequest(admissionReviewReq.Request)
+	admissionResponse := reqHandler.Run(admissionRequest)
 
 	return admissionResponse
 

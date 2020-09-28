@@ -17,27 +17,27 @@
 package enforcer
 
 import (
+	"strings"
+
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	whitelist "github.com/IBM/integrity-enforcer/enforcer/pkg/whitelist"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, policy []policy.AllowedChangeCondition) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, rules []*protect.AttrsPattern) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []policy.AllowedChangeCondition) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, rules []*protect.AttrsPattern) (*common.MutationEvalResult, error) {
 
 	mask := []string{
+		common.ResourceIntegrityLabelKey,
+		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
-		"metadata.annotations.integrityVerified",
-		"metadata.annotations.integrityUnverified",
-		"metadata.annotations.ie-createdBy",
 		"metadata.annotations.sigOwnerKind",
 		"metadata.annotations.sigOwnerApiVersion",
 		"metadata.annotations.sigOwnerName",
@@ -94,7 +94,8 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, policy []poli
 	}
 
 	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj, self.VerifiedOwners)
-	if mr, err := GetMAResult(ma4kInput, policy); err != nil {
+
+	if mr, err := GetMAResult(ma4kInput, rules); err != nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "Error when checking mutation",
@@ -132,12 +133,13 @@ type Ma4kInput struct {
 }
 
 type MAResult struct {
-	IsMutated bool
-	Diff      string
-	Filtered  string
-	Checked   bool
-	Msg       string
-	Error     error
+	IsMutated   bool
+	Diff        string
+	Filtered    string
+	MatchedKeys []string
+	Checked     bool
+	Msg         string
+	Error       error
 }
 
 func NewMa4kInput(namespace, kind, name, username string, usergroups []string, oldObj map[string]interface{}, newObj map[string]interface{}, owners []*common.Owner) *Ma4kInput {
@@ -179,7 +181,7 @@ func MutationMessage(resourceName string, diffResult []mapnode.Difference) (msg 
 	return msg
 }
 
-func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (*MAResult, error) {
+func GetMAResult(ma4kInput *Ma4kInput, rules []*protect.AttrsPattern) (*MAResult, error) {
 	mr := &MAResult{}
 	oldObject, _ := mapnode.NewFromMap(ma4kInput.Before)
 	newObject, _ := mapnode.NewFromMap(ma4kInput.After)
@@ -190,16 +192,12 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	kind := ma4kInput.Kind
 	username := ma4kInput.UserName
 	userGroups := ma4kInput.UserGroups
-	var ownerKind, ownerApiVersion, ownerName string
-	if ma4kInput.IntegrityRef != nil {
-		ownerKind = ma4kInput.IntegrityRef.Kind
-		ownerApiVersion = ma4kInput.IntegrityRef.ApiVersion
-		ownerName = ma4kInput.IntegrityRef.Name
-	}
 
-	allWhitelist := whitelist.NewEPW()
-	allWhitelist.Rule = policy
-	allMaskKeys := allWhitelist.GenerateMaskKeys(namespace, name, kind, username, ownerKind, ownerApiVersion, ownerName, userGroups)
+	// allWhitelist := whitelist.NewEPW()
+	// allWhitelist.Rule = policy
+
+	allMaskKeys := generateMaskKeys(rules,
+		namespace, name, kind, username, userGroups)
 
 	// diff
 	dr := oldObject.Diff(newObject)
@@ -208,9 +206,10 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	// split diff into 2 diffs with whitelist (mc & cmc)
 	filtered := &mapnode.DiffResult{}
 	unfiltered := &mapnode.DiffResult{}
+	matchedKeys := []string{}
 	if dr != nil {
 		//filtered, unfiltered = dr.Filter(appMaskKeys)
-		filtered, unfiltered = dr.Filter(allMaskKeys)
+		filtered, unfiltered, matchedKeys = dr.Filter(allMaskKeys)
 	}
 
 	// make result
@@ -223,7 +222,25 @@ func GetMAResult(ma4kInput *Ma4kInput, policy []policy.AllowedChangeCondition) (
 	}
 	mr.Diff = unfiltered.String()
 	mr.Filtered = filtered.String()
+	mr.MatchedKeys = matchedKeys
 	msg := MutationMessage(ma4kInput.Name, unfiltered.Items)
 	mr.Msg = msg
 	return mr, nil
+}
+
+func generateMaskKeys(rules []*protect.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
+	reqFields := map[string]string{}
+	reqFields["Namespace"] = namespace
+	reqFields["Name"] = name
+	reqFields["Kind"] = kind
+	reqFields["UserName"] = username
+	reqFields["UserGroups"] = strings.Join(usergroups, ",")
+
+	maskKey := []string{}
+	for _, rule := range rules {
+		if rule.Match.Match(reqFields) {
+			maskKey = append(maskKey, rule.Attrs...)
+		}
+	}
+	return maskKey
 }

@@ -17,7 +17,9 @@
 package common
 
 import (
+	"crypto/x509"
 	"crypto/x509/pkix"
+	"math/big"
 	"strconv"
 )
 
@@ -26,6 +28,23 @@ const (
 	SignatureCustomResourceKind       = "ResourceSignature"
 	PolicyCustomResourceAPIVersion    = "research.ibm.com/v1alpha1"
 	PolicyCustomResourceKind          = "EnforcePolicy"
+
+	IEPolicyCustomResourceAPIVersion      = "research.ibm.com/v1alpha1"
+	IEPolicyCustomResourceKind            = "IntegrityEnforcerPolicy"
+	DefaultPolicyCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
+	SignerPolicyCustomResourceAPIVersion  = "research.ibm.com/v1alpha1"
+	SignerPolicyCustomResourceKind        = "SignPolicy"
+	AppPolicyCustomResourceAPIVersion     = "research.ibm.com/v1alpha1"
+	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
+)
+
+const (
+	ResourceIntegrityLabelKey = "integrity-enforcer.ibm.com/resourceIntegrity"
+	ReasonLabelKey            = "integrity-enforcer.ibm.com/reason"
+
+	LabelValueVerified   = "verified"
+	LabelValueUnverified = "unverified"
 )
 
 /**********************************************
@@ -76,6 +95,54 @@ func (self *CheckError) MakeMessage() string {
 
 /**********************************************
 
+				ResourceLabel
+
+***********************************************/
+
+type ResourceLabel struct {
+	values map[string]string
+}
+
+func NewResourceLabel(values map[string]string) *ResourceLabel {
+	return &ResourceLabel{
+		values: values,
+	}
+}
+
+func (self *ResourceLabel) IntegrityVerified() bool {
+	return self.getString(ResourceIntegrityLabelKey) == LabelValueVerified
+}
+
+func (self *ResourceLabel) CreatedBy() string {
+	return self.getString("ie-createdBy")
+}
+
+func (self *ResourceLabel) getString(key string) string {
+	if s, ok := self.values[key]; ok {
+		return s
+	} else {
+		return ""
+	}
+}
+
+func (self *ResourceLabel) getBool(key string, defaultValue bool) bool {
+	if s, ok := self.values[key]; ok {
+		if b, err := strconv.ParseBool(s); err != nil {
+			return defaultValue
+		} else {
+			return b
+		}
+	}
+	return defaultValue
+}
+
+func (self *ResourceLabel) isDefined(key string) bool {
+	_, ok := self.values[key]
+	return ok
+}
+
+/**********************************************
+
 				ResourceAnnotation
 
 ***********************************************/
@@ -97,7 +164,7 @@ type SignatureAnnotation struct {
 	Certificate           string
 	Message               string
 	MessageScope          string
-	IgnoreAttrs           string
+	MutableAttrs          string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
@@ -108,7 +175,7 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 		Certificate:           self.getString("certificate"),
 		Message:               self.getString("message"),
 		MessageScope:          self.getString("messageScope"),
-		IgnoreAttrs:           self.getString("ignoreAttrs"),
+		MutableAttrs:          self.getString("mutableAttrs"),
 	}
 }
 
@@ -151,10 +218,22 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 ***********************************************/
 
 type SignPolicyEvalResult struct {
-	Signer  *SignerInfo `json:"signer"`
-	Checked bool        `json:"checked"`
-	Allow   bool        `json:"allow"`
-	Error   *CheckError `json:"error"`
+	Signer        *SignerInfo `json:"signer"`
+	SignerName    string      `json:"signerName"`
+	Checked       bool        `json:"checked"`
+	Allow         bool        `json:"allow"`
+	MatchedPolicy string      `json:"matchedPolicy"`
+	Error         *CheckError `json:"error"`
+}
+
+func (self *SignPolicyEvalResult) GetSignerName() string {
+	if self.SignerName != "" {
+		return self.SignerName
+	}
+	if self.Signer != nil {
+		return self.Signer.GetName()
+	}
+	return ""
 }
 
 type SignerInfo struct {
@@ -170,7 +249,7 @@ type SignerInfo struct {
 	StreetAddress      string
 	PostalCode         string
 	CommonName         string
-	SerialNumber       string
+	SerialNumber       *big.Int
 }
 
 func (self *SignerInfo) GetName() string {
@@ -184,6 +263,12 @@ func (self *SignerInfo) GetName() string {
 		return self.Name
 	}
 	return ""
+}
+
+func NewSignerInfoFromCert(cert *x509.Certificate) *SignerInfo {
+	si := NewSignerInfoFromPKIXName(cert.Subject)
+	si.SerialNumber = cert.SerialNumber
+	return si
 }
 
 func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
@@ -213,9 +298,9 @@ func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
 	if dn.CommonName != "" {
 		si.CommonName = dn.CommonName
 	}
-	if dn.SerialNumber != "" {
-		si.SerialNumber = dn.SerialNumber
-	}
+	// if dn.SerialNumber != "" {
+	// 	si.SerialNumber = dn.SerialNumber
+	// }
 	return si
 }
 
@@ -239,10 +324,11 @@ type Owner struct {
 	Ref        *ResourceRef
 	OwnerRef   *ResourceRef
 	Annotation *ResourceAnnotation
+	Label      *ResourceLabel
 }
 
 func (self *Owner) IsIntegrityVerified() bool {
-	return self.Annotation.IntegrityVerified()
+	return self.Label.IntegrityVerified()
 }
 
 type OwnerList struct {
@@ -288,10 +374,15 @@ const (
 	REASON_UPDATE_BY_SA
 	REASON_VERIFIED_SA
 	REASON_NO_MUTATION
+	REASON_IE_ADMIN
+	REASON_IGNORED_SA
+	REASON_NOT_PROTECTED
+	REASON_BLOCK_DELETE
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
 	REASON_ABORTED
-	REASON_UNVERIFIED
+	REASON_BREAK_GLASS
+	REASON_DETECTION
 	REASON_INVALID_SIG
 	REASON_NO_SIG
 	REASON_NO_POLICY
@@ -328,9 +419,21 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "allowed because no mutation found",
 		Code:    "no-mutation",
 	},
-	REASON_NOT_ENFORCED: {
-		Message: "not enforced",
-		Code:    "not-enforced",
+	REASON_IE_ADMIN: {
+		Message: "IE admin operation",
+		Code:    "ie-admin",
+	},
+	REASON_IGNORED_SA: {
+		Message: "ignored sa",
+		Code:    "ignored-sa",
+	},
+	REASON_NOT_PROTECTED: {
+		Message: "not protected",
+		Code:    "unprotected",
+	},
+	REASON_BLOCK_DELETE: {
+		Message: "block delete IE resouce",
+		Code:    "block-delete",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",
@@ -340,9 +443,13 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "aborted",
 		Code:    "aborted",
 	},
-	REASON_UNVERIFIED: {
-		Message: "allowed by allowUnverified policy",
-		Code:    "unverified",
+	REASON_BREAK_GLASS: {
+		Message: "allowed by breakglass mode",
+		Code:    "breakglass",
+	},
+	REASON_DETECTION: {
+		Message: "allowed by detection mode",
+		Code:    "detection",
 	},
 	REASON_INVALID_SIG: {
 		Message: "Failed to verify signature",

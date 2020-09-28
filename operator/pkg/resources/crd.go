@@ -22,19 +22,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//enforce policy crd
-func BuildEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+//sign policy crd
+func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+
+	subjectMatchCondition := &extv1.JSONSchemaProps{
+		Type: "object",
+		Properties: map[string]extv1.JSONSchemaProps{
+			"email": {
+				Type: "string",
+			},
+			"uid": {
+				Type: "string",
+			},
+		},
+	}
 
 	requestMatchCondition := &extv1.JSONSchemaProps{
 		Type: "object",
 		Properties: map[string]extv1.JSONSchemaProps{
 			"apiVersion": {
-				Type: "string",
-			},
-			"firstUser": {
-				Type: "boolean",
-			},
-			"k8screatedby": {
 				Type: "string",
 			},
 			"kind": {
@@ -61,84 +67,23 @@ func BuildEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Custom
 		},
 	}
 
-	ownerMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"apiVersion": {
-				Type: "string",
-			},
-			"kind": {
-				Type: "string",
-			},
-			"name": {
-				Type: "string",
-			},
-		},
-	}
-
-	subjectMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"email": {
-				Type: "string",
-			},
-			"uid": {
-				Type: "string",
-			},
-		},
-	}
-
-	stringArray := &extv1.JSONSchemaProps{
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: &extv1.JSONSchemaProps{
-				Type: "string",
-			},
-		},
-		Type: "array",
-	}
-
-	requestMatchConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: requestMatchCondition,
-		},
-	}
-
-	allowedServiceAccountMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"authorizedServiceAccount": *stringArray,
-			"allowChangesBySignedServiceAccount": {
-				Type: "boolean",
-			},
-			"request": *requestMatchCondition,
-		},
-	}
-
-	allowedServiceAccountMatchConditionArray := &extv1.JSONSchemaProps{
-		Type: "array",
-		Items: &extv1.JSONSchemaPropsOrArray{
-			Schema: allowedServiceAccountMatchCondition,
-		},
-	}
-
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "enforcepolicies.research.ibm.com",
+			Name:      "signpolicies.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "EnforcePolicy",
-				Plural:   "enforcepolicies",
-				ListKind: "EnforcePolicyList",
-				Singular: "enforcepolicy",
+				Kind:     "SignPolicy",
+				Plural:   "signpolicies",
+				ListKind: "SignPolicyList",
+				Singular: "signpolicy",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -157,22 +102,7 @@ func BuildEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Custom
 						"spec": {
 							Type: "object",
 							Properties: map[string]extv1.JSONSchemaProps{
-								"allowedByRule": *requestMatchConditionArray,
-								"allowedChange": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"key":     *stringArray,
-												"owner":   *ownerMatchCondition,
-												"request": *requestMatchCondition,
-											},
-										},
-									},
-								},
-								"allowedForInternalRequest": *requestMatchConditionArray,
-								"allowedSigner": {
+								"signer": {
 									Type: "array",
 									Items: &extv1.JSONSchemaPropsOrArray{
 										Schema: &extv1.JSONSchemaProps{
@@ -184,10 +114,25 @@ func BuildEnforcePolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Custom
 										},
 									},
 								},
-								"enforce":               *requestMatchConditionArray,
-								"ignoreRequest":         *requestMatchConditionArray,
-								"permitIfCreator":       *allowedServiceAccountMatchConditionArray,
-								"permitIfVerifiedOwner": *allowedServiceAccountMatchConditionArray,
+								"allowUnverified": {
+									Type: "array",
+									Items: &extv1.JSONSchemaPropsOrArray{
+										Schema: &extv1.JSONSchemaProps{
+											Type: "object",
+											Properties: map[string]extv1.JSONSchemaProps{
+												"namespace": {
+													Type: "string",
+												},
+											},
+										},
+									},
+								},
+								"policyType": {
+									Type: "string",
+								},
+								"description": {
+									Type: "string",
+								},
 							},
 						},
 						"status": {
@@ -271,6 +216,126 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 				Singular: "resourcesignature",
 			},
 			Scope: "Namespaced",
+			Validation: &extv1.CustomResourceValidation{
+				OpenAPIV3Schema: &extv1.JSONSchemaProps{
+					Type:                   "object",
+					XPreserveUnknownFields: &xPreserve,
+				},
+			},
+			Versions: []extv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
+	}
+	return newCRD
+}
+
+// helm release metadata crd
+func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+	xPreserve := true
+	newCRD := &extv1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helmreleasemetadatas.research.ibm.com",
+			Namespace: cr.Namespace,
+		},
+		Spec: extv1.CustomResourceDefinitionSpec{
+			Group: "research.ibm.com",
+			//Version: "v1beta1",
+			Names: extv1.CustomResourceDefinitionNames{
+				Kind:     "HelmReleaseMetadata",
+				Plural:   "helmreleasemetadatas",
+				ListKind: "HelmReleaseMetadataList",
+				Singular: "helmreleasemetadata",
+			},
+			Scope: "Namespaced",
+			Validation: &extv1.CustomResourceValidation{
+				OpenAPIV3Schema: &extv1.JSONSchemaProps{
+					Type:                   "object",
+					XPreserveUnknownFields: &xPreserve,
+				},
+			},
+			Versions: []extv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
+	}
+	return newCRD
+}
+
+// resourceprotectionprofile crd
+func BuildResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+	xPreserve := true
+	newCRD := &extv1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "resourceprotectionprofiles.research.ibm.com",
+			Namespace: cr.Namespace,
+		},
+		Spec: extv1.CustomResourceDefinitionSpec{
+			Group: "research.ibm.com",
+			//Version: "v1beta1",
+			Names: extv1.CustomResourceDefinitionNames{
+				Kind:     "ResourceProtectionProfile",
+				Plural:   "resourceprotectionprofiles",
+				ListKind: "ResourceProtectionProfileList",
+				Singular: "resourceprotectionprofile",
+			},
+			Scope: "Namespaced",
+			Validation: &extv1.CustomResourceValidation{
+				OpenAPIV3Schema: &extv1.JSONSchemaProps{
+					Type:                   "object",
+					XPreserveUnknownFields: &xPreserve,
+				},
+			},
+			Versions: []extv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+		},
+	}
+	return newCRD
+}
+
+// clusterresourceprotectionprofile crd
+func BuildClusterResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+	xPreserve := true
+	newCRD := &extv1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CustomResourceDefinition",
+			APIVersion: "apiextensions.k8s.io/v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "clusterresourceprotectionprofiles.research.ibm.com",
+			Namespace: cr.Namespace,
+		},
+		Spec: extv1.CustomResourceDefinitionSpec{
+			Group: "research.ibm.com",
+			//Version: "v1beta1",
+			Names: extv1.CustomResourceDefinitionNames{
+				Kind:     "ClusterResourceProtectionProfile",
+				Plural:   "clusterresourceprotectionprofiles",
+				ListKind: "ClusterResourceProtectionProfileList",
+				Singular: "clusterresourceprotectionprofile",
+			},
+			Scope: "Cluster",
 			Validation: &extv1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1.JSONSchemaProps{
 					Type:                   "object",

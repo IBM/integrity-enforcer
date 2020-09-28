@@ -34,6 +34,10 @@ else
     fi
 fi
 
+if [[ $HTTPOUT_ENABLED == "true" ]]; then
+    mode="${mode}_http"
+fi
+
 if [[ $mode == "none" ]]; then
     echo "logging does not output anything in this configuration..."
 fi

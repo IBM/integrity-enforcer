@@ -16,7 +16,7 @@
 
 REPO_ROOT=./..
 SERVICE_NAME ?=ie-server
-IMAGE_REMOTE ?=integrityenforcer/ie-server:0.0.1
+IMAGE_REMOTE ?=integrityenforcer/ie-server:0.0.3
 IMAGE_LOCAL ?=ie-server:local
 KEYDIR ?= ./cert
 BASEDIR ?= ./deployment
@@ -24,11 +24,11 @@ IE_NS ?= ienforcer
 DOCKERFILE ?= ./image/Dockerfile
 
 LOGG_BASEDIR ?=$(REPO_ROOT)/logging/
-LOGG_IMAGE_REMOTE ?=integrityenforcer/ie-logging:0.0.1
+LOGG_IMAGE_REMOTE ?=integrityenforcer/ie-logging:0.0.3
 LOGG_IMAGE_LOCAL ?=ie-logging:local
 
 SS_BASEDIR ?=$(REPO_ROOT)/signservice/
-SS_IMAGE_REMOTE ?=integrityenforcer/ie-signservice:0.0.1
+SS_IMAGE_REMOTE ?=integrityenforcer/ie-signservice:0.0.3
 SS_IMAGE_LOCAL ?=signservice:dev
 
 CA ?=$(shell openssl base64 -A <'$(KEYDIR)/ca.crt')

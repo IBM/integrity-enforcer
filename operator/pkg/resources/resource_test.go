@@ -138,25 +138,11 @@ func TestEnforcerConfigCR(t *testing.T) {
 // 	testObjAndYaml(t, obj, yamlPath)
 // }
 
-func TestResourceSignatureCR(t *testing.T) {
-	instance := loadTestInstance(t)
-	obj := BuildResourceSignatureForCR(instance)
-	yamlPath := "./testdata/resourceSignatureCR.yaml"
-	testObjAndYaml(t, obj, yamlPath)
-}
-
 //crd
 func TestEnforcerConfigCRD(t *testing.T) {
 	instance := loadTestInstance(t)
 	obj := BuildEnforcerConfigCRD(instance)
 	yamlPath := "./testdata/enforcerConfigCRD.yaml"
-	testObjAndYaml(t, obj, yamlPath)
-}
-
-func TestEnforcePolicyCRD(t *testing.T) {
-	instance := loadTestInstance(t)
-	obj := BuildEnforcePolicyCRD(instance)
-	yamlPath := "./testdata/enforcePolicyCRD.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }
 

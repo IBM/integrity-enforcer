@@ -17,15 +17,11 @@
 package config
 
 import (
-	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"time"
 
 	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 )
 
 /**********************************************
@@ -35,84 +31,13 @@ import (
 ***********************************************/
 
 type AdmissionControlConfig struct {
-	LoggerConfig        logger.LoggerConfig
-	ContextLoggerConfig logger.ContextLoggerConfig
-	EnforcerConfig      *cfg.EnforcerConfig
-	enforcePolicy       *policy.Policy
-	lastUpdated         time.Time
-	lastPolicyUpdated   time.Time
+	EnforcerConfig *cfg.EnforcerConfig
+	lastUpdated    time.Time
 }
 
 func NewAdmissionControlConfig() *AdmissionControlConfig {
-
-	cxLogEnabled, err := strconv.ParseBool(os.Getenv("CX_LOG_ENABLED"))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	cxLogFile := os.Getenv("CX_LOG_FILE")
-	if cxLogFile == "" {
-		cxLogFile = "/ie-app/public/events.txt"
-	}
-
-	cxLimitSizeStr := os.Getenv("CX_FILE_LIMIT_SIZE")
-	if cxLimitSizeStr == "" {
-		cxLimitSizeStr = "10485760" // == 10MB
-	}
-	cxLimitSize, err := strconv.Atoi(cxLimitSizeStr)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	cxLoggerConfig := logger.ContextLoggerConfig{Enabled: cxLogEnabled, File: cxLogFile, LimitSize: int64(cxLimitSize)}
-
-	if err != nil {
-		fmt.Println("Could not get env includeRequest")
-	}
-
-	acConfig := &AdmissionControlConfig{
-		ContextLoggerConfig: cxLoggerConfig,
-	}
-
+	acConfig := &AdmissionControlConfig{}
 	return acConfig
-}
-
-func (ac *AdmissionControlConfig) LoadEnforcePolicy() *policy.Policy {
-
-	renew := false
-	t := time.Now()
-	if ac.enforcePolicy != nil {
-
-		interval := 10
-		if s := os.Getenv("ENFORCE_POLICY_RELOAD_SEC"); s != "" {
-			if v, err := strconv.Atoi(s); err != nil {
-				interval = v
-			}
-		}
-
-		duration := t.Sub(ac.lastPolicyUpdated)
-		if int(duration.Seconds()) > interval {
-			renew = true
-		}
-	} else {
-		renew = true
-	}
-
-	if renew {
-		enforcerNs := os.Getenv("ENFORCER_NS")
-		policyNs := os.Getenv("POLICY_NS")
-		enforcePolicy := LoadEnforcePolicy(enforcerNs, policyNs)
-
-		if enforcePolicy != nil {
-			changed := reflect.DeepEqual(enforcePolicy, ac.enforcePolicy)
-			if changed {
-				logger.Info("Enforce Policy update reloaded")
-			}
-			ac.enforcePolicy = enforcePolicy
-			ac.lastPolicyUpdated = t
-		}
-	}
-
-	return ac.enforcePolicy
 }
 
 func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
@@ -138,21 +63,18 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 
 	if renew {
 		enforcerNs := os.Getenv("ENFORCER_NS")
-		signatureNs := os.Getenv("SIGNATURE_NS")
-		policyNs := os.Getenv("POLICY_NS")
 		enforcerConfigName := os.Getenv("ENFORCER_CONFIG_NAME")
 		enforcerConfig := LoadEnforceConfig(enforcerNs, enforcerConfigName)
 
-		ssconfig := loadSingStoreConfig(signatureNs)
+		chartRepo := os.Getenv("CHART_BASE_URL")
+		if chartRepo == "" {
+			chartRepo = ""
+		}
 
 		if enforcerConfig != nil {
-			enforcerConfig.SignStore = ssconfig
-			enforcerConfig.Namespace = enforcerNs
-			enforcerConfig.PolicyNamespace = policyNs
+			enforcerConfig.ChartRepo = chartRepo
 			ac.EnforcerConfig = enforcerConfig
 			ac.lastUpdated = t
-			logLevel := enforcerConfig.LogConfig().LogLevel
-			ac.LoggerConfig = logger.LoggerConfig{Level: logLevel, Format: "json"}
 		}
 	}
 
@@ -161,31 +83,4 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 
 func (ac *AdmissionControlConfig) HelmIntegrityEnabled() bool {
 	return true
-}
-
-func loadSingStoreConfig(signatureNs string) *cfg.SignStoreConfig {
-	certPoolPath := os.Getenv("CERT_POOL_PATH")
-	if certPoolPath == "" {
-		certPoolPath = "/ie-certpool-secret/" // default value
-	}
-	keyringPath := os.Getenv("KEYRING_PATH")
-	if keyringPath == "" {
-		keyringPath = "/keyring/pubring.gpg" // default value
-	}
-	chartDir := os.Getenv("CHART_DIR")
-	if chartDir == "" {
-		chartDir = "/tmp/"
-	}
-	chartRepo := os.Getenv("CHART_BASE_URL")
-	if chartRepo == "" {
-		chartRepo = ""
-	}
-	ssconfig := &cfg.SignStoreConfig{
-		CertPoolPath:       certPoolPath,
-		KeyringPath:        keyringPath,
-		ChartDir:           chartDir,
-		ChartRepo:          chartRepo,
-		SignatureNamespace: signatureNs,
-	}
-	return ssconfig
 }

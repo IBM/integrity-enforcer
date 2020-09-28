@@ -17,103 +17,128 @@
 package policy
 
 import (
-	"fmt"
-
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/jinzhu/copier"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type PolicyType string
+type ScopeType string
 
 const (
-	UnknownPolicy PolicyType = ""
-	DefaultPolicy PolicyType = "DefaultPolicy"
-	IEPolicy      PolicyType = "IEPolicy"
-	SignerPolicy  PolicyType = "SignerPolicy"
-	CustomPolicy  PolicyType = "CustomPolicy"
+	ScopeUndefined  ScopeType = ""
+	ScopeNamespaced ScopeType = "Namespaced"
+	ScopeCluster    ScopeType = "Cluster"
+)
+
+type IntegrityEnforcerMode string
+
+const (
+	UnknownMode IntegrityEnforcerMode = ""
+	EnforceMode IntegrityEnforcerMode = "enforce"
+	DetectMode  IntegrityEnforcerMode = "detect"
 )
 
 /**********************************************
 
-					Policy
+					SignPolicy
 
 ***********************************************/
 
-type Policy struct {
-	Enforce                   []RequestMatchPattern      `json:"enforce,omitempty"`
-	AllowUnverified           []AllowUnverifiedCondition `json:"allowUnverified,omitempty"`
-	IgnoreRequest             []RequestMatchPattern      `json:"ignoreRequest,omitempty"`
-	AllowedSigner             []SignerMatchPattern       `json:"allowedSigner,omitempty"`
-	AllowedForInternalRequest []RequestMatchPattern      `json:"allowedForInternalRequest,omitempty"`
-	AllowedByRule             []RequestMatchPattern      `json:"allowedByRule,omitempty"`
-	AllowedChange             []AllowedChangeCondition   `json:"allowedChange,omitempty"`
-	PermitIfVerifiedOwner     []AllowedUserPattern       `json:"permitIfVerifiedOwner,omitempty"`
-	Namespace                 string                     `json:"namespace,omitempty"`
-	PolicyType                PolicyType                 `json:"policyType,omitempty"`
+type SignPolicy struct {
+	Policies    []SignPolicyCondition `json:"policies,omitempty"`
+	Signers     []SignerCondition     `json:"signers,omitempty"`
+	BreakGlass  []BreakGlassCondition `json:"breakGlass,omitempty"`
+	Description string                `json:"description,omitempty"`
 }
 
-func (self *Policy) CheckFormat() (bool, string) {
-	pType := self.PolicyType
-	ns := self.Namespace
+func (p *SignPolicy) DeepCopyInto(p2 *SignPolicy) {
+	copier.Copy(&p2, &p)
+}
 
-	if pType == UnknownPolicy {
-		return false, "\"policyType\" must be set for any Policy"
-	}
+func (p *SignPolicy) DeepCopy() *SignPolicy {
+	p2 := &SignPolicy{}
+	p.DeepCopyInto(p2)
+	return p2
+}
 
-	if ns != "" && (pType == DefaultPolicy || pType == IEPolicy || pType == SignerPolicy) {
-		return false, fmt.Sprintf("\"namespace\" must be empty for %s", pType)
+func (self *SignPolicy) GetSignerMap() map[string][]SubjectCondition {
+	signerMap := map[string][]SubjectCondition{}
+	for _, si := range self.Signers {
+		tmpSC := []SubjectCondition{}
+		for _, sj := range si.Subjects {
+			sc := SubjectCondition{
+				Name:    si.Name,
+				Subject: sj,
+			}
+			tmpSC = append(tmpSC, sc)
+		}
+		signerMap[si.Name] = tmpSC
 	}
-	if ns == "" && pType == CustomPolicy {
-		return false, fmt.Sprintf("\"namespace\" must be specified for %s", pType)
-	}
-	if pType == SignerPolicy {
-		hasEnforce := len(self.Enforce) > 0
-		hasIgnore := len(self.IgnoreRequest) > 0
-		hasInternal := len(self.AllowedForInternalRequest) > 0
-		hasAllowRule := len(self.AllowedByRule) > 0
-		hasAllowChange := len(self.AllowedChange) > 0
-		hasVOwner := len(self.PermitIfVerifiedOwner) > 0
-		if hasEnforce || hasIgnore || hasInternal || hasAllowRule || hasAllowChange || hasVOwner {
-			return false, fmt.Sprintf("%s must contain only AllowedSigner rule", pType)
+	return signerMap
+}
+
+func (self *SignPolicy) Merge(data *SignPolicy) *SignPolicy {
+	merged := &SignPolicy{}
+	merged.Policies = append(self.Policies, data.Policies...)
+	merged.Signers = append(self.Signers, data.Signers...)
+	merged.BreakGlass = append(self.BreakGlass, data.BreakGlass...)
+	merged.Description = self.Description
+	return merged
+}
+
+func (self *SignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
+	signerMap := self.GetSignerMap()
+	for _, spc := range self.Policies {
+		var included, excluded bool
+		if namespace == "" {
+			if spc.Scope == ScopeCluster {
+				included = true
+				excluded = false
+			}
+		} else {
+			if spc.Scope != ScopeCluster {
+				included = common.MatchWithPatternArray(namespace, spc.Namespaces)
+				excluded = common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+			}
+		}
+		signerMatched := false
+		for _, signerName := range spc.Signers {
+			subjectConditions, ok := signerMap[signerName]
+			if !ok {
+				continue
+			}
+			for _, subjectCondition := range subjectConditions {
+				if subjectCondition.Match(signer) {
+					signerMatched = true
+					break
+				}
+			}
+			if signerMatched {
+				break
+			}
+		}
+		matched := included && !excluded && signerMatched
+		if matched {
+			return true, &spc
 		}
 	}
-	if pType == CustomPolicy {
-		hasSigner := len(self.AllowedSigner) > 0
-		if hasSigner {
-			return false, fmt.Sprintf("%s must not contain AllowedSigner rule", pType)
-		}
-	}
-	return true, ""
+	return false, nil
 }
 
-func (self *Policy) Validate(reqc *common.ReqContext, enforcerNs, policyNs string) (bool, string) {
-	ok, errMsg := self.CheckFormat()
-	if !ok {
-		return false, fmt.Sprintf("Policy in invalid format; %s", errMsg)
-	}
-	ns := reqc.Namespace
-
-	polNs := policyNs
-	pType := self.PolicyType
-
-	if pType == CustomPolicy && ns != polNs {
-		return false, fmt.Sprintf("%s must be created in namespace \"%s\", but requested in \"%s\"", pType, polNs, ns)
-	}
-
-	return true, ""
+type SignPolicyCondition struct {
+	Scope             ScopeType `json:"scope,omitempty"`
+	Namespaces        []string  `json:"namespaces,omitempty"`
+	ExcludeNamespaces []string  `json:"excludeNamespaces,omitempty"`
+	Signers           []string  `json:"signers,omitempty"`
 }
 
-type AllowedChangeCondition struct {
-	Request RequestMatchPattern `json:"request,omitempty"`
-	Key     []string            `json:"key,omitempty"`
-	Owner   OwnerMatchCondition `json:"owner,omitempty"`
+type SignerCondition struct {
+	Name     string                `json:"name,omitempty"`
+	Subjects []SubjectMatchPattern `json:"subjects,omitempty"`
 }
 
-type OwnerMatchCondition struct {
-	Kind       string `json:"kind,omitempty"`
-	ApiVersion string `json:"apiVersion,omitempty"`
-	Name       string `json:"name,omitempty"`
+type BreakGlassCondition struct {
+	Scope      ScopeType `json:"scope,omitempty"`
+	Namespaces []string  `json:"namespaces,omitempty"`
 }
 
 type SubjectMatchPattern struct {
@@ -130,78 +155,21 @@ type SubjectMatchPattern struct {
 	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
-type AllowUnverifiedCondition struct {
-	Namespace string `json:"namespace,omitempty"`
+type SubjectCondition struct {
+	Name    string              `json:"name"`
+	Subject SubjectMatchPattern `json:"subject"`
 }
 
-type SignerMatchPattern struct {
-	Request RequestMatchPattern `json:"request,omitempty"`
-	Subject SubjectMatchPattern `json:"subject,omitempty"`
-}
-
-type AllowedUserPattern struct {
-	AllowChangesBySignedServiceAccount bool                `json:"allowChangesBySignedServiceAccount,omitempty"`
-	AuthorizedServiceAccount           []string            `json:"authorizedServiceAccount,omitempty"`
-	Request                            RequestMatchPattern `json:"request,omitempty"`
-}
-
-type RequestMatchPattern struct {
-	Namespace    string `json:"namespace,omitempty"`
-	Name         string `json:"name,omitempty"`
-	Operation    string `json:"operation,omitempty"`
-	ApiVersion   string `json:"apiVersion,omitempty"`
-	Kind         string `json:"kind,omitempty"`
-	UserName     string `json:"username,omitempty"`
-	Type         string `json:"type,omitempty"`
-	K8sCreatedBy string `json:"k8screatedby,omitempty"`
-	UserGroup    string `json:"usergroup,omitempty"`
-}
-
-func (v *RequestMatchPattern) Match(reqc *common.ReqContext) bool {
-	gv := schema.GroupVersion{
-		Group:   reqc.ApiGroup,
-		Version: reqc.ApiVersion,
-	}
-	apiVersion := gv.String()
-
-	return MatchPattern(v.Namespace, reqc.Namespace) &&
-		MatchPattern(v.Name, reqc.Name) &&
-		MatchPattern(v.Operation, reqc.Operation) &&
-		MatchPattern(v.Kind, reqc.Kind) &&
-		MatchPattern(v.ApiVersion, apiVersion) &&
-		MatchPattern(v.UserName, reqc.UserName) &&
-		MatchPattern(v.Type, reqc.Type) &&
-		MatchPattern(v.K8sCreatedBy, reqc.OrgMetadata.K8sCreatedBy) &&
-		MatchPatternWithArray(v.UserGroup, reqc.UserGroups)
-
-}
-
-func (v *AllowUnverifiedCondition) Match(reqc *common.ReqContext) bool {
-	if v.Namespace == reqc.Namespace || v.Namespace == "*" {
-		return true
-	}
-	return false
-}
-
-func (p *Policy) DeepCopyInto(p2 *Policy) {
-	copier.Copy(&p2, &p)
-}
-
-func (p *Policy) DeepCopy() *Policy {
-	p2 := &Policy{}
-	p.DeepCopyInto(p2)
-	return p2
-}
-
-func (p *Policy) Merge(p2 *Policy) *Policy {
-	return &Policy{
-		Enforce:                   append(p.Enforce, p2.Enforce...),
-		IgnoreRequest:             append(p.IgnoreRequest, p2.IgnoreRequest...),
-		AllowedSigner:             append(p.AllowedSigner, p2.AllowedSigner...),
-		AllowedForInternalRequest: append(p.AllowedForInternalRequest, p2.AllowedForInternalRequest...),
-		AllowedByRule:             append(p.AllowedByRule, p2.AllowedByRule...),
-		AllowedChange:             append(p.AllowedChange, p2.AllowedChange...),
-		PermitIfVerifiedOwner:     append(p.PermitIfVerifiedOwner, p2.PermitIfVerifiedOwner...),
-		AllowUnverified:           append(p.AllowUnverified, p2.AllowUnverified...),
-	}
+func (self *SubjectCondition) Match(signer *common.SignerInfo) bool {
+	return common.MatchPattern(self.Subject.Email, signer.Email) &&
+		common.MatchPattern(self.Subject.Uid, signer.Uid) &&
+		common.MatchPattern(self.Subject.Country, signer.Country) &&
+		common.MatchPattern(self.Subject.Organization, signer.Organization) &&
+		common.MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
+		common.MatchPattern(self.Subject.Locality, signer.Locality) &&
+		common.MatchPattern(self.Subject.Province, signer.Province) &&
+		common.MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
+		common.MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
+		common.MatchPattern(self.Subject.CommonName, signer.CommonName) &&
+		common.MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
 }

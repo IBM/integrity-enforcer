@@ -238,6 +238,14 @@ func BuildSignServiceDeploymentForCR(cr *researchv1alpha1.SignService) *appsv1.D
 				Name:      "ie-certpool-secret",
 			},
 			{
+				MountPath: "/keyring-secret",
+				Name:      "keyring-secret",
+			},
+			{
+				MountPath: "/private-keyring-secret",
+				Name:      "private-keyring-secret",
+			},
+			{
 				MountPath: "/certs",
 				Name:      "ie-server-cert",
 			},
@@ -272,6 +280,8 @@ func BuildSignServiceDeploymentForCR(cr *researchv1alpha1.SignService) *appsv1.D
 					Volumes: []v1.Volume{
 						SecretVolume("signservice-secret", cr.Spec.SignServiceSecretName),
 						SecretVolume("ie-certpool-secret", cr.Spec.IECertPoolSecretName),
+						SecretVolume("keyring-secret", cr.Spec.KeyRingSecretName),
+						SecretVolume("private-keyring-secret", cr.Spec.PrivateKeyRingSecretName),
 						SecretVolume("ie-server-cert", SignServiceServerCertName),
 					},
 				},

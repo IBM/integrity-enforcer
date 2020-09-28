@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
+	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pkg/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/pkg/resources"
@@ -33,9 +35,8 @@ import (
 
 	cert "github.com/IBM/integrity-enforcer/operator/pkg/cert"
 
-	epol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcepolicy/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -98,15 +99,32 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcePolicyCRD(
+func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildEnforcePolicyCRD(instance)
+	expected := res.BuildSignPolicyCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
-
 func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSignatureCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
 	expected := res.BuildResourceSignatureCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateHelmReleaseMetadataCRD(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildHelmReleaseMetadataCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceProtectionProfileCRD(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildResourceProtectionProfileCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterResourceProtectionProfileCRD(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterResourceProtectionProfileCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
@@ -158,12 +176,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcerConfigCR(instance *re
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcePolicyCR(instance *researchv1alpha1.IntegrityEnforcer, expected *epol.EnforcePolicy) (reconcile.Result, error) {
-	found := &epol.EnforcePolicy{}
-
+func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	found := &spol.SignPolicy{}
+	expected := res.BuildSignEnforcePolicyForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
-		"EnforcePolicy.Name", expected.Name)
+		"SignPolicy.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
@@ -172,7 +190,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcePolicyCR(instance *res
 		return reconcile.Result{}, err
 	}
 
-	// If PodSecurityPolicy does not exist, create it and requeue
+	// If default rpp does not exist, create it and requeue
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
 
 	if err != nil && errors.IsNotFound(err) {
@@ -199,28 +217,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateEnforcePolicyCR(instance *res
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateIntegrityEnforcerEnforcePolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildIntegrityEnforcerEnforcePolicyForIE(instance)
-	return r.createOrUpdateEnforcePolicyCR(instance, expected)
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultEnforcePolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildDefaultEnforcePolicyForIE(instance)
-	return r.createOrUpdateEnforcePolicyCR(instance, expected)
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateSignerEnforcePolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildSignerEnforcePolicyForIE(instance)
-	return r.createOrUpdateEnforcePolicyCR(instance, expected)
-}
-
-func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSignatureCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildResourceSignatureForCR(instance)
-	found := &rs.ResourceSignature{}
-
+func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	found := &rpp.ResourceProtectionProfile{}
+	expected := res.BuildDefaultResourceProtectionProfileForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
-		"ResourceSignature.Name", expected.Name)
+		"DefaultResourceProtectionProfile.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
@@ -229,8 +231,51 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSignatureCR(instance 
 		return reconcile.Result{}, err
 	}
 
-	// If PodSecurityPolicy does not exist, create it and requeue
+	// If RPP does not exist, create it and requeue
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new resource")
+		err = r.client.Create(context.TODO(), expected)
+		if err != nil && errors.IsAlreadyExists(err) {
+			// Already exists from previous reconcile, requeue.
+			reqLogger.Info("Skip reconcile: resource already exists")
+			return reconcile.Result{Requeue: true}, nil
+		} else if err != nil {
+			reqLogger.Error(err, "Failed to create new resource")
+			return reconcile.Result{}, err
+		}
+		// Created successfully - return and requeue
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// No extra validation
+
+	// No reconcile was necessary
+	return reconcile.Result{}, nil
+
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultClusterResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+
+	found := &crpp.ClusterResourceProtectionProfile{}
+	expected := res.BuildDefaultClusterResourceProtectionProfileForIE(instance)
+
+	reqLogger := log.WithValues(
+		"Instance.Name", instance.Name,
+		"DefaultClusterResourceProtectionProfile.Name", expected.Name)
+
+	// Set CR instance as the owner and controller
+	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
+	if err != nil {
+		reqLogger.Error(err, "Failed to define expected resource")
+		return reconcile.Result{}, err
+	}
+
+	// If CRPP does not exist, create it and requeue
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: ""}, found)
 
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new resource")
@@ -304,7 +349,6 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSCC(instance *researchv1alpha
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdateServiceAccount(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-
 	expected := res.BuildServiceAccountForIE(instance)
 	found := &corev1.ServiceAccount{}
 
@@ -346,9 +390,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateServiceAccount(instance *rese
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRole(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRole(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRole) (reconcile.Result, error) {
 
-	expected := res.BuildClusterRoleForIE(instance)
 	found := &rbacv1.ClusterRole{}
 
 	reqLogger := log.WithValues(
@@ -390,9 +433,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRole(instance *researc
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBinding(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBinding(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRoleBinding) (reconcile.Result, error) {
 
-	expected := res.BuildClusterRoleBindingForIE(instance)
 	found := &rbacv1.ClusterRoleBinding{}
 
 	reqLogger := log.WithValues(
@@ -433,9 +475,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBinding(instance *
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateRole(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRole(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.Role) (reconcile.Result, error) {
 
-	expected := res.BuildRoleForIE(instance)
 	found := &rbacv1.Role{}
 
 	reqLogger := log.WithValues(
@@ -477,9 +518,8 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateRole(instance *researchv1alph
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBinding(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBinding(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.RoleBinding) (reconcile.Result, error) {
 
-	expected := res.BuildRoleBindingForIE(instance)
 	found := &rbacv1.RoleBinding{}
 
 	reqLogger := log.WithValues(
@@ -518,6 +558,56 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBinding(instance *researc
 	// No reconcile was necessary
 	return reconcile.Result{}, nil
 
+}
+
+// ie-admin
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBindingForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleBindingForIEAdmin(instance)
+	return r.createOrUpdateClusterRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBindingForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleBindingForIEAdmin(instance)
+	return r.createOrUpdateRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleForIEAdmin(instance)
+	return r.createOrUpdateRole(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleForIEAdmin(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleForIEAdmin(instance)
+	return r.createOrUpdateClusterRole(instance, expected)
+}
+
+// for ie
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleBindingForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleBindingForIE(instance)
+	return r.createOrUpdateClusterRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleBindingForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleBindingForIE(instance)
+	return r.createOrUpdateRoleBinding(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateRoleForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildRoleForIE(instance)
+	return r.createOrUpdateRole(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateClusterRoleForIE(
+	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildClusterRoleForIE(instance)
+	return r.createOrUpdateClusterRole(instance, expected)
 }
 
 func (r *ReconcileIntegrityEnforcer) createOrUpdatePodSecurityPolicy(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
@@ -876,4 +966,24 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateWebhook(instance *researchv1a
 	// No reconcile was necessary
 	return reconcile.Result{}, nil
 
+}
+
+// wait function
+func (r *ReconcileIntegrityEnforcer) isDeploymentAvailable(instance *researchv1alpha1.IntegrityEnforcer) bool {
+	found := &appsv1.Deployment{}
+
+	// If Deployment does not exist, return false
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		return false
+	} else if err != nil {
+		return false
+	}
+
+	// return true only if deployment is available
+	if found.Status.AvailableReplicas > 0 {
+		return true
+	}
+
+	return false
 }

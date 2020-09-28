@@ -1,0 +1,71 @@
+apiVersion: research.ibm.com/v1alpha1
+kind: ClusterResourceProtectionProfile
+metadata:
+  name: default-crpp
+spec:
+  ignoreAttrs:
+  - attrs:
+    - metadata.managedFields.*
+    - metadata.resourceVersion
+    - metadata.selfLink
+    - metadata.annotations.control-plane.alpha.kubernetes.io/leader
+    - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+    - metadata.finalizers*
+    match:
+      name: '*'
+  ignoreServiceAccount: 
+  - match: 
+      kind: "*"
+    serviceAccountName:
+    - system:admin
+    - system:apiserver
+    - system:kube-scheduler
+    - system:serviceaccount:integrity-enforcer-ns:integrity-enforcer-operator
+    - system:serviceaccount:openshift-marketplace:marketplace-operator
+    - system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
+    - system:serviceaccount:openshift-network-operator:default
+    - system:serviceaccount:openshift-monitoring:prometheus-operator
+    - system:serviceaccount:kube-system:generic-garbage-collector
+    - system:serviceaccount:kube-system:attachdetach-controller
+    - system:serviceaccount:kube-system:certificate-controller
+    - system:serviceaccount:kube-system:clusterrole-aggregation-controller
+    - system:serviceaccount:kube-system:cronjob-controller
+    - system:serviceaccount:kube-system:disruption-controller
+    - system:serviceaccount:kube-system:endpoint-controller
+    - system:serviceaccount:kube-system:horizontal-pod-autoscaler
+    - system:serviceaccount:kube-system:ibm-file-plugin
+    - system:serviceaccount:kube-system:ibm-keepalived-watcher
+    - system:serviceaccount:kube-system:ibmcloud-block-storage-plugin
+    - system:serviceaccount:kube-system:job-controller
+    - system:serviceaccount:kube-system:namespace-controller
+    - system:serviceaccount:kube-system:node-controller
+    - system:serviceaccount:kube-system:job-controller
+    - system:serviceaccount:kube-system:pod-garbage-collector
+    - system:serviceaccount:kube-system:pv-protection-controller
+    - system:serviceaccount:kube-system:pvc-protection-controller
+    - system:serviceaccount:kube-system:replication-controller
+    - system:serviceaccount:kube-system:resourcequota-controller
+    - system:serviceaccount:kube-system:service-account-controller
+    - system:serviceaccount:kube-system:statefulset-controller
+    - system:serviceaccount:ibm-common-services:cert-manager
+    - system:serviceaccount:openshift-cloud-credential-operator:default
+    - system:serviceaccount:openshift-machine-config-operator:default
+    - system:kube-controller-manager
+    - system:serviceaccount:openshift-infra:namespace-security-allocation-controller
+    - system:serviceaccount:openshift-cluster-version:default
+    - system:serviceaccount:openshift-authentication-operator:authentication-operator
+    - system:serviceaccount:openshift-apiserver-operator:openshift-apiserver-operator
+    - system:serviceaccount:openshift-kube-scheduler-operator:openshift-kube-scheduler-operator
+    - system:serviceaccount:openshift-kube-controller-manager-operator:kube-controller-manager-operator
+    - system:serviceaccount:openshift-controller-manager:openshift-controller-manager-sa
+    - system:serviceaccount:openshift-controller-manager-operator:openshift-controller-manager-operator
+    - system:serviceaccount:openshift-kube-apiserver-operator:kube-apiserver-operator
+    - system:serviceaccount:openshift-sdn:sdn-controller
+    - system:serviceaccount:openshift-machine-api:cluster-autoscaler-operator
+    - system:serviceaccount:openshift-machine-api:machine-api-operator
+    - system:serviceaccount:openshift-machine-config-operator:machine-config-controller
+    - system:serviceaccount:openshift-machine-api:machine-api-controllers
+    - system:serviceaccount:ibm-system:olm-operator-serviceaccount
+    - system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    - system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
+    - system:serviceaccount:tigera-operator:tigera-operator

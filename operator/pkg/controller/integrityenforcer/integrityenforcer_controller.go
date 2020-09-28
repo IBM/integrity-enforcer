@@ -131,7 +131,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateEnforcePolicyCRD(instance)
+	recResult, recErr = r.createOrUpdateSignPolicyCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -141,23 +141,41 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
+	recResult, recErr = r.createOrUpdateResourceProtectionProfileCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	recResult, recErr = r.createOrUpdateClusterResourceProtectionProfileCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	enabledPulgins := instance.Spec.EnforcerConfig.GetEnabledPlugins()
+	if enabledPulgins["helm"] {
+		recResult, recErr = r.createOrUpdateHelmReleaseMetadataCRD(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+	}
+
 	//Custom Resources (CR)
 	recResult, recErr = r.createOrUpdateEnforcerConfigCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateIntegrityEnforcerEnforcePolicyCR(instance)
+	recResult, recErr = r.createOrUpdateSignPolicyCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateDefaultEnforcePolicyCR(instance)
+	recResult, recErr = r.createOrUpdateDefaultResourceProtectionProfileCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateSignerEnforcePolicyCR(instance)
+	recResult, recErr = r.createOrUpdateDefaultClusterResourceProtectionProfileCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -190,27 +208,54 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	//Cluster Role
-	recResult, recErr = r.createOrUpdateClusterRole(instance)
+	recResult, recErr = r.createOrUpdateClusterRoleForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Cluster Role Binding
-	recResult, recErr = r.createOrUpdateClusterRoleBinding(instance)
+	recResult, recErr = r.createOrUpdateClusterRoleBindingForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Role
-	recResult, recErr = r.createOrUpdateRole(instance)
+	recResult, recErr = r.createOrUpdateRoleForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Role Binding
-	recResult, recErr = r.createOrUpdateRoleBinding(instance)
+	recResult, recErr = r.createOrUpdateRoleBindingForIE(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
+	}
+
+	// ie-admin
+	if !instance.Spec.Security.AutoIEAdminCreationDisabled {
+		//Cluster Role
+		recResult, recErr = r.createOrUpdateClusterRoleForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Cluster Role Binding
+		recResult, recErr = r.createOrUpdateClusterRoleBindingForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Role
+		recResult, recErr = r.createOrUpdateRoleForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Role Binding
+		recResult, recErr = r.createOrUpdateRoleBindingForIEAdmin(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
 	}
 
 	// Pod Security Policy (PSP)
@@ -232,9 +277,14 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	//Webhook Configuration
-	recResult, recErr = r.createOrUpdateWebhook(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
+	// wait until deployment is available
+	if r.isDeploymentAvailable(instance) {
+		recResult, recErr = r.createOrUpdateWebhook(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+	} else {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	}
 
 	reqLogger.Info("Reconciliation successful!", "Name", instance.Name)

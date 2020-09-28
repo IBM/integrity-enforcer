@@ -200,8 +200,6 @@ func (owr *ConcreteOwnerResolver) findOwner(ref *common.ResourceRef) (*FindOwner
 	}
 
 	annotation := common.NewResourceAnnotation(annotationMap)
-	annotationStore := GetAnnotationStore()
-	annotation = annotationStore.GetAnnotation(ref, annotation)
 
 	owner := &common.Owner{
 		Ref: ref,

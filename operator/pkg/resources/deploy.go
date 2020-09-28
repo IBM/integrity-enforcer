@@ -18,8 +18,9 @@ package resources
 
 import (
 	"fmt"
-	"strconv"
 	"reflect"
+	"strconv"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -32,6 +33,7 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 	labels := cr.Spec.MetaLabels
 
 	var volumemounts []v1.VolumeMount
+	var servervolumemounts []v1.VolumeMount
 	var volumes []v1.Volume
 
 	volumemounts = []v1.VolumeMount{
@@ -40,6 +42,7 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			Name:      "log-volume",
 		},
 	}
+
 	volumes = []v1.Volume{
 		SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
 		SecretVolume("ie-certpool-secret", cr.Spec.CertPool.Name),
@@ -48,40 +51,28 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		EmptyDirVolume("tmp"),
 	}
 
-	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
-		tlsVolMnt := v1.VolumeMount{
-			MountPath: "/run/secrets/es_tls",
-			Name:      "es-tls-certs",
-			ReadOnly:  true,
-		}
-		volumemounts = append(volumemounts, tlsVolMnt)
-		volumes = append(volumes, SecretVolume("es-tls-certs", cr.Spec.Logger.EsSecretName))
-	}
-
-	serverContainer := v1.Container{
-		Name:            cr.Spec.Server.Name,
-		SecurityContext: cr.Spec.Server.SecurityContext,
-		Image:           cr.Spec.Server.Image,
-		ImagePullPolicy: cr.Spec.Server.ImagePullPolicy,
-		ReadinessProbe: &v1.Probe{
-			InitialDelaySeconds: 30,
-			PeriodSeconds:       30,
-			Handler: v1.Handler{
-				Exec: &v1.ExecAction{
-					Command: []string{
-						"ls",
-					},
-				},
-			},
-		},
-		Ports: []v1.ContainerPort{
+	if cr.Spec.EnforcerConfig.VerifyType == "pgp" {
+		servervolumemounts = []v1.VolumeMount{
 			{
-				Name:          "ac-api",
-				ContainerPort: cr.Spec.Server.Port,
-				Protocol:      v1.ProtocolTCP,
+				MountPath: "/keyring",
+				Name:      "ie-keyring-secret",
 			},
-		},
-		VolumeMounts: []v1.VolumeMount{
+			{
+				MountPath: "/run/secrets/tls",
+				Name:      "ie-tls-certs",
+				ReadOnly:  true,
+			},
+			{
+				MountPath: "/tmp",
+				Name:      "tmp",
+			},
+			{
+				MountPath: "/ie-app/public",
+				Name:      "log-volume",
+			},
+		}
+	} else {
+		servervolumemounts = []v1.VolumeMount{
 			{
 				MountPath: "/ie-certpool-secret",
 				Name:      "ie-certpool-secret",
@@ -103,47 +94,63 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 				MountPath: "/ie-app/public",
 				Name:      "log-volume",
 			},
-		},
-		Env: []v1.EnvVar{
-			{
-				Name:  "CHART_BASE_URL",
-				Value: cr.Spec.Server.ChartBaseUrl,
+		}
+	}
+
+	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
+		tlsVolMnt := v1.VolumeMount{
+			MountPath: "/run/secrets/es_tls",
+			Name:      "es-tls-certs",
+			ReadOnly:  true,
+		}
+		volumemounts = append(volumemounts, tlsVolMnt)
+		volumes = append(volumes, SecretVolume("es-tls-certs", cr.Spec.Logger.EsSecretName))
+	}
+
+	serverContainer := v1.Container{
+		Name:            cr.Spec.Server.Name,
+		SecurityContext: cr.Spec.Server.SecurityContext,
+		Image:           cr.Spec.Server.Image,
+		ImagePullPolicy: cr.Spec.Server.ImagePullPolicy,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{
+						"ls",
+					},
+				},
 			},
+		},
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "ac-api",
+				ContainerPort: cr.Spec.Server.Port,
+				Protocol:      v1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: servervolumemounts,
+		Env: []v1.EnvVar{
 			{
 				Name:  "ENFORCER_NS",
 				Value: cr.Namespace,
-			},
-			{
-				Name:  "SIGNATURE_NS",
-				Value: cr.Spec.SignatureNamespace,
-			},
-			{
-				Name:  "POLICY_NS",
-				Value: cr.Spec.PolicyNamespace,
 			},
 			{
 				Name:  "ENFORCER_CONFIG_NAME",
 				Value: cr.Spec.EnforcerConfigCrName,
 			},
 			{
+				Name:  "CHART_BASE_URL",
+				Value: cr.Spec.Server.ChartBaseUrl,
+			},
+			{
 				Name:  "ENFORCER_CM_RELOAD_SEC",
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcerCmReloadSec)),
 			},
 			{
-				Name:  "ENFORCE_POLICY_NAME",
-				Value: cr.Spec.EnforcePolicyCrName,
-			},
-			{
 				Name:  "ENFORCE_POLICY_RELOAD_SEC",
 				Value: strconv.Itoa(int(cr.Spec.Server.EnforcePolicyReloadSec)),
-			},
-			{
-				Name:  "CX_LOG_ENABLED",
-				Value: strconv.FormatBool(cr.Spec.Server.ContextLogEnabled),
-			},
-			{
-				Name:  "PACKAGE_DIR",
-				Value: "/tmp",
 			},
 		},
 		Resources: cr.Spec.Server.Resources,
@@ -159,6 +166,14 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 			{
 				Name:  "STDOUT_ENABLED",
 				Value: strconv.FormatBool(cr.Spec.Logger.StdOutput),
+			},
+			{
+				Name:  "HTTPOUT_ENABLED",
+				Value: strconv.FormatBool(cr.Spec.Logger.HttpConfig.Enabled),
+			},
+			{
+				Name:  "HTTPOUT_ENDPOINT_URL",
+				Value: cr.Spec.Logger.HttpConfig.Endpoint,
 			},
 			{
 				Name:  "ES_ENABLED",
@@ -221,7 +236,7 @@ func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deploy
 		Spec: appsv1.DeploymentSpec{
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge: cr.Spec.MaxSurge,
+					MaxSurge:       cr.Spec.MaxSurge,
 					MaxUnavailable: cr.Spec.MaxUnavailable,
 				},
 			},
@@ -279,6 +294,7 @@ func EqualPods(expected v1.PodTemplateSpec, found v1.PodTemplateSpec) bool {
 	}
 	return true
 }
+
 // EqualContainers returns a Boolean
 func EqualContainers(expected v1.Container, found v1.Container) bool {
 	if !reflect.DeepEqual(found.Name, expected.Name) {

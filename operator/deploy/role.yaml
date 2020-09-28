@@ -70,9 +70,6 @@ rules:
   - research.ibm.com
   resources:
   - '*'
-  - enforcerpolicies
-  - resourcesignatures
-  - enforcepolicies
   verbs:
   - create
   - delete
