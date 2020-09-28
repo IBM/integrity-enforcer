@@ -967,3 +967,23 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateWebhook(instance *researchv1a
 	return reconcile.Result{}, nil
 
 }
+
+// wait function
+func (r *ReconcileIntegrityEnforcer) isDeploymentAvailable(instance *researchv1alpha1.IntegrityEnforcer) bool {
+	found := &appsv1.Deployment{}
+
+	// If Deployment does not exist, return false
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		return false
+	} else if err != nil {
+		return false
+	}
+
+	// return true only if deployment is available
+	if found.Status.AvailableReplicas > 0 {
+		return true
+	}
+
+	return false
+}
