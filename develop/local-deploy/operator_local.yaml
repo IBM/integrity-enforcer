@@ -16,7 +16,7 @@ spec:
       containers:
         - name: integrity-enforcer-operator
           # Replace this with the built image name
-          image: integrity-enforcer-operator:0.0.3rc2
+          image: integrity-enforcer-operator:0.0.3
           command:
           - integrity-enforcer-operator
           imagePullPolicy: IfNotPresent
