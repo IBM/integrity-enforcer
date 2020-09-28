@@ -24,8 +24,8 @@ BUILD_LOCALLY ?= 1
 # IBMDEV Set image and repo
 IMAGE_NAME ?= integrity-enforcer-operator
 IMAGE_REPO ?= integrityenforcer
-CSV_VERSION_LOCAL ?= 0.0.3rc2
-CSV_VERSION ?= 0.0.3rc2
+CSV_VERSION_LOCAL ?= 0.0.3
+CSV_VERSION ?= 0.0.3
 IMAGE_LOCAL ?="$(IMAGE_NAME):$(CSV_VERSION_LOCAL)"
 IMAGE_REMOTE ?="$(IMAGE_REPO)/$(IMAGE_NAME):$(CSV_VERSION)"
 

@@ -25,7 +25,7 @@ fi
 
 
 SS_BASEDIR=${IE_REPO_ROOT}/develop/signservice/signservice/
-SS_IMAGE_REMOTE=integrityenforcer/ie-signservice:0.0.3rc2
+SS_IMAGE_REMOTE=integrityenforcer/ie-signservice:0.0.3
 SS_IMAGE_LOCAL=signservice:dev
 
 SS_OPERATOR_BASEDIR=${IE_REPO_ROOT}/develop/signservice/signservice-operator/
