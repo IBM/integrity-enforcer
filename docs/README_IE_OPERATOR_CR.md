@@ -95,20 +95,6 @@ spec:
     openShift: true
 ```
 
-## Signature Verification Key
-
-```yaml
-spec:
-  certPoolConfig:
-    createIfNotExist: false
-    keyValue: test
-    name: ie-certpool-secret
-  keyRingConfig:
-    createIfNotExist: false
-    keyValue: test
-    name: keyring-secret
-```
-
 ## IE admin
 
 Specify user group for IE admin. The following values are default.
