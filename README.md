@@ -16,7 +16,8 @@ Integrity Enforcer (IE) provides signature-based assurance of integrity for Kube
 - Perform all integrity verification on cluster (admission controller, not in client side)
 - Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 ​
-![Scenario](ie-scenario.png).
+
+![Scenario](./docs/ie-scenario.png)
 
 ## Quick Start
 See [Quick Start](./docs/README_QUICK.md)
