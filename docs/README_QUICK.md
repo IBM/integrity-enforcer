@@ -233,23 +233,7 @@ configmap/test-cm created
 ```
 
 
-IE generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IE server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
-
-```
-$ cd integrity-enforcer
-$ ./scripts/log_server.sh
-{
-  "apiVersion": "rbac.authorization.k8s.io/v1",
-  "kind": "ClusterRole",
-  "level": "trace",
-  "msg": "New Admission Request Received",
-  "name": "olm-operators-view",
-  "namespace": "",
-  "operation": "CREATE",
-  "time": "2020-09-23T02:43:24.337685569Z"
-}
-...
-```
+IE generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IE server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
 
 If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
 ```json
