@@ -277,9 +277,14 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	//Webhook Configuration
-	recResult, recErr = r.createOrUpdateWebhook(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
+	// wait until deployment is available
+	if r.isDeploymentAvailable(instance) {
+		recResult, recErr = r.createOrUpdateWebhook(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+	} else {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	}
 
 	reqLogger.Info("Reconciliation successful!", "Name", instance.Name)
