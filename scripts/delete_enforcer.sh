@@ -55,6 +55,7 @@ echo ""
 if [ ! -d ${ENFORCER_DEPLOY_DIR} ];then
   echo "directory not exists."
 else
+    kubectl delete mutatingwebhookconfiguration ie-webhook-config
     kubectl delete -f ${IE_REPO_ROOT}/${IE_CR}  -n ${IE_NS}
     kubectl delete -f ${IE_REPO_ROOT}/${IE_OPERATOR_YAML} -n ${IE_NS}
     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role_binding.yaml -n ${IE_NS}
