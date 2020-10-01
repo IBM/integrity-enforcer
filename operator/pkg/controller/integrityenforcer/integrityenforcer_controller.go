@@ -21,6 +21,7 @@ import (
 	"time"
 
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,6 +69,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner IntegrityEnforcer
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &researchv1alpha1.IntegrityEnforcer{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to Deployment
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &researchv1alpha1.IntegrityEnforcer{},
 	})
@@ -284,7 +294,10 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 			return recResult, recErr
 		}
 	} else {
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+		recResult, recErr = r.deleteWebhook(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
 	}
 
 	reqLogger.Info("Reconciliation successful!", "Name", instance.Name)

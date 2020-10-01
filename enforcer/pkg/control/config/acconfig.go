@@ -22,6 +22,7 @@ import (
 	"time"
 
 	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
+	log "github.com/sirupsen/logrus"
 )
 
 /**********************************************
@@ -65,6 +66,14 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 		enforcerNs := os.Getenv("ENFORCER_NS")
 		enforcerConfigName := os.Getenv("ENFORCER_CONFIG_NAME")
 		enforcerConfig := LoadEnforceConfig(enforcerNs, enforcerConfigName)
+		if enforcerConfig == nil {
+			if ac.EnforcerConfig == nil {
+				log.Fatal("Failed to initialize EnforcerConfig. Exiting...")
+			} else {
+				enforcerConfig = ac.EnforcerConfig
+				log.Warn("The loaded EnforcerConfig is nil, re-use the existing one.")
+			}
+		}
 
 		chartRepo := os.Getenv("CHART_BASE_URL")
 		if chartRepo == "" {

@@ -25,8 +25,6 @@ import (
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 
-	"log"
-
 	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
@@ -40,6 +38,8 @@ import (
 
 	ecfgclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/enforcerconfig/clientset/versioned/typed/enforcerconfig/v1alpha1"
 	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
+
+	log "github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/rest"
 )
@@ -408,12 +408,12 @@ func LoadEnforceConfig(namespace, cmname string) *cfg.EnforcerConfig {
 	}
 	clientset, err := ecfgclient.NewForConfig(config)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return nil
 	}
 	ecres, err := clientset.EnforcerConfigs(namespace).Get(cmname, metav1.GetOptions{})
 	if err != nil {
-		log.Fatalln("failed to get EnforcerConfig:", err)
+		log.Error("failed to get EnforcerConfig:", err.Error())
 		return nil
 	}
 
