@@ -968,6 +968,33 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateWebhook(instance *researchv1a
 
 }
 
+// delete webhookconfiguration
+func (r *ReconcileIntegrityEnforcer) deleteWebhook(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+
+	expected := res.BuildMutatingWebhookConfigurationForIE(instance)
+	found := &admv1.MutatingWebhookConfiguration{}
+
+	reqLogger := log.WithValues(
+		"Instance.Name", instance.Name,
+		"MutatingWebhookConfiguration.Name", expected.Name)
+
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name}, found)
+
+	if err == nil {
+		reqLogger.Info("Deleting the IE webhook")
+		err = r.client.Delete(context.TODO(), found)
+		if err != nil {
+			reqLogger.Error(err, "Failed to delete the IE Webhook")
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if errors.IsNotFound(err) {
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else {
+		return reconcile.Result{}, err
+	}
+}
+
 // wait function
 func (r *ReconcileIntegrityEnforcer) isDeploymentAvailable(instance *researchv1alpha1.IntegrityEnforcer) bool {
 	found := &appsv1.Deployment{}
