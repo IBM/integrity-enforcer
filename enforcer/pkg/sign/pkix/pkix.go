@@ -17,6 +17,7 @@
 package pkix
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -276,7 +277,7 @@ func VerifyCertificate(certPemBytes []byte, certDir string) (bool, string, error
 		return false, reasonFail, fmt.Errorf(reasonFail)
 	}
 	for _, poolCert := range poolCerts {
-		if !poolCert.Equal(cert) {
+		if !poolCert.Equal(cert) || isSelfSignedCert(cert) {
 			roots.AddCert(poolCert)
 		}
 	}
@@ -291,4 +292,8 @@ func VerifyCertificate(certPemBytes []byte, certDir string) (bool, string, error
 	}
 
 	return true, "", nil
+}
+
+func isSelfSignedCert(cert *x509.Certificate) bool {
+	return bytes.Equal(cert.RawSubject, cert.RawIssuer)
 }
