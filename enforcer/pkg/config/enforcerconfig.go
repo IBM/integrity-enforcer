@@ -49,6 +49,7 @@ type EnforcerConfig struct {
 
 	Namespace          string `json:"namespace,omitempty"`
 	SignatureNamespace string `json:"signatureNamespace,omitempty"`
+	ProfileNamespace   string `json:"profileNamespace,omitempty"`
 	VerifyType         string `json:"verifyType"`
 	CertPoolPath       string `json:"certPoolPath,omitempty"`
 	KeyringPath        string `json:"keyringPath,omitempty"`

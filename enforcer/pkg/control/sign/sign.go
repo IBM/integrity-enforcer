@@ -19,7 +19,6 @@ package sign
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	vrsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
@@ -65,7 +64,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignPolicyEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error)
+	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectProfiles []protect.ProtectionProfile) (*common.SignPolicyEvalResult, error)
 }
 
 type ConcreteSignPolicyEvaluator struct {
@@ -82,12 +81,9 @@ func NewSignPolicyEvaluator(config *config.EnforcerConfig, policy *policy.SignPo
 	}, nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) *GeneralSignature {
+func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
 
 	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
-
-	matchedProtectAttrs := strings.Join(findAttrsPattern(reqc, protectAttrs), ",")
-	matchedUnprotectAttrs := strings.Join(findAttrsPattern(reqc, unprotectAttrs), ",")
 
 	//1. pick ResourceSignature from metadata.annotation if available
 	if sigAnnotations.Signature != "" {
@@ -111,7 +107,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 		}
 		return &GeneralSignature{
 			SignType: signType,
-			data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope, "protectAttrs": matchedProtectAttrs, "unprotectAttrs": matchedUnprotectAttrs},
+			data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope},
 			option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 		}
 	}
@@ -139,7 +135,7 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "protectAttrs": matchedProtectAttrs, "unprotectAttrs": matchedUnprotectAttrs},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -179,13 +175,13 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 	// return nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectAttrs, unprotectAttrs []*protect.AttrsPattern) (*common.SignPolicyEvalResult, error) {
+func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectProfiles []protect.ProtectionProfile) (*common.SignPolicyEvalResult, error) {
 
 	// eval sign policy
 	ref := reqc.ResourceRef()
 
 	// find signature
-	rsig := self.GetResourceSignature(ref, reqc, resSigList, protectAttrs, unprotectAttrs)
+	rsig := self.GetResourceSignature(ref, reqc, resSigList)
 	if rsig == nil {
 		return &common.SignPolicyEvalResult{
 			Allow:   false,
@@ -202,7 +198,7 @@ func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigLis
 	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, self.config.CertPoolPath, self.config.KeyringPath)
 
 	// verify signature
-	sigVerifyResult, err := verifier.Verify(rsig, reqc)
+	sigVerifyResult, err := verifier.Verify(rsig, reqc, protectProfiles)
 	if err != nil {
 		return &common.SignPolicyEvalResult{
 			Allow:   false,

@@ -132,29 +132,6 @@ type Result struct {
 	MatchedRule string `json:"matchedRule,omitempty"`
 }
 
-func (self *Result) Update(reqFields map[string]string, reason string, matchedRule *Rule) {
-	tmp := &Request{}
-	v := reflect.Indirect(reflect.ValueOf(tmp))
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		fieldName := t.Field(i).Name
-		f := v.Field(i)
-		itf := f.Interface()
-		if _, ok := itf.(string); ok {
-			reqValue, ok2 := reqFields[fieldName]
-			if ok2 {
-				v.Field(i).SetString(reqValue)
-			}
-		} else {
-			continue
-		}
-	}
-	self.Request = tmp.String()
-	self.Reason = reason
-	self.MatchedRule = matchedRule.String()
-	return
-}
-
 func (p *Rule) DeepCopyInto(p2 *Rule) {
 	copier.Copy(&p2, &p)
 }
@@ -207,5 +184,7 @@ func (p *Result) DeepCopy() *Result {
 
 type ProtectionProfile interface {
 	Match(reqFields map[string]string) (bool, *Rule)
-	Update(reqFields map[string]string, reason string, matchedRule *Rule)
+	ProtectAttrs(reqFields map[string]string) []*AttrsPattern
+	UnprotectAttrs(reqFields map[string]string) []*AttrsPattern
+	IgnoreAttrs(reqFields map[string]string) []*AttrsPattern
 }

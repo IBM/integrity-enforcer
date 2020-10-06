@@ -121,6 +121,17 @@ func BuildClusterRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Clust
 			},
 			{
 				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"events",
+				},
+				Verbs: []string{
+					"create", "update", "get",
+				},
+			},
+			{
+				APIGroups: []string{
 					"*",
 				},
 				Resources: []string{

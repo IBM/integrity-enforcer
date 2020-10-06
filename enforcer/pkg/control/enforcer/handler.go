@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
@@ -31,12 +32,15 @@ import (
 	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
 	patchutil "github.com/IBM/integrity-enforcer/enforcer/pkg/control/patch"
 	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 /**********************************************
@@ -206,7 +210,10 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	if !self.ctx.Allow && !self.ctx.IEResource {
-		// self.updateProtectionProfileStatus(self.ctx.Message)
+		err := self.createOrUpdateEvent()
+		if err != nil {
+			logger.Error("Failed to create an event; ", err)
+		}
 	}
 
 	//log context
@@ -418,9 +425,8 @@ func (self *RequestHandler) evalSignPolicy() (*common.SignPolicyEvalResult, erro
 	} else {
 		reqc := self.reqc
 		resSigList := self.loader.ResSigList(reqc)
-		protectAttrs := self.loader.ProtectAttrsPatterns(reqc.ResourceScope)
-		unprotectAttrs := self.loader.UnprotectAttrsPatterns(reqc.ResourceScope)
-		return evaluator.Eval(reqc, resSigList, protectAttrs, unprotectAttrs)
+		protectProfiles := self.loader.ProtectionProfile(reqc.ResourceScope)
+		return evaluator.Eval(reqc, resSigList, protectProfiles)
 	}
 }
 
@@ -431,8 +437,8 @@ func (self *RequestHandler) evalMutation() (*common.MutationEvalResult, error) {
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		rules := self.loader.IgnoreAttrsPatterns(reqc.ResourceScope)
-		return checker.Eval(reqc, rules)
+		protectProfiles := self.loader.ProtectionProfile(reqc.ResourceScope)
+		return checker.Eval(reqc, protectProfiles)
 	}
 }
 
@@ -445,11 +451,12 @@ func (self *RequestHandler) abort(reason string, err error) {
 func (self *RequestHandler) initLoader() {
 	enforcerNamespace := self.config.Namespace
 	requestNamespace := self.reqc.Namespace
-	signatureNamespace := self.config.SignatureNamespace // for cluster scope request
+	signatureNamespace := self.config.SignatureNamespace // for non-existing namespace / cluster scope
+	profileNamespace := self.config.ProfileNamespace     // for non-existing namespace / cluster scope
 	loader := &Loader{
 		Config:            self.config,
 		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
-		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, requestNamespace),
+		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace),
 		CRPP:              ctlconfig.NewCRPPLoader(),
 		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace),
 	}
@@ -557,11 +564,73 @@ func (self *RequestHandler) CheckIfDetectOnly() bool {
 	return self.loader.DetectOnlyMode()
 }
 
-func (self *RequestHandler) updateProtectionProfileStatus(msg string) {
-	err := self.loader.updateProtectionProfileStatus(self.reqc, msg)
+func (self *RequestHandler) createOrUpdateEvent() error {
+	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
-		logger.Error("Failed to update status in ProtectionProfile; ", err)
+		return err
 	}
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	sourceName := "IntegrityEnforcer"
+	evtName := fmt.Sprintf("ie-deny-%s-%s-%s", strings.ToLower(self.reqc.Operation), strings.ToLower(self.reqc.Kind), self.reqc.Name)
+	evtNamespace := self.reqc.Namespace
+	involvedObject := v1.ObjectReference{
+		Namespace:  self.reqc.Namespace,
+		APIVersion: self.reqc.GroupVersion(),
+		Kind:       self.reqc.Kind,
+		Name:       self.reqc.Name,
+	}
+	resource := involvedObject.String()
+
+	// report cluster scope object events as event of IE itself
+	if self.reqc.ResourceScope == "Cluster" {
+		evtNamespace = self.config.Namespace
+		involvedObject = v1.ObjectReference{
+			Namespace:  self.config.Namespace,
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       "ie-server",
+		}
+	}
+
+	now := time.Now()
+	evt := &v1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: evtName,
+		},
+		InvolvedObject:      involvedObject,
+		Type:                sourceName,
+		Source:              v1.EventSource{Component: sourceName},
+		ReportingController: sourceName,
+		ReportingInstance:   evtName,
+		Action:              evtName,
+		FirstTimestamp:      metav1.NewTime(now),
+	}
+	isExistingEvent := false
+	current, getErr := client.CoreV1().Events(evtNamespace).Get(evtName, metav1.GetOptions{})
+	if current != nil && getErr == nil {
+		isExistingEvent = true
+		evt = current
+	}
+
+	evt.Message = fmt.Sprintf("%s, Resource: %s", self.ctx.Message, resource)
+	evt.Reason = common.ReasonCodeMap[self.ctx.ReasonCode].Code
+	evt.Count = evt.Count + 1
+	evt.EventTime = metav1.NewMicroTime(now)
+	evt.LastTimestamp = metav1.NewTime(now)
+
+	if isExistingEvent {
+		_, err = client.CoreV1().Events(evtNamespace).Update(evt)
+	} else {
+		_, err = client.CoreV1().Events(evtNamespace).Create(evt)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /**********************************************
@@ -600,34 +669,6 @@ func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
 		}
 	}
 	return rules
-}
-
-func (self *Loader) updateProtectionProfileStatus(reqc *common.ReqContext, msg string) error {
-	var profileLoader ctlconfig.ProtectionProfileLoader
-	resourceScope := reqc.ResourceScope
-	if resourceScope == "Namespaced" {
-		profileLoader = self.RPP
-	} else if resourceScope == "Cluster" {
-		profileLoader = self.CRPP
-	}
-
-	profiles := profileLoader.GetProfileInterface()
-	if len(profiles) == 0 {
-		return nil
-	}
-
-	// update contents (in memory)
-	reqFields := reqc.Map()
-	updatedProfiles := []protect.ProtectionProfile{}
-	for _, profile := range profiles {
-		if matched, matchedRule := profile.Match(reqFields); matched {
-			profile.Update(reqFields, msg, matchedRule)
-			updatedProfiles = append(updatedProfiles, profile)
-		}
-	}
-
-	// update profile resource in k8s
-	return profileLoader.Update(updatedProfiles)
 }
 
 func (self *Loader) IgnoreServiceAccountPatterns(resourceScope string) []*protect.ServieAccountPattern {
@@ -710,6 +751,27 @@ func (self *Loader) UnprotectAttrsPatterns(resourceScope string) []*protect.Attr
 		}
 	}
 	return patterns
+
+}
+
+func (self *Loader) ProtectionProfile(resourceScope string) []protect.ProtectionProfile {
+	protectProfiles := []protect.ProtectionProfile{}
+	if resourceScope == "Namespaced" {
+		rpps := self.RPP.GetData()
+		for _, d := range rpps {
+			if !d.Spec.Disabled {
+				protectProfiles = append(protectProfiles, d)
+			}
+		}
+	} else if resourceScope == "Cluster" {
+		rpps := self.CRPP.GetData()
+		for _, d := range rpps {
+			if !d.Spec.Disabled {
+				protectProfiles = append(protectProfiles, d)
+			}
+		}
+	}
+	return protectProfiles
 
 }
 

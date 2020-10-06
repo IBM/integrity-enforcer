@@ -57,11 +57,11 @@ type ClusterResourceProtectionProfile struct {
 	Status ClusterResourceProtectionProfileStatus `json:"status,omitempty"`
 }
 
-func (self *ClusterResourceProtectionProfile) IsEmpty() bool {
+func (self ClusterResourceProtectionProfile) IsEmpty() bool {
 	return len(self.Spec.Rules) == 0
 }
 
-func (self *ClusterResourceProtectionProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
+func (self ClusterResourceProtectionProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
 	for _, rule := range self.Spec.Rules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
@@ -70,13 +70,34 @@ func (self *ClusterResourceProtectionProfile) Match(reqFields map[string]string)
 	return false, nil
 }
 
-func (self *ClusterResourceProtectionProfile) Update(reqFields map[string]string, reason string, matchedRule *protect.Rule) {
-	results := self.Status.Results
-	newResult := &protect.Result{}
-	newResult.Update(reqFields, reason, matchedRule)
-	results = append(results, newResult)
-	self.Status.Results = results
-	return
+func (self ClusterResourceProtectionProfile) ProtectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	for _, attrsPattern := range self.Spec.ProtectAttrs {
+		if attrsPattern.Match.Match(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	return patterns
+}
+
+func (self ClusterResourceProtectionProfile) UnprotectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	for _, attrsPattern := range self.Spec.UnprotectAttrs {
+		if attrsPattern.Match.Match(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	return patterns
+}
+
+func (self ClusterResourceProtectionProfile) IgnoreAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	for _, attrsPattern := range self.Spec.IgnoreAttrs {
+		if attrsPattern.Match.Match(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	return patterns
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

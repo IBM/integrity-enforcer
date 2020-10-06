@@ -28,6 +28,7 @@ import (
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/plugins/helm"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
 	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
 )
@@ -39,7 +40,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext) (*SigVerifyResult, error)
+	Verify(sig *GeneralSignature, reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*SigVerifyResult, error)
 }
 
 /**********************************************
@@ -64,10 +65,22 @@ func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespac
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext) (*SigVerifyResult, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
+
+	var protectAttrsList [][]*protect.AttrsPattern
+	for _, profile := range protectProfiles {
+		attrs := profile.ProtectAttrs(reqc.Map())
+		protectAttrsList = append(protectAttrsList, attrs)
+	}
+
+	var unprotectAttrsList [][]*protect.AttrsPattern
+	for _, profile := range protectProfiles {
+		attrs := profile.UnprotectAttrs(reqc.Map())
+		unprotectAttrsList = append(unprotectAttrsList, attrs)
+	}
 
 	if sig.option["matchRequired"] {
 		message, _ := sig.data["message"]
@@ -75,9 +88,8 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		if yamlBytes, ok := sig.data["yamlBytes"]; ok {
 			message = yamlBytes
 		}
-		protectAttrs, _ := sig.data["protectAttrs"]
-		unprotectAttrs, _ := sig.data["unprotectAttrs"]
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrs, unprotectAttrs, self.Namespace, sig.SignType)
+
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, unprotectAttrsList, reqc.ResourceScope, sig.SignType)
 		if !matched {
 			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
@@ -226,7 +238,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs, enforcerNamespace string, signType SignatureType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs [][]*protect.AttrsPattern, resScope string, signType SignatureType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -239,25 +251,38 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		return false, ""
 	}
 
-	addMask := []string{}
-	if unprotectAttrs != "" && protectAttrs == "" {
-		addMask = mapnode.SplitCommaSeparatedKeys(unprotectAttrs)
-	}
-	mask = append(mask, addMask...)
-
 	focus = []string{}
-	if protectAttrs != "" {
-		focus = mapnode.SplitCommaSeparatedKeys(protectAttrs)
+	for _, attrs := range protectAttrs {
+		for _, attr := range attrs {
+			focus = append(focus, attr.Attrs...)
+		}
+	}
+
+	addMask := []string{}
+	if len(focus) == 0 {
+		for _, attrs := range unprotectAttrs {
+			for _, attr := range attrs {
+				addMask = append(addMask, attr.Attrs...)
+			}
+		}
+		mask = append(mask, addMask...)
 	}
 
 	matched, diffStr = matchContents(orgObj, reqObj, focus, mask)
 	if matched {
 		logger.Debug("matched directly")
 	}
+
+	// do not attempt to DryRun for Cluster scope resource
+	// because ie-sa does not have role for creating "any" resource at cluster scope
+	if resScope == "Cluster" {
+		return matched, diffStr
+	}
+
 	if !matched && signType == SignatureTypeResource {
 
 		nsMaskedOrgBytes := orgNode.Mask([]string{"metadata.namespace"}).ToYaml()
-		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), enforcerNamespace)
+		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), self.Namespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate: %s", err.Error()))
 			return false, ""
@@ -283,7 +308,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		}
 		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
 		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
-		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.Namespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
 			return false, ""
@@ -305,7 +330,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		}
 		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
 		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
-		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), enforcerNamespace)
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.Namespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
 			return false, ""
@@ -456,7 +481,7 @@ type HelmVerifier struct {
 	KeyringPath  string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext) (*SigVerifyResult, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error

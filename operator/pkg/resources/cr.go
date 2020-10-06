@@ -58,6 +58,9 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 	if ecc.Spec.EnforcerConfig.SignatureNamespace == "" {
 		ecc.Spec.EnforcerConfig.SignatureNamespace = cr.Namespace
 	}
+	if ecc.Spec.EnforcerConfig.ProfileNamespace == "" {
+		ecc.Spec.EnforcerConfig.ProfileNamespace = cr.Namespace
+	}
 	if ecc.Spec.EnforcerConfig.IEServerUserName == "" {
 		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
 	}

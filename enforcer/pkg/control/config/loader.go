@@ -48,27 +48,29 @@ import (
 
 type RPPLoader struct {
 	enforcerNamespace string
+	profileNamespace  string
 	requestNamespace  string
 	interval          time.Duration
 
 	Client *rppclient.ResearchV1alpha1Client
-	Data   []*rppapi.ResourceProtectionProfile
+	Data   []rppapi.ResourceProtectionProfile
 }
 
-func NewRPPLoader(enforcerNamespace, requestNamespace string) *RPPLoader {
+func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string) *RPPLoader {
 	interval := time.Second * 10
 	config, _ := rest.InClusterConfig()
 	client, _ := rppclient.NewForConfig(config)
 
 	return &RPPLoader{
 		enforcerNamespace: enforcerNamespace,
+		profileNamespace:  profileNamespace,
 		requestNamespace:  requestNamespace,
 		interval:          interval,
 		Client:            client,
 	}
 }
 
-func (self *RPPLoader) GetData() []*rppapi.ResourceProtectionProfile {
+func (self *RPPLoader) GetData() []rppapi.ResourceProtectionProfile {
 	if len(self.Data) == 0 {
 		self.Load()
 	}
@@ -77,7 +79,7 @@ func (self *RPPLoader) GetData() []*rppapi.ResourceProtectionProfile {
 
 func (self *RPPLoader) Load() {
 	var err error
-	var list1, list2 *rppapi.ResourceProtectionProfileList
+	var list1, list2, list3 *rppapi.ResourceProtectionProfileList
 	var keyName string
 
 	keyName = fmt.Sprintf("RPPLoader/%s/list", self.enforcerNamespace)
@@ -100,15 +102,15 @@ func (self *RPPLoader) Load() {
 		}
 	}
 
-	keyName = fmt.Sprintf("RPPLoader/%s/list", self.requestNamespace)
+	keyName = fmt.Sprintf("RPPLoader/%s/list", self.profileNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceProtectionProfiles(self.requestNamespace).List(metav1.ListOptions{})
+		list2, err = self.Client.ResourceProtectionProfiles(self.profileNamespace).List(metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceProtectionProfile:", err)
 			return
 		}
 		logger.Debug("ResourceProtectionProfile reloaded.")
-		if len(list1.Items) > 0 {
+		if len(list2.Items) > 0 {
 			tmp, _ := json.Marshal(list2)
 			cache.SetString(keyName, string(tmp), &(self.interval))
 		}
@@ -120,12 +122,34 @@ func (self *RPPLoader) Load() {
 		}
 	}
 
-	data := []*rppapi.ResourceProtectionProfile{}
+	keyName = fmt.Sprintf("RPPLoader/%s/list", self.requestNamespace)
+	if cached := cache.GetString(keyName); cached == "" {
+		list3, err = self.Client.ResourceProtectionProfiles(self.requestNamespace).List(metav1.ListOptions{})
+		if err != nil {
+			logger.Error("failed to get ResourceProtectionProfile:", err)
+			return
+		}
+		logger.Debug("ResourceProtectionProfile reloaded.")
+		if len(list3.Items) > 0 {
+			tmp, _ := json.Marshal(list3)
+			cache.SetString(keyName, string(tmp), &(self.interval))
+		}
+	} else {
+		err = json.Unmarshal([]byte(cached), &list3)
+		if err != nil {
+			logger.Error("failed to Unmarshal cached ResourceProtectionProfile:", err)
+			return
+		}
+	}
+	data := []rppapi.ResourceProtectionProfile{}
 	for _, d := range list1.Items {
-		data = append(data, &d)
+		data = append(data, d)
 	}
 	for _, d := range list2.Items {
-		data = append(data, &d)
+		data = append(data, d)
+	}
+	for _, d := range list3.Items {
+		data = append(data, d)
 	}
 	self.Data = data
 	return
@@ -139,27 +163,13 @@ func (self *RPPLoader) GetProfileInterface() []protect.ProtectionProfile {
 	return profiles
 }
 
-func (self *RPPLoader) Update(profiles []protect.ProtectionProfile) error {
-	for _, profile := range profiles {
-		rpp, ok := profile.(*rppapi.ResourceProtectionProfile)
-		if !ok {
-			continue
-		}
-		_, err := self.Client.ResourceProtectionProfiles(rpp.GetNamespace()).Update(rpp)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // ClusterResourceProtectionProfile
 
 type CRPPLoader struct {
 	interval time.Duration
 
 	Client *crppclient.ResearchV1alpha1Client
-	Data   []*crppapi.ClusterResourceProtectionProfile
+	Data   []crppapi.ClusterResourceProtectionProfile
 }
 
 func NewCRPPLoader() *CRPPLoader {
@@ -173,7 +183,7 @@ func NewCRPPLoader() *CRPPLoader {
 	}
 }
 
-func (self *CRPPLoader) GetData() []*crppapi.ClusterResourceProtectionProfile {
+func (self *CRPPLoader) GetData() []crppapi.ClusterResourceProtectionProfile {
 	if len(self.Data) == 0 {
 		self.Load()
 	}
@@ -205,9 +215,9 @@ func (self *CRPPLoader) Load() {
 		}
 	}
 
-	data := []*crppapi.ClusterResourceProtectionProfile{}
+	data := []crppapi.ClusterResourceProtectionProfile{}
 	for _, d := range list1.Items {
-		data = append(data, &d)
+		data = append(data, d)
 	}
 	self.Data = data
 	return
@@ -221,23 +231,8 @@ func (self *CRPPLoader) GetProfileInterface() []protect.ProtectionProfile {
 	return profiles
 }
 
-func (self *CRPPLoader) Update(profiles []protect.ProtectionProfile) error {
-	for _, profile := range profiles {
-		crpp, ok := profile.(*crppapi.ClusterResourceProtectionProfile)
-		if !ok {
-			continue
-		}
-		_, err := self.Client.ClusterResourceProtectionProfiles().Update(crpp)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type ProtectionProfileLoader interface {
 	GetProfileInterface() []protect.ProtectionProfile
-	Update(profiles []protect.ProtectionProfile) error
 }
 
 // SignPolicy
