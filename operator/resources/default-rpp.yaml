@@ -32,8 +32,11 @@ spec:
     - metadata.annotations.argocd.argoproj.io/sync-wave
     - metadata.labels.app
     - metadata.labels.app.kubernetes.io/instance
+    - metadata.labels.app.kubernetes.io/managed-by
+    - metadata.annotations.meta.helm.sh/release-name
+    - metadata.annotations.meta.helm.sh/release-namespace
     match:
-      kind: ResourceProtectionProfile
+      kind: "*"
   ignoreServiceAccount: 
   - match: 
       kind: "*"

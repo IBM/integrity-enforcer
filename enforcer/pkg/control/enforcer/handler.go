@@ -478,7 +478,7 @@ func (self *RequestHandler) checkIfIEResource() bool {
 	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
 		self.reqc.Namespace == self.config.Namespace &&
 		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreSATableLockCMName))
-	return isIECustomResource || isIERuleTableConfigMap
+	return isIECustomResource || isIELockConfigMap
 }
 
 func (self *RequestHandler) checkIfProfileResource() bool {
