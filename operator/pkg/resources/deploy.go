@@ -28,6 +28,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const ruleTableLockCMName = "ie-rule-table-lock"
+const ignoreSATableLockCMName = "ie-ignore-sa-table-lock"
+
 //deployment
 func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
@@ -336,4 +339,32 @@ func EqualAnnotations(found map[string]string, expected map[string]string) bool 
 		return false
 	}
 	return true
+}
+
+// ie-rule-table-lock ConfigMap
+func BuildRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+	labels := cr.Spec.MetaLabels
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ruleTableLockCMName,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		BinaryData: map[string][]byte{"table": nil},
+	}
+}
+
+// ie-ignore-sa-table-lock ConfigMap
+func BuildIgnoreSARuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+	labels := cr.Spec.MetaLabels
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ignoreSATableLockCMName,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		BinaryData: map[string][]byte{"table": nil},
+	}
 }

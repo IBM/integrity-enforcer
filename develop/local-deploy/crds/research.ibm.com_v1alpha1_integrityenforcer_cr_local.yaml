@@ -42,13 +42,11 @@ spec:
       consoleLog:
         enabled: true
         inScope:
-        - namespace: '*'
-        - namespace: '-'
+        - kind: '*'
       contextLog:
         enabled: true
         inScope:
-        - namespace: '*'
-        - namespace: '-'
+        - kind: '*'
       logLevel: trace
   enforcerConfigCrName: ie-config
   globalConfig: 

@@ -26,6 +26,7 @@ import (
 	config "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
 	enforcer "github.com/IBM/integrity-enforcer/enforcer/pkg/control/enforcer"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +45,8 @@ type WebhookServer struct {
 }
 
 func init() {
+	log.SetFormatter(&log.JSONFormatter{})
+
 	acConfig = config.NewAdmissionControlConfig()
 	acConfig.InitEnforcerConfig()
 	logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
@@ -53,6 +56,10 @@ func init() {
 	cfgBytes, _ := json.Marshal(acConfig)
 	logger.Trace(string(cfgBytes))
 	logger.Info("EnforcerConfig is loaded.")
+
+	config.InitRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultRuleTableLockCMName)
+	config.InitIgnoreSARuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultIgnoreSATableLockCMName)
+	logger.Info("RuleTable has been set.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {

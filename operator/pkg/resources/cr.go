@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
@@ -32,10 +31,8 @@ import (
 )
 
 const defaultRppName = "default-rpp"
-const defaultCrppName = "default-crpp"
 const signerPolicyName = "signer-policy"
 const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
-const defaultClusterResourceProtectionProfileYamlPath = "/resources/default-crpp.yaml"
 const defaultCertPoolPath = "/ie-certpool-secret/"
 const defaultKeyringPath = "/keyring/pubring.gpg"
 
@@ -57,6 +54,9 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 	}
 	if ecc.Spec.EnforcerConfig.SignatureNamespace == "" {
 		ecc.Spec.EnforcerConfig.SignatureNamespace = cr.Namespace
+	}
+	if ecc.Spec.EnforcerConfig.ProfileNamespace == "" {
+		ecc.Spec.EnforcerConfig.ProfileNamespace = cr.Namespace
 	}
 	if ecc.Spec.EnforcerConfig.IEServerUserName == "" {
 		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
@@ -131,24 +131,4 @@ func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEn
 	defaultrpp.ObjectMeta.Name = defaultRppName
 	defaultrpp.ObjectMeta.Namespace = cr.Namespace
 	return defaultrpp
-}
-
-// default crpp
-func BuildDefaultClusterResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *crpp.ClusterResourceProtectionProfile {
-	var defaultcrpp *crpp.ClusterResourceProtectionProfile
-	reqLogger := log.WithValues("BuildDefaultClusterResourceProtectionProfile", defaultCrppName)
-
-	deafultCrppBytes, err := ioutil.ReadFile(defaultClusterResourceProtectionProfileYamlPath)
-	if err != nil {
-		reqLogger.Error(err, "Failed to read default crpp file")
-	}
-
-	err = yaml.Unmarshal(deafultCrppBytes, &defaultcrpp)
-	if err != nil {
-		reqLogger.Error(err, "Failed to unmarshal yaml")
-	}
-
-	defaultcrpp.ObjectMeta.Name = defaultCrppName
-	defaultcrpp.ObjectMeta.Namespace = cr.Namespace
-	return defaultcrpp
 }

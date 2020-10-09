@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,11 +57,11 @@ type ResourceProtectionProfile struct {
 	Status ResourceProtectionProfileStatus `json:"status,omitempty"`
 }
 
-func (self *ResourceProtectionProfile) IsEmpty() bool {
+func (self ResourceProtectionProfile) IsEmpty() bool {
 	return len(self.Spec.Rules) == 0
 }
 
-func (self *ResourceProtectionProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
+func (self ResourceProtectionProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
 	for _, rule := range self.Spec.Rules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
@@ -69,13 +70,70 @@ func (self *ResourceProtectionProfile) Match(reqFields map[string]string) (bool,
 	return false, nil
 }
 
-func (self *ResourceProtectionProfile) Update(reqFields map[string]string, reason string, matchedRule *protect.Rule) {
-	results := self.Status.Results
-	newResult := &protect.Result{}
-	newResult.Update(reqFields, reason, matchedRule)
-	results = append(results, newResult)
-	self.Status.Results = results
-	return
+func (self ResourceProtectionProfile) ToRuleTable() *protect.RuleTable {
+	gvk := self.GroupVersionKind()
+	source := &v1.ObjectReference{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		Namespace:  self.GetNamespace(),
+		Name:       self.GetName(),
+	}
+	table := protect.NewRuleTable()
+	table = table.Add(self.Spec.Rules, source)
+	return table
+}
+
+func (self ResourceProtectionProfile) ToIgnoreSARuleTable() *protect.IgnoreSARuleTable {
+	gvk := self.GroupVersionKind()
+	source := &v1.ObjectReference{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		Namespace:  self.GetNamespace(),
+		Name:       self.GetName(),
+	}
+	table := protect.NewIgnoreSARuleTable()
+	table = table.Add(self.Spec.IgnoreServiceAccount, source)
+	return table
+}
+
+func (self ResourceProtectionProfile) Merge(another ResourceProtectionProfile) ResourceProtectionProfile {
+	newProfile := self
+	newProfile.Spec.Rules = append(newProfile.Spec.Rules, another.Spec.Rules...)
+	newProfile.Spec.IgnoreServiceAccount = append(newProfile.Spec.IgnoreServiceAccount, another.Spec.IgnoreServiceAccount...)
+	newProfile.Spec.ProtectAttrs = append(newProfile.Spec.ProtectAttrs, another.Spec.ProtectAttrs...)
+	newProfile.Spec.UnprotectAttrs = append(newProfile.Spec.UnprotectAttrs, another.Spec.UnprotectAttrs...)
+	newProfile.Spec.IgnoreAttrs = append(newProfile.Spec.IgnoreAttrs, another.Spec.IgnoreAttrs...)
+	return newProfile
+}
+
+func (self ResourceProtectionProfile) ProtectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	for _, attrsPattern := range self.Spec.ProtectAttrs {
+		if attrsPattern.Match.Match(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	return patterns
+}
+
+func (self ResourceProtectionProfile) UnprotectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	for _, attrsPattern := range self.Spec.UnprotectAttrs {
+		if attrsPattern.Match.Match(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	return patterns
+}
+
+func (self ResourceProtectionProfile) IgnoreAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+	patterns := []*protect.AttrsPattern{}
+	for _, attrsPattern := range self.Spec.IgnoreAttrs {
+		if attrsPattern.Match.Match(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	return patterns
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

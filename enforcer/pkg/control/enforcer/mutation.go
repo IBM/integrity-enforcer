@@ -25,14 +25,14 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, rules []*protect.AttrsPattern) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, rules []*protect.AttrsPattern) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -94,6 +94,17 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, rules []*prot
 	}
 
 	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj, self.VerifiedOwners)
+
+	var ignoreAttrsList [][]*protect.AttrsPattern
+	for _, profile := range protectProfiles {
+		attrs := profile.IgnoreAttrs(reqc.Map())
+		ignoreAttrsList = append(ignoreAttrsList, attrs)
+	}
+
+	rules := []*protect.AttrsPattern{}
+	for _, attrs := range ignoreAttrsList {
+		rules = append(rules, attrs...)
+	}
 
 	if mr, err := GetMAResult(ma4kInput, rules); err != nil {
 		maResult.Error = &common.CheckError{
