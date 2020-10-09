@@ -48,6 +48,10 @@ func MatchPattern(pattern, value string) bool {
 	}
 }
 
+func ExactMatch(pattern, value string) bool {
+	return pattern == value
+}
+
 func MatchPatternWithArray(pattern string, valueArray []string) bool {
 	for _, value := range valueArray {
 		if MatchPattern(pattern, value) {

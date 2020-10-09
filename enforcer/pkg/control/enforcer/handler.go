@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	crpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
 	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
@@ -101,6 +100,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	self.logEntry()
 
+	profileReferences := []*v1.ObjectReference{}
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
 	if self.checkIfIEResource() {
@@ -116,24 +116,21 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 			self.ctx.Protected = true
 		}
 	} else {
-		if ignoredSA, err := self.checkIfIgnoredSA(); err != nil {
-			self.abort("Error when checking if ignored service accounts", err)
-		} else if ignoredSA {
-			self.ctx.IgnoredSA = ignoredSA
+		ignoreSAMatched, _ := self.checkIfIgnoredSA()
+		if ignoreSAMatched {
+			self.ctx.IgnoredSA = true
 			allowed = true
 			evalReason = common.REASON_IGNORED_SA
 		}
 
 		if !self.ctx.Aborted && !allowed {
-			if protected, err := self.checkIfProtected(); err != nil {
-				self.abort("Error when check if the resource is protected", err)
-			} else {
-				self.ctx.Protected = protected
-				if !protected {
-					allowed = true
-					evalReason = common.REASON_NOT_PROTECTED
-				}
+			protected, matchedProfileRefs := self.checkIfProtected()
+			self.ctx.Protected = protected
+			if !protected {
+				allowed = true
+				evalReason = common.REASON_NOT_PROTECTED
 			}
+			profileReferences = matchedProfileRefs
 		}
 	}
 
@@ -142,7 +139,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 		//evaluate sign policy
 		if !self.ctx.Aborted && !allowed {
-			if r, err := self.evalSignPolicy(); err != nil {
+			if r, err := self.evalSignPolicy(profileReferences); err != nil {
 				self.abort("Error when evaluating sign policy", err)
 			} else {
 				self.ctx.Result.SignPolicyEvalResult = r
@@ -167,7 +164,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 		//check mutation
 		if !self.ctx.Aborted && !allowed && reqc.IsUpdateRequest() && !self.ctx.IEResource {
-			if r, err := self.evalMutation(); err != nil {
+			if r, err := self.evalMutation(profileReferences); err != nil {
 				self.abort("Error when evaluating mutation", err)
 			} else {
 				self.ctx.Result.MutationEvalResult = r
@@ -207,6 +204,10 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 			pt := v1beta1.PatchTypeJSONPatch
 			return &pt
 		}()
+	}
+
+	if self.ctx.Allow && self.ctx.IEResource && self.checkIfProfileResource() {
+		self.loader.UpdateRuleTable(self.reqc)
 	}
 
 	if !self.ctx.Allow && !self.ctx.IEResource {
@@ -339,11 +340,6 @@ func (self *RequestHandler) validateIEResource() (bool, string) {
 		if err := json.Unmarshal(rawObj, &obj); err != nil {
 			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
 		}
-	} else if kind == "ClusterResourceProtectionProfile" {
-		var obj *crpp.ClusterResourceProtectionProfile
-		if err := json.Unmarshal(rawObj, &obj); err != nil {
-			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
-		}
 	} else if kind == "ResourceSignature" {
 		var obj *rsig.ResourceSignature
 		if err := json.Unmarshal(rawObj, &obj); err != nil {
@@ -417,7 +413,7 @@ func (self *RequestHandler) createPatch() []byte {
 	return patch
 }
 
-func (self *RequestHandler) evalSignPolicy() (*common.SignPolicyEvalResult, error) {
+func (self *RequestHandler) evalSignPolicy(profileReferences []*v1.ObjectReference) (*common.SignPolicyEvalResult, error) {
 	signPolicy := self.loader.MergedSignPolicy()
 	plugins := self.GetEnabledPlugins()
 	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, plugins); err != nil {
@@ -425,19 +421,19 @@ func (self *RequestHandler) evalSignPolicy() (*common.SignPolicyEvalResult, erro
 	} else {
 		reqc := self.reqc
 		resSigList := self.loader.ResSigList(reqc)
-		protectProfiles := self.loader.ProtectionProfile(reqc.ResourceScope)
+		protectProfiles := self.loader.ProtectionProfile(profileReferences)
 		return evaluator.Eval(reqc, resSigList, protectProfiles)
 	}
 }
 
-func (self *RequestHandler) evalMutation() (*common.MutationEvalResult, error) {
+func (self *RequestHandler) evalMutation(profileReferences []*v1.ObjectReference) (*common.MutationEvalResult, error) {
 	reqc := self.reqc
 	owners := []*common.Owner{}
 	//ignoreAttrs := self.GetIgnoreAttrs()
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		protectProfiles := self.loader.ProtectionProfile(reqc.ResourceScope)
+		protectProfiles := self.loader.ProtectionProfile(profileReferences)
 		return checker.Eval(reqc, protectProfiles)
 	}
 }
@@ -457,7 +453,7 @@ func (self *RequestHandler) initLoader() {
 		Config:            self.config,
 		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
 		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace),
-		CRPP:              ctlconfig.NewCRPPLoader(),
+		RuleTable:         ctlconfig.NewRuleTableLoader(enforcerNamespace),
 		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace),
 	}
 	self.loader = loader
@@ -478,7 +474,15 @@ func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 }
 
 func (self *RequestHandler) checkIfIEResource() bool {
-	return self.reqc.ApiGroup == self.config.IEResource //"research.ibm.com"
+	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"research.ibm.com"
+	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
+		self.reqc.Namespace == self.config.Namespace &&
+		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreSATableLockCMName))
+	return isIECustomResource || isIERuleTableConfigMap
+}
+
+func (self *RequestHandler) checkIfProfileResource() bool {
+	return self.reqc.Kind == "ResourceProtectionProfile"
 }
 
 func (self *RequestHandler) checkIfIEAdminRequest() bool {
@@ -493,41 +497,18 @@ func (self *RequestHandler) GetEnabledPlugins() map[string]bool {
 	return self.config.GetEnabledPlugins()
 }
 
-func (self *RequestHandler) checkIfProtected() (bool, error) {
-	resourceScope := self.reqc.ResourceScope
+func (self *RequestHandler) checkIfProtected() (bool, []*v1.ObjectReference) {
 	reqFields := self.reqc.Map()
-	if resourceScope == "Cluster" || resourceScope == "Namespaced" {
-		rules := self.loader.ProtectRules(resourceScope)
-		for _, r := range rules {
-			if matched := r.MatchWithRequest(reqFields); matched {
-				return true, nil
-			}
-		}
-		return false, nil
-	} else {
-		return false, fmt.Errorf("invalid resource scope")
-	}
+	table := self.loader.ProtectRules()
+	protected, matchedProfileRefs := table.Match(reqFields)
+	return protected, matchedProfileRefs
 }
 
-func (self *RequestHandler) checkIfIgnoredSA() (bool, error) {
-	reqc := self.reqc
-	reqFields := reqc.Map()
-	patterns := self.loader.IgnoreServiceAccountPatterns(reqc.ResourceScope)
-	ignoredSA := false
-	for _, d := range patterns {
-		saMatch := false
-		for _, sa := range d.ServiceAccountName {
-			if reqc.UserName == sa {
-				saMatch = true
-				break
-			}
-		}
-		if saMatch && d.Match.Match(reqFields) {
-			ignoredSA = true
-			break
-		}
-	}
-	return ignoredSA, nil
+func (self *RequestHandler) checkIfIgnoredSA() (bool, []*v1.ObjectReference) {
+	reqFields := self.reqc.Map()
+	table := self.loader.IgnoreServiceAccountPatterns()
+	matched, matchedProfileRefs := table.Match(reqFields)
+	return matched, matchedProfileRefs
 }
 
 func (self *RequestHandler) CheckIfBreakGlassEnabled() bool {
@@ -642,8 +623,8 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 type Loader struct {
 	Config            *config.EnforcerConfig
 	SignPolicy        *ctlconfig.SignPolicyLoader
+	RuleTable         *ctlconfig.RuleTableLoader
 	RPP               *ctlconfig.RPPLoader
-	CRPP              *ctlconfig.CRPPLoader
 	ResourceSignature *ctlconfig.ResSigLoader
 }
 
@@ -651,128 +632,36 @@ func (self *Loader) UnprotectedRequestMatchPattern() []protect.RequestPattern {
 	return self.Config.Ignore
 }
 
-func (self *Loader) ProtectRules(resourceScope string) []*protect.Rule {
-	rules := []*protect.Rule{}
-	if resourceScope == "Namespaced" {
-		rpps := self.RPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				rules = append(rules, d.Spec.Rules...)
-			}
-		}
-	} else if resourceScope == "Cluster" {
-		rpps := self.CRPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				rules = append(rules, d.Spec.Rules...)
-			}
-		}
-	}
-	return rules
+func (self *Loader) ProtectRules() *protect.RuleTable {
+	table := self.RuleTable.GetData()
+	return table
 }
 
-func (self *Loader) IgnoreServiceAccountPatterns(resourceScope string) []*protect.ServieAccountPattern {
-	patterns := []*protect.ServieAccountPattern{}
-	if resourceScope == "Namespaced" {
-		rpps := self.RPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
-			}
-		}
-	} else if resourceScope == "Cluster" {
-		rpps := self.CRPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.IgnoreServiceAccount...)
-			}
-		}
-	}
-	return patterns
+func (self *Loader) IgnoreServiceAccountPatterns() *protect.IgnoreSARuleTable {
+	table := self.RuleTable.GetIgnoreSAData()
+	return table
 }
 
-func (self *Loader) IgnoreAttrsPatterns(resourceScope string) []*protect.AttrsPattern {
-	patterns := []*protect.AttrsPattern{}
-	if resourceScope == "Namespaced" {
-		rpps := self.RPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.IgnoreAttrs...)
-			}
-		}
-	} else if resourceScope == "Cluster" {
-		rpps := self.CRPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.IgnoreAttrs...)
-			}
-		}
-	}
-	return patterns
-
-}
-
-func (self *Loader) ProtectAttrsPatterns(resourceScope string) []*protect.AttrsPattern {
-	patterns := []*protect.AttrsPattern{}
-	if resourceScope == "Namespaced" {
-		rpps := self.RPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.ProtectAttrs...)
-			}
-		}
-	} else if resourceScope == "Cluster" {
-		rpps := self.CRPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.ProtectAttrs...)
-			}
-		}
-	}
-	return patterns
-
-}
-
-func (self *Loader) UnprotectAttrsPatterns(resourceScope string) []*protect.AttrsPattern {
-	patterns := []*protect.AttrsPattern{}
-	if resourceScope == "Namespaced" {
-		rpps := self.RPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.UnprotectAttrs...)
-			}
-		}
-	} else if resourceScope == "Cluster" {
-		rpps := self.CRPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				patterns = append(patterns, d.Spec.UnprotectAttrs...)
-			}
-		}
-	}
-	return patterns
-
-}
-
-func (self *Loader) ProtectionProfile(resourceScope string) []protect.ProtectionProfile {
+func (self *Loader) ProtectionProfile(profileReferences []*v1.ObjectReference) []protect.ProtectionProfile {
 	protectProfiles := []protect.ProtectionProfile{}
-	if resourceScope == "Namespaced" {
-		rpps := self.RPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				protectProfiles = append(protectProfiles, d)
-			}
-		}
-	} else if resourceScope == "Cluster" {
-		rpps := self.CRPP.GetData()
-		for _, d := range rpps {
-			if !d.Spec.Disabled {
-				protectProfiles = append(protectProfiles, d)
-			}
+
+	rpps := self.RPP.GetByReferences(profileReferences)
+	for _, d := range rpps {
+		if !d.Spec.Disabled {
+			protectProfiles = append(protectProfiles, d)
 		}
 	}
+
 	return protectProfiles
 
+}
+
+func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
+	err := self.RuleTable.Update(reqc)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {

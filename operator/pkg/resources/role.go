@@ -213,7 +213,7 @@ func BuildRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 					"*",
 				},
 				Verbs: []string{
-					"get", "create",
+					"get", "create", "update",
 				},
 			},
 		},

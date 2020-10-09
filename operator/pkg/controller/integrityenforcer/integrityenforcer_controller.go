@@ -156,11 +156,6 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateClusterResourceProtectionProfileCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
 	enabledPulgins := instance.Spec.EnforcerConfig.GetEnabledPlugins()
 	if enabledPulgins["helm"] {
 		recResult, recErr = r.createOrUpdateHelmReleaseMetadataCRD(instance)
@@ -181,11 +176,6 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	recResult, recErr = r.createOrUpdateDefaultResourceProtectionProfileCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateDefaultClusterResourceProtectionProfileCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -270,6 +260,18 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 
 	// Pod Security Policy (PSP)
 	recResult, recErr = r.createOrUpdatePodSecurityPolicy(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	// ConfigMap (RuleTable)
+	recResult, recErr = r.createOrUpdateRuleTableConfigMap(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	// ConfigMap (IgnoreSATable)
+	recResult, recErr = r.createOrUpdateIgnoreSARuleTableConfigMap(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}

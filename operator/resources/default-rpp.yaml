@@ -27,6 +27,13 @@ spec:
     - "spec.ports[].nodePort"
     match:
       kind: Service
+  unprotectAttrs:
+  - attrs:
+    - metadata.annotations.argocd.argoproj.io/sync-wave
+    - metadata.labels.app
+    - metadata.labels.app.kubernetes.io/instance
+    match:
+      kind: ResourceProtectionProfile
   ignoreServiceAccount: 
   - match: 
       kind: "*"
@@ -87,6 +94,9 @@ spec:
     - system:serviceaccount:openshift-service-ca:service-ca
     - system:serviceaccount:openshift-config-operator:openshift-config-operator
     - system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
+    - system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    - system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
+    - system:serviceaccount:tigera-operator:tigera-operator
   - match: 
       kind: ControllerRevision, Pod
     serviceAccountName:

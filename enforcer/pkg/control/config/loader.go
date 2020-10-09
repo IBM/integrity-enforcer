@@ -23,17 +23,17 @@ import (
 	"time"
 
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 
-	crppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/clusterresourceprotectionprofile/v1alpha1"
 	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
-	crppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/clusterresourceprotectionprofile/clientset/versioned/typed/clusterresourceprotectionprofile/v1alpha1"
 	rppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourceprotectionprofile/clientset/versioned/typed/resourceprotectionprofile/v1alpha1"
 	rsigclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
 	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	ecfgclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/enforcerconfig/clientset/versioned/typed/enforcerconfig/v1alpha1"
@@ -44,29 +44,162 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const DefaultRuleTableLockCMName = "ie-rule-table-lock"
+const DefaultIgnoreSATableLockCMName = "ie-ignore-sa-table-lock"
+
+// RuleTable
+
+type RuleTableLoader struct {
+	RPPClient *rppclient.ResearchV1alpha1Client
+	// ConfigMapClient xxxxxx
+	Rule     *protect.RuleTable
+	IgnoreSA *protect.IgnoreSARuleTable
+
+	enforcerNamespace string
+}
+
+func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
+	config, _ := rest.InClusterConfig()
+	rppClient, _ := rppclient.NewForConfig(config)
+
+	return &RuleTableLoader{
+		RPPClient:         rppClient,
+		Rule:              protect.NewRuleTable(),
+		IgnoreSA:          protect.NewIgnoreSARuleTable(),
+		enforcerNamespace: enforcerNamespace,
+	}
+}
+
+func InitRuleTable(namespace, name string) error {
+	config, _ := rest.InClusterConfig()
+	rppClient, _ := rppclient.NewForConfig(config)
+	// list RPP in all namespaces
+	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	table := protect.NewRuleTable()
+	for _, rpp := range list1.Items {
+		singleTable := rpp.ToRuleTable()
+		stb, _ := json.Marshal(singleTable)
+		logger.Debug("[SingleTable]", string(stb))
+		if !rpp.Spec.Disabled {
+			table = table.Merge(singleTable)
+		}
+	}
+	table.Update(namespace, name)
+	return nil
+}
+
+func InitIgnoreSARuleTable(namespace, name string) error {
+	config, _ := rest.InClusterConfig()
+	rppClient, _ := rppclient.NewForConfig(config)
+	// list RPP in all namespaces
+	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	table := protect.NewIgnoreSARuleTable()
+	for _, rpp := range list1.Items {
+		singleTable := rpp.ToIgnoreSARuleTable()
+		stb, _ := json.Marshal(singleTable)
+		logger.Debug("[SingleIgnoreSATable]", string(stb))
+		if !rpp.Spec.Disabled {
+			table = table.Merge(singleTable)
+		}
+	}
+	table.Update(namespace, name)
+	return nil
+}
+
+func (self *RuleTableLoader) GetData() *protect.RuleTable {
+	self.Load()
+	return self.Rule
+}
+
+func (self *RuleTableLoader) GetIgnoreSAData() *protect.IgnoreSARuleTable {
+	self.Load()
+	return self.IgnoreSA
+}
+
+func (self *RuleTableLoader) Load() {
+	tmpData, err := protect.GetRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	self.Rule = tmpData
+	tmpSAData, err := protect.GetIgnoreSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	self.IgnoreSA = tmpSAData
+	return
+}
+
+func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
+	ref := &v1.ObjectReference{
+		APIVersion: reqc.GroupVersion(),
+		Kind:       reqc.Kind,
+		Name:       reqc.Name,
+		Namespace:  reqc.Namespace,
+	}
+	tmpData, err := protect.GetRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	tmpData = tmpData.Remove(ref)
+
+	tmpSAData, err := protect.GetIgnoreSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	tmpSAData = tmpSAData.Remove(ref)
+
+	if reqc.IsCreateRequest() || reqc.IsUpdateRequest() {
+		var newProfile rppapi.ResourceProtectionProfile
+		err = json.Unmarshal(reqc.RawObject, &newProfile)
+		if err != nil {
+			logger.Error(err)
+		}
+		tmpData = tmpData.Add(newProfile.Spec.Rules, ref)
+		tmpSAData = tmpSAData.Add(newProfile.Spec.IgnoreServiceAccount, ref)
+	}
+
+	self.Rule = tmpData
+	self.Rule.Update(self.enforcerNamespace, DefaultRuleTableLockCMName)
+
+	self.IgnoreSA = tmpSAData
+	self.IgnoreSA.Update(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	return nil
+}
+
 // ResourceProtectionProfile
 
 type RPPLoader struct {
-	enforcerNamespace string
-	profileNamespace  string
-	requestNamespace  string
-	interval          time.Duration
+	enforcerNamespace      string
+	profileNamespace       string
+	requestNamespace       string
+	defaultProfileName     string
+	defaultProfileInterval time.Duration
 
 	Client *rppclient.ResearchV1alpha1Client
 	Data   []rppapi.ResourceProtectionProfile
 }
 
 func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string) *RPPLoader {
-	interval := time.Second * 10
+	defaultProfileInterval := time.Second * 60
 	config, _ := rest.InClusterConfig()
 	client, _ := rppclient.NewForConfig(config)
 
 	return &RPPLoader{
-		enforcerNamespace: enforcerNamespace,
-		profileNamespace:  profileNamespace,
-		requestNamespace:  requestNamespace,
-		interval:          interval,
-		Client:            client,
+		enforcerNamespace:      enforcerNamespace,
+		profileNamespace:       profileNamespace,
+		requestNamespace:       requestNamespace,
+		defaultProfileName:     "default-rpp",
+		defaultProfileInterval: defaultProfileInterval,
+		Client:                 client,
 	}
 }
 
@@ -92,7 +225,7 @@ func (self *RPPLoader) Load() {
 		logger.Debug("ResourceProtectionProfile reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
-			cache.SetString(keyName, string(tmp), &(self.interval))
+			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
 		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
@@ -112,7 +245,7 @@ func (self *RPPLoader) Load() {
 		logger.Debug("ResourceProtectionProfile reloaded.")
 		if len(list2.Items) > 0 {
 			tmp, _ := json.Marshal(list2)
-			cache.SetString(keyName, string(tmp), &(self.interval))
+			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
 		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &list2)
@@ -132,7 +265,7 @@ func (self *RPPLoader) Load() {
 		logger.Debug("ResourceProtectionProfile reloaded.")
 		if len(list3.Items) > 0 {
 			tmp, _ := json.Marshal(list3)
-			cache.SetString(keyName, string(tmp), &(self.interval))
+			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
 		}
 	} else {
 		err = json.Unmarshal([]byte(cached), &list3)
@@ -155,75 +288,67 @@ func (self *RPPLoader) Load() {
 	return
 }
 
-func (self *RPPLoader) GetProfileInterface() []protect.ProtectionProfile {
-	profiles := []protect.ProtectionProfile{}
-	for _, d := range self.GetData() {
-		profiles = append(profiles, d)
-	}
-	return profiles
-}
-
-// ClusterResourceProtectionProfile
-
-type CRPPLoader struct {
-	interval time.Duration
-
-	Client *crppclient.ResearchV1alpha1Client
-	Data   []crppapi.ClusterResourceProtectionProfile
-}
-
-func NewCRPPLoader() *CRPPLoader {
-	interval := time.Second * 10
-	config, _ := rest.InClusterConfig()
-	client, _ := crppclient.NewForConfig(config)
-
-	return &CRPPLoader{
-		interval: interval,
-		Client:   client,
-	}
-}
-
-func (self *CRPPLoader) GetData() []crppapi.ClusterResourceProtectionProfile {
-	if len(self.Data) == 0 {
-		self.Load()
-	}
-	return self.Data
-}
-
-func (self *CRPPLoader) Load() {
-	var err error
-	var list1 *crppapi.ClusterResourceProtectionProfileList
-	var keyName string
-
-	keyName = "CRPPLoader/list"
-	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ClusterResourceProtectionProfiles().List(metav1.ListOptions{})
+func (self *RPPLoader) GetByReferences(refs []*v1.ObjectReference) []rppapi.ResourceProtectionProfile {
+	data := []rppapi.ResourceProtectionProfile{}
+	for _, ref := range refs {
+		d, err := self.Client.ResourceProtectionProfiles(ref.Namespace).Get(ref.Name, metav1.GetOptions{})
 		if err != nil {
-			logger.Error("failed to get ClusterResourceProtectionProfile:", err)
-			return
+			logger.Error(err)
+		} else {
+			data = append(data, *d)
 		}
-		logger.Debug("ClusterResourceProtectionProfile reloaded.")
-		if len(list1.Items) > 0 {
-			tmp, _ := json.Marshal(list1)
-			cache.SetString(keyName, string(tmp), &(self.interval))
+	}
+	// add empty RPP if there is no matched reference, to enable default RPP even in the case
+	if len(data) == 0 {
+		emptyProfile := rppapi.ResourceProtectionProfile{}
+		data = []rppapi.ResourceProtectionProfile{
+			emptyProfile,
+		}
+	}
+	data, err := self.MergeDefaultProfiles(data)
+	if err != nil {
+		logger.Error(err)
+	}
+	return data
+}
+
+func (self *RPPLoader) MergeDefaultProfiles(data []rppapi.ResourceProtectionProfile) ([]rppapi.ResourceProtectionProfile, error) {
+	dp, err := self.GetDefaultProfile()
+	if err != nil {
+		logger.Error(err)
+	} else {
+		for i, d := range data {
+			data[i] = d.Merge(*dp)
+		}
+	}
+	return data, nil
+}
+
+func (self *RPPLoader) GetDefaultProfile() (*rppapi.ResourceProtectionProfile, error) {
+	var rpp *rppapi.ResourceProtectionProfile
+	var err error
+
+	keyName := fmt.Sprintf("RPPLoader/%s/get/%s", self.enforcerNamespace, self.defaultProfileName)
+	if cached := cache.GetString(keyName); cached == "" {
+		rpp, err = self.Client.ResourceProtectionProfiles(self.enforcerNamespace).Get(self.defaultProfileName, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ResourceProtectionProfile: %s", err.Error())
+		}
+		logger.Debug("ResourceProtectionProfile reloaded.")
+		if rpp != nil {
+			tmp, _ := json.Marshal(rpp)
+			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
 		}
 	} else {
-		err = json.Unmarshal([]byte(cached), &list1)
+		err = json.Unmarshal([]byte(cached), &rpp)
 		if err != nil {
-			logger.Error("failed to Unmarshal cached ClusterResourceProtectionProfile:", err)
-			return
+			return nil, fmt.Errorf("failed to Unmarshal cached ResourceProtectionProfile: %s", err.Error())
 		}
 	}
-
-	data := []crppapi.ClusterResourceProtectionProfile{}
-	for _, d := range list1.Items {
-		data = append(data, d)
-	}
-	self.Data = data
-	return
+	return rpp, nil
 }
 
-func (self *CRPPLoader) GetProfileInterface() []protect.ProtectionProfile {
+func (self *RPPLoader) GetProfileInterface() []protect.ProtectionProfile {
 	profiles := []protect.ProtectionProfile{}
 	for _, d := range self.GetData() {
 		profiles = append(profiles, d)

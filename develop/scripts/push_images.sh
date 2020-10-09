@@ -25,20 +25,20 @@ if [ -z "$IE_REPO_ROOT" ]; then
 fi
 
 SERVICE_NAME=ie-server
-IMAGE_REMOTE=integrityenforcer/ie-server:0.0.3
+IMAGE_REMOTE=us.icr.io/mutation-advisor/ie-server:0.0.3dev
 IMAGE_LOCAL=ie-server:local
 BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
 
 LOGG_BASEDIR=${IE_REPO_ROOT}/logging/
-LOGG_IMAGE_REMOTE=integrityenforcer/ie-logging:0.0.3
+LOGG_IMAGE_REMOTE=us.icr.io/mutation-advisor/ie-logging:0.0.3dev
 LOGG_IMAGE_LOCAL=ie-logging:local
 
 OPERATOR_BASEDIR=${IE_REPO_ROOT}/operator/
 OPERATOR_IMAGE_NAME=integrity-enforcer-operator
 OPERATOR_IMAGE_REPO=integrityenforcer
-CSV_VERSION_LOCAL=0.0.3
-CSV_VERSION=0.0.3
+CSV_VERSION_LOCAL=0.0.3dev
+CSV_VERSION=0.0.3dev
 OPERATOR_IMAGE_LOCAL=${OPERATOR_IMAGE_NAME}:${CSV_VERSION_LOCAL}
 OPERATOR_IMAGE_REMOTE=${OPERATOR_IMAGE_REPO}/${OPERATOR_IMAGE_NAME}:${CSV_VERSION}
 

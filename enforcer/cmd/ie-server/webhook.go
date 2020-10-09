@@ -56,6 +56,10 @@ func init() {
 	cfgBytes, _ := json.Marshal(acConfig)
 	logger.Trace(string(cfgBytes))
 	logger.Info("EnforcerConfig is loaded.")
+
+	config.InitRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultRuleTableLockCMName)
+	config.InitIgnoreSARuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultIgnoreSATableLockCMName)
+	logger.Info("RuleTable has been set.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {

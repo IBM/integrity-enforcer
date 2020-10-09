@@ -17,11 +17,19 @@
 package protect
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
+	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
 	"github.com/jinzhu/copier"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type Rule struct {
@@ -30,8 +38,8 @@ type Rule struct {
 }
 
 type RequestPattern struct {
-	Scope      *RulePattern `json:"scope,omitempty"`
-	Namespace  *RulePattern `json:"namespace,omitempty"`
+	Scope *RulePattern `json:"scope,omitempty"`
+	// Namespace  *RulePattern `json:"namespace,omitempty"`
 	ApiGroup   *RulePattern `json:"apiGroup,omitempty"`
 	ApiVersion *RulePattern `json:"apiVersion,omitempty"`
 	Kind       *RulePattern `json:"kind,omitempty"`
@@ -39,6 +47,11 @@ type RequestPattern struct {
 	Operation  *RulePattern `json:"operation,omitempty"`
 	UserName   *RulePattern `json:"username,omitempty"`
 	UserGroup  *RulePattern `json:"usergroup,omitempty"`
+}
+
+type RequestPatternWithNamespace struct {
+	RequestPattern
+	Namespace *RulePattern `json:"namespace,omitempty"`
 }
 
 func (self *Rule) String() string {
@@ -68,6 +81,11 @@ func (self *Rule) MatchWithRequest(reqFields map[string]string) bool {
 }
 
 func (self *RequestPattern) Match(reqFields map[string]string) bool {
+	scope := "Namespaced"
+	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {
+		scope = reqScope
+	}
+
 	p := reflect.ValueOf(self)
 	if p.IsNil() {
 		return false
@@ -85,7 +103,11 @@ func (self *RequestPattern) Match(reqFields map[string]string) bool {
 				pattern := value
 				reqValue := reqFields[fieldName]
 				patternCount += 1
-				matched = matched && pattern.match(reqValue)
+				if scope == "Cluster" && fieldName == "Name" {
+					matched = matched && pattern.exactMatch(reqValue) // "*" is not allowed for Name pattern of cluster scope object
+				} else {
+					matched = matched && pattern.match(reqValue)
+				}
 			}
 		} else {
 			continue
@@ -100,9 +122,13 @@ func (self *RulePattern) match(value string) bool {
 	return common.MatchPattern(string(*self), value)
 }
 
+func (self *RulePattern) exactMatch(value string) bool {
+	return common.ExactMatch(string(*self), value)
+}
+
 type ServieAccountPattern struct {
-	Match              *RequestPattern `json:"match,omitempty"`
-	ServiceAccountName []string        `json:"serviceAccountName,omitempty"`
+	Match              *RequestPatternWithNamespace `json:"match,omitempty"`
+	ServiceAccountName []string                     `json:"serviceAccountName,omitempty"`
 }
 
 type AttrsPattern struct {
@@ -187,4 +213,290 @@ type ProtectionProfile interface {
 	ProtectAttrs(reqFields map[string]string) []*AttrsPattern
 	UnprotectAttrs(reqFields map[string]string) []*AttrsPattern
 	IgnoreAttrs(reqFields map[string]string) []*AttrsPattern
+}
+
+// RuleTable
+
+const ruleTableDumpFileName = "/tmp/rule_table"
+
+type RuleTable []RuleItem
+
+type RuleItem struct {
+	Rule   *Rule               `json:"rule,omitempty"`
+	Source *v1.ObjectReference `json:"source,omitempty"`
+}
+
+type IgnoreSARuleTable []IgnoreSARuleItem
+
+type IgnoreSARuleItem struct {
+	Rule   *ServieAccountPattern `json:"rule,omitempty"`
+	Source *v1.ObjectReference   `json:"source,omitempty"`
+}
+
+func (self *RuleTable) Update(namespace, name string) error {
+	rawData, err := json.Marshal(self)
+	if err != nil {
+		return err
+	}
+	fmt.Println("[RuleTable]", string(rawData))
+
+	config, _ := kubeutil.GetKubeConfig()
+	coreV1Client, err := v1client.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var gzipBuffer bytes.Buffer
+	writer := gzip.NewWriter(&gzipBuffer)
+	writer.Write(rawData)
+	writer.Close()
+	zipData := gzipBuffer.Bytes()
+
+	cm.BinaryData["table"] = zipData
+	_, err = coreV1Client.ConfigMaps(namespace).Update(cm)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetRuleTable(namespace, name string) (*RuleTable, error) {
+	t := NewRuleTable()
+	newTable, err := t.Get(namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	return newTable, nil
+}
+
+func (self *RuleTable) Get(namespace, name string) (*RuleTable, error) {
+
+	config, _ := kubeutil.GetKubeConfig()
+	coreV1Client, err := v1client.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	zipData := cm.BinaryData["table"]
+
+	gzipBuffer := bytes.NewBuffer(zipData)
+	reader, _ := gzip.NewReader(gzipBuffer)
+	output := bytes.Buffer{}
+	output.ReadFrom(reader)
+	rawData := output.Bytes()
+
+	var t *RuleTable
+	err = json.Unmarshal(rawData, &t)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
+}
+
+func NewRuleTable() *RuleTable {
+	items := []RuleItem{}
+	newTable := RuleTable(items)
+	return &newTable
+}
+
+func (self *RuleTable) Add(rules []*Rule, source *v1.ObjectReference) *RuleTable {
+	newTable := *self
+	for _, rule := range rules {
+		newTable = append(newTable, RuleItem{Rule: rule, Source: source})
+	}
+	return &newTable
+}
+
+func (self *RuleTable) Merge(data *RuleTable) *RuleTable {
+	newTable := *self
+	for _, item := range *data {
+		newTable = append(newTable, item)
+	}
+	return &newTable
+}
+
+func (self *RuleTable) Remove(subject *v1.ObjectReference) *RuleTable {
+	items := []RuleItem{}
+	for _, item := range *self {
+		if item.Source.APIVersion == subject.APIVersion &&
+			item.Source.Kind == subject.Kind &&
+			item.Source.Name == subject.Name &&
+			item.Source.Namespace == subject.Namespace {
+			continue
+		}
+		items = append(items, item)
+	}
+	newTable := RuleTable(items)
+	return &newTable
+}
+
+func (self *RuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectReference) {
+	matchedSources := []*v1.ObjectReference{}
+	for _, item := range *self {
+		if item.Match(reqFields) {
+			matchedSources = append(matchedSources, item.Source)
+		}
+	}
+	if len(matchedSources) == 0 {
+		return false, matchedSources
+	}
+	return true, matchedSources
+}
+
+func (self *RuleItem) Match(reqFields map[string]string) bool {
+	reqNamespace := ""
+	if tmp, ok := reqFields["Namespace"]; ok && tmp != "" {
+		reqNamespace = tmp
+	}
+	// if namespaced scope request, use only rules from the namespace
+	if reqNamespace != "" {
+		if self.Source.Namespace != reqNamespace {
+			return false
+		}
+	}
+	return self.Rule.MatchWithRequest(reqFields)
+}
+
+func (self *IgnoreSARuleTable) Update(namespace, name string) error {
+	rawData, err := json.Marshal(self)
+	if err != nil {
+		return err
+	}
+	fmt.Println("[IgnoreSARuleTable]", string(rawData))
+
+	config, _ := kubeutil.GetKubeConfig()
+	coreV1Client, err := v1client.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var gzipBuffer bytes.Buffer
+	writer := gzip.NewWriter(&gzipBuffer)
+	writer.Write(rawData)
+	writer.Close()
+	zipData := gzipBuffer.Bytes()
+
+	cm.BinaryData["table"] = zipData
+	_, err = coreV1Client.ConfigMaps(namespace).Update(cm)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetIgnoreSARuleTable(namespace, name string) (*IgnoreSARuleTable, error) {
+	t := NewIgnoreSARuleTable()
+	newTable, err := t.Get(namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	return newTable, nil
+}
+
+func (self *IgnoreSARuleTable) Get(namespace, name string) (*IgnoreSARuleTable, error) {
+
+	config, _ := kubeutil.GetKubeConfig()
+	coreV1Client, err := v1client.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	zipData := cm.BinaryData["table"]
+
+	gzipBuffer := bytes.NewBuffer(zipData)
+	reader, _ := gzip.NewReader(gzipBuffer)
+	output := bytes.Buffer{}
+	output.ReadFrom(reader)
+	rawData := output.Bytes()
+
+	var t *IgnoreSARuleTable
+	err = json.Unmarshal(rawData, &t)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+func NewIgnoreSARuleTable() *IgnoreSARuleTable {
+	items := []IgnoreSARuleItem{}
+	newTable := IgnoreSARuleTable(items)
+	return &newTable
+}
+
+func (self *IgnoreSARuleTable) Add(rules []*ServieAccountPattern, source *v1.ObjectReference) *IgnoreSARuleTable {
+	newTable := *self
+	for _, rule := range rules {
+		newTable = append(newTable, IgnoreSARuleItem{Rule: rule, Source: source})
+	}
+	return &newTable
+}
+
+func (self *IgnoreSARuleTable) Merge(data *IgnoreSARuleTable) *IgnoreSARuleTable {
+	newTable := *self
+	for _, item := range *data {
+		newTable = append(newTable, item)
+	}
+	return &newTable
+}
+
+func (self *IgnoreSARuleTable) Remove(subject *v1.ObjectReference) *IgnoreSARuleTable {
+	items := []IgnoreSARuleItem{}
+	for _, item := range *self {
+		if item.Source.APIVersion == subject.APIVersion &&
+			item.Source.Kind == subject.Kind &&
+			item.Source.Name == subject.Name &&
+			item.Source.Namespace == subject.Namespace {
+			continue
+		}
+		items = append(items, item)
+	}
+	newTable := IgnoreSARuleTable(items)
+	return &newTable
+}
+
+func (self *IgnoreSARuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectReference) {
+	matchedSources := []*v1.ObjectReference{}
+	for _, item := range *self {
+		if item.Match(reqFields) {
+			matchedSources = append(matchedSources, item.Source)
+		}
+	}
+	if len(matchedSources) == 0 {
+		return false, matchedSources
+	}
+	return true, matchedSources
+}
+
+func (self *IgnoreSARuleItem) Match(reqFields map[string]string) bool {
+	reqUserName, ok := reqFields["UserName"]
+	if !ok {
+		return false
+	}
+	ruleMatched := self.Rule.Match.Match(reqFields)
+	if !ruleMatched {
+		return false
+	}
+	saMatched := common.MatchWithPatternArray(reqUserName, self.Rule.ServiceAccountName)
+	return saMatched
 }
