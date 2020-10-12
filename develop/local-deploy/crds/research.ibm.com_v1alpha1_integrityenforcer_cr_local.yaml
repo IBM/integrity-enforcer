@@ -102,6 +102,9 @@ spec:
       - apiGroup: rbac.authorization.k8s.io
         kind: Group
         name: system:masters
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Group
+        name: system:cluster-admins
     autoIEAdminRoleCreationDisabled: false
   selector:
     app: ie-server
@@ -131,8 +134,8 @@ spec:
   webhookClusterResource:
     apiGroups: ["*"]
     apiVersions: ["*"]
-    resources: 
-    - podsecuritypolicies
-    - clusterrolebindings
-    - clusterroles
-    - clusterresourceprotectionprofiles
+    resources: ["*"]
+    # OCP4.4 or earlier, need to select resources.
+    # - podsecuritypolicies
+    # - clusterrolebindings
+    # - clusterroles
