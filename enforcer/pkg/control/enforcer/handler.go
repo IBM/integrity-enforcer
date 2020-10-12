@@ -116,21 +116,29 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 			self.ctx.Protected = true
 		}
 	} else {
-		ignoreSAMatched, _ := self.checkIfIgnoredSA()
-		if ignoreSAMatched {
-			self.ctx.IgnoredSA = true
-			allowed = true
-			evalReason = common.REASON_IGNORED_SA
-		}
 
-		if !self.ctx.Aborted && !allowed {
-			protected, matchedProfileRefs := self.checkIfProtected()
-			self.ctx.Protected = protected
-			if !protected {
+		forceCheckSAMatched, _ := self.checkIfForceCheckSA()
+
+		if forceCheckSAMatched {
+			// force to check this request
+			self.ctx.Protected = true
+		} else {
+			ignoreSAMatched, _ := self.checkIfIgnoredSA()
+			if ignoreSAMatched {
+				self.ctx.IgnoredSA = true
 				allowed = true
-				evalReason = common.REASON_NOT_PROTECTED
+				evalReason = common.REASON_IGNORED_SA
 			}
-			profileReferences = matchedProfileRefs
+
+			if !self.ctx.Aborted && !allowed {
+				protected, matchedProfileRefs := self.checkIfProtected()
+				self.ctx.Protected = protected
+				if !protected {
+					allowed = true
+					evalReason = common.REASON_NOT_PROTECTED
+				}
+				profileReferences = matchedProfileRefs
+			}
 		}
 	}
 
@@ -477,7 +485,7 @@ func (self *RequestHandler) checkIfIEResource() bool {
 	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"research.ibm.com"
 	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
 		self.reqc.Namespace == self.config.Namespace &&
-		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreSATableLockCMName))
+		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreSATableLockCMName || self.reqc.Name == ctlconfig.DefaultForceCheckSATableLockCMName))
 	return isIECustomResource || isIELockConfigMap
 }
 
@@ -507,6 +515,13 @@ func (self *RequestHandler) checkIfProtected() (bool, []*v1.ObjectReference) {
 func (self *RequestHandler) checkIfIgnoredSA() (bool, []*v1.ObjectReference) {
 	reqFields := self.reqc.Map()
 	table := self.loader.IgnoreServiceAccountPatterns()
+	matched, matchedProfileRefs := table.Match(reqFields)
+	return matched, matchedProfileRefs
+}
+
+func (self *RequestHandler) checkIfForceCheckSA() (bool, []*v1.ObjectReference) {
+	reqFields := self.reqc.Map()
+	table := self.loader.ForceCheckServiceAccountPatterns()
 	matched, matchedProfileRefs := table.Match(reqFields)
 	return matched, matchedProfileRefs
 }
@@ -637,8 +652,13 @@ func (self *Loader) ProtectRules() *protect.RuleTable {
 	return table
 }
 
-func (self *Loader) IgnoreServiceAccountPatterns() *protect.IgnoreSARuleTable {
+func (self *Loader) IgnoreServiceAccountPatterns() *protect.SARuleTable {
 	table := self.RuleTable.GetIgnoreSAData()
+	return table
+}
+
+func (self *Loader) ForceCheckServiceAccountPatterns() *protect.SARuleTable {
+	table := self.RuleTable.GetForceCheckSAData()
 	return table
 }
 

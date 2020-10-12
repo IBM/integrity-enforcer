@@ -4,6 +4,7 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
+  defaultResourceProtectionProfile: {}
   enforcerConfig:
     verifyType: pgp # x509
     plugin:

@@ -798,6 +798,11 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateIgnoreSARuleTableConfigMap(in
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
+func (r *ReconcileIntegrityEnforcer) createOrUpdateForceCheckSARuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildForceCheckSARuleTableLockConfigMapForCR(instance)
+	return r.createOrUpdateConfigMap(instance, expected)
+}
+
 /**********************************************
 
 				Deployment

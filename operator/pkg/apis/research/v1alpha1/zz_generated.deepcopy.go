@@ -236,7 +236,7 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 	}
 	if in.DefaultRpp != nil {
 		in, out := &in.DefaultRpp, &out.DefaultRpp
-		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfile)
+		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfileSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	in.WebhookNamespacedResource.DeepCopyInto(&out.WebhookNamespacedResource)

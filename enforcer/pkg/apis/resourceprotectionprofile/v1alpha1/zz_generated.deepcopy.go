@@ -99,8 +99,18 @@ func (in *ResourceProtectionProfileSpec) DeepCopyInto(out *ResourceProtectionPro
 			}
 		}
 	}
-	if in.IgnoreServiceAccount != nil {
-		in, out := &in.IgnoreServiceAccount, &out.IgnoreServiceAccount
+	if in.IgnoreServiceAccounts != nil {
+		in, out := &in.IgnoreServiceAccounts, &out.IgnoreServiceAccounts
+		*out = make([]*protect.ServieAccountPattern, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = (*in).DeepCopy()
+			}
+		}
+	}
+	if in.ForceCheckServiceAccounts != nil {
+		in, out := &in.ForceCheckServiceAccounts, &out.ForceCheckServiceAccounts
 		*out = make([]*protect.ServieAccountPattern, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

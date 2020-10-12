@@ -276,6 +276,12 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
+	// ConfigMap (ForceCheckSATable)
+	recResult, recErr = r.createOrUpdateForceCheckSARuleTableConfigMap(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	//Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {

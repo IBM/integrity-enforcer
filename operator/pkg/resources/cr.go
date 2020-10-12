@@ -114,18 +114,20 @@ func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEn
 	var defaultrpp *rpp.ResourceProtectionProfile
 	reqLogger := log.WithValues("BuildDefaultResourceProtectionProfile", defaultRppName)
 
-	if cr.Spec.DefaultRpp != nil {
-		defaultrpp = cr.Spec.DefaultRpp
-	} else {
-		deafultRppBytes, err := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
-		if err != nil {
-			reqLogger.Error(err, "Failed to read default rpp file")
-		}
+	deafultRppBytes, err := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
+	if err != nil {
+		reqLogger.Error(err, "Failed to read default rpp file")
+	}
 
-		err = yaml.Unmarshal(deafultRppBytes, &defaultrpp)
-		if err != nil {
-			reqLogger.Error(err, "Failed to unmarshal yaml")
-		}
+	err = yaml.Unmarshal(deafultRppBytes, &defaultrpp)
+	if err != nil {
+		reqLogger.Error(err, "Failed to unmarshal yaml")
+	}
+
+	if cr.Spec.DefaultRpp != nil {
+		mergeRPP := &rpp.ResourceProtectionProfile{}
+		mergeRPP.Spec = *cr.Spec.DefaultRpp
+		*defaultrpp = (*defaultrpp).Merge(*mergeRPP)
 	}
 
 	defaultrpp.ObjectMeta.Name = defaultRppName

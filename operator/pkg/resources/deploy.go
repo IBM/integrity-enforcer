@@ -30,6 +30,7 @@ import (
 
 const ruleTableLockCMName = "ie-rule-table-lock"
 const ignoreSATableLockCMName = "ie-ignore-sa-table-lock"
+const forceCheckSATableLockCMName = "ie-force-check-sa-table-lock"
 
 //deployment
 func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
@@ -362,6 +363,20 @@ func BuildIgnoreSARuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnfo
 	return &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ignoreSATableLockCMName,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		BinaryData: map[string][]byte{"table": nil},
+	}
+}
+
+// ie-force-check-sa-table-lock ConfigMap
+func BuildForceCheckSARuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+	labels := cr.Spec.MetaLabels
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      forceCheckSATableLockCMName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},

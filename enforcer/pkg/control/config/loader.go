@@ -46,14 +46,16 @@ import (
 
 const DefaultRuleTableLockCMName = "ie-rule-table-lock"
 const DefaultIgnoreSATableLockCMName = "ie-ignore-sa-table-lock"
+const DefaultForceCheckSATableLockCMName = "ie-force-check-sa-table-lock"
 
 // RuleTable
 
 type RuleTableLoader struct {
 	RPPClient *rppclient.ResearchV1alpha1Client
 	// ConfigMapClient xxxxxx
-	Rule     *protect.RuleTable
-	IgnoreSA *protect.IgnoreSARuleTable
+	Rule         *protect.RuleTable
+	IgnoreSA     *protect.SARuleTable
+	ForceCheckSA *protect.SARuleTable
 
 	enforcerNamespace string
 }
@@ -65,7 +67,8 @@ func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 	return &RuleTableLoader{
 		RPPClient:         rppClient,
 		Rule:              protect.NewRuleTable(),
-		IgnoreSA:          protect.NewIgnoreSARuleTable(),
+		IgnoreSA:          protect.NewSARuleTable(),
+		ForceCheckSA:      protect.NewSARuleTable(),
 		enforcerNamespace: enforcerNamespace,
 	}
 }
@@ -101,11 +104,33 @@ func InitIgnoreSARuleTable(namespace, name string) error {
 		return err
 	}
 
-	table := protect.NewIgnoreSARuleTable()
+	table := protect.NewSARuleTable()
 	for _, rpp := range list1.Items {
 		singleTable := rpp.ToIgnoreSARuleTable()
 		stb, _ := json.Marshal(singleTable)
 		logger.Debug("[SingleIgnoreSATable]", string(stb))
+		if !rpp.Spec.Disabled {
+			table = table.Merge(singleTable)
+		}
+	}
+	table.Update(namespace, name)
+	return nil
+}
+
+func InitForceCheckSARuleTable(namespace, name string) error {
+	config, _ := rest.InClusterConfig()
+	rppClient, _ := rppclient.NewForConfig(config)
+	// list RPP in all namespaces
+	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	table := protect.NewSARuleTable()
+	for _, rpp := range list1.Items {
+		singleTable := rpp.ToForceCheckSARuleTable()
+		stb, _ := json.Marshal(singleTable)
+		logger.Debug("[SingleForceCheckSATable]", string(stb))
 		if !rpp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
@@ -119,9 +144,14 @@ func (self *RuleTableLoader) GetData() *protect.RuleTable {
 	return self.Rule
 }
 
-func (self *RuleTableLoader) GetIgnoreSAData() *protect.IgnoreSARuleTable {
+func (self *RuleTableLoader) GetIgnoreSAData() *protect.SARuleTable {
 	self.Load()
 	return self.IgnoreSA
+}
+
+func (self *RuleTableLoader) GetForceCheckSAData() *protect.SARuleTable {
+	self.Load()
+	return self.ForceCheckSA
 }
 
 func (self *RuleTableLoader) Load() {
@@ -130,11 +160,16 @@ func (self *RuleTableLoader) Load() {
 		logger.Error(err)
 	}
 	self.Rule = tmpData
-	tmpSAData, err := protect.GetIgnoreSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	tmpSAData, err := protect.GetSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
 	if err != nil {
 		logger.Error(err)
 	}
 	self.IgnoreSA = tmpSAData
+	tmpSAData2, err := protect.GetSARuleTable(self.enforcerNamespace, DefaultForceCheckSATableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	self.ForceCheckSA = tmpSAData2
 	return
 }
 
@@ -151,11 +186,17 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 	}
 	tmpData = tmpData.Remove(ref)
 
-	tmpSAData, err := protect.GetIgnoreSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	tmpSAData, err := protect.GetSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
 	if err != nil {
 		logger.Error(err)
 	}
 	tmpSAData = tmpSAData.Remove(ref)
+
+	tmpSAData2, err := protect.GetSARuleTable(self.enforcerNamespace, DefaultForceCheckSATableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	tmpSAData2 = tmpSAData2.Remove(ref)
 
 	if reqc.IsCreateRequest() || reqc.IsUpdateRequest() {
 		var newProfile rppapi.ResourceProtectionProfile
@@ -164,7 +205,8 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 			logger.Error(err)
 		}
 		tmpData = tmpData.Add(newProfile.Spec.Rules, ref)
-		tmpSAData = tmpSAData.Add(newProfile.Spec.IgnoreServiceAccount, ref)
+		tmpSAData = tmpSAData.Add(newProfile.Spec.IgnoreServiceAccounts, ref)
+		tmpSAData2 = tmpSAData2.Add(newProfile.Spec.ForceCheckServiceAccounts, ref)
 	}
 
 	self.Rule = tmpData
@@ -172,6 +214,9 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 
 	self.IgnoreSA = tmpSAData
 	self.IgnoreSA.Update(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+
+	self.ForceCheckSA = tmpSAData2
+	self.ForceCheckSA.Update(self.enforcerNamespace, DefaultForceCheckSATableLockCMName)
 	return nil
 }
 
@@ -301,6 +346,8 @@ func (self *RPPLoader) GetByReferences(refs []*v1.ObjectReference) []rppapi.Reso
 	// add empty RPP if there is no matched reference, to enable default RPP even in the case
 	if len(data) == 0 {
 		emptyProfile := rppapi.ResourceProtectionProfile{}
+		emptyProfile.SetNamespace(self.enforcerNamespace)
+		emptyProfile.SetName("default-rpp")
 		data = []rppapi.ResourceProtectionProfile{
 			emptyProfile,
 		}

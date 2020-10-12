@@ -27,11 +27,12 @@ type ResourceProtectionProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
 	Delete   bool `json:"delete,omitempty"`
 
-	Rules                []*protect.Rule                 `json:"rules,omitempty"`
-	IgnoreServiceAccount []*protect.ServieAccountPattern `json:"ignoreServiceAccount,omitempty"`
-	ProtectAttrs         []*protect.AttrsPattern         `json:"protectAttrs,omitempty"`
-	UnprotectAttrs       []*protect.AttrsPattern         `json:"unprotectAttrs,omitempty"`
-	IgnoreAttrs          []*protect.AttrsPattern         `json:"ignoreAttrs,omitempty"`
+	Rules                     []*protect.Rule                 `json:"rules,omitempty"`
+	IgnoreServiceAccounts     []*protect.ServieAccountPattern `json:"ignoreServiceAccounts,omitempty"`
+	ForceCheckServiceAccounts []*protect.ServieAccountPattern `json:"forceCheckServiceAccounts,omitempty"`
+	ProtectAttrs              []*protect.AttrsPattern         `json:"protectAttrs,omitempty"`
+	UnprotectAttrs            []*protect.AttrsPattern         `json:"unprotectAttrs,omitempty"`
+	IgnoreAttrs               []*protect.AttrsPattern         `json:"ignoreAttrs,omitempty"`
 }
 
 // ResourceProtectionProfileStatus defines the observed state of AppEnforcePolicy
@@ -83,7 +84,7 @@ func (self ResourceProtectionProfile) ToRuleTable() *protect.RuleTable {
 	return table
 }
 
-func (self ResourceProtectionProfile) ToIgnoreSARuleTable() *protect.IgnoreSARuleTable {
+func (self ResourceProtectionProfile) ToIgnoreSARuleTable() *protect.SARuleTable {
 	gvk := self.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -91,15 +92,29 @@ func (self ResourceProtectionProfile) ToIgnoreSARuleTable() *protect.IgnoreSARul
 		Namespace:  self.GetNamespace(),
 		Name:       self.GetName(),
 	}
-	table := protect.NewIgnoreSARuleTable()
-	table = table.Add(self.Spec.IgnoreServiceAccount, source)
+	table := protect.NewSARuleTable()
+	table = table.Add(self.Spec.IgnoreServiceAccounts, source)
+	return table
+}
+
+func (self ResourceProtectionProfile) ToForceCheckSARuleTable() *protect.SARuleTable {
+	gvk := self.GroupVersionKind()
+	source := &v1.ObjectReference{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		Namespace:  self.GetNamespace(),
+		Name:       self.GetName(),
+	}
+	table := protect.NewSARuleTable()
+	table = table.Add(self.Spec.ForceCheckServiceAccounts, source)
 	return table
 }
 
 func (self ResourceProtectionProfile) Merge(another ResourceProtectionProfile) ResourceProtectionProfile {
 	newProfile := self
 	newProfile.Spec.Rules = append(newProfile.Spec.Rules, another.Spec.Rules...)
-	newProfile.Spec.IgnoreServiceAccount = append(newProfile.Spec.IgnoreServiceAccount, another.Spec.IgnoreServiceAccount...)
+	newProfile.Spec.IgnoreServiceAccounts = append(newProfile.Spec.IgnoreServiceAccounts, another.Spec.IgnoreServiceAccounts...)
+	newProfile.Spec.ForceCheckServiceAccounts = append(newProfile.Spec.ForceCheckServiceAccounts, another.Spec.ForceCheckServiceAccounts...)
 	newProfile.Spec.ProtectAttrs = append(newProfile.Spec.ProtectAttrs, another.Spec.ProtectAttrs...)
 	newProfile.Spec.UnprotectAttrs = append(newProfile.Spec.UnprotectAttrs, another.Spec.UnprotectAttrs...)
 	newProfile.Spec.IgnoreAttrs = append(newProfile.Spec.IgnoreAttrs, another.Spec.IgnoreAttrs...)

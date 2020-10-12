@@ -53,10 +53,10 @@ type IntegrityEnforcerSpec struct {
 	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
 	GlobalConfig GlobalConfig    `json:"globalConfig,omitempty"`
 
-	EnforcerConfigCrName string                         `json:"enforcerConfigCrName,omitempty"`
-	EnforcerConfig       *iec.EnforcerConfig            `json:"enforcerConfig,omitempty"`
-	SignPolicy           *policy.SignPolicy             `json:"signPolicy,omitempty"`
-	DefaultRpp           *rpp.ResourceProtectionProfile `json:"defaultResourceProtectionProfile,omitempty"`
+	EnforcerConfigCrName string                             `json:"enforcerConfigCrName,omitempty"`
+	EnforcerConfig       *iec.EnforcerConfig                `json:"enforcerConfig,omitempty"`
+	SignPolicy           *policy.SignPolicy                 `json:"signPolicy,omitempty"`
+	DefaultRpp           *rpp.ResourceProtectionProfileSpec `json:"defaultResourceProtectionProfile,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`

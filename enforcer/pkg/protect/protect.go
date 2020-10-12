@@ -127,8 +127,9 @@ func (self *RulePattern) exactMatch(value string) bool {
 }
 
 type ServieAccountPattern struct {
-	Match              *RequestPatternWithNamespace `json:"match,omitempty"`
-	ServiceAccountName []string                     `json:"serviceAccountName,omitempty"`
+	Match               *RequestPatternWithNamespace `json:"match,omitempty"`
+	Except              *RequestPatternWithNamespace `json:"except,omitempty"`
+	ServiceAccountNames []string                     `json:"serviceAccountNames,omitempty"`
 }
 
 type AttrsPattern struct {
@@ -224,13 +225,6 @@ type RuleTable []RuleItem
 type RuleItem struct {
 	Rule   *Rule               `json:"rule,omitempty"`
 	Source *v1.ObjectReference `json:"source,omitempty"`
-}
-
-type IgnoreSARuleTable []IgnoreSARuleItem
-
-type IgnoreSARuleItem struct {
-	Rule   *ServieAccountPattern `json:"rule,omitempty"`
-	Source *v1.ObjectReference   `json:"source,omitempty"`
 }
 
 func (self *RuleTable) Update(namespace, name string) error {
@@ -370,12 +364,19 @@ func (self *RuleItem) Match(reqFields map[string]string) bool {
 	return self.Rule.MatchWithRequest(reqFields)
 }
 
-func (self *IgnoreSARuleTable) Update(namespace, name string) error {
+type SARuleTable []SARuleItem
+
+type SARuleItem struct {
+	Rule   *ServieAccountPattern `json:"rule,omitempty"`
+	Source *v1.ObjectReference   `json:"source,omitempty"`
+}
+
+func (self *SARuleTable) Update(namespace, name string) error {
 	rawData, err := json.Marshal(self)
 	if err != nil {
 		return err
 	}
-	fmt.Println("[IgnoreSARuleTable]", string(rawData))
+	fmt.Println("[SARuleTable]", string(rawData))
 
 	config, _ := kubeutil.GetKubeConfig()
 	coreV1Client, err := v1client.NewForConfig(config)
@@ -402,8 +403,8 @@ func (self *IgnoreSARuleTable) Update(namespace, name string) error {
 	return nil
 }
 
-func GetIgnoreSARuleTable(namespace, name string) (*IgnoreSARuleTable, error) {
-	t := NewIgnoreSARuleTable()
+func GetSARuleTable(namespace, name string) (*SARuleTable, error) {
+	t := NewSARuleTable()
 	newTable, err := t.Get(namespace, name)
 	if err != nil {
 		return nil, err
@@ -411,7 +412,7 @@ func GetIgnoreSARuleTable(namespace, name string) (*IgnoreSARuleTable, error) {
 	return newTable, nil
 }
 
-func (self *IgnoreSARuleTable) Get(namespace, name string) (*IgnoreSARuleTable, error) {
+func (self *SARuleTable) Get(namespace, name string) (*SARuleTable, error) {
 
 	config, _ := kubeutil.GetKubeConfig()
 	coreV1Client, err := v1client.NewForConfig(config)
@@ -430,7 +431,7 @@ func (self *IgnoreSARuleTable) Get(namespace, name string) (*IgnoreSARuleTable, 
 	output.ReadFrom(reader)
 	rawData := output.Bytes()
 
-	var t *IgnoreSARuleTable
+	var t *SARuleTable
 	err = json.Unmarshal(rawData, &t)
 	if err != nil {
 		return nil, err
@@ -438,21 +439,21 @@ func (self *IgnoreSARuleTable) Get(namespace, name string) (*IgnoreSARuleTable, 
 	return t, nil
 }
 
-func NewIgnoreSARuleTable() *IgnoreSARuleTable {
-	items := []IgnoreSARuleItem{}
-	newTable := IgnoreSARuleTable(items)
+func NewSARuleTable() *SARuleTable {
+	items := []SARuleItem{}
+	newTable := SARuleTable(items)
 	return &newTable
 }
 
-func (self *IgnoreSARuleTable) Add(rules []*ServieAccountPattern, source *v1.ObjectReference) *IgnoreSARuleTable {
+func (self *SARuleTable) Add(rules []*ServieAccountPattern, source *v1.ObjectReference) *SARuleTable {
 	newTable := *self
 	for _, rule := range rules {
-		newTable = append(newTable, IgnoreSARuleItem{Rule: rule, Source: source})
+		newTable = append(newTable, SARuleItem{Rule: rule, Source: source})
 	}
 	return &newTable
 }
 
-func (self *IgnoreSARuleTable) Merge(data *IgnoreSARuleTable) *IgnoreSARuleTable {
+func (self *SARuleTable) Merge(data *SARuleTable) *SARuleTable {
 	newTable := *self
 	for _, item := range *data {
 		newTable = append(newTable, item)
@@ -460,8 +461,8 @@ func (self *IgnoreSARuleTable) Merge(data *IgnoreSARuleTable) *IgnoreSARuleTable
 	return &newTable
 }
 
-func (self *IgnoreSARuleTable) Remove(subject *v1.ObjectReference) *IgnoreSARuleTable {
-	items := []IgnoreSARuleItem{}
+func (self *SARuleTable) Remove(subject *v1.ObjectReference) *SARuleTable {
+	items := []SARuleItem{}
 	for _, item := range *self {
 		if item.Source.APIVersion == subject.APIVersion &&
 			item.Source.Kind == subject.Kind &&
@@ -471,11 +472,11 @@ func (self *IgnoreSARuleTable) Remove(subject *v1.ObjectReference) *IgnoreSARule
 		}
 		items = append(items, item)
 	}
-	newTable := IgnoreSARuleTable(items)
+	newTable := SARuleTable(items)
 	return &newTable
 }
 
-func (self *IgnoreSARuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectReference) {
+func (self *SARuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectReference) {
 	matchedSources := []*v1.ObjectReference{}
 	for _, item := range *self {
 		if item.Match(reqFields) {
@@ -488,15 +489,26 @@ func (self *IgnoreSARuleTable) Match(reqFields map[string]string) (bool, []*v1.O
 	return true, matchedSources
 }
 
-func (self *IgnoreSARuleItem) Match(reqFields map[string]string) bool {
+func (self *SARuleItem) Match(reqFields map[string]string) bool {
 	reqUserName, ok := reqFields["UserName"]
 	if !ok {
 		return false
 	}
-	ruleMatched := self.Rule.Match.Match(reqFields)
+	ruleMatched := false
+	if self.Rule != nil {
+		matchRuleMatched := false
+		if self.Rule.Match != nil {
+			matchRuleMatched = self.Rule.Match.Match(reqFields)
+		}
+		exceptRuleMatched := false
+		if self.Rule.Except != nil {
+			exceptRuleMatched = self.Rule.Except.Match(reqFields)
+		}
+		ruleMatched = (matchRuleMatched && !exceptRuleMatched)
+	}
 	if !ruleMatched {
 		return false
 	}
-	saMatched := common.MatchWithPatternArray(reqUserName, self.Rule.ServiceAccountName)
+	saMatched := common.MatchWithPatternArray(reqUserName, self.Rule.ServiceAccountNames)
 	return saMatched
 }
