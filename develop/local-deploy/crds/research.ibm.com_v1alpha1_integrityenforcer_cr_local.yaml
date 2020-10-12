@@ -139,4 +139,3 @@ spec:
     # - podsecuritypolicies
     # - clusterrolebindings
     # - clusterroles
-    # - clusterresourceprotectionprofiles
