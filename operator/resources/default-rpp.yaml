@@ -33,6 +33,9 @@ spec:
     - metadata.annotations.deployment.kubernetes.io/revision
     - metadata.labels.app
     - metadata.labels.app.kubernetes.io/instance
+    - metadata.labels.app.kubernetes.io/managed-by
+    - metadata.annotations.meta.helm.sh/release-name
+    - metadata.annotations.meta.helm.sh/release-namespace
     match:
       kind: '*'
   ignoreServiceAccount: 
