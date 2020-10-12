@@ -116,7 +116,7 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     enforcePolicyReloadSec: 10
-    image: us.icr.io/mutation-advisor/ie-server:0.0.3dev
+    image: integrityenforcer/ie-server:0.0.3
     imagePullPolicy: Always
     name: server
     port: 8443
