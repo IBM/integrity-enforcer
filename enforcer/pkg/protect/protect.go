@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
@@ -47,6 +48,12 @@ type RequestPattern struct {
 	Operation  *RulePattern `json:"operation,omitempty"`
 	UserName   *RulePattern `json:"username,omitempty"`
 	UserGroup  *RulePattern `json:"usergroup,omitempty"`
+}
+
+type KustomizePattern struct {
+	Match      []*RequestPattern `json:"match,omitempty"`
+	NamePrefix *RulePattern      `json:"namePrefix,omitempty"`
+	NameSuffix *RulePattern      `json:"nameSuffix,omitempty"`
 }
 
 type RequestPatternWithNamespace struct {
@@ -126,14 +133,67 @@ func (self *RulePattern) exactMatch(value string) bool {
 	return common.ExactMatch(string(*self), value)
 }
 
-type ServieAccountPattern struct {
-	Match              *RequestPatternWithNamespace `json:"match,omitempty"`
-	ServiceAccountName []string                     `json:"serviceAccountName,omitempty"`
+// reverse the string
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
+}
+
+func (self *KustomizePattern) OverrideName(ref *common.ResourceRef) *common.ResourceRef {
+	name := ref.Name
+	if self.NamePrefix == nil && self.NameSuffix == nil {
+		return ref
+	}
+	if self.NamePrefix != nil {
+		namePrefix := string(*self.NamePrefix)
+		if strings.HasPrefix(name, namePrefix) {
+			name = strings.Replace(name, namePrefix, "", 1)
+		}
+	}
+
+	if self.NameSuffix != nil {
+		nameSuffix := string(*self.NameSuffix)
+		if strings.HasSuffix(name, nameSuffix) {
+			revName := reverse(name)
+			revSuffix := reverse(nameSuffix)
+			revName = strings.Replace(revName, revSuffix, "", 1)
+			name = reverse(revName)
+		}
+	}
+	ref.Name = name
+	return ref
+}
+
+func (self *KustomizePattern) MatchWith(reqFields map[string]string) bool {
+	for _, reqPattern := range self.Match {
+		if reqPattern.Match(reqFields) {
+			return true
+		}
+	}
+	return false
+}
+
+type ServiceAccountPattern struct {
+	Match               *RequestPatternWithNamespace `json:"match,omitempty"`
+	Except              *RequestPatternWithNamespace `json:"except,omitempty"`
+	ServiceAccountNames []string                     `json:"serviceAccountNames,omitempty"`
 }
 
 type AttrsPattern struct {
-	Match *RequestPattern `json:"match,omitempty"`
-	Attrs []string        `json:"attrs,omitempty"`
+	Match []*RequestPattern `json:"match,omitempty"`
+	Attrs []string          `json:"attrs,omitempty"`
+}
+
+func (self *AttrsPattern) MatchWith(reqFields map[string]string) bool {
+	for _, reqPattern := range self.Match {
+		if reqPattern.Match(reqFields) {
+			return true
+		}
+	}
+	return false
 }
 
 type Request struct {
@@ -178,12 +238,22 @@ func (p *RequestPattern) DeepCopy() *RequestPattern {
 	return p2
 }
 
-func (p *ServieAccountPattern) DeepCopyInto(p2 *ServieAccountPattern) {
+func (p *KustomizePattern) DeepCopyInto(p2 *KustomizePattern) {
 	copier.Copy(&p2, &p)
 }
 
-func (p *ServieAccountPattern) DeepCopy() *ServieAccountPattern {
-	p2 := &ServieAccountPattern{}
+func (p *KustomizePattern) DeepCopy() *KustomizePattern {
+	p2 := &KustomizePattern{}
+	p.DeepCopyInto(p2)
+	return p2
+}
+
+func (p *ServiceAccountPattern) DeepCopyInto(p2 *ServiceAccountPattern) {
+	copier.Copy(&p2, &p)
+}
+
+func (p *ServiceAccountPattern) DeepCopy() *ServiceAccountPattern {
+	p2 := &ServiceAccountPattern{}
 	p.DeepCopyInto(p2)
 	return p2
 }
@@ -210,6 +280,7 @@ func (p *Result) DeepCopy() *Result {
 
 type ProtectionProfile interface {
 	Match(reqFields map[string]string) (bool, *Rule)
+	Kustomize(reqFields map[string]string) []*KustomizePattern
 	ProtectAttrs(reqFields map[string]string) []*AttrsPattern
 	UnprotectAttrs(reqFields map[string]string) []*AttrsPattern
 	IgnoreAttrs(reqFields map[string]string) []*AttrsPattern
@@ -224,13 +295,6 @@ type RuleTable []RuleItem
 type RuleItem struct {
 	Rule   *Rule               `json:"rule,omitempty"`
 	Source *v1.ObjectReference `json:"source,omitempty"`
-}
-
-type IgnoreSARuleTable []IgnoreSARuleItem
-
-type IgnoreSARuleItem struct {
-	Rule   *ServieAccountPattern `json:"rule,omitempty"`
-	Source *v1.ObjectReference   `json:"source,omitempty"`
 }
 
 func (self *RuleTable) Update(namespace, name string) error {
@@ -368,135 +432,4 @@ func (self *RuleItem) Match(reqFields map[string]string) bool {
 		}
 	}
 	return self.Rule.MatchWithRequest(reqFields)
-}
-
-func (self *IgnoreSARuleTable) Update(namespace, name string) error {
-	rawData, err := json.Marshal(self)
-	if err != nil {
-		return err
-	}
-	fmt.Println("[IgnoreSARuleTable]", string(rawData))
-
-	config, _ := kubeutil.GetKubeConfig()
-	coreV1Client, err := v1client.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	var gzipBuffer bytes.Buffer
-	writer := gzip.NewWriter(&gzipBuffer)
-	writer.Write(rawData)
-	writer.Close()
-	zipData := gzipBuffer.Bytes()
-
-	cm.BinaryData["table"] = zipData
-	_, err = coreV1Client.ConfigMaps(namespace).Update(cm)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetIgnoreSARuleTable(namespace, name string) (*IgnoreSARuleTable, error) {
-	t := NewIgnoreSARuleTable()
-	newTable, err := t.Get(namespace, name)
-	if err != nil {
-		return nil, err
-	}
-	return newTable, nil
-}
-
-func (self *IgnoreSARuleTable) Get(namespace, name string) (*IgnoreSARuleTable, error) {
-
-	config, _ := kubeutil.GetKubeConfig()
-	coreV1Client, err := v1client.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	zipData := cm.BinaryData["table"]
-
-	gzipBuffer := bytes.NewBuffer(zipData)
-	reader, _ := gzip.NewReader(gzipBuffer)
-	output := bytes.Buffer{}
-	output.ReadFrom(reader)
-	rawData := output.Bytes()
-
-	var t *IgnoreSARuleTable
-	err = json.Unmarshal(rawData, &t)
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
-}
-
-func NewIgnoreSARuleTable() *IgnoreSARuleTable {
-	items := []IgnoreSARuleItem{}
-	newTable := IgnoreSARuleTable(items)
-	return &newTable
-}
-
-func (self *IgnoreSARuleTable) Add(rules []*ServieAccountPattern, source *v1.ObjectReference) *IgnoreSARuleTable {
-	newTable := *self
-	for _, rule := range rules {
-		newTable = append(newTable, IgnoreSARuleItem{Rule: rule, Source: source})
-	}
-	return &newTable
-}
-
-func (self *IgnoreSARuleTable) Merge(data *IgnoreSARuleTable) *IgnoreSARuleTable {
-	newTable := *self
-	for _, item := range *data {
-		newTable = append(newTable, item)
-	}
-	return &newTable
-}
-
-func (self *IgnoreSARuleTable) Remove(subject *v1.ObjectReference) *IgnoreSARuleTable {
-	items := []IgnoreSARuleItem{}
-	for _, item := range *self {
-		if item.Source.APIVersion == subject.APIVersion &&
-			item.Source.Kind == subject.Kind &&
-			item.Source.Name == subject.Name &&
-			item.Source.Namespace == subject.Namespace {
-			continue
-		}
-		items = append(items, item)
-	}
-	newTable := IgnoreSARuleTable(items)
-	return &newTable
-}
-
-func (self *IgnoreSARuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectReference) {
-	matchedSources := []*v1.ObjectReference{}
-	for _, item := range *self {
-		if item.Match(reqFields) {
-			matchedSources = append(matchedSources, item.Source)
-		}
-	}
-	if len(matchedSources) == 0 {
-		return false, matchedSources
-	}
-	return true, matchedSources
-}
-
-func (self *IgnoreSARuleItem) Match(reqFields map[string]string) bool {
-	reqUserName, ok := reqFields["UserName"]
-	if !ok {
-		return false
-	}
-	ruleMatched := self.Rule.Match.Match(reqFields)
-	if !ruleMatched {
-		return false
-	}
-	saMatched := common.MatchWithPatternArray(reqUserName, self.Rule.ServiceAccountName)
-	return saMatched
 }

@@ -614,223 +614,274 @@ spec:
                   type: string
               type: object
             defaultResourceProtectionProfile:
-              description: 'EnforcePolicy is the CRD. Use this command to generate
-                deepcopy for it: ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis
-                github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
-                For more details of code-generator, please visit https://github.com/kubernetes/code-generator
-                ResourceProtectionProfile is the CRD. Use this command to generate
-                deepcopy for it:'
+              description: ResourceProtectionProfileSpec defines the desired state
+                of AppEnforcePolicy
               properties:
-                apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
-                    of an object. Servers should convert recognized schemas to the
-                    latest internal value, and may reject unrecognized values. More
-                    info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                  type: string
-                kind:
-                  description: 'Kind is a string value representing the REST resource
-                    this object represents. Servers may infer this from the endpoint
-                    the client submits requests to. Cannot be updated. In CamelCase.
-                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                  type: string
-                metadata:
-                  type: object
-                spec:
-                  description: ResourceProtectionProfileSpec defines the desired state
-                    of AppEnforcePolicy
-                  properties:
-                    delete:
-                      type: boolean
-                    disabled:
-                      type: boolean
-                    ignoreAttrs:
-                      items:
-                        properties:
-                          attrs:
-                            items:
+                delete:
+                  type: boolean
+                disabled:
+                  type: boolean
+                forceCheckRules:
+                  items:
+                    properties:
+                      exclude:
+                        items:
+                          properties:
+                            apiGroup:
+                              description: Namespace  *RulePattern `json:"namespace,omitempty"`
                               type: string
-                            type: array
-                          match:
-                            properties:
-                              apiGroup:
-                                type: string
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              namespace:
-                                type: string
-                              operation:
-                                type: string
-                              scope:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                        type: object
-                      type: array
-                    ignoreServiceAccount:
-                      items:
-                        properties:
-                          match:
-                            properties:
-                              apiGroup:
-                                type: string
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              namespace:
-                                type: string
-                              operation:
-                                type: string
-                              scope:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                          serviceAccountName:
-                            items:
+                            apiVersion:
                               type: string
-                            type: array
-                        type: object
-                      type: array
-                    protectAttrs:
-                      items:
-                        properties:
-                          attrs:
-                            items:
+                            kind:
                               type: string
-                            type: array
-                          match:
-                            properties:
-                              apiGroup:
-                                type: string
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              namespace:
-                                type: string
-                              operation:
-                                type: string
-                              scope:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                        type: object
-                      type: array
-                    rules:
-                      items:
-                        properties:
-                          exclude:
-                            items:
-                              properties:
-                                apiGroup:
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                          match:
-                            items:
-                              properties:
-                                apiGroup:
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                        type: object
-                      type: array
-                    unprotectAttrs:
-                      items:
-                        properties:
-                          attrs:
-                            items:
+                            name:
                               type: string
-                            type: array
-                          match:
-                            properties:
-                              apiGroup:
-                                type: string
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              namespace:
-                                type: string
-                              operation:
-                                type: string
-                              scope:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                        type: object
-                      type: array
-                  type: object
-                status:
-                  description: ResourceProtectionProfileStatus defines the observed
-                    state of AppEnforcePolicy
-                  properties:
-                    deniedRequests:
-                      items:
+                            operation:
+                              type: string
+                            scope:
+                              type: string
+                            usergroup:
+                              type: string
+                            username:
+                              type: string
+                          type: object
+                        type: array
+                      match:
+                        items:
+                          properties:
+                            apiGroup:
+                              description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                              type: string
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                            operation:
+                              type: string
+                            scope:
+                              type: string
+                            usergroup:
+                              type: string
+                            username:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  type: array
+                ignoreAttrs:
+                  items:
+                    properties:
+                      attrs:
+                        items:
+                          type: string
+                        type: array
+                      match:
                         properties:
-                          matchedRule:
+                          apiGroup:
+                            description: Namespace  *RulePattern `json:"namespace,omitempty"`
                             type: string
-                          reason:
+                          apiVersion:
                             type: string
-                          request:
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          operation:
+                            type: string
+                          scope:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
                             type: string
                         type: object
-                      type: array
-                  type: object
+                    type: object
+                  type: array
+                ignoreRules:
+                  items:
+                    properties:
+                      exclude:
+                        items:
+                          properties:
+                            apiGroup:
+                              description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                              type: string
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                            operation:
+                              type: string
+                            scope:
+                              type: string
+                            usergroup:
+                              type: string
+                            username:
+                              type: string
+                          type: object
+                        type: array
+                      match:
+                        items:
+                          properties:
+                            apiGroup:
+                              description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                              type: string
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                            operation:
+                              type: string
+                            scope:
+                              type: string
+                            usergroup:
+                              type: string
+                            username:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  type: array
+                kustomizePatterns:
+                  items:
+                    properties:
+                      match:
+                        properties:
+                          apiGroup:
+                            description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                            type: string
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          operation:
+                            type: string
+                          scope:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
+                            type: string
+                        type: object
+                      namePrefix:
+                        type: string
+                    type: object
+                  type: array
+                protectAttrs:
+                  items:
+                    properties:
+                      attrs:
+                        items:
+                          type: string
+                        type: array
+                      match:
+                        properties:
+                          apiGroup:
+                            description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                            type: string
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          operation:
+                            type: string
+                          scope:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                rules:
+                  items:
+                    properties:
+                      exclude:
+                        items:
+                          properties:
+                            apiGroup:
+                              description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                              type: string
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                            operation:
+                              type: string
+                            scope:
+                              type: string
+                            usergroup:
+                              type: string
+                            username:
+                              type: string
+                          type: object
+                        type: array
+                      match:
+                        items:
+                          properties:
+                            apiGroup:
+                              description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                              type: string
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                            operation:
+                              type: string
+                            scope:
+                              type: string
+                            usergroup:
+                              type: string
+                            username:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  type: array
+                unprotectAttrs:
+                  items:
+                    properties:
+                      attrs:
+                        items:
+                          type: string
+                        type: array
+                      match:
+                        properties:
+                          apiGroup:
+                            description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                            type: string
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          operation:
+                            type: string
+                          scope:
+                            type: string
+                          usergroup:
+                            type: string
+                          username:
+                            type: string
+                        type: object
+                    type: object
+                  type: array
               type: object
             enforcerConfig:
               properties:
@@ -839,14 +890,13 @@ spec:
                   items:
                     properties:
                       apiGroup:
+                        description: Namespace  *RulePattern `json:"namespace,omitempty"`
                         type: string
                       apiVersion:
                         type: string
                       kind:
                         type: string
                       name:
-                        type: string
-                      namespace:
                         type: string
                       operation:
                         type: string
@@ -874,14 +924,13 @@ spec:
                   items:
                     properties:
                       apiGroup:
+                        description: Namespace  *RulePattern `json:"namespace,omitempty"`
                         type: string
                       apiVersion:
                         type: string
                       kind:
                         type: string
                       name:
-                        type: string
-                      namespace:
                         type: string
                       operation:
                         type: string
@@ -905,14 +954,13 @@ spec:
                           items:
                             properties:
                               apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
                                 type: string
                               apiVersion:
                                 type: string
                               kind:
                                 type: string
                               name:
-                                type: string
-                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -928,14 +976,13 @@ spec:
                           items:
                             properties:
                               apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
                                 type: string
                               apiVersion:
                                 type: string
                               kind:
                                 type: string
                               name:
-                                type: string
-                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -960,14 +1007,13 @@ spec:
                           items:
                             properties:
                               apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
                                 type: string
                               apiVersion:
                                 type: string
                               kind:
                                 type: string
                               name:
-                                type: string
-                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -983,14 +1029,13 @@ spec:
                           items:
                             properties:
                               apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
                                 type: string
                               apiVersion:
                                 type: string
                               kind:
                                 type: string
                               name:
-                                type: string
-                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -1033,6 +1078,8 @@ spec:
                         type: string
                     type: object
                   type: array
+                profileNamespace:
+                  type: string
                 signPolicy:
                   properties:
                     breakGlass:
@@ -1202,7 +1249,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        # x-kubernetes-int-or-string: true
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
@@ -1212,7 +1259,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        # x-kubernetes-int-or-string: true
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise
@@ -1356,12 +1403,12 @@ spec:
                 Important: Run "operator-sdk generate k8s" to regenerate code after
                 modifying this file Add custom validation using kubebuilder tags:
                 https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
-              # x-kubernetes-int-or-string: true
+              x-kubernetes-int-or-string: true
             maxUnavailable:
               anyOf:
               - type: integer
               - type: string
-              # x-kubernetes-int-or-string: true
+              x-kubernetes-int-or-string: true
             nodeSelector:
               additionalProperties:
                 type: string
@@ -1583,7 +1630,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        # x-kubernetes-int-or-string: true
+                        x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
                         resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                       type: object
@@ -1593,7 +1640,7 @@ spec:
                         - type: integer
                         - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        # x-kubernetes-int-or-string: true
+                        x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
                         resources required. If Requests is omitted for a container,
                         it defaults to Limits if that is explicitly specified, otherwise

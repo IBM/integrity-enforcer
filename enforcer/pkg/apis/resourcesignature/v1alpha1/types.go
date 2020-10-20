@@ -18,8 +18,10 @@ package v1alpha1
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	yaml "gopkg.in/yaml.v2"
@@ -187,6 +189,7 @@ func (si *SignItem) match(apiVersion, kind, name, namespace string) (bool, []byt
 
 func (si *SignItem) parseMessage() []ResourceInfo {
 	msg := base64decode(si.Message)
+	msg = decompress(msg)
 	r := bytes.NewReader([]byte(msg))
 	dec := k8syaml.NewYAMLToJSONDecoder(r)
 	var t interface{}
@@ -223,6 +226,21 @@ func base64decode(str string) string {
 	}
 	dec := string(decBytes)
 	return dec
+}
+
+func decompress(str string) string {
+	if str == "" {
+		return str
+	}
+	buffer := strings.NewReader(str)
+	reader, err := gzip.NewReader(buffer)
+	if err != nil {
+		return str
+	}
+	output := bytes.Buffer{}
+	output.ReadFrom(reader)
+	s := string(output.Bytes())
+	return s
 }
 
 func convert(m map[interface{}]interface{}) map[string]interface{} {

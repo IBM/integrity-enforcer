@@ -95,35 +95,43 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfil
 
 	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj, self.VerifiedOwners)
 
-	var ignoreAttrsList [][]*protect.AttrsPattern
-	for _, profile := range protectProfiles {
-		attrs := profile.IgnoreAttrs(reqc.Map())
-		ignoreAttrsList = append(ignoreAttrsList, attrs)
-	}
+	reqFields := reqc.Map()
+	lastMr := &MAResult{}
 
-	rules := []*protect.AttrsPattern{}
-	for _, attrs := range ignoreAttrsList {
-		rules = append(rules, attrs...)
-	}
+	for _, protectProfile := range protectProfiles {
+		ignoreAttrsList := protectProfile.IgnoreAttrs(reqFields)
 
-	if mr, err := GetMAResult(ma4kInput, rules); err != nil {
-		maResult.Error = &common.CheckError{
-			Error:  err,
-			Reason: "Error when checking mutation",
+		if mr, err := GetMAResult(ma4kInput, ignoreAttrsList); err != nil {
+			maResult.Error = &common.CheckError{
+				Error:  err,
+				Reason: "Error when checking mutation",
+			}
+			return maResult, nil
+		} else if mr.IsMutated {
+			maResult.IsMutated = mr.IsMutated
+			maResult.Diff = mr.Diff
+			maResult.Filtered = mr.Filtered
+			maResult.Checked = mr.Checked
+			maResult.Error = &common.CheckError{
+				Error:  mr.Error,
+				Reason: mr.Msg,
+			}
+			return maResult, nil
+		} else {
+			lastMr = mr
+			continue
 		}
-		return maResult, nil
-	} else {
-		maResult.IsMutated = mr.IsMutated
-		maResult.Diff = mr.Diff
-		maResult.Filtered = mr.Filtered
-		maResult.Checked = mr.Checked
-		maResult.Error = &common.CheckError{
-			Error:  mr.Error,
-			Reason: mr.Msg,
-		}
-		return maResult, nil
 	}
 
+	maResult.IsMutated = lastMr.IsMutated
+	maResult.Diff = lastMr.Diff
+	maResult.Filtered = lastMr.Filtered
+	maResult.Checked = lastMr.Checked
+	maResult.Error = &common.CheckError{
+		Error:  lastMr.Error,
+		Reason: lastMr.Msg,
+	}
+	return maResult, nil
 }
 
 func NewMutationChecker(owners []*common.Owner) (MutationChecker, error) {
@@ -249,7 +257,7 @@ func generateMaskKeys(rules []*protect.AttrsPattern, namespace, name, kind, user
 
 	maskKey := []string{}
 	for _, rule := range rules {
-		if rule.Match.Match(reqFields) {
+		if rule.MatchWith(reqFields) {
 			maskKey = append(maskKey, rule.Attrs...)
 		}
 	}

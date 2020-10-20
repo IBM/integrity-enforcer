@@ -211,12 +211,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *resear
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateDefaultResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+func (r *ReconcileIntegrityEnforcer) createOrUpdatePrimaryResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
 	found := &rpp.ResourceProtectionProfile{}
-	expected := res.BuildDefaultResourceProtectionProfileForIE(instance)
+	expected := res.BuildPrimaryResourceProtectionProfileForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
-		"DefaultResourceProtectionProfile.Name", expected.Name)
+		"PrimaryResourceProtectionProfile.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
@@ -793,8 +793,13 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateRuleTableConfigMap(instance *
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateIgnoreSARuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildIgnoreSARuleTableLockConfigMapForCR(instance)
+func (r *ReconcileIntegrityEnforcer) createOrUpdateIgnoreRuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildIgnoreRuleTableLockConfigMapForCR(instance)
+	return r.createOrUpdateConfigMap(instance, expected)
+}
+
+func (r *ReconcileIntegrityEnforcer) createOrUpdateForceCheckRuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	expected := res.BuildForceCheckRuleTableLockConfigMapForCR(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 

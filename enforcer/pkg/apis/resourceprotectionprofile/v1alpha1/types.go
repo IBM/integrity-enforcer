@@ -27,11 +27,13 @@ type ResourceProtectionProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
 	Delete   bool `json:"delete,omitempty"`
 
-	Rules                []*protect.Rule                 `json:"rules,omitempty"`
-	IgnoreServiceAccount []*protect.ServieAccountPattern `json:"ignoreServiceAccount,omitempty"`
-	ProtectAttrs         []*protect.AttrsPattern         `json:"protectAttrs,omitempty"`
-	UnprotectAttrs       []*protect.AttrsPattern         `json:"unprotectAttrs,omitempty"`
-	IgnoreAttrs          []*protect.AttrsPattern         `json:"ignoreAttrs,omitempty"`
+	ProtectRules      []*protect.Rule             `json:"protectRules,omitempty"`
+	IgnoreRules       []*protect.Rule             `json:"ignoreRules,omitempty"`
+	ForceCheckRules   []*protect.Rule             `json:"forceCheckRules,omitempty"`
+	KustomizePatterns []*protect.KustomizePattern `json:"kustomizePatterns,omitempty"`
+	ProtectAttrs      []*protect.AttrsPattern     `json:"protectAttrs,omitempty"`
+	UnprotectAttrs    []*protect.AttrsPattern     `json:"unprotectAttrs,omitempty"`
+	IgnoreAttrs       []*protect.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
 // ResourceProtectionProfileStatus defines the observed state of AppEnforcePolicy
@@ -58,11 +60,11 @@ type ResourceProtectionProfile struct {
 }
 
 func (self ResourceProtectionProfile) IsEmpty() bool {
-	return len(self.Spec.Rules) == 0
+	return len(self.Spec.ProtectRules) == 0
 }
 
 func (self ResourceProtectionProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
-	for _, rule := range self.Spec.Rules {
+	for _, rule := range self.Spec.ProtectRules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
 		}
@@ -79,11 +81,11 @@ func (self ResourceProtectionProfile) ToRuleTable() *protect.RuleTable {
 		Name:       self.GetName(),
 	}
 	table := protect.NewRuleTable()
-	table = table.Add(self.Spec.Rules, source)
+	table = table.Add(self.Spec.ProtectRules, source)
 	return table
 }
 
-func (self ResourceProtectionProfile) ToIgnoreSARuleTable() *protect.IgnoreSARuleTable {
+func (self ResourceProtectionProfile) ToIgnoreRuleTable() *protect.RuleTable {
 	gvk := self.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -91,25 +93,49 @@ func (self ResourceProtectionProfile) ToIgnoreSARuleTable() *protect.IgnoreSARul
 		Namespace:  self.GetNamespace(),
 		Name:       self.GetName(),
 	}
-	table := protect.NewIgnoreSARuleTable()
-	table = table.Add(self.Spec.IgnoreServiceAccount, source)
+	table := protect.NewRuleTable()
+	table = table.Add(self.Spec.IgnoreRules, source)
+	return table
+}
+
+func (self ResourceProtectionProfile) ToForceCheckRuleTable() *protect.RuleTable {
+	gvk := self.GroupVersionKind()
+	source := &v1.ObjectReference{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
+		Namespace:  self.GetNamespace(),
+		Name:       self.GetName(),
+	}
+	table := protect.NewRuleTable()
+	table = table.Add(self.Spec.ForceCheckRules, source)
 	return table
 }
 
 func (self ResourceProtectionProfile) Merge(another ResourceProtectionProfile) ResourceProtectionProfile {
 	newProfile := self
-	newProfile.Spec.Rules = append(newProfile.Spec.Rules, another.Spec.Rules...)
-	newProfile.Spec.IgnoreServiceAccount = append(newProfile.Spec.IgnoreServiceAccount, another.Spec.IgnoreServiceAccount...)
+	newProfile.Spec.ProtectRules = append(newProfile.Spec.ProtectRules, another.Spec.ProtectRules...)
+	newProfile.Spec.IgnoreRules = append(newProfile.Spec.IgnoreRules, another.Spec.IgnoreRules...)
+	newProfile.Spec.ForceCheckRules = append(newProfile.Spec.ForceCheckRules, another.Spec.ForceCheckRules...)
 	newProfile.Spec.ProtectAttrs = append(newProfile.Spec.ProtectAttrs, another.Spec.ProtectAttrs...)
 	newProfile.Spec.UnprotectAttrs = append(newProfile.Spec.UnprotectAttrs, another.Spec.UnprotectAttrs...)
 	newProfile.Spec.IgnoreAttrs = append(newProfile.Spec.IgnoreAttrs, another.Spec.IgnoreAttrs...)
 	return newProfile
 }
 
+func (self ResourceProtectionProfile) Kustomize(reqFields map[string]string) []*protect.KustomizePattern {
+	patterns := []*protect.KustomizePattern{}
+	for _, kustPattern := range self.Spec.KustomizePatterns {
+		if kustPattern.MatchWith(reqFields) {
+			patterns = append(patterns, kustPattern)
+		}
+	}
+	return patterns
+}
+
 func (self ResourceProtectionProfile) ProtectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
 	patterns := []*protect.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.ProtectAttrs {
-		if attrsPattern.Match.Match(reqFields) {
+		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
 	}
@@ -119,7 +145,7 @@ func (self ResourceProtectionProfile) ProtectAttrs(reqFields map[string]string) 
 func (self ResourceProtectionProfile) UnprotectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
 	patterns := []*protect.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.UnprotectAttrs {
-		if attrsPattern.Match.Match(reqFields) {
+		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
 	}
@@ -129,7 +155,7 @@ func (self ResourceProtectionProfile) UnprotectAttrs(reqFields map[string]string
 func (self ResourceProtectionProfile) IgnoreAttrs(reqFields map[string]string) []*protect.AttrsPattern {
 	patterns := []*protect.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.IgnoreAttrs {
-		if attrsPattern.Match.Match(reqFields) {
+		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
 	}

@@ -58,7 +58,8 @@ func init() {
 	logger.Info("EnforcerConfig is loaded.")
 
 	config.InitRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultRuleTableLockCMName)
-	config.InitIgnoreSARuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultIgnoreSATableLockCMName)
+	config.InitIgnoreRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultIgnoreTableLockCMName)
+	config.InitForceCheckRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultForceCheckTableLockCMName)
 	logger.Info("RuleTable has been set.")
 }
 

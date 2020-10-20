@@ -18,6 +18,7 @@ package mapnode
 
 import (
 	"encoding/json"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -31,6 +32,16 @@ import (
 type Difference struct {
 	Key    string                 `json:"key"`
 	Values map[string]interface{} `json:"values"`
+}
+
+func (d *Difference) Equal(d2 *Difference) bool {
+	equal := false
+	if d.Key == d2.Key {
+		if reflect.DeepEqual(d.Values, d2.Values) {
+			equal = true
+		}
+	}
+	return equal
 }
 
 type DiffResult struct {
@@ -55,6 +66,18 @@ func (d *DiffResult) Values() []map[string]interface{} {
 
 func (dr *DiffResult) Size() int {
 	return len(dr.Items)
+}
+
+func (dr *DiffResult) Remove(df *Difference) *DiffResult {
+	items := []Difference{}
+	for _, d := range dr.Items {
+		d0 := &d
+		if (d0).Equal(df) {
+			continue
+		}
+		items = append(items, d)
+	}
+	return &DiffResult{Items: items}
 }
 
 func (dr *DiffResult) Filter(maskKeys []string) (*DiffResult, *DiffResult, []string) {
