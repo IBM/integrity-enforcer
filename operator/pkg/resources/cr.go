@@ -31,6 +31,7 @@ import (
 )
 
 const defaultRppName = "default-rpp"
+const primaryRppName = "primary-rpp"
 const signerPolicyName = "signer-policy"
 const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
 const defaultCertPoolPath = "/ie-certpool-secret/"
@@ -66,6 +67,16 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 	}
 	if ecc.Spec.EnforcerConfig.KeyringPath == "" {
 		ecc.Spec.EnforcerConfig.KeyringPath = defaultKeyringPath
+	}
+	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
+		var defaultrpp *rpp.ResourceProtectionProfile
+		deafultRppBytes, _ := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
+		err := yaml.Unmarshal(deafultRppBytes, &defaultrpp)
+		if err != nil {
+			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
+			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
+		}
+		ecc.Spec.EnforcerConfig.CommonProfile = &(defaultrpp.Spec)
 	}
 
 	return ecc
@@ -109,26 +120,15 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 	return epcr
 }
 
-// default rpp
-func BuildDefaultResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.ResourceProtectionProfile {
-	var defaultrpp *rpp.ResourceProtectionProfile
-	reqLogger := log.WithValues("BuildDefaultResourceProtectionProfile", defaultRppName)
+// primary rpp
+func BuildPrimaryResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.ResourceProtectionProfile {
+	primaryrpp := &rpp.ResourceProtectionProfile{}
 
-	if cr.Spec.DefaultRpp != nil {
-		defaultrpp = cr.Spec.DefaultRpp
-	} else {
-		deafultRppBytes, err := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
-		if err != nil {
-			reqLogger.Error(err, "Failed to read default rpp file")
-		}
-
-		err = yaml.Unmarshal(deafultRppBytes, &defaultrpp)
-		if err != nil {
-			reqLogger.Error(err, "Failed to unmarshal yaml")
-		}
+	if cr.Spec.PrimaryRpp != nil {
+		primaryrpp.Spec = *cr.Spec.PrimaryRpp
 	}
 
-	defaultrpp.ObjectMeta.Name = defaultRppName
-	defaultrpp.ObjectMeta.Namespace = cr.Namespace
-	return defaultrpp
+	primaryrpp.ObjectMeta.Name = primaryRppName
+	primaryrpp.ObjectMeta.Namespace = cr.Namespace
+	return primaryrpp
 }

@@ -234,9 +234,14 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 		in, out := &in.SignPolicy, &out.SignPolicy
 		*out = (*in).DeepCopy()
 	}
+	if in.PrimaryRpp != nil {
+		in, out := &in.PrimaryRpp, &out.PrimaryRpp
+		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfileSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.DefaultRpp != nil {
 		in, out := &in.DefaultRpp, &out.DefaultRpp
-		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfile)
+		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfileSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	in.WebhookNamespacedResource.DeepCopyInto(&out.WebhookNamespacedResource)

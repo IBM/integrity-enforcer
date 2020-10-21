@@ -175,9 +175,11 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateDefaultResourceProtectionProfileCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
+	if instance.Spec.PrimaryRpp != nil {
+		recResult, recErr = r.createOrUpdatePrimaryResourceProtectionProfileCR(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
 	}
 
 	//Secret
@@ -271,7 +273,13 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	// ConfigMap (IgnoreSATable)
-	recResult, recErr = r.createOrUpdateIgnoreSARuleTableConfigMap(instance)
+	recResult, recErr = r.createOrUpdateIgnoreRuleTableConfigMap(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	// ConfigMap (ForceCheckTable)
+	recResult, recErr = r.createOrUpdateForceCheckRuleTableConfigMap(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}

@@ -116,21 +116,34 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 			self.ctx.Protected = true
 		}
 	} else {
-		ignoreSAMatched, _ := self.checkIfIgnoredSA()
-		if ignoreSAMatched {
-			self.ctx.IgnoredSA = true
-			allowed = true
-			evalReason = common.REASON_IGNORED_SA
+		forceMatched, forcedProfileRefs := self.checkIfForced()
+		if forceMatched {
+			self.ctx.Protected = true
+			profileReferences = append(profileReferences, forcedProfileRefs...)
 		}
 
-		if !self.ctx.Aborted && !allowed {
-			protected, matchedProfileRefs := self.checkIfProtected()
-			self.ctx.Protected = protected
-			if !protected {
+		if !forceMatched {
+			ignoreMatched, _ := self.checkIfIgnored()
+			if ignoreMatched {
+				self.ctx.IgnoredSA = true
 				allowed = true
-				evalReason = common.REASON_NOT_PROTECTED
+				evalReason = common.REASON_IGNORED_SA
 			}
-			profileReferences = matchedProfileRefs
+		}
+
+		protected := false
+		if !self.ctx.Aborted && !allowed {
+			tmpProtected, matchedProfileRefs := self.checkIfProtected()
+			if tmpProtected {
+				protected = true
+				profileReferences = append(profileReferences, matchedProfileRefs...)
+			}
+		}
+		if !forceMatched && !protected {
+			allowed = true
+			evalReason = common.REASON_NOT_PROTECTED
+		} else {
+			self.ctx.Protected = true
 		}
 	}
 
@@ -449,12 +462,14 @@ func (self *RequestHandler) initLoader() {
 	requestNamespace := self.reqc.Namespace
 	signatureNamespace := self.config.SignatureNamespace // for non-existing namespace / cluster scope
 	profileNamespace := self.config.ProfileNamespace     // for non-existing namespace / cluster scope
+	reqApiVersion := self.reqc.GroupVersion()
+	reqKind := self.reqc.Kind
 	loader := &Loader{
 		Config:            self.config,
 		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
-		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace),
+		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace, self.config.CommonProfile),
 		RuleTable:         ctlconfig.NewRuleTableLoader(enforcerNamespace),
-		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace),
+		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
 	}
 	self.loader = loader
 }
@@ -477,7 +492,7 @@ func (self *RequestHandler) checkIfIEResource() bool {
 	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"research.ibm.com"
 	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
 		self.reqc.Namespace == self.config.Namespace &&
-		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreSATableLockCMName))
+		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreTableLockCMName || self.reqc.Name == ctlconfig.DefaultForceCheckTableLockCMName))
 	return isIECustomResource || isIELockConfigMap
 }
 
@@ -504,9 +519,16 @@ func (self *RequestHandler) checkIfProtected() (bool, []*v1.ObjectReference) {
 	return protected, matchedProfileRefs
 }
 
-func (self *RequestHandler) checkIfIgnoredSA() (bool, []*v1.ObjectReference) {
+func (self *RequestHandler) checkIfIgnored() (bool, []*v1.ObjectReference) {
 	reqFields := self.reqc.Map()
-	table := self.loader.IgnoreServiceAccountPatterns()
+	table := self.loader.IgnoreRules()
+	matched, matchedProfileRefs := table.Match(reqFields)
+	return matched, matchedProfileRefs
+}
+
+func (self *RequestHandler) checkIfForced() (bool, []*v1.ObjectReference) {
+	reqFields := self.reqc.Map()
+	table := self.loader.ForceCheckRules()
 	matched, matchedProfileRefs := table.Match(reqFields)
 	return matched, matchedProfileRefs
 }
@@ -637,8 +659,13 @@ func (self *Loader) ProtectRules() *protect.RuleTable {
 	return table
 }
 
-func (self *Loader) IgnoreServiceAccountPatterns() *protect.IgnoreSARuleTable {
-	table := self.RuleTable.GetIgnoreSAData()
+func (self *Loader) IgnoreRules() *protect.RuleTable {
+	table := self.RuleTable.GetIgnoreData()
+	return table
+}
+
+func (self *Loader) ForceCheckRules() *protect.RuleTable {
+	table := self.RuleTable.GetForceCheckData()
 	return table
 }
 
@@ -658,6 +685,14 @@ func (self *Loader) ProtectionProfile(profileReferences []*v1.ObjectReference) [
 
 func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
 	err := self.RuleTable.Update(reqc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self *Loader) RefreshRuleTable() error {
+	err := self.RuleTable.Refresh()
 	if err != nil {
 		return err
 	}

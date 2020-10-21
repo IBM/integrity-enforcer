@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
@@ -45,15 +46,17 @@ import (
 )
 
 const DefaultRuleTableLockCMName = "ie-rule-table-lock"
-const DefaultIgnoreSATableLockCMName = "ie-ignore-sa-table-lock"
+const DefaultIgnoreTableLockCMName = "ie-ignore-table-lock"
+const DefaultForceCheckTableLockCMName = "ie-force-check-table-lock"
 
 // RuleTable
 
 type RuleTableLoader struct {
 	RPPClient *rppclient.ResearchV1alpha1Client
 	// ConfigMapClient xxxxxx
-	Rule     *protect.RuleTable
-	IgnoreSA *protect.IgnoreSARuleTable
+	Rule       *protect.RuleTable
+	Ignore     *protect.RuleTable
+	ForceCheck *protect.RuleTable
 
 	enforcerNamespace string
 }
@@ -65,7 +68,8 @@ func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 	return &RuleTableLoader{
 		RPPClient:         rppClient,
 		Rule:              protect.NewRuleTable(),
-		IgnoreSA:          protect.NewIgnoreSARuleTable(),
+		Ignore:            protect.NewRuleTable(),
+		ForceCheck:        protect.NewRuleTable(),
 		enforcerNamespace: enforcerNamespace,
 	}
 }
@@ -92,7 +96,7 @@ func InitRuleTable(namespace, name string) error {
 	return nil
 }
 
-func InitIgnoreSARuleTable(namespace, name string) error {
+func InitIgnoreRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
 	rppClient, _ := rppclient.NewForConfig(config)
 	// list RPP in all namespaces
@@ -101,11 +105,33 @@ func InitIgnoreSARuleTable(namespace, name string) error {
 		return err
 	}
 
-	table := protect.NewIgnoreSARuleTable()
+	table := protect.NewRuleTable()
 	for _, rpp := range list1.Items {
-		singleTable := rpp.ToIgnoreSARuleTable()
+		singleTable := rpp.ToIgnoreRuleTable()
 		stb, _ := json.Marshal(singleTable)
-		logger.Debug("[SingleIgnoreSATable]", string(stb))
+		logger.Debug("[SingleIgnoreTable]", string(stb))
+		if !rpp.Spec.Disabled {
+			table = table.Merge(singleTable)
+		}
+	}
+	table.Update(namespace, name)
+	return nil
+}
+
+func InitForceCheckRuleTable(namespace, name string) error {
+	config, _ := rest.InClusterConfig()
+	rppClient, _ := rppclient.NewForConfig(config)
+	// list RPP in all namespaces
+	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	table := protect.NewRuleTable()
+	for _, rpp := range list1.Items {
+		singleTable := rpp.ToForceCheckRuleTable()
+		stb, _ := json.Marshal(singleTable)
+		logger.Debug("[SingleForceCheckTable]", string(stb))
 		if !rpp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
@@ -119,9 +145,14 @@ func (self *RuleTableLoader) GetData() *protect.RuleTable {
 	return self.Rule
 }
 
-func (self *RuleTableLoader) GetIgnoreSAData() *protect.IgnoreSARuleTable {
+func (self *RuleTableLoader) GetIgnoreData() *protect.RuleTable {
 	self.Load()
-	return self.IgnoreSA
+	return self.Ignore
+}
+
+func (self *RuleTableLoader) GetForceCheckData() *protect.RuleTable {
+	self.Load()
+	return self.ForceCheck
 }
 
 func (self *RuleTableLoader) Load() {
@@ -130,11 +161,16 @@ func (self *RuleTableLoader) Load() {
 		logger.Error(err)
 	}
 	self.Rule = tmpData
-	tmpSAData, err := protect.GetIgnoreSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	tmpIgnoreData, err := protect.GetRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
 	if err != nil {
 		logger.Error(err)
 	}
-	self.IgnoreSA = tmpSAData
+	self.Ignore = tmpIgnoreData
+	tmpSAData2, err := protect.GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	self.ForceCheck = tmpSAData2
 	return
 }
 
@@ -151,11 +187,17 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 	}
 	tmpData = tmpData.Remove(ref)
 
-	tmpSAData, err := protect.GetIgnoreSARuleTable(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	tmpIgnoreData, err := protect.GetRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
 	if err != nil {
 		logger.Error(err)
 	}
-	tmpSAData = tmpSAData.Remove(ref)
+	tmpIgnoreData = tmpIgnoreData.Remove(ref)
+
+	tmpSAData2, err := protect.GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+	if err != nil {
+		logger.Error(err)
+	}
+	tmpSAData2 = tmpSAData2.Remove(ref)
 
 	if reqc.IsCreateRequest() || reqc.IsUpdateRequest() {
 		var newProfile rppapi.ResourceProtectionProfile
@@ -163,15 +205,25 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 		if err != nil {
 			logger.Error(err)
 		}
-		tmpData = tmpData.Add(newProfile.Spec.Rules, ref)
-		tmpSAData = tmpSAData.Add(newProfile.Spec.IgnoreServiceAccount, ref)
+		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref)
+		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref)
+		tmpSAData2 = tmpSAData2.Add(newProfile.Spec.ForceCheckRules, ref)
 	}
 
 	self.Rule = tmpData
 	self.Rule.Update(self.enforcerNamespace, DefaultRuleTableLockCMName)
 
-	self.IgnoreSA = tmpSAData
-	self.IgnoreSA.Update(self.enforcerNamespace, DefaultIgnoreSATableLockCMName)
+	self.Ignore = tmpIgnoreData
+	self.Ignore.Update(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
+
+	self.ForceCheck = tmpSAData2
+	self.ForceCheck.Update(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+	return nil
+}
+
+func (self *RuleTableLoader) Refresh() error {
+	// TODO: implement Refresh function
+	// need to consider that this Loader is initialized every request
 	return nil
 }
 
@@ -181,14 +233,14 @@ type RPPLoader struct {
 	enforcerNamespace      string
 	profileNamespace       string
 	requestNamespace       string
-	defaultProfileName     string
+	commonProfile          *rppapi.ResourceProtectionProfileSpec
 	defaultProfileInterval time.Duration
 
 	Client *rppclient.ResearchV1alpha1Client
 	Data   []rppapi.ResourceProtectionProfile
 }
 
-func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string) *RPPLoader {
+func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string, commonProfile *rppapi.ResourceProtectionProfileSpec) *RPPLoader {
 	defaultProfileInterval := time.Second * 60
 	config, _ := rest.InClusterConfig()
 	client, _ := rppclient.NewForConfig(config)
@@ -197,7 +249,7 @@ func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string) 
 		enforcerNamespace:      enforcerNamespace,
 		profileNamespace:       profileNamespace,
 		requestNamespace:       requestNamespace,
-		defaultProfileName:     "default-rpp",
+		commonProfile:          commonProfile,
 		defaultProfileInterval: defaultProfileInterval,
 		Client:                 client,
 	}
@@ -318,33 +370,15 @@ func (self *RPPLoader) MergeDefaultProfiles(data []rppapi.ResourceProtectionProf
 		logger.Error(err)
 	} else {
 		for i, d := range data {
-			data[i] = d.Merge(*dp)
+			data[i] = d.Merge(dp)
 		}
 	}
 	return data, nil
 }
 
-func (self *RPPLoader) GetDefaultProfile() (*rppapi.ResourceProtectionProfile, error) {
-	var rpp *rppapi.ResourceProtectionProfile
-	var err error
-
-	keyName := fmt.Sprintf("RPPLoader/%s/get/%s", self.enforcerNamespace, self.defaultProfileName)
-	if cached := cache.GetString(keyName); cached == "" {
-		rpp, err = self.Client.ResourceProtectionProfiles(self.enforcerNamespace).Get(self.defaultProfileName, metav1.GetOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get ResourceProtectionProfile: %s", err.Error())
-		}
-		logger.Debug("ResourceProtectionProfile reloaded.")
-		if rpp != nil {
-			tmp, _ := json.Marshal(rpp)
-			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
-		}
-	} else {
-		err = json.Unmarshal([]byte(cached), &rpp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to Unmarshal cached ResourceProtectionProfile: %s", err.Error())
-		}
-	}
+func (self *RPPLoader) GetDefaultProfile() (rppapi.ResourceProtectionProfile, error) {
+	rpp := rppapi.ResourceProtectionProfile{}
+	rpp.Spec = *(self.commonProfile)
 	return rpp, nil
 }
 
@@ -428,12 +462,14 @@ type ResSigLoader struct {
 	interval           time.Duration
 	signatureNamespace string
 	requestNamespace   string
+	reqApiVersion      string
+	reqKind            string
 
 	Client *rsigclient.ResearchV1alpha1Client
 	Data   []*rsigapi.ResourceSignature
 }
 
-func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader {
+func NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind string) *ResSigLoader {
 	interval := time.Second * 0
 	config, _ := rest.InClusterConfig()
 	client, _ := rsigclient.NewForConfig(config)
@@ -442,6 +478,8 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 		interval:           interval,
 		signatureNamespace: signatureNamespace,
 		requestNamespace:   requestNamespace,
+		reqApiVersion:      reqApiVersion,
+		reqKind:            reqKind,
 		Client:             client,
 	}
 }
@@ -458,9 +496,11 @@ func (self *ResSigLoader) Load() {
 	var list1, list2 *rsigapi.ResourceSignatureList
 	var keyName string
 
-	keyName = fmt.Sprintf("ResSigLoader/%s/list", self.signatureNamespace)
+	labelSelector := fmt.Sprintf("%s=%s,%s=%s", common.ResSigLabelApiVer, self.reqApiVersion, common.ResSigLabelKind, self.reqKind)
+
+	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.signatureNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
 			return
@@ -477,9 +517,9 @@ func (self *ResSigLoader) Load() {
 			return
 		}
 	}
-	keyName = fmt.Sprintf("ResSigLoader/%s/list", self.requestNamespace)
+	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.requestNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(metav1.ListOptions{})
+		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
 			return
@@ -504,18 +544,26 @@ func (self *ResSigLoader) Load() {
 	for _, d := range list2.Items {
 		data = append(data, d)
 	}
-	sortedData := sortByCreationTimestamp(data)
+	sortedData := sortByTimestamp(data)
 	self.Data = sortedData
 	return
 }
 
-func sortByCreationTimestamp(items []*rsigapi.ResourceSignature) []*rsigapi.ResourceSignature {
+func sortByTimestamp(items []*rsigapi.ResourceSignature) []*rsigapi.ResourceSignature {
 	items2 := make([]*rsigapi.ResourceSignature, len(items))
 	copy(items2, items)
 	sort.Slice(items2, func(i, j int) bool {
-		ti := items2[i].GetCreationTimestamp()
-		tj := items2[j].GetCreationTimestamp()
-		return ti.Time.After(tj.Time)
+		ti := 0
+		tj := 0
+		tis, ok1 := items2[i].GetLabels()[common.ResSigLabelTime]
+		if ok1 {
+			ti, _ = strconv.Atoi(tis)
+		}
+		tjs, ok2 := items2[j].GetLabels()[common.ResSigLabelTime]
+		if ok2 {
+			tj, _ = strconv.Atoi(tjs)
+		}
+		return ti > tj
 	})
 	return items2
 }

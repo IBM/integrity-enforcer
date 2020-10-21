@@ -29,7 +29,8 @@ import (
 )
 
 const ruleTableLockCMName = "ie-rule-table-lock"
-const ignoreSATableLockCMName = "ie-ignore-sa-table-lock"
+const ignoreTableLockCMName = "ie-ignore-table-lock"
+const forceCheckTableLockCMName = "ie-force-check-table-lock"
 
 //deployment
 func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
@@ -355,13 +356,27 @@ func BuildRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v
 	}
 }
 
-// ie-ignore-sa-table-lock ConfigMap
-func BuildIgnoreSARuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+// ie-ignore-table-lock ConfigMap
+func BuildIgnoreRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
 	labels := cr.Spec.MetaLabels
 
 	return &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ignoreSATableLockCMName,
+			Name:      ignoreTableLockCMName,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		BinaryData: map[string][]byte{"table": nil},
+	}
+}
+
+// ie-force-check-table-lock ConfigMap
+func BuildForceCheckRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+	labels := cr.Spec.MetaLabels
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      forceCheckTableLockCMName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
