@@ -17,7 +17,7 @@
 package config
 
 import (
-	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
@@ -42,12 +42,12 @@ type EnforcerConfig struct {
 	Log   *LoggingScopeConfig `json:"log,omitempty"`
 
 	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
-	Allow         []protect.RequestPattern              `json:"allow,omitempty"`
-	Ignore        []protect.RequestPattern              `json:"ignore,omitempty"`
-	SignPolicy    *policy.SignPolicy                    `json:"signPolicy,omitempty"`
-	Mode          IntegrityEnforcerMode                 `json:"mode,omitempty"`
-	Plugin        []PluginConfig                        `json:"plugin,omitempty"`
-	CommonProfile *rppapi.ResourceProtectionProfileSpec `json:"commonProfile,omitempty"`
+	Allow         []protect.RequestPattern           `json:"allow,omitempty"`
+	Ignore        []protect.RequestPattern           `json:"ignore,omitempty"`
+	SignPolicy    *policy.SignPolicy                 `json:"signPolicy,omitempty"`
+	Mode          IntegrityEnforcerMode              `json:"mode,omitempty"`
+	Plugin        []PluginConfig                     `json:"plugin,omitempty"`
+	CommonProfile *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`
 
 	Namespace          string `json:"namespace,omitempty"`
 	SignatureNamespace string `json:"signatureNamespace,omitempty"`

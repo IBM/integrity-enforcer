@@ -21,7 +21,7 @@
 package v1alpha1
 
 import (
-	resourceprotectionprofilev1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	resourcesigningprofilev1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -236,12 +236,12 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 	}
 	if in.PrimaryRpp != nil {
 		in, out := &in.PrimaryRpp, &out.PrimaryRpp
-		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfileSpec)
+		*out = new(resourcesigningprofilev1alpha1.ResourceSigningProfileSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.DefaultRpp != nil {
 		in, out := &in.DefaultRpp, &out.DefaultRpp
-		*out = new(resourceprotectionprofilev1alpha1.ResourceProtectionProfileSpec)
+		*out = new(resourcesigningprofilev1alpha1.ResourceSigningProfileSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	in.WebhookNamespacedResource.DeepCopyInto(&out.WebhookNamespacedResource)

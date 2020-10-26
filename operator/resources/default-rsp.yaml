@@ -1,7 +1,7 @@
 apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+kind: ResourceSigningProfile
 metadata:
-  name: default-rpp
+  name: default-rsp
 spec:
   ignoreAttrs:
   - attrs:

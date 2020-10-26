@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
@@ -30,10 +30,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const defaultRppName = "default-rpp"
-const primaryRppName = "primary-rpp"
+const defaultRppName = "default-rsp"
+const primaryRppName = "primary-rsp"
 const signerPolicyName = "signer-policy"
-const defaultResourceProtectionProfileYamlPath = "/resources/default-rpp.yaml"
+const defaultResourceSigningProfileYamlPath = "/resources/default-rsp.yaml"
 const defaultCertPoolPath = "/ie-certpool-secret/"
 const defaultKeyringPath = "/keyring/pubring.gpg"
 
@@ -69,14 +69,14 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 		ecc.Spec.EnforcerConfig.KeyringPath = defaultKeyringPath
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
-		var defaultrpp *rpp.ResourceProtectionProfile
-		deafultRppBytes, _ := ioutil.ReadFile(defaultResourceProtectionProfileYamlPath)
-		err := yaml.Unmarshal(deafultRppBytes, &defaultrpp)
+		var defaultrsp *rsp.ResourceSigningProfile
+		deafultRppBytes, _ := ioutil.ReadFile(defaultResourceSigningProfileYamlPath)
+		err := yaml.Unmarshal(deafultRppBytes, &defaultrsp)
 		if err != nil {
 			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
 			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
 		}
-		ecc.Spec.EnforcerConfig.CommonProfile = &(defaultrpp.Spec)
+		ecc.Spec.EnforcerConfig.CommonProfile = &(defaultrsp.Spec)
 	}
 
 	return ecc
@@ -120,15 +120,15 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 	return epcr
 }
 
-// primary rpp
-func BuildPrimaryResourceProtectionProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rpp.ResourceProtectionProfile {
-	primaryrpp := &rpp.ResourceProtectionProfile{}
+// primary rsp
+func BuildPrimaryResourceSigningProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rsp.ResourceSigningProfile {
+	primaryrsp := &rsp.ResourceSigningProfile{}
 
 	if cr.Spec.PrimaryRpp != nil {
-		primaryrpp.Spec = *cr.Spec.PrimaryRpp
+		primaryrsp.Spec = *cr.Spec.PrimaryRpp
 	}
 
-	primaryrpp.ObjectMeta.Name = primaryRppName
-	primaryrpp.ObjectMeta.Namespace = cr.Namespace
-	return primaryrpp
+	primaryrsp.ObjectMeta.Name = primaryRppName
+	primaryrsp.ObjectMeta.Namespace = cr.Namespace
+	return primaryrsp
 }

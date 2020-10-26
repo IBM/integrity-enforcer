@@ -19,14 +19,14 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourceprotectionprofile/clientset/versioned/scheme"
+	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
 type ResearchV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	ResourceProtectionProfilesGetter
+	ResourceSigningProfilesGetter
 }
 
 // ResearchV1alpha1Client is used to interact with features provided by the research.ibm.com group.
@@ -34,8 +34,8 @@ type ResearchV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ResearchV1alpha1Client) ResourceProtectionProfiles(namespace string) ResourceProtectionProfileInterface {
-	return newResourceProtectionProfiles(c, namespace)
+func (c *ResearchV1alpha1Client) ResourceSigningProfiles(namespace string) ResourceSigningProfileInterface {
+	return newResourceSigningProfiles(c, namespace)
 }
 
 // NewForConfig creates a new ResearchV1alpha1Client for the given config.

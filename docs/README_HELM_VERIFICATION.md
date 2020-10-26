@@ -20,20 +20,20 @@ IE provides protection for Helm chart resources. To protect the Helm chart resou
    $ ./scripts/gpg-rs-sign.sh <SAMPLE_SIGNER_EMAIL> /tmp/sample-chart-manifest.yaml /tmp/sample-chart-manifest-rs.yaml
    ```
 
-3. Create a ResourceProtectionProfile for the Helm resources by the script.
+3. Create a ResourceSigningProfile for the Helm resources by the script.
 
    
    ```
-   $ generate_rpp.sh <ARGS: TODO FIX THIS> > /tmp/sample-chart-rpp.yaml
+   $ generate_rsp.sh <ARGS: TODO FIX THIS> > /tmp/sample-chart-rsp.yaml
    ```
 
-   `/tmp/sample-chart-rpp.yaml` is generated, and the content is something like this.
+   `/tmp/sample-chart-rsp.yaml` is generated, and the content is something like this.
 
    ```
    apiVersion: research.ibm.com/v1alpha1
-   kind: ResourceProtectionProfile
+   kind: ResourceSigningProfile
    metadata:
-     name: ac-test-chart-rpp
+     name: ac-test-chart-rsp
    spec:
      rules:
      - match:
@@ -43,11 +43,11 @@ IE provides protection for Helm chart resources. To protect the Helm chart resou
          name: sample-app-1-sample-chart-secret
    ```
    
-4. Once ResourceSignature and ResourceProtectionProfile are ready, deploy them in the namespace which you will use for Helm chart installation. 
+4. Once ResourceSignature and ResourceSigningProfile are ready, deploy them in the namespace which you will use for Helm chart installation. 
    
    ```
    $ oc create -n sample-ns -f /tmp/sample-chart-manifest-rs.yaml
-   $ oc create -n sample-ns -f /tmp/sample-chart-rpp.yaml
+   $ oc create -n sample-ns -f /tmp/sample-chart-rsp.yaml
    ```
 
 5. It's time to install the Helm chart!

@@ -25,14 +25,14 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfiles []protect.ProtectionProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -96,42 +96,36 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfil
 	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj, self.VerifiedOwners)
 
 	reqFields := reqc.Map()
-	lastMr := &MAResult{}
 
-	for _, protectProfile := range protectProfiles {
-		ignoreAttrsList := protectProfile.IgnoreAttrs(reqFields)
+	ignoreAttrsList := protectProfile.IgnoreAttrs(reqFields)
 
-		if mr, err := GetMAResult(ma4kInput, ignoreAttrsList); err != nil {
-			maResult.Error = &common.CheckError{
-				Error:  err,
-				Reason: "Error when checking mutation",
-			}
-			return maResult, nil
-		} else if mr.IsMutated {
-			maResult.IsMutated = mr.IsMutated
-			maResult.Diff = mr.Diff
-			maResult.Filtered = mr.Filtered
-			maResult.Checked = mr.Checked
-			maResult.Error = &common.CheckError{
-				Error:  mr.Error,
-				Reason: mr.Msg,
-			}
-			return maResult, nil
-		} else {
-			lastMr = mr
-			continue
+	if mr, err := GetMAResult(ma4kInput, ignoreAttrsList); err != nil {
+		maResult.Error = &common.CheckError{
+			Error:  err,
+			Reason: "Error when checking mutation",
 		}
+		return maResult, nil
+	} else if mr.IsMutated {
+		maResult.IsMutated = mr.IsMutated
+		maResult.Diff = mr.Diff
+		maResult.Filtered = mr.Filtered
+		maResult.Checked = mr.Checked
+		maResult.Error = &common.CheckError{
+			Error:  mr.Error,
+			Reason: mr.Msg,
+		}
+		return maResult, nil
+	} else {
+		maResult.IsMutated = mr.IsMutated
+		maResult.Diff = mr.Diff
+		maResult.Filtered = mr.Filtered
+		maResult.Checked = mr.Checked
+		maResult.Error = &common.CheckError{
+			Error:  mr.Error,
+			Reason: mr.Msg,
+		}
+		return maResult, nil
 	}
-
-	maResult.IsMutated = lastMr.IsMutated
-	maResult.Diff = lastMr.Diff
-	maResult.Filtered = lastMr.Filtered
-	maResult.Checked = lastMr.Checked
-	maResult.Error = &common.CheckError{
-		Error:  lastMr.Error,
-		Reason: lastMr.Msg,
-	}
-	return maResult, nil
 }
 
 func NewMutationChecker(owners []*common.Owner) (MutationChecker, error) {

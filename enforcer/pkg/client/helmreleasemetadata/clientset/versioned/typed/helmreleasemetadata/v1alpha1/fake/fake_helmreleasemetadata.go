@@ -19,6 +19,8 @@
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var helmreleasemetadatasResource = schema.GroupVersionResource{Group: "research.
 var helmreleasemetadatasKind = schema.GroupVersionKind{Group: "research.ibm.com", Version: "v1alpha1", Kind: "HelmReleaseMetadata"}
 
 // Get takes name of the helmReleaseMetadata, and returns the corresponding helmReleaseMetadata object, and an error if there is any.
-func (c *FakeHelmReleaseMetadatas) Get(name string, options v1.GetOptions) (result *v1alpha1.HelmReleaseMetadata, err error) {
+func (c *FakeHelmReleaseMetadatas) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.HelmReleaseMetadata, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(helmreleasemetadatasResource, c.ns, name), &v1alpha1.HelmReleaseMetadata{})
 
@@ -50,7 +52,7 @@ func (c *FakeHelmReleaseMetadatas) Get(name string, options v1.GetOptions) (resu
 }
 
 // List takes label and field selectors, and returns the list of HelmReleaseMetadatas that match those selectors.
-func (c *FakeHelmReleaseMetadatas) List(opts v1.ListOptions) (result *v1alpha1.HelmReleaseMetadataList, err error) {
+func (c *FakeHelmReleaseMetadatas) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.HelmReleaseMetadataList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(helmreleasemetadatasResource, helmreleasemetadatasKind, c.ns, opts), &v1alpha1.HelmReleaseMetadataList{})
 
@@ -72,14 +74,14 @@ func (c *FakeHelmReleaseMetadatas) List(opts v1.ListOptions) (result *v1alpha1.H
 }
 
 // Watch returns a watch.Interface that watches the requested helmReleaseMetadatas.
-func (c *FakeHelmReleaseMetadatas) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeHelmReleaseMetadatas) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(helmreleasemetadatasResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a helmReleaseMetadata and creates it.  Returns the server's representation of the helmReleaseMetadata, and an error, if there is any.
-func (c *FakeHelmReleaseMetadatas) Create(helmReleaseMetadata *v1alpha1.HelmReleaseMetadata) (result *v1alpha1.HelmReleaseMetadata, err error) {
+func (c *FakeHelmReleaseMetadatas) Create(ctx context.Context, helmReleaseMetadata *v1alpha1.HelmReleaseMetadata, opts v1.CreateOptions) (result *v1alpha1.HelmReleaseMetadata, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(helmreleasemetadatasResource, c.ns, helmReleaseMetadata), &v1alpha1.HelmReleaseMetadata{})
 
@@ -90,7 +92,7 @@ func (c *FakeHelmReleaseMetadatas) Create(helmReleaseMetadata *v1alpha1.HelmRele
 }
 
 // Update takes the representation of a helmReleaseMetadata and updates it. Returns the server's representation of the helmReleaseMetadata, and an error, if there is any.
-func (c *FakeHelmReleaseMetadatas) Update(helmReleaseMetadata *v1alpha1.HelmReleaseMetadata) (result *v1alpha1.HelmReleaseMetadata, err error) {
+func (c *FakeHelmReleaseMetadatas) Update(ctx context.Context, helmReleaseMetadata *v1alpha1.HelmReleaseMetadata, opts v1.UpdateOptions) (result *v1alpha1.HelmReleaseMetadata, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(helmreleasemetadatasResource, c.ns, helmReleaseMetadata), &v1alpha1.HelmReleaseMetadata{})
 
@@ -101,7 +103,7 @@ func (c *FakeHelmReleaseMetadatas) Update(helmReleaseMetadata *v1alpha1.HelmRele
 }
 
 // Delete takes name of the helmReleaseMetadata and deletes it. Returns an error if one occurs.
-func (c *FakeHelmReleaseMetadatas) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeHelmReleaseMetadatas) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(helmreleasemetadatasResource, c.ns, name), &v1alpha1.HelmReleaseMetadata{})
 
@@ -109,15 +111,15 @@ func (c *FakeHelmReleaseMetadatas) Delete(name string, options *v1.DeleteOptions
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeHelmReleaseMetadatas) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(helmreleasemetadatasResource, c.ns, listOptions)
+func (c *FakeHelmReleaseMetadatas) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(helmreleasemetadatasResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.HelmReleaseMetadataList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched helmReleaseMetadata.
-func (c *FakeHelmReleaseMetadatas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.HelmReleaseMetadata, err error) {
+func (c *FakeHelmReleaseMetadatas) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.HelmReleaseMetadata, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(helmreleasemetadatasResource, c.ns, name, pt, data, subresources...), &v1alpha1.HelmReleaseMetadata{})
 

@@ -17,13 +17,19 @@
 package v1alpha1
 
 import (
+	"time"
+
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ResourceProtectionProfileSpec defines the desired state of AppEnforcePolicy
-type ResourceProtectionProfileSpec struct {
+var layout = "2006-01-02 15:04:05"
+
+const maxHistoryLength = 3
+
+// ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
+type ResourceSigningProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
 	Delete   bool `json:"delete,omitempty"`
 
@@ -36,34 +42,40 @@ type ResourceProtectionProfileSpec struct {
 	IgnoreAttrs       []*protect.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
-// ResourceProtectionProfileStatus defines the observed state of AppEnforcePolicy
-type ResourceProtectionProfileStatus struct {
-	Results []*protect.Result `json:"deniedRequests,omitempty"`
+// ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy
+type ResourceSigningProfileStatus struct {
+	Details []ProfileStatusDetail `json:"deniedRequests,omitempty"`
+}
+
+type ProfileStatusDetail struct {
+	Request *protect.Request `json:"request,omitempty"`
+	Count   int              `json:"count,omitempty"`
+	History []protect.Result `json:"history,omitempty"`
 }
 
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=resourceprotectionprofile,scope=Namespaced
+// +resource:path=resourcesigningprofile,scope=Namespaced
 
 // EnforcePolicy is the CRD. Use this command to generate deepcopy for it:
 // ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
 // For more details of code-generator, please visit https://github.com/kubernetes/code-generator
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// ResourceProtectionProfile is the CRD. Use this command to generate deepcopy for it:
-type ResourceProtectionProfile struct {
+// ResourceSigningProfile is the CRD. Use this command to generate deepcopy for it:
+type ResourceSigningProfile struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ResourceProtectionProfileSpec   `json:"spec,omitempty"`
-	Status ResourceProtectionProfileStatus `json:"status,omitempty"`
+	Spec   ResourceSigningProfileSpec   `json:"spec,omitempty"`
+	Status ResourceSigningProfileStatus `json:"status,omitempty"`
 }
 
-func (self ResourceProtectionProfile) IsEmpty() bool {
+func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.ProtectRules) == 0
 }
 
-func (self ResourceProtectionProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
+func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
 	for _, rule := range self.Spec.ProtectRules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
@@ -72,7 +84,7 @@ func (self ResourceProtectionProfile) Match(reqFields map[string]string) (bool, 
 	return false, nil
 }
 
-func (self ResourceProtectionProfile) ToRuleTable() *protect.RuleTable {
+func (self ResourceSigningProfile) ToRuleTable() *protect.RuleTable {
 	gvk := self.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -85,7 +97,7 @@ func (self ResourceProtectionProfile) ToRuleTable() *protect.RuleTable {
 	return table
 }
 
-func (self ResourceProtectionProfile) ToIgnoreRuleTable() *protect.RuleTable {
+func (self ResourceSigningProfile) ToIgnoreRuleTable() *protect.RuleTable {
 	gvk := self.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -98,7 +110,7 @@ func (self ResourceProtectionProfile) ToIgnoreRuleTable() *protect.RuleTable {
 	return table
 }
 
-func (self ResourceProtectionProfile) ToForceCheckRuleTable() *protect.RuleTable {
+func (self ResourceSigningProfile) ToForceCheckRuleTable() *protect.RuleTable {
 	gvk := self.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -111,7 +123,7 @@ func (self ResourceProtectionProfile) ToForceCheckRuleTable() *protect.RuleTable
 	return table
 }
 
-func (self ResourceProtectionProfile) Merge(another ResourceProtectionProfile) ResourceProtectionProfile {
+func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) ResourceSigningProfile {
 	newProfile := self
 	newProfile.Spec.ProtectRules = append(newProfile.Spec.ProtectRules, another.Spec.ProtectRules...)
 	newProfile.Spec.IgnoreRules = append(newProfile.Spec.IgnoreRules, another.Spec.IgnoreRules...)
@@ -122,7 +134,7 @@ func (self ResourceProtectionProfile) Merge(another ResourceProtectionProfile) R
 	return newProfile
 }
 
-func (self ResourceProtectionProfile) Kustomize(reqFields map[string]string) []*protect.KustomizePattern {
+func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*protect.KustomizePattern {
 	patterns := []*protect.KustomizePattern{}
 	for _, kustPattern := range self.Spec.KustomizePatterns {
 		if kustPattern.MatchWith(reqFields) {
@@ -132,7 +144,7 @@ func (self ResourceProtectionProfile) Kustomize(reqFields map[string]string) []*
 	return patterns
 }
 
-func (self ResourceProtectionProfile) ProtectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
 	patterns := []*protect.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.ProtectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
@@ -142,7 +154,7 @@ func (self ResourceProtectionProfile) ProtectAttrs(reqFields map[string]string) 
 	return patterns
 }
 
-func (self ResourceProtectionProfile) UnprotectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
 	patterns := []*protect.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.UnprotectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
@@ -152,7 +164,7 @@ func (self ResourceProtectionProfile) UnprotectAttrs(reqFields map[string]string
 	return patterns
 }
 
-func (self ResourceProtectionProfile) IgnoreAttrs(reqFields map[string]string) []*protect.AttrsPattern {
+func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*protect.AttrsPattern {
 	patterns := []*protect.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.IgnoreAttrs {
 		if attrsPattern.MatchWith(reqFields) {
@@ -162,11 +174,49 @@ func (self ResourceProtectionProfile) IgnoreAttrs(reqFields map[string]string) [
 	return patterns
 }
 
+func (self *ResourceSigningProfile) UpdateStatus(request *protect.Request, errMsg string) *ResourceSigningProfile {
+	reqId := -1
+	var detail ProfileStatusDetail
+	for i, d := range self.Status.Details {
+		if request.Equal(d.Request) {
+			reqId = i
+			detail = d
+		}
+	}
+	if reqId < 0 {
+		detail = ProfileStatusDetail{
+			Request: request,
+			Count:   1,
+			History: []protect.Result{
+				{
+					Message:   errMsg,
+					Timestamp: time.Now().UTC().Format(layout),
+				},
+			},
+		}
+		self.Status.Details = append(self.Status.Details, detail)
+	} else if reqId < len(self.Status.Details) {
+		detail.Count = detail.Count + 1
+		newResult := protect.Result{
+			Message:   errMsg,
+			Timestamp: time.Now().UTC().Format(layout),
+		}
+		detail.History = append(detail.History, newResult)
+		currentLen := len(detail.History)
+		if currentLen > maxHistoryLength {
+			tmpHistory := detail.History[currentLen-3:]
+			detail.History = tmpHistory
+		}
+		self.Status.Details[reqId] = detail
+	}
+	return self
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ResourceProtectionProfileList contains a list of ResourceProtectionProfile
-type ResourceProtectionProfileList struct {
+// ResourceSigningProfileList contains a list of ResourceSigningProfile
+type ResourceSigningProfileList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ResourceProtectionProfile `json:"items"`
+	Items           []ResourceSigningProfile `json:"items"`
 }

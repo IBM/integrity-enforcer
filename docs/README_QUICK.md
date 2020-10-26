@@ -143,14 +143,14 @@ The steps for protecting resources include:
 
 ### Define which reource(s) should be protected
 
-You can define which resources should be protected with signature in a cluster by IE. A custom resource `ResourceProtectionProfile` (RPP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RPP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
+You can define which resources should be protected with signature in a cluster by IE. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
 apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
 spec:
   rules:
   - match:
@@ -159,7 +159,7 @@ spec:
     - kind: Service
 EOF
 
-resourceprotectionprofile.research.ibm.com/sample-rpp created
+resourcesigningprofile.research.ibm.com/sample-rsp created
 ```
 
 See [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail specs.
@@ -280,7 +280,7 @@ If you want to see the result of admission check, you can see the detail by usin
   "request.objectHashType": "",
   "request.uid": "bdb62f22-22f8-4a4d-9ead-cc034e4ce07b",
   "requestScope": "Namespaced",
-  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=research.ibm.com/v1alpha1 kind=ResourceProtectionProfile name=sample-rpp namespace=secure-ns operation=UPDATE\n",
+  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=research.ibm.com/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
   "sig.allow": false,
   "sig.errMsg": "",
   "sig.errOccured": true,

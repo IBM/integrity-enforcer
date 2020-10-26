@@ -151,7 +151,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateResourceProtectionProfileCRD(instance)
+	recResult, recErr = r.createOrUpdateResourceSigningProfileCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -176,7 +176,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 	}
 
 	if instance.Spec.PrimaryRpp != nil {
-		recResult, recErr = r.createOrUpdatePrimaryResourceProtectionProfileCR(instance)
+		recResult, recErr = r.createOrUpdatePrimaryResourceSigningProfileCR(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}

@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
@@ -53,11 +53,11 @@ type IntegrityEnforcerSpec struct {
 	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
 	GlobalConfig GlobalConfig    `json:"globalConfig,omitempty"`
 
-	EnforcerConfigCrName string                             `json:"enforcerConfigCrName,omitempty"`
-	EnforcerConfig       *iec.EnforcerConfig                `json:"enforcerConfig,omitempty"`
-	SignPolicy           *policy.SignPolicy                 `json:"signPolicy,omitempty"`
-	PrimaryRpp           *rpp.ResourceProtectionProfileSpec `json:"resourceProtectionProfile,omitempty"`
-	DefaultRpp           *rpp.ResourceProtectionProfileSpec `json:"defaultResourceProtectionProfile,omitempty"`
+	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
+	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
+	SignPolicy           *policy.SignPolicy              `json:"signPolicy,omitempty"`
+	PrimaryRpp           *rsp.ResourceSigningProfileSpec `json:"resourceProtectionProfile,omitempty"`
+	DefaultRpp           *rsp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`

@@ -135,7 +135,7 @@ spec:
     - podsecuritypolicies
     - clusterrolebindings
     - clusterroles
-    - clusterresourceprotectionprofiles
+    - clusterresourcesigningprofiles
 ```
 
 ## Logging

@@ -19,7 +19,7 @@
 package fake
 
 import (
-	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourceprotectionprofile/clientset/versioned/typed/resourceprotectionprofile/v1alpha1"
+	v1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
@@ -28,8 +28,8 @@ type FakeResearchV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeResearchV1alpha1) ResourceProtectionProfiles(namespace string) v1alpha1.ResourceProtectionProfileInterface {
-	return &FakeResourceProtectionProfiles{c, namespace}
+func (c *FakeResearchV1alpha1) ResourceSigningProfiles(namespace string) v1alpha1.ResourceSigningProfileInterface {
+	return &FakeResourceSigningProfiles{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

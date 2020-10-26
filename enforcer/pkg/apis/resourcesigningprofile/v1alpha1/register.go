@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,7 +25,7 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: rpp.GroupName, Version: "v1alpha1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: rsp.GroupName, Version: "v1alpha1"}
 )
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind
@@ -46,8 +46,8 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ResourceProtectionProfile{},
-		&ResourceProtectionProfileList{},
+		&ResourceSigningProfile{},
+		&ResourceSigningProfileList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

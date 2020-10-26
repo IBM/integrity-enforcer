@@ -27,9 +27,9 @@ rules:
   - apiGroups:
     - ""
     resources:
-    - resourceprotectionprofiles
+    - resourcesigningprofiles
     - resourcesignatures
-    - clusterresourceprotectionprofiles
+    - clusterresourcesigningprofiles
     verbs:
     - create
     - delete

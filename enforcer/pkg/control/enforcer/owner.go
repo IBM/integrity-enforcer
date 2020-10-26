@@ -172,7 +172,7 @@ func (owr *ConcreteOwnerResolver) findOwner(ref *common.ResourceRef) (*FindOwner
 	gvclient := (*owr.client).Resource(gvr)
 
 	var objMap map[string]interface{}
-	if v, err := gvclient.Namespace(ref.Namespace).Get(ref.Name, metav1.GetOptions{}); err != nil {
+	if v, err := gvclient.Namespace(ref.Namespace).Get(nil, ref.Name, metav1.GetOptions{}); err != nil {
 		result.Error = &common.CheckError{
 			Error:  err,
 			Reason: "Error when obtaing owner reference",

@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/pkg/apis/research/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pkg/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/pkg/resources"
@@ -116,9 +116,9 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateHelmReleaseMetadataCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceProtectionProfileCRD(
+func (r *ReconcileIntegrityEnforcer) createOrUpdateResourceSigningProfileCRD(
 	instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	expected := res.BuildResourceProtectionProfileCRD(instance)
+	expected := res.BuildResourceSigningProfileCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
@@ -184,7 +184,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *resear
 		return reconcile.Result{}, err
 	}
 
-	// If default rpp does not exist, create it and requeue
+	// If default rsp does not exist, create it and requeue
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
 
 	if err != nil && errors.IsNotFound(err) {
@@ -211,12 +211,12 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdateSignPolicyCR(instance *resear
 
 }
 
-func (r *ReconcileIntegrityEnforcer) createOrUpdatePrimaryResourceProtectionProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
-	found := &rpp.ResourceProtectionProfile{}
-	expected := res.BuildPrimaryResourceProtectionProfileForIE(instance)
+func (r *ReconcileIntegrityEnforcer) createOrUpdatePrimaryResourceSigningProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (reconcile.Result, error) {
+	found := &rsp.ResourceSigningProfile{}
+	expected := res.BuildPrimaryResourceSigningProfileForIE(instance)
 	reqLogger := log.WithValues(
 		"Instance.Name", instance.Name,
-		"PrimaryResourceProtectionProfile.Name", expected.Name)
+		"PrimaryResourceSigningProfile.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.scheme)
@@ -225,7 +225,7 @@ func (r *ReconcileIntegrityEnforcer) createOrUpdatePrimaryResourceProtectionProf
 		return reconcile.Result{}, err
 	}
 
-	// If RPP does not exist, create it and requeue
+	// If RSP does not exist, create it and requeue
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
 
 	if err != nil && errors.IsNotFound(err) {

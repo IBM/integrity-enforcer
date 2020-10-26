@@ -613,8 +613,8 @@ spec:
                 name:
                   type: string
               type: object
-            defaultResourceProtectionProfile:
-              description: ResourceProtectionProfileSpec defines the desired state
+            defaultResourceSigningProfile:
+              description: ResourceSigningProfileSpec defines the desired state
                 of AppEnforcePolicy
               properties:
                 delete:

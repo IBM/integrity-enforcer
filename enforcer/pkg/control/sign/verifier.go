@@ -388,7 +388,7 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string, allowPattern *ma
 	maskedReqNode := reqNode.Mask(mask)
 
 	dr := maskedOrgNode.Diff(maskedReqNode)
-	if dr != nil {
+	if dr != nil && allowPattern != nil {
 		dr = dr.Remove(allowPattern)
 	}
 	diffStr := ""

@@ -64,7 +64,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignPolicyEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectProfiles []protect.ProtectionProfile) (*common.SignPolicyEvalResult, error)
+	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectProfiles protect.ProtectionProfile) (*common.SignPolicyEvalResult, error)
 }
 
 type ConcreteSignPolicyEvaluator struct {
@@ -177,98 +177,91 @@ func (self *ConcreteSignPolicyEvaluator) GetResourceSignature(ref *common.Resour
 	// return nil
 }
 
-func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectProfiles []protect.ProtectionProfile) (*common.SignPolicyEvalResult, error) {
+func (self *ConcreteSignPolicyEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, protectProfile protect.ProtectionProfile) (*common.SignPolicyEvalResult, error) {
 
 	// eval sign policy
 	ref := reqc.ResourceRef()
 
-	signer := &common.SignerInfo{}
-	matchedPolicyStr := ""
+	// override ref name if there is kustomize pattern for this
+	kustPatterns := protectProfile.Kustomize(reqc.Map())
+	if len(kustPatterns) > 0 {
+		ref = kustPatterns[0].OverrideName(ref)
+	}
 
-	for _, protectProfile := range protectProfiles {
-		// override ref name if there is kustomize pattern for this
-		kustPatterns := protectProfile.Kustomize(reqc.Map())
-		if len(kustPatterns) > 0 {
-			ref = kustPatterns[0].OverrideName(ref)
+	// find signature
+	rsig := self.GetResourceSignature(ref, reqc, resSigList)
+	if rsig == nil {
+		return &common.SignPolicyEvalResult{
+			Allow:   false,
+			Checked: true,
+			Error: &common.CheckError{
+				Reason: "No signature found",
+			},
+		}, nil
+	}
+
+	verifyType := VerifyType(self.config.VerifyType)
+
+	// create verifier
+	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, self.config.CertPoolPath, self.config.KeyringPath)
+
+	// verify signature
+	sigVerifyResult, err := verifier.Verify(rsig, reqc, protectProfile)
+	if err != nil {
+		return &common.SignPolicyEvalResult{
+			Allow:   false,
+			Checked: true,
+			Error: &common.CheckError{
+				Error:  err,
+				Reason: "Error during signature verification",
+			},
+		}, nil
+	}
+
+	if sigVerifyResult == nil || sigVerifyResult.Signer == nil {
+		msg := ""
+		if sigVerifyResult != nil && sigVerifyResult.Error != nil {
+			msg = sigVerifyResult.Error.Reason
 		}
+		return &common.SignPolicyEvalResult{
+			Allow:   false,
+			Checked: true,
+			Error: &common.CheckError{
+				Reason: fmt.Sprintf("Failed to verify signature; %s", msg),
+			},
+		}, nil
+	}
 
-		// find signature
-		rsig := self.GetResourceSignature(ref, reqc, resSigList)
-		if rsig == nil {
-			return &common.SignPolicyEvalResult{
-				Allow:   false,
-				Checked: true,
-				Error: &common.CheckError{
-					Reason: "No signature found",
-				},
-			}, nil
-		}
+	// signer
+	signer := sigVerifyResult.Signer
 
-		verifyType := VerifyType(self.config.VerifyType)
-
-		// create verifier
-		verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, self.config.CertPoolPath, self.config.KeyringPath)
-
-		// verify signature
-		sigVerifyResult, err := verifier.Verify(rsig, reqc, protectProfile)
-		if err != nil {
-			return &common.SignPolicyEvalResult{
-				Allow:   false,
-				Checked: true,
-				Error: &common.CheckError{
-					Error:  err,
-					Reason: "Error during signature verification",
-				},
-			}, nil
-		}
-
-		if sigVerifyResult == nil || sigVerifyResult.Signer == nil {
-			msg := ""
-			if sigVerifyResult != nil && sigVerifyResult.Error != nil {
-				msg = sigVerifyResult.Error.Reason
-			}
-			return &common.SignPolicyEvalResult{
-				Allow:   false,
-				Checked: true,
-				Error: &common.CheckError{
-					Reason: fmt.Sprintf("Failed to verify signature; %s", msg),
-				},
-			}, nil
-		}
-
-		// signer
-		signer := sigVerifyResult.Signer
-
-		// check signer policy
-		signerMatched, matchedPolicy := self.policy.Match(reqc.Namespace, signer)
+	// check signer policy
+	signerMatched, matchedPolicy := self.policy.Match(reqc.Namespace, signer)
+	if signerMatched {
+		matchedPolicyStr := ""
 		if matchedPolicy != nil {
 			tmpMatchedPolicy, _ := json.Marshal(matchedPolicy)
 			matchedPolicyStr = string(tmpMatchedPolicy)
 		}
-		if signerMatched {
-			continue
-		} else {
-			return &common.SignPolicyEvalResult{
-				Signer:     signer,
-				SignerName: signer.GetName(),
-				Allow:      false,
-				Checked:    true,
-				Error: &common.CheckError{
-					Reason: fmt.Sprintf("No signer policies met this resource. this resource is signed by %s", signer.GetName()),
-				},
-			}, nil
-		}
+		return &common.SignPolicyEvalResult{
+			Signer:        signer,
+			SignerName:    signer.GetName(),
+			Allow:         true,
+			Checked:       true,
+			MatchedPolicy: matchedPolicyStr,
+			Error:         nil,
+		}, nil
+	} else {
+		return &common.SignPolicyEvalResult{
+			Signer:     signer,
+			SignerName: signer.GetName(),
+			Allow:      false,
+			Checked:    true,
+			Error: &common.CheckError{
+				Reason: fmt.Sprintf("No signer policies met this resource. this resource is signed by %s", signer.GetName()),
+			},
+		}, nil
 	}
-
-	return &common.SignPolicyEvalResult{
-		Signer:        signer,
-		SignerName:    signer.GetName(),
-		Allow:         true,
-		Checked:       true,
-		MatchedPolicy: matchedPolicyStr,
-		Error:         nil,
-	}, nil
-
 }
 
 func findAttrsPattern(reqc *common.ReqContext, attrs []*protect.AttrsPattern) []string {

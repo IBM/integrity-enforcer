@@ -274,8 +274,8 @@ func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.
 	return newCRD
 }
 
-// resourceprotectionprofile crd
-func BuildResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+// resourcesigningprofile crd
+func BuildResourceSigningProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -283,17 +283,17 @@ func BuildResourceProtectionProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *
 			APIVersion: "apiextensions.k8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "resourceprotectionprofiles.research.ibm.com",
+			Name:      "resourcesigningprofiles.research.ibm.com",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "ResourceProtectionProfile",
-				Plural:   "resourceprotectionprofiles",
-				ListKind: "ResourceProtectionProfileList",
-				Singular: "resourceprotectionprofile",
+				Kind:     "ResourceSigningProfile",
+				Plural:   "resourcesigningprofiles",
+				ListKind: "ResourceSigningProfileList",
+				Singular: "resourcesigningprofile",
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{

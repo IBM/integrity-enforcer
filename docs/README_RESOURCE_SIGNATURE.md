@@ -45,5 +45,5 @@ $ ./scripts/gpg-rs-sign.sh signer@enterprise.com /tmp/test-cm.yaml /tmp/test-cm-
 
 The ResourceSignature resource must be created to allow admission with the YAML.
 
-`ResourceSignature` resource has a `message` field which refers to the encoded content of a resource file to be signed. A resource file may include a specification for single resource or multiple resources. A signature is generated for the entire YAML file, but it is used to verify when any resources are verified with the signature if the resource is to be protected according to ResourceProtectionProfile (RPP).
+`ResourceSignature` resource has a `message` field which refers to the encoded content of a resource file to be signed. A resource file may include a specification for single resource or multiple resources. A signature is generated for the entire YAML file, but it is used to verify when any resources are verified with the signature if the resource is to be protected according to ResourceSigningProfile (RSP).
 

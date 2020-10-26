@@ -15,26 +15,26 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tidwall/gjson v1.5.0
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	helm.sh/helm/v3 v3.0.2
-	k8s.io/api v0.18.2
-	k8s.io/apiextensions-apiserver v0.18.2
-	k8s.io/apimachinery v0.18.2
-	k8s.io/cli-runtime v0.18.2
-	k8s.io/client-go v0.18.2
-	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d
+	k8s.io/api v0.18.6
+	k8s.io/apiextensions-apiserver v0.18.6
+	k8s.io/apimachinery v0.18.6
+	k8s.io/cli-runtime v0.18.6
+	k8s.io/client-go v0.18.6
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	k8s.io/kubectl v0.18.2
-	k8s.io/utils v0.0.0-20200324210504-a9aa75ae1b89
+	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
 	sigs.k8s.io/controller-runtime v0.5.2
 )
 
 replace (
-	k8s.io/api => k8s.io/api v0.16.5-beta.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.5-beta.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.16.5-beta.1
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.16.5-beta.1
-	k8s.io/client-go => k8s.io/client-go v0.16.5-beta.1
-	k8s.io/code-generator => k8s.io/code-generator v0.16.5-beta.1
-	k8s.io/kubectl => k8s.io/kubectl v0.16.5-beta.1
+	k8s.io/api => k8s.io/api v0.18.6
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.6
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.6
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.6
+	k8s.io/client-go => k8s.io/client-go v0.18.6
+	k8s.io/code-generator => k8s.io/code-generator v0.18.6
+	k8s.io/kubectl => k8s.io/kubectl v0.18.6
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.2
 )
-

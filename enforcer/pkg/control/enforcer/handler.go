@@ -23,8 +23,8 @@ import (
 	"time"
 
 	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
@@ -148,45 +148,77 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	var errMsg string
-	if !self.ctx.Aborted && self.ctx.Protected {
+	var denyingProfile protect.ProtectionProfile
+	if !self.ctx.Aborted && self.ctx.Protected && !allowed {
 
-		//evaluate sign policy
-		if !self.ctx.Aborted && !allowed {
-			if r, err := self.evalSignPolicy(profileReferences); err != nil {
-				self.abort("Error when evaluating sign policy", err)
-			} else {
-				self.ctx.Result.SignPolicyEvalResult = r
-				if r.Checked && r.Allow {
-					allowed = true
-					evalReason = common.REASON_VALID_SIG
-				}
-				if r.Error != nil {
-					errMsg = r.Error.MakeMessage()
-					if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
-						evalReason = common.REASON_INVALID_SIG
-					} else if strings.HasPrefix(errMsg, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
-						evalReason = common.REASON_NO_POLICY
-					} else if errMsg == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
-						evalReason = common.REASON_NO_SIG
-					} else {
-						evalReason = common.REASON_ERROR
+		protectProfiles := self.loader.ProtectionProfile(profileReferences)
+		allowCount := 0
+		for i, protectProfile := range protectProfiles {
+
+			allowedForThisProfile := false
+			var errMsgForThisProfile string
+			evalReasonForThisProfile := common.REASON_UNEXPECTED
+			var signResultForThisProfile *common.SignPolicyEvalResult
+			var mutationResultForThisProfile *common.MutationEvalResult
+
+			//evaluate sign policy
+			if !self.ctx.Aborted && !allowedForThisProfile {
+				if r, err := self.evalSignPolicy(protectProfile); err != nil {
+					self.abort("Error when evaluating sign policy", err)
+				} else {
+					signResultForThisProfile = r
+					if r.Checked && r.Allow {
+						allowedForThisProfile = true
+						evalReasonForThisProfile = common.REASON_VALID_SIG
+					}
+					if r.Error != nil {
+						errMsgForThisProfile = r.Error.MakeMessage()
+						if strings.HasPrefix(errMsgForThisProfile, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
+							evalReasonForThisProfile = common.REASON_INVALID_SIG
+						} else if strings.HasPrefix(errMsgForThisProfile, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
+							evalReasonForThisProfile = common.REASON_NO_POLICY
+						} else if errMsgForThisProfile == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
+							evalReasonForThisProfile = common.REASON_NO_SIG
+						} else {
+							evalReasonForThisProfile = common.REASON_ERROR
+						}
 					}
 				}
 			}
-		}
 
-		//check mutation
-		if !self.ctx.Aborted && !allowed && reqc.IsUpdateRequest() && !self.ctx.IEResource {
-			if r, err := self.evalMutation(profileReferences); err != nil {
-				self.abort("Error when evaluating mutation", err)
-			} else {
-				self.ctx.Result.MutationEvalResult = r
-				if r.Checked && !r.IsMutated {
-					allowed = true
-					evalReason = common.REASON_NO_MUTATION
+			//check mutation
+			if !self.ctx.Aborted && !allowedForThisProfile && reqc.IsUpdateRequest() && !self.ctx.IEResource {
+				if r, err := self.evalMutation(protectProfile); err != nil {
+					self.abort("Error when evaluating mutation", err)
+				} else {
+					mutationResultForThisProfile = r
+					if r.Checked && !r.IsMutated {
+						allowedForThisProfile = true
+						evalReasonForThisProfile = common.REASON_NO_MUTATION
+					}
 				}
 			}
+
+			if !allowedForThisProfile {
+				denyingProfile = protectProfile
+				allowed = false
+				evalReason = evalReasonForThisProfile
+				errMsg = errMsgForThisProfile
+				self.ctx.Result.SignPolicyEvalResult = signResultForThisProfile
+				self.ctx.Result.MutationEvalResult = mutationResultForThisProfile
+				break
+			} else {
+				allowCount += 1
+			}
+			if i == len(protectProfiles)-1 && allowCount == len(protectProfiles) {
+				allowed = true
+				evalReason = evalReasonForThisProfile
+				errMsg = errMsgForThisProfile
+				self.ctx.Result.SignPolicyEvalResult = signResultForThisProfile
+				self.ctx.Result.MutationEvalResult = mutationResultForThisProfile
+			}
 		}
+
 	}
 
 	self.ctx.BreakGlassModeEnabled = self.CheckIfBreakGlassEnabled()
@@ -223,8 +255,13 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		self.loader.UpdateRuleTable(self.reqc)
 	}
 
-	if !self.ctx.Allow && !self.ctx.IEResource {
-		err := self.createOrUpdateEvent()
+	if !self.ctx.Allow && !self.ctx.IEResource && denyingProfile != nil {
+		err := self.loader.UpdateProfileStatus(denyingProfile, reqc, errMsg)
+		if err != nil {
+			logger.Error("Failed to update status; ", err)
+		}
+
+		err = self.createOrUpdateEvent()
 		if err != nil {
 			logger.Error("Failed to create an event; ", err)
 		}
@@ -348,8 +385,8 @@ func (self *RequestHandler) validateIEResource() (bool, string) {
 		if err := json.Unmarshal(rawObj, &obj); err != nil {
 			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
 		}
-	} else if kind == "ResourceProtectionProfile" {
-		var obj *rpp.ResourceProtectionProfile
+	} else if kind == "ResourceSigningProfile" {
+		var obj *rsp.ResourceSigningProfile
 		if err := json.Unmarshal(rawObj, &obj); err != nil {
 			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
 		}
@@ -426,7 +463,7 @@ func (self *RequestHandler) createPatch() []byte {
 	return patch
 }
 
-func (self *RequestHandler) evalSignPolicy(profileReferences []*v1.ObjectReference) (*common.SignPolicyEvalResult, error) {
+func (self *RequestHandler) evalSignPolicy(protectProfile protect.ProtectionProfile) (*common.SignPolicyEvalResult, error) {
 	signPolicy := self.loader.MergedSignPolicy()
 	plugins := self.GetEnabledPlugins()
 	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, plugins); err != nil {
@@ -434,20 +471,18 @@ func (self *RequestHandler) evalSignPolicy(profileReferences []*v1.ObjectReferen
 	} else {
 		reqc := self.reqc
 		resSigList := self.loader.ResSigList(reqc)
-		protectProfiles := self.loader.ProtectionProfile(profileReferences)
-		return evaluator.Eval(reqc, resSigList, protectProfiles)
+		return evaluator.Eval(reqc, resSigList, protectProfile)
 	}
 }
 
-func (self *RequestHandler) evalMutation(profileReferences []*v1.ObjectReference) (*common.MutationEvalResult, error) {
+func (self *RequestHandler) evalMutation(protectProfile protect.ProtectionProfile) (*common.MutationEvalResult, error) {
 	reqc := self.reqc
 	owners := []*common.Owner{}
 	//ignoreAttrs := self.GetIgnoreAttrs()
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		protectProfiles := self.loader.ProtectionProfile(profileReferences)
-		return checker.Eval(reqc, protectProfiles)
+		return checker.Eval(reqc, protectProfile)
 	}
 }
 
@@ -467,7 +502,7 @@ func (self *RequestHandler) initLoader() {
 	loader := &Loader{
 		Config:            self.config,
 		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
-		RPP:               ctlconfig.NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace, self.config.CommonProfile),
+		RSP:               ctlconfig.NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, self.config.CommonProfile),
 		RuleTable:         ctlconfig.NewRuleTableLoader(enforcerNamespace),
 		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
 	}
@@ -497,7 +532,7 @@ func (self *RequestHandler) checkIfIEResource() bool {
 }
 
 func (self *RequestHandler) checkIfProfileResource() bool {
-	return self.reqc.Kind == "ResourceProtectionProfile"
+	return self.reqc.Kind == "ResourceSigningProfile"
 }
 
 func (self *RequestHandler) checkIfIEAdminRequest() bool {
@@ -613,7 +648,7 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 		FirstTimestamp:      metav1.NewTime(now),
 	}
 	isExistingEvent := false
-	current, getErr := client.CoreV1().Events(evtNamespace).Get(evtName, metav1.GetOptions{})
+	current, getErr := client.CoreV1().Events(evtNamespace).Get(nil, evtName, metav1.GetOptions{})
 	if current != nil && getErr == nil {
 		isExistingEvent = true
 		evt = current
@@ -626,9 +661,9 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 	evt.LastTimestamp = metav1.NewTime(now)
 
 	if isExistingEvent {
-		_, err = client.CoreV1().Events(evtNamespace).Update(evt)
+		_, err = client.CoreV1().Events(evtNamespace).Update(nil, evt, metav1.UpdateOptions{})
 	} else {
-		_, err = client.CoreV1().Events(evtNamespace).Create(evt)
+		_, err = client.CoreV1().Events(evtNamespace).Create(nil, evt, metav1.CreateOptions{})
 	}
 	if err != nil {
 		return err
@@ -646,7 +681,7 @@ type Loader struct {
 	Config            *config.EnforcerConfig
 	SignPolicy        *ctlconfig.SignPolicyLoader
 	RuleTable         *ctlconfig.RuleTableLoader
-	RPP               *ctlconfig.RPPLoader
+	RSP               *ctlconfig.RSPLoader
 	ResourceSignature *ctlconfig.ResSigLoader
 }
 
@@ -672,8 +707,8 @@ func (self *Loader) ForceCheckRules() *protect.RuleTable {
 func (self *Loader) ProtectionProfile(profileReferences []*v1.ObjectReference) []protect.ProtectionProfile {
 	protectProfiles := []protect.ProtectionProfile{}
 
-	rpps := self.RPP.GetByReferences(profileReferences)
-	for _, d := range rpps {
+	rsps := self.RSP.GetByReferences(profileReferences)
+	for _, d := range rsps {
 		if !d.Spec.Disabled {
 			protectProfiles = append(protectProfiles, d)
 		}
@@ -685,6 +720,14 @@ func (self *Loader) ProtectionProfile(profileReferences []*v1.ObjectReference) [
 
 func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
 	err := self.RuleTable.Update(reqc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (self *Loader) UpdateProfileStatus(profile protect.ProtectionProfile, reqc *common.ReqContext, errMsg string) error {
+	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
 	if err != nil {
 		return err
 	}

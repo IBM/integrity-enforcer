@@ -4,7 +4,24 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  resourceProtectionProfile: {}
+  resourceProtectionProfile:
+    protectRules:
+    - match:
+      - apiVersion: policy.open-cluster-management.io/v1
+    ignoreRules:
+    - match:
+      - username: "system:serviceaccount:open-cluster-management-agent:*"
+      - username: "system:serviceaccount:open-cluster-management-agent-addon:*"
+    forceCheckRules:
+    - match:
+      - apiVersion: policy.open-cluster-management.io/v1
+        kind: Policy
+    kustomizePatterns:
+    - match:
+      - apiVersion: policy.open-cluster-management.io/v1
+        kind: Policy
+      namePrefix: "policies."
+  defaultResourceSigningProfile: {}
   enforcerConfig:
     verifyType: pgp # x509
     plugin:
@@ -21,6 +38,10 @@ spec:
         signers:
         - "ClusterSigner"
         - "HelmClusterSigner"
+      - namespaces:
+        - secure-ns
+        signers:
+        - "HiroSigner"
       signers:
       - name: "ClusterSigner"
         subjects:
@@ -28,6 +49,9 @@ spec:
       - name: "HelmClusterSigner"
         subjects:
         - email: cluster_signer@signer.com
+      - name: "HiroSigner"
+        subjects:
+        - email: hirokuni.kitahara1@ibm.com
     ieResource: "research.ibm.com"
     ieAdminUserGroup: "system:masters,system:cluster-admins"
     ignore:

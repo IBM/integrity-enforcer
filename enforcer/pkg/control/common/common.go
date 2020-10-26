@@ -43,8 +43,8 @@ const (
 	ResourceIntegrityLabelKey = "integrity-enforcer.ibm.com/resourceIntegrity"
 	ReasonLabelKey            = "integrity-enforcer.ibm.com/reason"
 
-	ResSigLabelApiVer = "integrityenforcer.io/sigsubject-apiversion"
-	ResSigLabelKind   = "integrityenforcer.io/sigsubject-kind"
+	ResSigLabelApiVer = "integrityenforcer.io/sigobject-apiversion"
+	ResSigLabelKind   = "integrityenforcer.io/sigobject-kind"
 	ResSigLabelTime   = "integrityenforcer.io/sigtime"
 
 	LabelValueVerified   = "verified"
