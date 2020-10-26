@@ -18,6 +18,8 @@ package kubeutil
 
 import (
 	"bytes"
+	"context"
+
 	// "context"
 	"encoding/json"
 	"fmt"
@@ -77,9 +79,9 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 
 	var simObj *unstructured.Unstructured
 	if namespace == "" {
-		simObj, err = gvClient.Create(nil, obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		simObj, err = gvClient.Create(context.Background(), obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
 	} else {
-		simObj, err = gvClient.Namespace(namespace).Create(nil, obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		simObj, err = gvClient.Namespace(namespace).Create(context.Background(), obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
 	}
 	if err != nil {
 		return nil, fmt.Errorf("Error in createging resource; %s, gvk: %s", err.Error(), gvk)
@@ -124,9 +126,9 @@ func strategicMergePatch(objBytes []byte, namespace string) ([]byte, []byte, err
 
 	var currentObj *unstructured.Unstructured
 	if namespace == "" {
-		currentObj, err = gvClient.Get(nil, claimedName, metav1.GetOptions{})
+		currentObj, err = gvClient.Get(context.Background(), claimedName, metav1.GetOptions{})
 	} else {
-		currentObj, err = gvClient.Namespace(namespace).Get(nil, claimedName, metav1.GetOptions{})
+		currentObj, err = gvClient.Namespace(namespace).Get(context.Background(), claimedName, metav1.GetOptions{})
 	}
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, nil, fmt.Errorf("Error in getting current obj; %s", err.Error())
@@ -176,9 +178,9 @@ func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte,
 
 	var currentObj *unstructured.Unstructured
 	if namespace == "" {
-		currentObj, err = gvClient.Get(nil, claimedName, metav1.GetOptions{})
+		currentObj, err = gvClient.Get(context.Background(), claimedName, metav1.GetOptions{})
 	} else {
-		currentObj, err = gvClient.Namespace(namespace).Get(nil, claimedName, metav1.GetOptions{})
+		currentObj, err = gvClient.Namespace(namespace).Get(context.Background(), claimedName, metav1.GetOptions{})
 	}
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, fmt.Errorf("Error in getting current obj; %s", err.Error())

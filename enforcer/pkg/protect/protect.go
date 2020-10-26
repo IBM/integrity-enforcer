@@ -19,6 +19,7 @@ package protect
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -326,7 +327,7 @@ func (self *RuleTable) Update(namespace, name string) error {
 		return err
 	}
 
-	cm, err := coreV1Client.ConfigMaps(namespace).Get(nil, name, metav1.GetOptions{})
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -338,7 +339,7 @@ func (self *RuleTable) Update(namespace, name string) error {
 	zipData := gzipBuffer.Bytes()
 
 	cm.BinaryData["table"] = zipData
-	_, err = coreV1Client.ConfigMaps(namespace).Update(nil, cm, metav1.UpdateOptions{})
+	_, err = coreV1Client.ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -361,7 +362,7 @@ func (self *RuleTable) Get(namespace, name string) (*RuleTable, error) {
 	if err != nil {
 		return nil, err
 	}
-	cm, err := coreV1Client.ConfigMaps(namespace).Get(nil, name, metav1.GetOptions{})
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -17,6 +17,7 @@
 package enforcer
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -648,7 +649,7 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 		FirstTimestamp:      metav1.NewTime(now),
 	}
 	isExistingEvent := false
-	current, getErr := client.CoreV1().Events(evtNamespace).Get(nil, evtName, metav1.GetOptions{})
+	current, getErr := client.CoreV1().Events(evtNamespace).Get(context.Background(), evtName, metav1.GetOptions{})
 	if current != nil && getErr == nil {
 		isExistingEvent = true
 		evt = current
@@ -661,9 +662,9 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 	evt.LastTimestamp = metav1.NewTime(now)
 
 	if isExistingEvent {
-		_, err = client.CoreV1().Events(evtNamespace).Update(nil, evt, metav1.UpdateOptions{})
+		_, err = client.CoreV1().Events(evtNamespace).Update(context.Background(), evt, metav1.UpdateOptions{})
 	} else {
-		_, err = client.CoreV1().Events(evtNamespace).Create(nil, evt, metav1.CreateOptions{})
+		_, err = client.CoreV1().Events(evtNamespace).Create(context.Background(), evt, metav1.CreateOptions{})
 	}
 	if err != nil {
 		return err

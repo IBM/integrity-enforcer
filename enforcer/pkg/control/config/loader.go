@@ -17,6 +17,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -78,7 +79,7 @@ func InitRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
 	rspClient, _ := rspclient.NewForConfig(config)
 	// list RSP in all namespaces
-	list1, err := rspClient.ResourceSigningProfiles("").List(nil, metav1.ListOptions{})
+	list1, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func InitIgnoreRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
 	rspClient, _ := rspclient.NewForConfig(config)
 	// list RSP in all namespaces
-	list1, err := rspClient.ResourceSigningProfiles("").List(nil, metav1.ListOptions{})
+	list1, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,7 @@ func InitForceCheckRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
 	rspClient, _ := rspclient.NewForConfig(config)
 	// list RSP in all namespaces
-	list1, err := rspClient.ResourceSigningProfiles("").List(nil, metav1.ListOptions{})
+	list1, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,7 @@ func (self *RSPLoader) Load() {
 
 	keyName = fmt.Sprintf("RSPLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ResourceSigningProfiles(self.enforcerNamespace).List(nil, metav1.ListOptions{})
+		list1, err = self.Client.ResourceSigningProfiles(self.enforcerNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceSigningProfile:", err)
 			return
@@ -289,7 +290,7 @@ func (self *RSPLoader) Load() {
 
 	keyName = fmt.Sprintf("RSPLoader/%s/list", self.profileNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceSigningProfiles(self.profileNamespace).List(nil, metav1.ListOptions{})
+		list2, err = self.Client.ResourceSigningProfiles(self.profileNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceSigningProfile:", err)
 			return
@@ -309,7 +310,7 @@ func (self *RSPLoader) Load() {
 
 	keyName = fmt.Sprintf("RSPLoader/%s/list", self.requestNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list3, err = self.Client.ResourceSigningProfiles(self.requestNamespace).List(nil, metav1.ListOptions{})
+		list3, err = self.Client.ResourceSigningProfiles(self.requestNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceSigningProfile:", err)
 			return
@@ -343,7 +344,7 @@ func (self *RSPLoader) Load() {
 func (self *RSPLoader) GetByReferences(refs []*v1.ObjectReference) []rspapi.ResourceSigningProfile {
 	data := []rspapi.ResourceSigningProfile{}
 	for _, ref := range refs {
-		d, err := self.Client.ResourceSigningProfiles(ref.Namespace).Get(nil, ref.Name, metav1.GetOptions{})
+		d, err := self.Client.ResourceSigningProfiles(ref.Namespace).Get(context.Background(), ref.Name, metav1.GetOptions{})
 		if err != nil {
 			logger.Error(err)
 		} else {
@@ -390,7 +391,7 @@ func (self *RSPLoader) UpdateStatus(profile protect.ProtectionProfile, reqc *com
 	}
 	rspNamespace := rsp.GetNamespace()
 	rspName := rsp.GetName()
-	rspOrg, err := self.Client.ResourceSigningProfiles(rspNamespace).Get(nil, rspName, metav1.GetOptions{})
+	rspOrg, err := self.Client.ResourceSigningProfiles(rspNamespace).Get(context.Background(), rspName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -398,7 +399,7 @@ func (self *RSPLoader) UpdateStatus(profile protect.ProtectionProfile, reqc *com
 	req := protect.NewRequestFromReqContext(reqc)
 	rspNew := rspOrg.UpdateStatus(req, errMsg)
 
-	_, err = self.Client.ResourceSigningProfiles(rspNamespace).Update(nil, rspNew, metav1.UpdateOptions{})
+	_, err = self.Client.ResourceSigningProfiles(rspNamespace).Update(context.Background(), rspNew, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -441,7 +442,7 @@ func (self *SignPolicyLoader) Load() {
 
 	keyName = fmt.Sprintf("SignPolicyLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(nil, metav1.ListOptions{})
+		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get SignPolicy:", err)
 			return
@@ -511,7 +512,7 @@ func (self *ResSigLoader) Load() {
 
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.signatureNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(nil, metav1.ListOptions{LabelSelector: labelSelector})
+		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
 			return
@@ -530,7 +531,7 @@ func (self *ResSigLoader) Load() {
 	}
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.requestNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(nil, metav1.ListOptions{LabelSelector: labelSelector})
+		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
 			return
@@ -590,7 +591,7 @@ func LoadEnforceConfig(namespace, cmname string) *cfg.EnforcerConfig {
 		log.Error(err)
 		return nil
 	}
-	ecres, err := clientset.EnforcerConfigs(namespace).Get(nil, cmname, metav1.GetOptions{})
+	ecres, err := clientset.EnforcerConfigs(namespace).Get(context.Background(), cmname, metav1.GetOptions{})
 	if err != nil {
 		log.Error("failed to get EnforcerConfig:", err.Error())
 		return nil

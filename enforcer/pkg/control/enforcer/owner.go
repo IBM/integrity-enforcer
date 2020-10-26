@@ -17,6 +17,8 @@
 package enforcer
 
 import (
+	"context"
+
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -172,7 +174,7 @@ func (owr *ConcreteOwnerResolver) findOwner(ref *common.ResourceRef) (*FindOwner
 	gvclient := (*owr.client).Resource(gvr)
 
 	var objMap map[string]interface{}
-	if v, err := gvclient.Namespace(ref.Namespace).Get(nil, ref.Name, metav1.GetOptions{}); err != nil {
+	if v, err := gvclient.Namespace(ref.Namespace).Get(context.Background(), ref.Name, metav1.GetOptions{}); err != nil {
 		result.Error = &common.CheckError{
 			Error:  err,
 			Reason: "Error when obtaing owner reference",
