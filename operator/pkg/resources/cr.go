@@ -30,8 +30,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const defaultRppName = "default-rsp"
-const primaryRppName = "primary-rsp"
+const defaultRspName = "default-rsp"
+const primaryRspName = "primary-rsp"
 const signerPolicyName = "signer-policy"
 const defaultResourceSigningProfileYamlPath = "/resources/default-rsp.yaml"
 const defaultCertPoolPath = "/ie-certpool-secret/"
@@ -70,8 +70,8 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile
-		deafultRppBytes, _ := ioutil.ReadFile(defaultResourceSigningProfileYamlPath)
-		err := yaml.Unmarshal(deafultRppBytes, &defaultrsp)
+		deafultRspBytes, _ := ioutil.ReadFile(defaultResourceSigningProfileYamlPath)
+		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
 		if err != nil {
 			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
 			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
@@ -124,11 +124,11 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 func BuildPrimaryResourceSigningProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rsp.ResourceSigningProfile {
 	primaryrsp := &rsp.ResourceSigningProfile{}
 
-	if cr.Spec.PrimaryRpp != nil {
-		primaryrsp.Spec = *cr.Spec.PrimaryRpp
+	if cr.Spec.PrimaryRsp != nil {
+		primaryrsp.Spec = *cr.Spec.PrimaryRsp
 	}
 
-	primaryrsp.ObjectMeta.Name = primaryRppName
+	primaryrsp.ObjectMeta.Name = primaryRspName
 	primaryrsp.ObjectMeta.Namespace = cr.Namespace
 	return primaryrsp
 }

@@ -175,7 +175,7 @@ func (r *ReconcileIntegrityEnforcer) Reconcile(request reconcile.Request) (recon
 		return recResult, recErr
 	}
 
-	if instance.Spec.PrimaryRpp != nil {
+	if instance.Spec.PrimaryRsp != nil {
 		recResult, recErr = r.createOrUpdatePrimaryResourceSigningProfileCR(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr

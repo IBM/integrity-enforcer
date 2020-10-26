@@ -4,7 +4,7 @@ metadata:
   name: integrity-enforcer-server
 spec:
   affinity: {}
-  resourceProtectionProfile:
+  resourceSigningProfile:
     protectRules:
     - match:
       - apiVersion: policy.open-cluster-management.io/v1

@@ -234,13 +234,13 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 		in, out := &in.SignPolicy, &out.SignPolicy
 		*out = (*in).DeepCopy()
 	}
-	if in.PrimaryRpp != nil {
-		in, out := &in.PrimaryRpp, &out.PrimaryRpp
+	if in.PrimaryRsp != nil {
+		in, out := &in.PrimaryRsp, &out.PrimaryRsp
 		*out = new(resourcesigningprofilev1alpha1.ResourceSigningProfileSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DefaultRpp != nil {
-		in, out := &in.DefaultRpp, &out.DefaultRpp
+	if in.DefaultRsp != nil {
+		in, out := &in.DefaultRsp, &out.DefaultRsp
 		*out = new(resourcesigningprofilev1alpha1.ResourceSigningProfileSpec)
 		(*in).DeepCopyInto(*out)
 	}

@@ -56,8 +56,8 @@ type IntegrityEnforcerSpec struct {
 	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
 	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
 	SignPolicy           *policy.SignPolicy              `json:"signPolicy,omitempty"`
-	PrimaryRpp           *rsp.ResourceSigningProfileSpec `json:"resourceProtectionProfile,omitempty"`
-	DefaultRpp           *rsp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
+	PrimaryRsp           *rsp.ResourceSigningProfileSpec `json:"resourceSigningProfile,omitempty"`
+	DefaultRsp           *rsp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
