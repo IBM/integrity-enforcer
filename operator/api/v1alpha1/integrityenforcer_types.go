@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
@@ -57,8 +57,8 @@ type IntegrityEnforcerSpec struct {
 	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
 	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
 	SignPolicy           *policy.SignPolicy              `json:"signPolicy,omitempty"`
-	PrimaryRpp           *rpp.ResourceSigningProfileSpec `json:"resourceSigningProfile,omitempty"`
-	DefaultRpp           *rpp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
+	PrimaryRsp           *rsp.ResourceSigningProfileSpec `json:"resourceSigningProfile,omitempty"`
+	DefaultRsp           *rsp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`

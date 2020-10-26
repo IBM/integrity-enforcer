@@ -18,9 +18,11 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/resources"
@@ -170,6 +172,9 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *r
 	} else if err != nil {
 		reqLogger.Info("5 completed Building Config for IE")
 		return ctrl.Result{}, err
+	} else if err == nil {
+		ecB, _ := json.Marshal(found)
+		reqLogger.Info(fmt.Sprintf("found EnforcerConfig: %s", string(ecB)))
 	}
 
 	// No extra validation
@@ -223,7 +228,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *resea
 
 func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
-	found := &rpp.ResourceSigningProfile{}
+	found := &rsp.ResourceSigningProfile{}
 	expected := res.BuildPrimaryResourceSigningProfileForIE(instance)
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
@@ -236,7 +241,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfil
 		return ctrl.Result{}, err
 	}
 
-	// If RPP does not exist, create it and requeue
+	// If RSP does not exist, create it and requeue
 	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
 
 	if err != nil && errors.IsNotFound(err) {

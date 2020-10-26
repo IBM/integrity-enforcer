@@ -33,7 +33,7 @@ import (
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
-	rpp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/controllers"
 
@@ -57,7 +57,7 @@ func init() {
 	utilruntime.Must(scc.AddToScheme(scheme))
 
 	utilruntime.Must(ec.AddToScheme(scheme))
-	utilruntime.Must(rpp.AddToScheme(scheme))
+	utilruntime.Must(rsp.AddToScheme(scheme))
 	utilruntime.Must(rs.AddToScheme(scheme))
 	utilruntime.Must(spol.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
