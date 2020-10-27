@@ -29,6 +29,11 @@ if [ -z "$IE_NS" ]; then
     exit 1
 fi
 
+if [ -z "$IE_OP_NS" ]; then
+    echo "IE_OP_NS is empty. Please set namespace name for integrity-enforcer-operator."
+    exit 1
+fi
+
 if [ -z "$IE_ENV" ]; then
     echo "IE_ENV is empty. Please set local or remote."
     exit 1
@@ -56,6 +61,9 @@ ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/operator/deploy"
 echo ""
 echo "------------- Delete integrity-enforcer -------------"
 echo ""
+cd ${ENFORCER_DIR}config/default 
+kustomize edit set namespace $IE_OP_NS
+
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
 cd $ENFORCER_DIR
 kubectl delete -n $IE_NS -f config/samples/research_v1alpha1_integrityenforcer.yaml

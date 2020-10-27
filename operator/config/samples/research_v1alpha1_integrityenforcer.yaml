@@ -3,7 +3,7 @@ kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server
 spec:
-  namespace: operator-system
+  namespace: integrity-enforcer-ns
   affinity: {}
   resourceSigningProfile: {}
   enforcerConfig:
