@@ -21,7 +21,6 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -319,7 +318,6 @@ func (self *RuleTable) Update(namespace, name string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("[RuleTable]", string(rawData))
 
 	config, _ := kubeutil.GetKubeConfig()
 	coreV1Client, err := v1client.NewForConfig(config)
