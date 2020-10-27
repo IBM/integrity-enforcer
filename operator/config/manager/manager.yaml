@@ -22,18 +22,21 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      imagePullSecrets:
+      - name: mappregkey
       containers:
       - command:
         - /manager
         args:
         - --enable-leader-election
         image: controller:latest
+        imagePullPolicy: Always
         name: manager
         resources:
           limits:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 500m
+            memory: 500Mi
           requests:
-            cpu: 100m
-            memory: 20Mi
+            cpu: 200m
+            memory: 200Mi
       terminationGracePeriodSeconds: 10

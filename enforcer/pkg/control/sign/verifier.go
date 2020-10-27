@@ -42,7 +42,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*SigVerifyResult, error)
+	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile protect.SigningProfile) (*SigVerifyResult, error)
 }
 
 /**********************************************
@@ -67,16 +67,16 @@ func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespac
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*SigVerifyResult, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile protect.SigningProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
 
-	kustomizeList := protectProfile.Kustomize(reqc.Map())
-	allowPattern := makeAllowPattern(reqc, kustomizeList)
+	kustomizeList := signingProfile.Kustomize(reqc.Map())
+	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
 
-	protectAttrsList := protectProfile.ProtectAttrs(reqc.Map())
-	unprotectAttrsList := protectProfile.UnprotectAttrs(reqc.Map())
+	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
+	unprotectAttrsList := signingProfile.UnprotectAttrs(reqc.Map())
 
 	if sig.option["matchRequired"] {
 		message, _ := sig.data["message"]
@@ -85,7 +85,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			message = yamlBytes
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, unprotectAttrsList, allowPattern, reqc.ResourceScope, sig.SignType)
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, unprotectAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType)
 		if !matched {
 			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
@@ -234,7 +234,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*protect.AttrsPattern, allowPattern *mapnode.Difference, resScope string, signType SignatureType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*protect.AttrsPattern, allowDiffPatterns []*mapnode.Difference, resScope string, signType SignatureType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -260,7 +260,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 	}
 
-	matched, diffStr = matchContents(orgObj, reqObj, focus, mask, allowPattern)
+	matched, diffStr = matchContents(orgObj, reqObj, focus, mask, allowDiffPatterns)
 	if matched {
 		logger.Debug("matched directly")
 	}
@@ -284,7 +284,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 
-		matched, diffStr = matchContents(simObj, reqObj, focus, mask, allowPattern)
+		matched, diffStr = matchContents(simObj, reqObj, focus, mask, allowDiffPatterns)
 		if matched {
 			logger.Debug("matched by DryRunCreate()")
 		}
@@ -309,7 +309,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowPattern)
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns)
 		if matched {
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
@@ -331,7 +331,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowPattern)
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns)
 		if matched {
 			logger.Debug("matched by StrategicMergePatch()")
 		}
@@ -371,7 +371,7 @@ func getMaskDef(kind string) []string {
 	return masks
 }
 
-func matchContents(orgObj, reqObj []byte, focus, mask []string, allowPattern *mapnode.Difference) (bool, string) {
+func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPatterns []*mapnode.Difference) (bool, string) {
 	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error("Failed to load original message as *Node", string(orgObj))
@@ -388,8 +388,8 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string, allowPattern *ma
 	maskedReqNode := reqNode.Mask(mask)
 
 	dr := maskedOrgNode.Diff(maskedReqNode)
-	if dr != nil && allowPattern != nil {
-		dr = dr.Remove(allowPattern)
+	if dr != nil && len(allowDiffPatterns) > 0 {
+		dr = dr.Remove(allowDiffPatterns)
 	}
 	diffStr := ""
 
@@ -473,27 +473,28 @@ func decompress(str string) string {
 	return s
 }
 
-func makeAllowPattern(reqc *common.ReqContext, kustomizeList []*protect.KustomizePattern) *mapnode.Difference {
+func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*protect.KustomizePattern) []*mapnode.Difference {
 	ref := reqc.ResourceRef()
 	name := reqc.Name
-	kustedName := name
+	kustomizedName := name
 	for _, pattern := range kustomizeList {
 		newRef := pattern.OverrideName(ref)
-		kustedName = newRef.Name
+		kustomizedName = newRef.Name
 	}
-	if kustedName == name {
+	if kustomizedName == name {
 		return nil
 	}
 
 	key := "metadata.name"
 	values := map[string]interface{}{
 		"before": name,
-		"after":  kustedName,
+		"after":  kustomizedName,
 	}
-	return &mapnode.Difference{
+	allowDiffPattern := &mapnode.Difference{
 		Key:    key,
 		Values: values,
 	}
+	return []*mapnode.Difference{allowDiffPattern}
 }
 
 type SigVerifyResult struct {
@@ -514,7 +515,7 @@ type HelmVerifier struct {
 	KeyringPath  string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*SigVerifyResult, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile protect.SigningProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error

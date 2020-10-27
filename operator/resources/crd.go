@@ -170,10 +170,11 @@ func BuildEnforcerConfigCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Custo
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "EnforcerConfig",
-				Plural:   "enforcerconfigs",
-				ListKind: "EnforcerConfigList",
-				Singular: "enforcerconfig",
+				Kind:       "EnforcerConfig",
+				Plural:     "enforcerconfigs",
+				ListKind:   "EnforcerConfigList",
+				Singular:   "enforcerconfig",
+				ShortNames: []string{"econf", "econfs"},
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -210,10 +211,11 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "ResourceSignature",
-				Plural:   "resourcesignatures",
-				ListKind: "ResourceSignatureList",
-				Singular: "resourcesignature",
+				Kind:       "ResourceSignature",
+				Plural:     "resourcesignatures",
+				ListKind:   "ResourceSignatureList",
+				Singular:   "resourcesignature",
+				ShortNames: []string{"rsig", "rsigs"},
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -250,10 +252,11 @@ func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "HelmReleaseMetadata",
-				Plural:   "helmreleasemetadatas",
-				ListKind: "HelmReleaseMetadataList",
-				Singular: "helmreleasemetadata",
+				Kind:       "HelmReleaseMetadata",
+				Plural:     "helmreleasemetadatas",
+				ListKind:   "HelmReleaseMetadataList",
+				Singular:   "helmreleasemetadata",
+				ShortNames: []string{"hrm", "hrms"},
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
@@ -290,10 +293,11 @@ func BuildResourceSigningProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *ext
 			Group: "research.ibm.com",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "ResourceSigningProfile",
-				Plural:   "resourcesigningprofiles",
-				ListKind: "ResourceSigningProfileList",
-				Singular: "resourcesigningprofile",
+				Kind:       "ResourceSigningProfile",
+				Plural:     "resourcesigningprofiles",
+				ListKind:   "ResourceSigningProfileList",
+				Singular:   "resourcesigningprofile",
+				ShortNames: []string{"rsp", "rsps"},
 			},
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{

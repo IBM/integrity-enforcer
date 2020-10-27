@@ -383,7 +383,7 @@ func (self *RSPLoader) GetDefaultProfile() (rspapi.ResourceSigningProfile, error
 	return rsp, nil
 }
 
-func (self *RSPLoader) UpdateStatus(profile protect.ProtectionProfile, reqc *common.ReqContext, errMsg string) error {
+func (self *RSPLoader) UpdateStatus(profile protect.SigningProfile, reqc *common.ReqContext, errMsg string) error {
 	rsp, ok := profile.(rspapi.ResourceSigningProfile)
 	if !ok {
 		logger.Warn(fmt.Sprintf("The profile is not an instance of ResourceSigningProfile but one of %T; skip updating status.", profile))

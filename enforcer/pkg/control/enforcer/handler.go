@@ -149,22 +149,22 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	var errMsg string
-	var denyingProfile protect.ProtectionProfile
+	var denyingProfile protect.SigningProfile
 	if !self.ctx.Aborted && self.ctx.Protected && !allowed {
 
-		protectProfiles := self.loader.ProtectionProfile(profileReferences)
+		signingProfiles := self.loader.SigningProfile(profileReferences)
 		allowCount := 0
-		for i, protectProfile := range protectProfiles {
+		for i, signingProfile := range signingProfiles {
 
 			allowedForThisProfile := false
 			var errMsgForThisProfile string
 			evalReasonForThisProfile := common.REASON_UNEXPECTED
-			var signResultForThisProfile *common.SignPolicyEvalResult
+			var signResultForThisProfile *common.SignatureEvalResult
 			var mutationResultForThisProfile *common.MutationEvalResult
 
-			//evaluate sign policy
+			//check signature
 			if !self.ctx.Aborted && !allowedForThisProfile {
-				if r, err := self.evalSignPolicy(protectProfile); err != nil {
+				if r, err := self.evalSignature(signingProfile); err != nil {
 					self.abort("Error when evaluating sign policy", err)
 				} else {
 					signResultForThisProfile = r
@@ -189,7 +189,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 			//check mutation
 			if !self.ctx.Aborted && !allowedForThisProfile && reqc.IsUpdateRequest() && !self.ctx.IEResource {
-				if r, err := self.evalMutation(protectProfile); err != nil {
+				if r, err := self.evalMutation(signingProfile); err != nil {
 					self.abort("Error when evaluating mutation", err)
 				} else {
 					mutationResultForThisProfile = r
@@ -201,21 +201,21 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 			}
 
 			if !allowedForThisProfile {
-				denyingProfile = protectProfile
+				denyingProfile = signingProfile
 				allowed = false
 				evalReason = evalReasonForThisProfile
 				errMsg = errMsgForThisProfile
-				self.ctx.Result.SignPolicyEvalResult = signResultForThisProfile
+				self.ctx.Result.SignatureEvalResult = signResultForThisProfile
 				self.ctx.Result.MutationEvalResult = mutationResultForThisProfile
 				break
 			} else {
 				allowCount += 1
 			}
-			if i == len(protectProfiles)-1 && allowCount == len(protectProfiles) {
+			if i == len(signingProfiles)-1 && allowCount == len(signingProfiles) {
 				allowed = true
 				evalReason = evalReasonForThisProfile
 				errMsg = errMsgForThisProfile
-				self.ctx.Result.SignPolicyEvalResult = signResultForThisProfile
+				self.ctx.Result.SignatureEvalResult = signResultForThisProfile
 				self.ctx.Result.MutationEvalResult = mutationResultForThisProfile
 			}
 		}
@@ -448,7 +448,7 @@ func (self *RequestHandler) createPatch() []byte {
 		if !self.ctx.Verified {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueUnverified
 			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ctx.ReasonCode].Code
-		} else if self.ctx.Result.SignPolicyEvalResult.Allow {
+		} else if self.ctx.Result.SignatureEvalResult.Allow {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
 			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ctx.ReasonCode].Code
 		} else {
@@ -464,26 +464,26 @@ func (self *RequestHandler) createPatch() []byte {
 	return patch
 }
 
-func (self *RequestHandler) evalSignPolicy(protectProfile protect.ProtectionProfile) (*common.SignPolicyEvalResult, error) {
+func (self *RequestHandler) evalSignature(signingProfile protect.SigningProfile) (*common.SignatureEvalResult, error) {
 	signPolicy := self.loader.MergedSignPolicy()
 	plugins := self.GetEnabledPlugins()
-	if evaluator, err := sign.NewSignPolicyEvaluator(self.config, signPolicy, plugins); err != nil {
+	if evaluator, err := sign.NewSignatureEvaluator(self.config, signPolicy, plugins); err != nil {
 		return nil, err
 	} else {
 		reqc := self.reqc
 		resSigList := self.loader.ResSigList(reqc)
-		return evaluator.Eval(reqc, resSigList, protectProfile)
+		return evaluator.Eval(reqc, resSigList, signingProfile)
 	}
 }
 
-func (self *RequestHandler) evalMutation(protectProfile protect.ProtectionProfile) (*common.MutationEvalResult, error) {
+func (self *RequestHandler) evalMutation(signingProfile protect.SigningProfile) (*common.MutationEvalResult, error) {
 	reqc := self.reqc
 	owners := []*common.Owner{}
 	//ignoreAttrs := self.GetIgnoreAttrs()
 	if checker, err := NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
-		return checker.Eval(reqc, protectProfile)
+		return checker.Eval(reqc, signingProfile)
 	}
 }
 
@@ -705,17 +705,17 @@ func (self *Loader) ForceCheckRules() *protect.RuleTable {
 	return table
 }
 
-func (self *Loader) ProtectionProfile(profileReferences []*v1.ObjectReference) []protect.ProtectionProfile {
-	protectProfiles := []protect.ProtectionProfile{}
+func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []protect.SigningProfile {
+	signingProfiles := []protect.SigningProfile{}
 
 	rsps := self.RSP.GetByReferences(profileReferences)
 	for _, d := range rsps {
 		if !d.Spec.Disabled {
-			protectProfiles = append(protectProfiles, d)
+			signingProfiles = append(signingProfiles, d)
 		}
 	}
 
-	return protectProfiles
+	return signingProfiles
 
 }
 
@@ -727,7 +727,7 @@ func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
 	return nil
 }
 
-func (self *Loader) UpdateProfileStatus(profile protect.ProtectionProfile, reqc *common.ReqContext, errMsg string) error {
+func (self *Loader) UpdateProfileStatus(profile protect.SigningProfile, reqc *common.ReqContext, errMsg string) error {
 	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
 	if err != nil {
 		return err

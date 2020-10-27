@@ -73,15 +73,12 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 		deafultRspBytes, _ := ioutil.ReadFile(defaultResourceSigningProfileYamlPath)
 
 		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
-		reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
-		reqLogger.Info("Building Config for IE")
 
 		if err != nil {
-			//reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
+			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
 			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
 		}
 		ecc.Spec.EnforcerConfig.CommonProfile = &(defaultrsp.Spec)
-		reqLogger.Info("completed Building Config for IE")
 	}
 
 	return ecc

@@ -113,7 +113,7 @@ func BuildClusterRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Clust
 					"extensions", "", "research.ibm.com",
 				},
 				Resources: []string{
-					"secrets", "namespaces", "resourcesignatures", "enforcerconfigs", "signpolicies", "signpolicies", "resourcesigningprofiles", "clusterresourcesigningprofiles", "resourcesignatures",
+					"secrets", "namespaces", "resourcesignatures", "enforcerconfigs", "signpolicies", "signpolicies", "resourcesigningprofiles", "resourcesignatures",
 				},
 				Verbs: []string{
 					"get", "list", "watch", "patch", "update",
@@ -330,7 +330,6 @@ func BuildClusterRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.
 				Resources: []string{
 					"resourcesigningprofiles",
 					"resourcesignatures",
-					"clusterresourcesigningprofiles",
 				},
 				Verbs: []string{
 					"update", "create", "delete", "get", "list", "watch", "patch",

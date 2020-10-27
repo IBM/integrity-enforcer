@@ -68,14 +68,20 @@ func (dr *DiffResult) Size() int {
 	return len(dr.Items)
 }
 
-func (dr *DiffResult) Remove(df *Difference) *DiffResult {
+func (dr *DiffResult) Remove(patterns []*Difference) *DiffResult {
 	items := []Difference{}
 	for _, d := range dr.Items {
 		d0 := &d
-		if (d0).Equal(df) {
-			continue
+		patternMatched := false
+		for _, p := range patterns {
+			if (d0).Equal(p) {
+				patternMatched = true
+				break
+			}
 		}
-		items = append(items, d)
+		if !patternMatched {
+			items = append(items, d)
+		}
 	}
 	return &DiffResult{Items: items}
 }

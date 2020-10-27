@@ -295,7 +295,7 @@ func (p *Result) DeepCopy() *Result {
 	return p2
 }
 
-type ProtectionProfile interface {
+type SigningProfile interface {
 	Match(reqFields map[string]string) (bool, *Rule)
 	Kustomize(reqFields map[string]string) []*KustomizePattern
 	ProtectAttrs(reqFields map[string]string) []*AttrsPattern

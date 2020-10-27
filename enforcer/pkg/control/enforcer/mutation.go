@@ -25,14 +25,14 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, signingProfile protect.SigningProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfile protect.ProtectionProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile protect.SigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -97,7 +97,7 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, protectProfil
 
 	reqFields := reqc.Map()
 
-	ignoreAttrsList := protectProfile.IgnoreAttrs(reqFields)
+	ignoreAttrsList := signingProfile.IgnoreAttrs(reqFields)
 
 	if mr, err := GetMAResult(ma4kInput, ignoreAttrsList); err != nil {
 		maResult.Error = &common.CheckError{

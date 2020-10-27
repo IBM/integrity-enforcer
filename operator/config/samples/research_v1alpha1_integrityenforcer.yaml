@@ -49,17 +49,18 @@ spec:
         enabled: true
         inScope:
         - kind: '*'
-      logLevel: trace
+      logLevel: info
   enforcerConfigCrName: ie-config
+  # imagePullSecrets:
+  # - name: REPLACEME
   globalConfig: 
     detectionMode: false
-  imagePullSecrets: []
   certPoolConfig:
-    createIfNotExist: true
+    createIfNotExist: false
     keyValue: test
     name: ie-certpool-secret
   keyRingConfig:
-    createIfNotExist: true
+    createIfNotExist: false
     keyValue: test
     name: keyring-secret
   labels:
@@ -76,7 +77,7 @@ spec:
       enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
-    image: ie-logging:local
+    image: integrityenforcer/ie-logging:0.0.3
     imagePullPolicy: IfNotPresent
     name: forwarder
     resources:
@@ -114,8 +115,8 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     enforcePolicyReloadSec: 10
-    image: ie-server:local
-    imagePullPolicy: IfNotPresent
+    image: integrityenforcer/ie-server:0.0.3
+    imagePullPolicy: Always
     name: server
     port: 8443
     resources:

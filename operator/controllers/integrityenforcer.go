@@ -18,8 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -134,14 +132,10 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCRD(
 func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name)
-	reqLogger.Info("Looking to Building Config for IE")
 	expected := res.BuildEnforcerConfigForIE(instance)
-	reqLogger.Info("2 completed Building Config for IE")
 	found := &ec.EnforcerConfig{}
 
-	reqLogger = r.Log.WithValues(
+	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"EnforcerConfig.Name", expected.Name)
 
@@ -151,11 +145,10 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *r
 		reqLogger.Error(err, "Failed to define expected resource")
 		return ctrl.Result{}, err
 	}
-	reqLogger.Info("3 completed Building Config for IE")
 
 	// If PodSecurityPolicy does not exist, create it and requeue
 	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-	reqLogger.Info("4 completed Building Config for IE")
+
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new resource")
 		err = r.Create(ctx, expected)
@@ -170,15 +163,11 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *r
 		// Created successfully - return and requeue
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
-		reqLogger.Info("5 completed Building Config for IE")
 		return ctrl.Result{}, err
-	} else if err == nil {
-		ecB, _ := json.Marshal(found)
-		reqLogger.Info(fmt.Sprintf("found EnforcerConfig: %s", string(ecB)))
 	}
 
 	// No extra validation
-	reqLogger.Info("6 completed Building Config for IE")
+
 	// No reconcile was necessary
 	return ctrl.Result{}, nil
 

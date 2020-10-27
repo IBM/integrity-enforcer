@@ -221,7 +221,7 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 
 ***********************************************/
 
-type SignPolicyEvalResult struct {
+type SignatureEvalResult struct {
 	Signer        *SignerInfo `json:"signer"`
 	SignerName    string      `json:"signerName"`
 	Checked       bool        `json:"checked"`
@@ -230,7 +230,7 @@ type SignPolicyEvalResult struct {
 	Error         *CheckError `json:"error"`
 }
 
-func (self *SignPolicyEvalResult) GetSignerName() string {
+func (self *SignatureEvalResult) GetSignerName() string {
 	if self.SignerName != "" {
 		return self.SignerName
 	}

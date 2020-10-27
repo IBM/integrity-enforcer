@@ -58,9 +58,9 @@ type CheckContext struct {
 }
 
 type CheckResult struct {
-	SignPolicyEvalResult *common.SignPolicyEvalResult `json:"signpolicy"`
-	ResolveOwnerResult   *common.ResolveOwnerResult   `json:"owner"`
-	MutationEvalResult   *common.MutationEvalResult   `json:"mutation"`
+	SignatureEvalResult *common.SignatureEvalResult `json:"signature"`
+	ResolveOwnerResult  *common.ResolveOwnerResult  `json:"owner"`
+	MutationEvalResult  *common.MutationEvalResult  `json:"mutation"`
 }
 
 func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
@@ -71,7 +71,7 @@ func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
 		Allow:     false,
 		Verified:  false,
 		Result: &CheckResult{
-			SignPolicyEvalResult: &common.SignPolicyEvalResult{
+			SignatureEvalResult: &common.SignatureEvalResult{
 				Allow:   false,
 				Checked: false,
 			},
@@ -156,8 +156,8 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 	}
 
 	//context from sign policy eval
-	if self.Result != nil && self.Result.SignPolicyEvalResult != nil {
-		r := self.Result.SignPolicyEvalResult
+	if self.Result != nil && self.Result.SignatureEvalResult != nil {
+		r := self.Result.SignatureEvalResult
 		if r.Signer != nil {
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
