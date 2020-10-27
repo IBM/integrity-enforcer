@@ -19,6 +19,11 @@ if ! [ -x "$(command -v kubectl)" ]; then
     exit 1
 fi
 
+if ! [ -x "$(command -v kustomize)" ]; then
+    echo 'Error: kustomize is not installed.' >&2
+    exit 1
+fi
+
 if [ -z "$IE_NS" ]; then
     echo "IE_NS is empty. Please set namespace name for integrity-enforcer."
     exit 1
@@ -45,22 +50,31 @@ if [ ${IE_ENV} = "remote" ]; then
     IE_CR="operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml"
 fi
 
-
+ENFORCER_DIR="${IE_REPO_ROOT}/operator/"
 ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/operator/deploy"
 
 echo ""
 echo "------------- Delete integrity-enforcer -------------"
 echo ""
+kubectl delete mutatingwebhookconfiguration ie-webhook-config
+cd $ENFORCER_DIR
+kubectl delete -n $IE_NS -f config/samples/research_v1alpha1_integrityenforcer.yaml
+kustomize build config/default | kubectl delete -f - 
+cd ${IE_REPO_ROOT}
 
-if [ ! -d ${ENFORCER_DEPLOY_DIR} ];then
-  echo "directory not exists."
-else
-    kubectl delete mutatingwebhookconfiguration ie-webhook-config
-    kubectl delete -f ${IE_REPO_ROOT}/${IE_CR}  -n ${IE_NS}
-    kubectl delete -f ${IE_REPO_ROOT}/${IE_OPERATOR_YAML} -n ${IE_NS}
-    kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role_binding.yaml -n ${IE_NS}
-    kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role.yaml -n ${IE_NS}
-    kubectl delete -f ${ENFORCER_DEPLOY_DIR}/service_account.yaml -n ${IE_NS}
-    kubectl delete -f ${ENFORCER_DEPLOY_DIR}/crds/research.ibm.com_integrityenforcers_crd.yaml
-fi
+################################
+# previous script commands here
+################################
+
+# if [ ! -d ${ENFORCER_DEPLOY_DIR} ];then
+#   echo "directory not exists."
+# else
+#     kubectl delete mutatingwebhookconfiguration ie-webhook-config
+#     kubectl delete -f ${IE_REPO_ROOT}/${IE_CR}  -n ${IE_NS}
+#     kubectl delete -f ${IE_REPO_ROOT}/${IE_OPERATOR_YAML} -n ${IE_NS}
+#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role_binding.yaml -n ${IE_NS}
+#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role.yaml -n ${IE_NS}
+#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/service_account.yaml -n ${IE_NS}
+#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/crds/research.ibm.com_integrityenforcers_crd.yaml
+# fi
 

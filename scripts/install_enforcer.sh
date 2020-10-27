@@ -19,6 +19,11 @@ if ! [ -x "$(command -v kubectl)" ]; then
     exit 1
 fi
 
+if ! [ -x "$(command -v kustomize)" ]; then
+    echo 'Error: kustomize is not installed.' >&2
+    exit 1
+fi
+
 if [ -z "$IE_NS" ]; then
     echo "IE_NS is empty. Please set namespace name for integrity-enforcer."
     exit 1
@@ -34,43 +39,67 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
-
-ENFORCER_DIR=$IE_REPO_ROOT"/operator/"
-ENFORCER_LOCAL_DIR=$IE_REPO_ROOT"/develop/local-deploy/"
-
+IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
+ENFORCER_DIR=${IE_REPO_ROOT}"/operator/"
+ENFORCER_LOCAL_DIR=${IE_REPO_ROOT}"/develop/local-deploy/"
 
 echo ""
 echo "------------- Install integrity-enforcer -------------"
 echo ""
-if [ $IE_ENV = "local" ]; then
-    IE_OPERATOR_YAMl=${ENFORCER_LOCAL_DIR}"operator_local.yaml"
-    IE_CR=${ENFORCER_LOCAL_DIR}"crds/research.ibm.com_v1alpha1_integrityenforcer_cr_local.yaml"
-fi
 
-if [ $IE_ENV = "remote" ]; then
-    IE_OPERATOR_YAMl=${ENFORCER_DIR}"deploy/operator.yaml"
-    IE_CR=${ENFORCER_DIR}"deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml"
-fi
+echo ""
+echo "------------- Create crd -------------"
+echo ""
+cd ${ENFORCER_DIR}
+kustomize build ${ENFORCER_DIR}config/crd | kubectl apply -f -
 
-if [ ! -d $ENFORCER_DIR ];then
-  echo "directory not exists."
-else
-    echo ""
-    echo "------------- Create crd -------------"
-    echo ""
-    kubectl create -f ${ENFORCER_DIR}deploy/crds/research.ibm.com_integrityenforcers_crd.yaml
+echo ""
+echo "------------- Install operator -------------"
+echo ""
+cd ${ENFORCER_DIR}config/manager
+kustomize edit set image controller=${IMG}
+kustomize build ${ENFORCER_DIR}config/default | kubectl apply -f -
 
-    echo ""
-    echo "------------- Install operator -------------"
-    echo ""
-    kubectl create -f ${ENFORCER_DIR}deploy/service_account.yaml -n ${IE_NS}
-    kubectl create -f ${ENFORCER_DIR}deploy/role.yaml -n ${IE_NS}
-    kubectl create -f ${ENFORCER_DIR}deploy/role_binding.yaml -n ${IE_NS}
-    kubectl create -f ${IE_OPERATOR_YAMl} -n ${IE_NS}
+echo ""
+echo "------------- Create CR -------------"
+echo ""
+cd $IE_REPO_ROOT
+kubectl apply -f ${ENFORCER_DIR}config/samples/research_v1alpha1_integrityenforcer.yaml
 
-    echo ""
-    echo "------------- Create CR -------------"
-    echo ""
-    kubectl create -f ${IE_CR} -n ${IE_NS}
-fi
+
+################################
+# previous script commands here
+################################
+
+# if [ $IE_ENV = "local" ]; then
+#     IE_OPERATOR_YAMl=${ENFORCER_LOCAL_DIR}"operator_local.yaml"
+#     IE_CR=${ENFORCER_LOCAL_DIR}"crds/research.ibm.com_v1alpha1_integrityenforcer_cr_local.yaml"
+# fi
+
+# if [ $IE_ENV = "remote" ]; then
+#     IE_OPERATOR_YAMl=${ENFORCER_DIR}"deploy/operator.yaml"
+#     IE_CR=${ENFORCER_DIR}"deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml"
+# fi
+
+# if [ ! -d $ENFORCER_DIR ];then
+#   echo "directory not exists."
+# else
+#     echo ""
+#     echo "------------- Create crd -------------"
+#     echo ""
+#     kubectl create -f ${ENFORCER_DIR}deploy/crds/research.ibm.com_integrityenforcers_crd.yaml
+
+#     echo ""
+#     echo "------------- Install operator -------------"
+#     echo ""
+#     kubectl create -f ${ENFORCER_DIR}deploy/service_account.yaml -n ${IE_NS}
+#     kubectl create -f ${ENFORCER_DIR}deploy/role.yaml -n ${IE_NS}
+#     kubectl create -f ${ENFORCER_DIR}deploy/role_binding.yaml -n ${IE_NS}
+#     kubectl create -f ${IE_OPERATOR_YAMl} -n ${IE_NS}
+
+#     echo ""
+#     echo "------------- Create CR -------------"
+#     echo ""
+#     kubectl create -f ${IE_CR} -n ${IE_NS}
+# fi
 

@@ -87,8 +87,6 @@ func InitRuleTable(namespace, name string) error {
 	table := protect.NewRuleTable()
 	for _, rsp := range list1.Items {
 		singleTable := rsp.ToRuleTable()
-		stb, _ := json.Marshal(singleTable)
-		logger.Debug("[SingleTable]", string(stb))
 		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
@@ -109,8 +107,6 @@ func InitIgnoreRuleTable(namespace, name string) error {
 	table := protect.NewRuleTable()
 	for _, rsp := range list1.Items {
 		singleTable := rsp.ToIgnoreRuleTable()
-		stb, _ := json.Marshal(singleTable)
-		logger.Debug("[SingleIgnoreTable]", string(stb))
 		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
@@ -131,8 +127,6 @@ func InitForceCheckRuleTable(namespace, name string) error {
 	table := protect.NewRuleTable()
 	for _, rsp := range list1.Items {
 		singleTable := rsp.ToForceCheckRuleTable()
-		stb, _ := json.Marshal(singleTable)
-		logger.Debug("[SingleForceCheckTable]", string(stb))
 		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
