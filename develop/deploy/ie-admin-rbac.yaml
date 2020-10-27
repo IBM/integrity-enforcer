@@ -29,7 +29,6 @@ rules:
     resources:
     - resourcesigningprofiles
     - resourcesignatures
-    - clusterresourcesigningprofiles
     verbs:
     - create
     - delete
