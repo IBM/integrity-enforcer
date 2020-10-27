@@ -2,13 +2,13 @@
 
 
 ## Create Resource Protection Profile
-You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace. The example below shows a definition to protect config map and service resource in `secure-ns` namespace. Only a single RPP can be defined in each namespace.
+You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceSigningProfile` (RSP) is created in the same namespace. The example below shows a definition to protect config map and service resource in `secure-ns` namespace. Only a single RSP can be defined in each namespace.
 
 ```yaml
 apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
   namespace: secure-ns
 spec:
   rules:
@@ -20,7 +20,7 @@ spec:
 If you are cluster-admin role, you can create these resource by
 
 ```
-oc apply -f sample-rpp.yaml -n secure-ns
+oc apply -f sample-rsp.yaml -n secure-ns
 ```
 
 This profile become effective in IE instantly for evaluating any further incoming admission requests.
@@ -83,13 +83,13 @@ ignoreAttrs:
 
 
 ## Cluster scope
-For cluster-scope resources, cluster scope custom resource `ClusterResourceProtectionProfile` (CRPP) are used. The example below shows definition to protect ClusterRoleBinding resource `sample-crb`.
+For cluster-scope resources, cluster scope custom resource `ClusterResourceSigningProfile` (CRSP) are used. The example below shows definition to protect ClusterRoleBinding resource `sample-crb`.
 
 ```
 apiVersion: research.ibm.com/v1alpha1
-kind: ClusterResourceProtectionProfile
+kind: ClusterResourceSigningProfile
 metadata:
-  name: sample-crpp
+  name: sample-crsp
 spec:
 rules:
 - match:
@@ -97,45 +97,45 @@ rules:
     name: sample-crb
 ```
 
-Rule syntax is same as RPP.
+Rule syntax is same as RSP.
 
 
-## Default RPP/CRPP
+## Default RSP/CRSP
 
-Cluster default RPP and CRPP are predefined in IE namespace. They are automatically created by IE operator when installing IE to the cluster. It is managed only by IE admin.
+Cluster default RSP and CRSP are predefined in IE namespace. They are automatically created by IE operator when installing IE to the cluster. It is managed only by IE admin.
 
-Default RPP/CRPP includes
+Default RSP/CRSP includes
 - service accounts which are considered as platform operator.
 - changes which are considered as expected normal platform behavior.
 
 
-## Delete/Disable RPP
+## Delete/Disable RSP
 
-RPP and CRPP have two lifecycle flags `disabled` and `delete`. Those fields are `false` by default.
+RSP and CRSP have two lifecycle flags `disabled` and `delete`. Those fields are `false` by default.
 
-If `disabled` is set to `true`, the RPP (CRPP) becomes invalid and ignored when checking signature (This implies no RPP is defined in the namespace). When you set it to `false` back, the RPP will become effective again.
+If `disabled` is set to `true`, the RSP (CRSP) becomes invalid and ignored when checking signature (This implies no RSP is defined in the namespace). When you set it to `false` back, the RSP will become effective again.
 
-When you want to delete RPP, set `delete` to `true`, then IE will delete RPP (CRPP). RPP and CRPP cannot be deleted directly, so need to set this flag when you want to delete then.
+When you want to delete RSP, set `delete` to `true`, then IE will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
 
 ```
 apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
   namespace: secure-ns
 spec:
   disabled: false
   delete: false
 ```
 
-## Example of RPP
+## Example of RSP
 
-The whole RPP is represented like this.
+The whole RSP is represented like this.
 ```
 apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
   namespace: secure-ns
 spec:
   disabled: false

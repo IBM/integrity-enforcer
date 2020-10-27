@@ -17,6 +17,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -27,11 +28,11 @@ import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
 
-	rppapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourceprotectionprofile/v1alpha1"
 	rsigapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
-	rppclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourceprotectionprofile/clientset/versioned/typed/resourceprotectionprofile/v1alpha1"
 	rsigclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
+	rspclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
 	v1 "k8s.io/api/core/v1"
@@ -52,7 +53,7 @@ const DefaultForceCheckTableLockCMName = "ie-force-check-table-lock"
 // RuleTable
 
 type RuleTableLoader struct {
-	RPPClient *rppclient.ResearchV1alpha1Client
+	RSPClient *rspclient.ResearchV1alpha1Client
 	// ConfigMapClient xxxxxx
 	Rule       *protect.RuleTable
 	Ignore     *protect.RuleTable
@@ -63,10 +64,10 @@ type RuleTableLoader struct {
 
 func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 	config, _ := rest.InClusterConfig()
-	rppClient, _ := rppclient.NewForConfig(config)
+	rspClient, _ := rspclient.NewForConfig(config)
 
 	return &RuleTableLoader{
-		RPPClient:         rppClient,
+		RSPClient:         rspClient,
 		Rule:              protect.NewRuleTable(),
 		Ignore:            protect.NewRuleTable(),
 		ForceCheck:        protect.NewRuleTable(),
@@ -76,19 +77,19 @@ func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 
 func InitRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
-	rppClient, _ := rppclient.NewForConfig(config)
-	// list RPP in all namespaces
-	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	rspClient, _ := rspclient.NewForConfig(config)
+	// list RSP in all namespaces
+	list1, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	table := protect.NewRuleTable()
-	for _, rpp := range list1.Items {
-		singleTable := rpp.ToRuleTable()
+	for _, rsp := range list1.Items {
+		singleTable := rsp.ToRuleTable()
 		stb, _ := json.Marshal(singleTable)
 		logger.Debug("[SingleTable]", string(stb))
-		if !rpp.Spec.Disabled {
+		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
 	}
@@ -98,19 +99,19 @@ func InitRuleTable(namespace, name string) error {
 
 func InitIgnoreRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
-	rppClient, _ := rppclient.NewForConfig(config)
-	// list RPP in all namespaces
-	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	rspClient, _ := rspclient.NewForConfig(config)
+	// list RSP in all namespaces
+	list1, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	table := protect.NewRuleTable()
-	for _, rpp := range list1.Items {
-		singleTable := rpp.ToIgnoreRuleTable()
+	for _, rsp := range list1.Items {
+		singleTable := rsp.ToIgnoreRuleTable()
 		stb, _ := json.Marshal(singleTable)
 		logger.Debug("[SingleIgnoreTable]", string(stb))
-		if !rpp.Spec.Disabled {
+		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
 	}
@@ -120,19 +121,19 @@ func InitIgnoreRuleTable(namespace, name string) error {
 
 func InitForceCheckRuleTable(namespace, name string) error {
 	config, _ := rest.InClusterConfig()
-	rppClient, _ := rppclient.NewForConfig(config)
-	// list RPP in all namespaces
-	list1, err := rppClient.ResourceProtectionProfiles("").List(metav1.ListOptions{})
+	rspClient, _ := rspclient.NewForConfig(config)
+	// list RSP in all namespaces
+	list1, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	table := protect.NewRuleTable()
-	for _, rpp := range list1.Items {
-		singleTable := rpp.ToForceCheckRuleTable()
+	for _, rsp := range list1.Items {
+		singleTable := rsp.ToForceCheckRuleTable()
 		stb, _ := json.Marshal(singleTable)
 		logger.Debug("[SingleForceCheckTable]", string(stb))
-		if !rpp.Spec.Disabled {
+		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
 	}
@@ -200,7 +201,7 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 	tmpSAData2 = tmpSAData2.Remove(ref)
 
 	if reqc.IsCreateRequest() || reqc.IsUpdateRequest() {
-		var newProfile rppapi.ResourceProtectionProfile
+		var newProfile rspapi.ResourceSigningProfile
 		err = json.Unmarshal(reqc.RawObject, &newProfile)
 		if err != nil {
 			logger.Error(err)
@@ -227,25 +228,25 @@ func (self *RuleTableLoader) Refresh() error {
 	return nil
 }
 
-// ResourceProtectionProfile
+// ResourceSigningProfile
 
-type RPPLoader struct {
+type RSPLoader struct {
 	enforcerNamespace      string
 	profileNamespace       string
 	requestNamespace       string
-	commonProfile          *rppapi.ResourceProtectionProfileSpec
+	commonProfile          *rspapi.ResourceSigningProfileSpec
 	defaultProfileInterval time.Duration
 
-	Client *rppclient.ResearchV1alpha1Client
-	Data   []rppapi.ResourceProtectionProfile
+	Client *rspclient.ResearchV1alpha1Client
+	Data   []rspapi.ResourceSigningProfile
 }
 
-func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string, commonProfile *rppapi.ResourceProtectionProfileSpec) *RPPLoader {
+func NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace string, commonProfile *rspapi.ResourceSigningProfileSpec) *RSPLoader {
 	defaultProfileInterval := time.Second * 60
 	config, _ := rest.InClusterConfig()
-	client, _ := rppclient.NewForConfig(config)
+	client, _ := rspclient.NewForConfig(config)
 
-	return &RPPLoader{
+	return &RSPLoader{
 		enforcerNamespace:      enforcerNamespace,
 		profileNamespace:       profileNamespace,
 		requestNamespace:       requestNamespace,
@@ -255,26 +256,26 @@ func NewRPPLoader(enforcerNamespace, profileNamespace, requestNamespace string, 
 	}
 }
 
-func (self *RPPLoader) GetData() []rppapi.ResourceProtectionProfile {
+func (self *RSPLoader) GetData() []rspapi.ResourceSigningProfile {
 	if len(self.Data) == 0 {
 		self.Load()
 	}
 	return self.Data
 }
 
-func (self *RPPLoader) Load() {
+func (self *RSPLoader) Load() {
 	var err error
-	var list1, list2, list3 *rppapi.ResourceProtectionProfileList
+	var list1, list2, list3 *rspapi.ResourceSigningProfileList
 	var keyName string
 
-	keyName = fmt.Sprintf("RPPLoader/%s/list", self.enforcerNamespace)
+	keyName = fmt.Sprintf("RSPLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ResourceProtectionProfiles(self.enforcerNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.ResourceSigningProfiles(self.enforcerNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			logger.Error("failed to get ResourceProtectionProfile:", err)
+			logger.Error("failed to get ResourceSigningProfile:", err)
 			return
 		}
-		logger.Debug("ResourceProtectionProfile reloaded.")
+		logger.Debug("ResourceSigningProfile reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
@@ -282,19 +283,19 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Error("failed to Unmarshal cached ResourceProtectionProfile:", err)
+			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
 			return
 		}
 	}
 
-	keyName = fmt.Sprintf("RPPLoader/%s/list", self.profileNamespace)
+	keyName = fmt.Sprintf("RSPLoader/%s/list", self.profileNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceProtectionProfiles(self.profileNamespace).List(metav1.ListOptions{})
+		list2, err = self.Client.ResourceSigningProfiles(self.profileNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			logger.Error("failed to get ResourceProtectionProfile:", err)
+			logger.Error("failed to get ResourceSigningProfile:", err)
 			return
 		}
-		logger.Debug("ResourceProtectionProfile reloaded.")
+		logger.Debug("ResourceSigningProfile reloaded.")
 		if len(list2.Items) > 0 {
 			tmp, _ := json.Marshal(list2)
 			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
@@ -302,19 +303,19 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list2)
 		if err != nil {
-			logger.Error("failed to Unmarshal cached ResourceProtectionProfile:", err)
+			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
 			return
 		}
 	}
 
-	keyName = fmt.Sprintf("RPPLoader/%s/list", self.requestNamespace)
+	keyName = fmt.Sprintf("RSPLoader/%s/list", self.requestNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list3, err = self.Client.ResourceProtectionProfiles(self.requestNamespace).List(metav1.ListOptions{})
+		list3, err = self.Client.ResourceSigningProfiles(self.requestNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			logger.Error("failed to get ResourceProtectionProfile:", err)
+			logger.Error("failed to get ResourceSigningProfile:", err)
 			return
 		}
-		logger.Debug("ResourceProtectionProfile reloaded.")
+		logger.Debug("ResourceSigningProfile reloaded.")
 		if len(list3.Items) > 0 {
 			tmp, _ := json.Marshal(list3)
 			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
@@ -322,11 +323,11 @@ func (self *RPPLoader) Load() {
 	} else {
 		err = json.Unmarshal([]byte(cached), &list3)
 		if err != nil {
-			logger.Error("failed to Unmarshal cached ResourceProtectionProfile:", err)
+			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
 			return
 		}
 	}
-	data := []rppapi.ResourceProtectionProfile{}
+	data := []rspapi.ResourceSigningProfile{}
 	for _, d := range list1.Items {
 		data = append(data, d)
 	}
@@ -340,20 +341,20 @@ func (self *RPPLoader) Load() {
 	return
 }
 
-func (self *RPPLoader) GetByReferences(refs []*v1.ObjectReference) []rppapi.ResourceProtectionProfile {
-	data := []rppapi.ResourceProtectionProfile{}
+func (self *RSPLoader) GetByReferences(refs []*v1.ObjectReference) []rspapi.ResourceSigningProfile {
+	data := []rspapi.ResourceSigningProfile{}
 	for _, ref := range refs {
-		d, err := self.Client.ResourceProtectionProfiles(ref.Namespace).Get(ref.Name, metav1.GetOptions{})
+		d, err := self.Client.ResourceSigningProfiles(ref.Namespace).Get(context.Background(), ref.Name, metav1.GetOptions{})
 		if err != nil {
 			logger.Error(err)
 		} else {
 			data = append(data, *d)
 		}
 	}
-	// add empty RPP if there is no matched reference, to enable default RPP even in the case
+	// add empty RSP if there is no matched reference, to enable default RSP even in the case
 	if len(data) == 0 {
-		emptyProfile := rppapi.ResourceProtectionProfile{}
-		data = []rppapi.ResourceProtectionProfile{
+		emptyProfile := rspapi.ResourceSigningProfile{}
+		data = []rspapi.ResourceSigningProfile{
 			emptyProfile,
 		}
 	}
@@ -364,7 +365,7 @@ func (self *RPPLoader) GetByReferences(refs []*v1.ObjectReference) []rppapi.Reso
 	return data
 }
 
-func (self *RPPLoader) MergeDefaultProfiles(data []rppapi.ResourceProtectionProfile) ([]rppapi.ResourceProtectionProfile, error) {
+func (self *RSPLoader) MergeDefaultProfiles(data []rspapi.ResourceSigningProfile) ([]rspapi.ResourceSigningProfile, error) {
 	dp, err := self.GetDefaultProfile()
 	if err != nil {
 		logger.Error(err)
@@ -376,22 +377,33 @@ func (self *RPPLoader) MergeDefaultProfiles(data []rppapi.ResourceProtectionProf
 	return data, nil
 }
 
-func (self *RPPLoader) GetDefaultProfile() (rppapi.ResourceProtectionProfile, error) {
-	rpp := rppapi.ResourceProtectionProfile{}
-	rpp.Spec = *(self.commonProfile)
-	return rpp, nil
+func (self *RSPLoader) GetDefaultProfile() (rspapi.ResourceSigningProfile, error) {
+	rsp := rspapi.ResourceSigningProfile{}
+	rsp.Spec = *(self.commonProfile)
+	return rsp, nil
 }
 
-func (self *RPPLoader) GetProfileInterface() []protect.ProtectionProfile {
-	profiles := []protect.ProtectionProfile{}
-	for _, d := range self.GetData() {
-		profiles = append(profiles, d)
+func (self *RSPLoader) UpdateStatus(profile protect.SigningProfile, reqc *common.ReqContext, errMsg string) error {
+	rsp, ok := profile.(rspapi.ResourceSigningProfile)
+	if !ok {
+		logger.Warn(fmt.Sprintf("The profile is not an instance of ResourceSigningProfile but one of %T; skip updating status.", profile))
+		return nil
 	}
-	return profiles
-}
+	rspNamespace := rsp.GetNamespace()
+	rspName := rsp.GetName()
+	rspOrg, err := self.Client.ResourceSigningProfiles(rspNamespace).Get(context.Background(), rspName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
 
-type ProtectionProfileLoader interface {
-	GetProfileInterface() []protect.ProtectionProfile
+	req := protect.NewRequestFromReqContext(reqc)
+	rspNew := rspOrg.UpdateStatus(req, errMsg)
+
+	_, err = self.Client.ResourceSigningProfiles(rspNamespace).Update(context.Background(), rspNew, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // SignPolicy
@@ -430,7 +442,7 @@ func (self *SignPolicyLoader) Load() {
 
 	keyName = fmt.Sprintf("SignPolicyLoader/%s/list", self.enforcerNamespace)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(metav1.ListOptions{})
+		list1, err = self.Client.SignPolicies(self.enforcerNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get SignPolicy:", err)
 			return
@@ -500,7 +512,7 @@ func (self *ResSigLoader) Load() {
 
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.signatureNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(metav1.ListOptions{LabelSelector: labelSelector})
+		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
 			return
@@ -519,7 +531,7 @@ func (self *ResSigLoader) Load() {
 	}
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.requestNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(metav1.ListOptions{LabelSelector: labelSelector})
+		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
 			return
@@ -579,7 +591,7 @@ func LoadEnforceConfig(namespace, cmname string) *cfg.EnforcerConfig {
 		log.Error(err)
 		return nil
 	}
-	ecres, err := clientset.EnforcerConfigs(namespace).Get(cmname, metav1.GetOptions{})
+	ecres, err := clientset.EnforcerConfigs(namespace).Get(context.Background(), cmname, metav1.GetOptions{})
 	if err != nil {
 		log.Error("failed to get EnforcerConfig:", err.Error())
 		return nil

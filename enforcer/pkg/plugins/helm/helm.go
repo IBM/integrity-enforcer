@@ -19,6 +19,7 @@ package helm
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -218,7 +219,7 @@ func GetHelmReleaseMetadata(rawBytes []byte) ([]string, error) {
 	config, _ := kubeutil.GetKubeConfig()
 	hrmclient, _ := hrmclient.NewForConfig(config)
 
-	hrm, err := hrmclient.HelmReleaseMetadatas(namespace).Get(name, metav1.GetOptions{})
+	hrm, err := hrmclient.HelmReleaseMetadatas(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get HelmReleaseMetadata: %s", err)
 	}
@@ -317,7 +318,7 @@ func FindReleaseSecret(namespace, kind, name string, rawObj []byte) ([]byte, err
 		}
 	} else {
 		v1client := v1cli.NewForConfigOrDie(config)
-		rsecList, err := v1client.Secrets(namespace).List(metav1.ListOptions{})
+		rsecList, err := v1client.Secrets(namespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}

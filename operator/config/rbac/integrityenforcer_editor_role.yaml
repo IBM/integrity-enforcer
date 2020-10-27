@@ -1,0 +1,24 @@
+# permissions for end users to edit integrityenforcers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: integrityenforcer-editor-role
+rules:
+- apiGroups:
+  - research.ibm.com
+  resources:
+  - integrityenforcers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - research.ibm.com
+  resources:
+  - integrityenforcers/status
+  verbs:
+  - get

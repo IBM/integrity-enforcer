@@ -19,6 +19,7 @@ package protect
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -212,10 +213,26 @@ func (self *Request) String() string {
 	return string(rB)
 }
 
+func (self *Request) Equal(req *Request) bool {
+	return reflect.DeepEqual(self, req)
+}
+
+func NewRequestFromReqContext(reqc *common.ReqContext) *Request {
+	req := &Request{
+		Operation:  reqc.Operation,
+		Namespace:  reqc.Namespace,
+		ApiGroup:   reqc.ApiGroup,
+		ApiVersion: reqc.ApiVersion,
+		Kind:       reqc.Kind,
+		Name:       reqc.Name,
+		UserName:   reqc.UserName,
+	}
+	return req
+}
+
 type Result struct {
-	Request     string `json:"request,omitempty"`
-	Reason      string `json:"reason,omitempty"`
-	MatchedRule string `json:"matchedRule,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Timestamp string `json:"timestamp,omitempty"`
 }
 
 func (p *Rule) DeepCopyInto(p2 *Rule) {
@@ -278,7 +295,7 @@ func (p *Result) DeepCopy() *Result {
 	return p2
 }
 
-type ProtectionProfile interface {
+type SigningProfile interface {
 	Match(reqFields map[string]string) (bool, *Rule)
 	Kustomize(reqFields map[string]string) []*KustomizePattern
 	ProtectAttrs(reqFields map[string]string) []*AttrsPattern
@@ -310,7 +327,7 @@ func (self *RuleTable) Update(namespace, name string) error {
 		return err
 	}
 
-	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -322,7 +339,7 @@ func (self *RuleTable) Update(namespace, name string) error {
 	zipData := gzipBuffer.Bytes()
 
 	cm.BinaryData["table"] = zipData
-	_, err = coreV1Client.ConfigMaps(namespace).Update(cm)
+	_, err = coreV1Client.ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -345,7 +362,7 @@ func (self *RuleTable) Get(namespace, name string) (*RuleTable, error) {
 	if err != nil {
 		return nil, err
 	}
-	cm, err := coreV1Client.ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	cm, err := coreV1Client.ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

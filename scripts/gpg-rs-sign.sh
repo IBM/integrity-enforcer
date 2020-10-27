@@ -65,6 +65,6 @@ rsigname="rsig-${reslowerkind}-${resname}"
 # add new annotations
 yq w -i $OUTPUT_FILE metadata.annotations.signature $rsigsig
 yq w -i $OUTPUT_FILE metadata.name $rsigname
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigsubject-apiversion"' $resApiVer
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigsubject-kind"' $resKind
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigobject-apiversion"' $resApiVer
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigobject-kind"' $resKind
 yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigtime"' $sigtime

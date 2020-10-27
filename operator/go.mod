@@ -3,16 +3,23 @@ module github.com/IBM/integrity-enforcer/operator
 go 1.13
 
 require (
+	cloud.google.com/go v0.49.0 // indirect
 	github.com/IBM/integrity-enforcer/enforcer v0.0.0-20200526092602-9fe2166392e1
+	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/google/go-cmp v0.4.0
+	github.com/go-logr/logr v0.1.0
+	github.com/go-logr/zapr v0.1.1 // indirect
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.1
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
-	github.com/operator-framework/operator-sdk v0.17.0
-	github.com/spf13/pflag v1.0.5
+	github.com/prometheus/client_golang v1.5.1 // indirect
+	github.com/sirupsen/logrus v1.5.0 // indirect
+	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
-	k8s.io/api v0.18.2
-	k8s.io/apiextensions-apiserver v0.18.2
-	k8s.io/apimachinery v0.18.2
+	golang.org/x/tools v0.0.0-20200327195553-82bb89366a1e // indirect
+	k8s.io/api v0.18.6
+	k8s.io/apiextensions-apiserver v0.18.6
+	k8s.io/apimachinery v0.19.3
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.5.2
 )
@@ -20,12 +27,13 @@ require (
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.4-0.20200207053602-7439e774c9e9+incompatible
 	github.com/IBM/integrity-enforcer/enforcer => ../enforcer
-	k8s.io/api => k8s.io/api v0.16.5-beta.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.5-beta.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.16.5-beta.1
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.16.5-beta.1
-	k8s.io/client-go => k8s.io/client-go v0.16.5-beta.1
-	k8s.io/kubectl => k8s.io/kubectl v0.16.5-beta.1
+	k8s.io/api => k8s.io/api v0.18.6
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.6
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.6
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.6
+	k8s.io/client-go => k8s.io/client-go v0.18.6
+	k8s.io/kubectl => k8s.io/kubectl v0.18.6
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.2
 )
 
 replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm

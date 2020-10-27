@@ -43,8 +43,8 @@ const (
 	ResourceIntegrityLabelKey = "integrity-enforcer.ibm.com/resourceIntegrity"
 	ReasonLabelKey            = "integrity-enforcer.ibm.com/reason"
 
-	ResSigLabelApiVer = "integrityenforcer.io/sigsubject-apiversion"
-	ResSigLabelKind   = "integrityenforcer.io/sigsubject-kind"
+	ResSigLabelApiVer = "integrityenforcer.io/sigobject-apiversion"
+	ResSigLabelKind   = "integrityenforcer.io/sigobject-kind"
 	ResSigLabelTime   = "integrityenforcer.io/sigtime"
 
 	LabelValueVerified   = "verified"
@@ -221,7 +221,7 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 
 ***********************************************/
 
-type SignPolicyEvalResult struct {
+type SignatureEvalResult struct {
 	Signer        *SignerInfo `json:"signer"`
 	SignerName    string      `json:"signerName"`
 	Checked       bool        `json:"checked"`
@@ -230,7 +230,7 @@ type SignPolicyEvalResult struct {
 	Error         *CheckError `json:"error"`
 }
 
-func (self *SignPolicyEvalResult) GetSignerName() string {
+func (self *SignatureEvalResult) GetSignerName() string {
 	if self.SignerName != "" {
 		return self.SignerName
 	}
