@@ -58,10 +58,13 @@ fi
 ENFORCER_DIR="${IE_REPO_ROOT}/operator/"
 ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/operator/deploy"
 
+IE_OP_DEFAULT_NS=ie-operator-ns
+
 echo ""
 echo "------------- Delete integrity-enforcer -------------"
 echo ""
-yq w -i ${ENFORCER_DIR}config/default/kustomization.yaml namespace $IE_OP_NS
+
+sed -i "s/$IE_OP_DEFAULT_NS/$IE_OP_NS/g" ${ENFORCER_DIR}config/default/kustomization.yaml
 
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
 cd $ENFORCER_DIR
