@@ -49,8 +49,10 @@ type IntegrityEnforcerReconciler struct {
 // +kubebuilder:rbac:groups=research.ibm.com,resources=*,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
-// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutationwebhookconfigurations,verbs=*
+// +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=*
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=*
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=*
+
 func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
