@@ -99,7 +99,12 @@ rules:
 - apiGroups:
   - research.ibm.com
   resources:
-  - '*'
+  - enforcerconfigs
+  - helmreleasemetadatas
+  - integrityenforcers
+  - resourcesignatures
+  - resourcesigningprofiles
+  - signpolicies
   verbs:
   - create
   - delete
