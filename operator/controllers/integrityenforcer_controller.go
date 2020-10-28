@@ -46,7 +46,7 @@ type IntegrityEnforcerReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers,resourceNames=integrity-enforcer-operator,verbs=update
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get
 // +kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=get
-// +kubebuilder:rbac:groups=research.ibm.com,resources=*,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=research.ibm.com,resources=integrityenforcers;enforcerconfigs;signpolicies;resourcesigningprofiles;resourcesignatures;helmreleasemetadatas,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
 // +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=*
