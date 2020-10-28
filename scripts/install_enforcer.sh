@@ -67,7 +67,8 @@ kustomize build ${ENFORCER_DIR}config/crd | kubectl apply -f -
 echo ""
 echo "------------- Install operator -------------"
 echo ""
-sed -i "s/IE_OP_NS/$IE_OP_NS/g" ${ENFORCER_DIR}config/default/kustomization.yaml
+yq w -i ${ENFORCER_DIR}config/default/kustomization.yaml namespace $IE_OP_NS
+
 cd ${ENFORCER_DIR}config/manager
 kustomize edit set image controller=${IMG}
 kustomize build ${ENFORCER_DIR}config/default | kubectl apply -f -
