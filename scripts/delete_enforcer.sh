@@ -61,13 +61,12 @@ ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/operator/deploy"
 echo ""
 echo "------------- Delete integrity-enforcer -------------"
 echo ""
-cd ${ENFORCER_DIR}config/default 
-kustomize edit set namespace $IE_OP_NS
+sed -i "s/IE_OP_NS/$IE_OP_NS/g" ${ENFORCER_DIR}config/default/kustomization.yaml
 
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
 cd $ENFORCER_DIR
 kubectl delete -n $IE_NS -f config/samples/research_v1alpha1_integrityenforcer.yaml
-kustomize build config/default | kubectl delete -f - 
+kustomize build config/default | kubectl delete -f -
 cd ${IE_REPO_ROOT}
 
 ################################
