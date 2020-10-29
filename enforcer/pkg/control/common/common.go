@@ -24,18 +24,18 @@ import (
 )
 
 const (
-	SignatureCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	SignatureCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
 	SignatureCustomResourceKind       = "ResourceSignature"
-	PolicyCustomResourceAPIVersion    = "research.ibm.com/v1alpha1"
+	PolicyCustomResourceAPIVersion    = "apis.integrityenforcer.io/v1alpha1"
 	PolicyCustomResourceKind          = "EnforcePolicy"
 
-	IEPolicyCustomResourceAPIVersion      = "research.ibm.com/v1alpha1"
+	IEPolicyCustomResourceAPIVersion      = "apis.integrityenforcer.io/v1alpha1"
 	IEPolicyCustomResourceKind            = "IntegrityEnforcerPolicy"
-	DefaultPolicyCustomResourceAPIVersion = "research.ibm.com/v1alpha1"
+	DefaultPolicyCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
 	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
-	SignerPolicyCustomResourceAPIVersion  = "research.ibm.com/v1alpha1"
+	SignerPolicyCustomResourceAPIVersion  = "apis.integrityenforcer.io/v1alpha1"
 	SignerPolicyCustomResourceKind        = "SignPolicy"
-	AppPolicyCustomResourceAPIVersion     = "research.ibm.com/v1alpha1"
+	AppPolicyCustomResourceAPIVersion     = "apis.integrityenforcer.io/v1alpha1"
 	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
 )
 

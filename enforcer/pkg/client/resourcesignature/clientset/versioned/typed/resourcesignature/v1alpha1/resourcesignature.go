@@ -56,7 +56,7 @@ type resourceSignatures struct {
 }
 
 // newResourceSignatures returns a ResourceSignatures
-func newResourceSignatures(c *ResearchV1alpha1Client, namespace string) *resourceSignatures {
+func newResourceSignatures(c *ApisV1alpha1Client, namespace string) *resourceSignatures {
 	return &resourceSignatures{
 		client: c.RESTClient(),
 		ns:     namespace,

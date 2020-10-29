@@ -17,13 +17,13 @@
 package resources
 
 import (
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //regkey.yaml
-func BuildRegKeySecretForCR(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Secret {
+func BuildRegKeySecretForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Spec.RegKeySecret.Name,
@@ -38,7 +38,7 @@ func BuildRegKeySecretForCR(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Secr
 }
 
 // //server-secret.yaml
-func BuildKeyringSecretForIEFromValue(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Secret {
+func BuildKeyringSecretForIEFromValue(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	metaLabels := map[string]string{
 		"app":                    cr.Name,
 		"app.kubernetes.io/name": cr.Spec.CertPool.Name,
@@ -61,7 +61,7 @@ func BuildKeyringSecretForIEFromValue(cr *researchv1alpha1.IntegrityEnforcer) *c
 }
 
 // ie-server-tls
-func BuildTlsSecretForIE(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Secret {
+func BuildTlsSecretForIE(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

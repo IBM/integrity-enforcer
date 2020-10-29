@@ -32,13 +32,13 @@ import (
 
 // FakeSignPolicies implements SignPolicyInterface
 type FakeSignPolicies struct {
-	Fake *FakeResearchV1alpha1
+	Fake *FakeApisV1alpha1
 	ns   string
 }
 
-var signpoliciesResource = schema.GroupVersionResource{Group: "research.ibm.com", Version: "v1alpha1", Resource: "signpolicies"}
+var signpoliciesResource = schema.GroupVersionResource{Group: "apis.integrityenforcer.io", Version: "v1alpha1", Resource: "signpolicies"}
 
-var signpoliciesKind = schema.GroupVersionKind{Group: "research.ibm.com", Version: "v1alpha1", Kind: "SignPolicy"}
+var signpoliciesKind = schema.GroupVersionKind{Group: "apis.integrityenforcer.io", Version: "v1alpha1", Kind: "SignPolicy"}
 
 // Get takes name of the signPolicy, and returns the corresponding signPolicy object, and an error if there is any.
 func (c *FakeSignPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.SignPolicy, err error) {

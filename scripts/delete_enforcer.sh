@@ -68,7 +68,7 @@ sed -i "s/$IE_OP_DEFAULT_NS/$IE_OP_NS/g" ${ENFORCER_DIR}config/default/kustomiza
 
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
 cd $ENFORCER_DIR
-kubectl delete -n $IE_NS -f config/samples/research_v1alpha1_integrityenforcer.yaml
+kubectl delete -n $IE_NS -f config/samples/apis_v1alpha1_integrityenforcer.yaml
 kustomize build config/default | kubectl delete -f -
 cd ${IE_REPO_ROOT}
 

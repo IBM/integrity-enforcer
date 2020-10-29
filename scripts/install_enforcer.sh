@@ -77,7 +77,7 @@ echo ""
 echo "------------- Create CR -------------"
 echo ""
 cd $IE_REPO_ROOT
-kubectl apply -f ${ENFORCER_DIR}config/samples/research_v1alpha1_integrityenforcer.yaml -n $IE_NS
+kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
 
 
 ################################

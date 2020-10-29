@@ -56,7 +56,7 @@ type helmReleaseMetadatas struct {
 }
 
 // newHelmReleaseMetadatas returns a HelmReleaseMetadatas
-func newHelmReleaseMetadatas(c *ResearchV1alpha1Client, namespace string) *helmReleaseMetadatas {
+func newHelmReleaseMetadatas(c *IntegrityenforcerV1alpha1Client, namespace string) *helmReleaseMetadatas {
 	return &helmReleaseMetadatas{
 		client: c.RESTClient(),
 		ns:     namespace,

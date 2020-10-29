@@ -56,7 +56,7 @@ type enforcerConfigs struct {
 }
 
 // newEnforcerConfigs returns a EnforcerConfigs
-func newEnforcerConfigs(c *ResearchV1alpha1Client, namespace string) *enforcerConfigs {
+func newEnforcerConfigs(c *ApisV1alpha1Client, namespace string) *enforcerConfigs {
 	return &enforcerConfigs{
 		client: c.RESTClient(),
 		ns:     namespace,

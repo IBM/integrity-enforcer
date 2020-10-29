@@ -21,7 +21,7 @@ package versioned
 import (
 	"fmt"
 
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/enforcerconfig/clientset/versioned/typed/enforcerconfig/v1alpha1"
+	apisv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/enforcerconfig/clientset/versioned/typed/enforcerconfig/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -29,19 +29,19 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	ResearchV1alpha1() researchv1alpha1.ResearchV1alpha1Interface
+	ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	researchV1alpha1 *researchv1alpha1.ResearchV1alpha1Client
+	apisV1alpha1 *apisv1alpha1.ApisV1alpha1Client
 }
 
-// ResearchV1alpha1 retrieves the ResearchV1alpha1Client
-func (c *Clientset) ResearchV1alpha1() researchv1alpha1.ResearchV1alpha1Interface {
-	return c.researchV1alpha1
+// ApisV1alpha1 retrieves the ApisV1alpha1Client
+func (c *Clientset) ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface {
+	return c.apisV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,7 +65,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.researchV1alpha1, err = researchv1alpha1.NewForConfig(&configShallowCopy)
+	cs.apisV1alpha1, err = apisv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.researchV1alpha1 = researchv1alpha1.NewForConfigOrDie(c)
+	cs.apisV1alpha1 = apisv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -90,7 +90,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.researchV1alpha1 = researchv1alpha1.New(c)
+	cs.apisV1alpha1 = apisv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

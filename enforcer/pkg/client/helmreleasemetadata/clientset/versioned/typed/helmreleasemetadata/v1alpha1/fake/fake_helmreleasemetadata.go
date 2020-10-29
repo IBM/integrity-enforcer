@@ -32,13 +32,13 @@ import (
 
 // FakeHelmReleaseMetadatas implements HelmReleaseMetadataInterface
 type FakeHelmReleaseMetadatas struct {
-	Fake *FakeResearchV1alpha1
+	Fake *FakeIntegrityenforcerV1alpha1
 	ns   string
 }
 
-var helmreleasemetadatasResource = schema.GroupVersionResource{Group: "research.ibm.com", Version: "v1alpha1", Resource: "helmreleasemetadatas"}
+var helmreleasemetadatasResource = schema.GroupVersionResource{Group: "integrityenforcer.io", Version: "v1alpha1", Resource: "helmreleasemetadatas"}
 
-var helmreleasemetadatasKind = schema.GroupVersionKind{Group: "research.ibm.com", Version: "v1alpha1", Kind: "HelmReleaseMetadata"}
+var helmreleasemetadatasKind = schema.GroupVersionKind{Group: "integrityenforcer.io", Version: "v1alpha1", Kind: "HelmReleaseMetadata"}
 
 // Get takes name of the helmReleaseMetadata, and returns the corresponding helmReleaseMetadata object, and an error if there is any.
 func (c *FakeHelmReleaseMetadatas) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.HelmReleaseMetadata, err error) {

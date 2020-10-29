@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: integrityenforcers.research.ibm.com
+  name: integrityenforcers.apis.integrityenforcer.io
 spec:
-  group: research.ibm.com
+  group: apis.integrityenforcer.io
   names:
     kind: IntegrityEnforcer
     listKind: IntegrityEnforcerList

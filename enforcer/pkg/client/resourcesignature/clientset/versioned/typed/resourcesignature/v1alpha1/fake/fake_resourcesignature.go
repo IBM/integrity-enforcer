@@ -32,13 +32,13 @@ import (
 
 // FakeResourceSignatures implements ResourceSignatureInterface
 type FakeResourceSignatures struct {
-	Fake *FakeResearchV1alpha1
+	Fake *FakeApisV1alpha1
 	ns   string
 }
 
-var resourcesignaturesResource = schema.GroupVersionResource{Group: "research.ibm.com", Version: "v1alpha1", Resource: "resourcesignatures"}
+var resourcesignaturesResource = schema.GroupVersionResource{Group: "apis.integrityenforcer.io", Version: "v1alpha1", Resource: "resourcesignatures"}
 
-var resourcesignaturesKind = schema.GroupVersionKind{Group: "research.ibm.com", Version: "v1alpha1", Kind: "ResourceSignature"}
+var resourcesignaturesKind = schema.GroupVersionKind{Group: "apis.integrityenforcer.io", Version: "v1alpha1", Kind: "ResourceSignature"}
 
 // Get takes name of the resourceSignature, and returns the corresponding resourceSignature object, and an error if there is any.
 func (c *FakeResourceSignatures) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ResourceSignature, err error) {

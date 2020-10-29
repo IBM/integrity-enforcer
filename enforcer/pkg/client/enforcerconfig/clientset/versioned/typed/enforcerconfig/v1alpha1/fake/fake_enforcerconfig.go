@@ -32,13 +32,13 @@ import (
 
 // FakeEnforcerConfigs implements EnforcerConfigInterface
 type FakeEnforcerConfigs struct {
-	Fake *FakeResearchV1alpha1
+	Fake *FakeApisV1alpha1
 	ns   string
 }
 
-var enforcerconfigsResource = schema.GroupVersionResource{Group: "research.ibm.com", Version: "v1alpha1", Resource: "enforcerconfigs"}
+var enforcerconfigsResource = schema.GroupVersionResource{Group: "apis.integrityenforcer.io", Version: "v1alpha1", Resource: "enforcerconfigs"}
 
-var enforcerconfigsKind = schema.GroupVersionKind{Group: "research.ibm.com", Version: "v1alpha1", Kind: "EnforcerConfig"}
+var enforcerconfigsKind = schema.GroupVersionKind{Group: "apis.integrityenforcer.io", Version: "v1alpha1", Kind: "EnforcerConfig"}
 
 // Get takes name of the enforcerConfig, and returns the corresponding enforcerConfig object, and an error if there is any.
 func (c *FakeEnforcerConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.EnforcerConfig, err error) {
