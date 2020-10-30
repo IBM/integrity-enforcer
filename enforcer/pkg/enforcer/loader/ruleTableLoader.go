@@ -19,6 +19,7 @@ package loader
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
@@ -57,6 +58,16 @@ func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 		ForceCheck:        NewRuleTable(),
 		enforcerNamespace: enforcerNamespace,
 	}
+}
+
+func InitAllRuleTables(namespace string) error {
+	err1 := InitRuleTable(namespace, DefaultRuleTableLockCMName)
+	err2 := InitIgnoreRuleTable(namespace, DefaultIgnoreTableLockCMName)
+	err3 := InitForceCheckRuleTable(namespace, DefaultForceCheckTableLockCMName)
+	if err1 != nil || err2 != nil || err3 != nil {
+		return fmt.Errorf("RuleTableErr: %s, IgnoreRuleTableError: %s, ForceCheckRuleTableError: %s", err1.Error(), err2.Error(), err3.Error())
+	}
+	return nil
 }
 
 func InitRuleTable(namespace, name string) error {

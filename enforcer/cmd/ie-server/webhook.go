@@ -58,9 +58,7 @@ func init() {
 	logger.Trace(string(cfgBytes))
 	logger.Info("EnforcerConfig is loaded.")
 
-	loader.InitRuleTable(config.EnforcerConfig.Namespace, loader.DefaultRuleTableLockCMName)
-	loader.InitIgnoreRuleTable(config.EnforcerConfig.Namespace, loader.DefaultIgnoreTableLockCMName)
-	loader.InitForceCheckRuleTable(config.EnforcerConfig.Namespace, loader.DefaultForceCheckTableLockCMName)
+	loader.InitAllRuleTables(config.EnforcerConfig.Namespace)
 	logger.Info("RuleTable has been set.")
 }
 
