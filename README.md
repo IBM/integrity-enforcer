@@ -37,7 +37,7 @@ IE can be deployed with operator. We have verified the feasibility on the follow
 - Resources to be protected in each namespace can be defined in the custom resource called `ResourceSigningProfile`. For example, the following snippet shows an example definition of protected resources in a namespace. This `ResourceSigningProfile` resource includes the matching rule for specifiying resources to such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by IE, so any matched request to create/update those resources are verified with signature.  (see [Define Protected Resources](./docs/README_FOR_RESOURCE_PROTECTION_PROFILE.md))
 ​
   ```yaml
-  apiVersion: research.ibm.com/v1alpha1
+  apiVersion: apis.integrityenforcer.io/v1alpha1
   kind: ResourceSigningProfile
   metadata:
     name: sample-rsp

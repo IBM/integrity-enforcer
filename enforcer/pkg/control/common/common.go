@@ -40,8 +40,8 @@ const (
 )
 
 const (
-	ResourceIntegrityLabelKey = "integrity-enforcer.ibm.com/resourceIntegrity"
-	ReasonLabelKey            = "integrity-enforcer.ibm.com/reason"
+	ResourceIntegrityLabelKey = "integrityenforcer.io/resourceIntegrity"
+	ReasonLabelKey            = "integrityenforcer.io/reason"
 
 	ResSigLabelApiVer = "integrityenforcer.io/sigobject-apiversion"
 	ResSigLabelKind   = "integrityenforcer.io/sigobject-kind"
