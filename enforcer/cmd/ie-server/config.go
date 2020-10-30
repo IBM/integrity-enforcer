@@ -29,12 +29,6 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-/**********************************************
-
-					Config
-
-***********************************************/
-
 type Config struct {
 	EnforcerConfig *cfg.EnforcerConfig
 	lastUpdated    time.Time
