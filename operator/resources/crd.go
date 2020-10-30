@@ -17,13 +17,13 @@
 package resources
 
 import (
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //sign policy crd
-func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 
 	subjectMatchCondition := &extv1.JSONSchemaProps{
 		Type: "object",
@@ -73,11 +73,11 @@ func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomRes
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "signpolicies.research.ibm.com",
+			Name:      "signpolicies.apis.integrityenforcer.io",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "research.ibm.com",
+			Group: "apis.integrityenforcer.io",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
 				Kind:     "SignPolicy",
@@ -155,7 +155,7 @@ func BuildSignPolicyCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomRes
 }
 
 //enforcer config crd
-func BuildEnforcerConfigCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+func BuildEnforcerConfigCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -163,11 +163,11 @@ func BuildEnforcerConfigCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Custo
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "enforcerconfigs.research.ibm.com",
+			Name:      "enforcerconfigs.apis.integrityenforcer.io",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "research.ibm.com",
+			Group: "apis.integrityenforcer.io",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
 				Kind:       "EnforcerConfig",
@@ -196,7 +196,7 @@ func BuildEnforcerConfigCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Custo
 }
 
 //resource signature crd
-func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+func BuildResourceSignatureCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -204,11 +204,11 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "resourcesignatures.research.ibm.com",
+			Name:      "resourcesignatures.apis.integrityenforcer.io",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "research.ibm.com",
+			Group: "apis.integrityenforcer.io",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
 				Kind:       "ResourceSignature",
@@ -237,7 +237,7 @@ func BuildResourceSignatureCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.Cu
 }
 
 // helm release metadata crd
-func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+func BuildHelmReleaseMetadataCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -245,11 +245,11 @@ func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helmreleasemetadatas.research.ibm.com",
+			Name:      "helmreleasemetadatas.apis.integrityenforcer.io",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "research.ibm.com",
+			Group: "apis.integrityenforcer.io",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
 				Kind:       "HelmReleaseMetadata",
@@ -278,7 +278,7 @@ func BuildHelmReleaseMetadataCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.
 }
 
 // resourcesigningprofile crd
-func BuildResourceSigningProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
+func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -286,11 +286,11 @@ func BuildResourceSigningProfileCRD(cr *researchv1alpha1.IntegrityEnforcer) *ext
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "resourcesigningprofiles.research.ibm.com",
+			Name:      "resourcesigningprofiles.apis.integrityenforcer.io",
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "research.ibm.com",
+			Group: "apis.integrityenforcer.io",
 			//Version: "v1beta1",
 			Names: extv1.CustomResourceDefinitionNames{
 				Kind:       "ResourceSigningProfile",

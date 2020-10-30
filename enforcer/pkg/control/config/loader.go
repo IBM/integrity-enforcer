@@ -53,7 +53,7 @@ const DefaultForceCheckTableLockCMName = "ie-force-check-table-lock"
 // RuleTable
 
 type RuleTableLoader struct {
-	RSPClient *rspclient.ResearchV1alpha1Client
+	RSPClient *rspclient.ApisV1alpha1Client
 	// ConfigMapClient xxxxxx
 	Rule       *protect.RuleTable
 	Ignore     *protect.RuleTable
@@ -231,7 +231,7 @@ type RSPLoader struct {
 	commonProfile          *rspapi.ResourceSigningProfileSpec
 	defaultProfileInterval time.Duration
 
-	Client *rspclient.ResearchV1alpha1Client
+	Client *rspclient.ApisV1alpha1Client
 	Data   []rspapi.ResourceSigningProfile
 }
 
@@ -406,7 +406,7 @@ type SignPolicyLoader struct {
 	interval          time.Duration
 	enforcerNamespace string
 
-	Client *spolclient.ResearchV1alpha1Client
+	Client *spolclient.ApisV1alpha1Client
 	Data   *spolapi.SignPolicy
 }
 
@@ -471,7 +471,7 @@ type ResSigLoader struct {
 	reqApiVersion      string
 	reqKind            string
 
-	Client *rsigclient.ResearchV1alpha1Client
+	Client *rsigclient.ApisV1alpha1Client
 	Data   []*rsigapi.ResourceSignature
 }
 

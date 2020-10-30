@@ -24,7 +24,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,7 +40,7 @@ const defaultKeyringPath = "/keyring/pubring.gpg"
 var log = logf.Log.WithName("controller_integrityenforcer")
 
 // enforcer config cr
-func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.EnforcerConfig {
+func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerConfig {
 	ecc := &ec.EnforcerConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Spec.EnforcerConfigCrName,
@@ -85,7 +85,7 @@ func BuildEnforcerConfigForIE(cr *researchv1alpha1.IntegrityEnforcer) *ec.Enforc
 }
 
 //sign enforce policy cr
-func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol.SignPolicy {
+func BuildSignEnforcePolicyForIE(cr *apiv1alpha1.IntegrityEnforcer) *iespol.SignPolicy {
 	var signPolicy *policy.SignPolicy
 
 	if cr.Spec.SignPolicy != nil {
@@ -123,7 +123,7 @@ func BuildSignEnforcePolicyForIE(cr *researchv1alpha1.IntegrityEnforcer) *iespol
 }
 
 // primary rsp
-func BuildPrimaryResourceSigningProfileForIE(cr *researchv1alpha1.IntegrityEnforcer) *rsp.ResourceSigningProfile {
+func BuildPrimaryResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer) *rsp.ResourceSigningProfile {
 	primaryrsp := &rsp.ResourceSigningProfile{}
 
 	if cr.Spec.PrimaryRsp != nil {

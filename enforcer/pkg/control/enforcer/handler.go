@@ -525,7 +525,7 @@ func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 }
 
 func (self *RequestHandler) checkIfIEResource() bool {
-	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"research.ibm.com"
+	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"apis.integrityenforcer.io"
 	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
 		self.reqc.Namespace == self.config.Namespace &&
 		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreTableLockCMName || self.reqc.Name == ctlconfig.DefaultForceCheckTableLockCMName))

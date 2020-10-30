@@ -34,7 +34,7 @@ else
 fi
 
 content=`cat <<EOF  
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: HelmReleaseMetadata
 metadata:
   name: ${name}

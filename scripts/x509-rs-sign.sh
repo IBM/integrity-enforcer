@@ -26,7 +26,7 @@ OUTPUT_FILE=$4
 
 # compute signature (and encoded message and certificate)
 cat <<EOF > $OUTPUT_FILE
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSignature
 metadata:
    annotations:

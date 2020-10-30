@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned"
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1"
-	fakeresearchv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1/fake"
+	integrityenforcerv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1"
+	fakeintegrityenforcerv1alpha1 "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -76,7 +76,7 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 
 var _ clientset.Interface = &Clientset{}
 
-// ResearchV1alpha1 retrieves the ResearchV1alpha1Client
-func (c *Clientset) ResearchV1alpha1() researchv1alpha1.ResearchV1alpha1Interface {
-	return &fakeresearchv1alpha1.FakeResearchV1alpha1{Fake: &c.Fake}
+// IntegrityenforcerV1alpha1 retrieves the IntegrityenforcerV1alpha1Client
+func (c *Clientset) IntegrityenforcerV1alpha1() integrityenforcerv1alpha1.IntegrityenforcerV1alpha1Interface {
+	return &fakeintegrityenforcerv1alpha1.FakeIntegrityenforcerV1alpha1{Fake: &c.Fake}
 }

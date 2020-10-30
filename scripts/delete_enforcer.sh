@@ -47,12 +47,12 @@ fi
 
 if [ ${IE_ENV} = "local" ]; then
     IE_OPERATOR_YAML="develop/local-deploy/operator_local.yaml"
-    IE_CR="develop/local-deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr_local.yaml"
+    IE_CR="develop/local-deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr_local.yaml"
 fi
 
 if [ ${IE_ENV} = "remote" ]; then
     IE_OPERATOR_YAML="operator/deploy/operator.yaml"
-    IE_CR="operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml"
+    IE_CR="operator/deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml"
 fi
 
 ENFORCER_DIR="${IE_REPO_ROOT}/operator/"
@@ -68,7 +68,7 @@ sed -i "s/$IE_OP_DEFAULT_NS/$IE_OP_NS/g" ${ENFORCER_DIR}config/default/kustomiza
 
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
 cd $ENFORCER_DIR
-kubectl delete -n $IE_NS -f config/samples/research_v1alpha1_integrityenforcer.yaml
+kubectl delete -n $IE_NS -f config/samples/apis_v1alpha1_integrityenforcer.yaml
 kustomize build config/default | kubectl delete -f -
 cd ${IE_REPO_ROOT}
 
@@ -85,6 +85,6 @@ cd ${IE_REPO_ROOT}
 #     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role_binding.yaml -n ${IE_NS}
 #     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role.yaml -n ${IE_NS}
 #     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/service_account.yaml -n ${IE_NS}
-#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/crds/research.ibm.com_integrityenforcers_crd.yaml
+#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/crds/apis.integrityenforcer.io_integrityenforcers_crd.yaml
 # fi
 

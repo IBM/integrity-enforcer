@@ -21,7 +21,7 @@ import (
 	"time"
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	"github.com/IBM/integrity-enforcer/operator/pgpkey"
 	res "github.com/IBM/integrity-enforcer/operator/resources"
 	scc "github.com/openshift/api/security/v1"
@@ -51,7 +51,7 @@ import (
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateCRD(instance *researchv1alpha1.IntegrityEnforcer, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateCRD(instance *apiv1alpha1.IntegrityEnforcer, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
 	ctx := context.Background()
 
 	found := &extv1.CustomResourceDefinition{}
@@ -95,30 +95,30 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateCRD(instance *researchv1alph
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildEnforcerConfigCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildSignPolicyCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSignatureCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildResourceSignatureCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateHelmReleaseMetadataCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildHelmReleaseMetadataCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCRD(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildResourceSigningProfileCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
@@ -129,7 +129,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCRD(
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 
 	expected := res.BuildEnforcerConfigForIE(instance)
@@ -173,7 +173,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *r
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &spol.SignPolicy{}
 	expected := res.BuildSignEnforcePolicyForIE(instance)
@@ -215,7 +215,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *resea
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfileCR(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfileCR(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rsp.ResourceSigningProfile{}
 	expected := res.BuildPrimaryResourceSigningProfileForIE(instance)
@@ -263,7 +263,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfil
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateSCC(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateSCC(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildSecurityContextConstraints(instance)
 	found := &scc.SecurityContextConstraints{}
@@ -304,7 +304,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSCC(instance *researchv1alph
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateServiceAccount(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateServiceAccount(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildServiceAccountForIE(instance)
 	found := &corev1.ServiceAccount{}
@@ -347,7 +347,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateServiceAccount(instance *res
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRole(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRole(instance *apiv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRole{}
 
@@ -390,7 +390,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRole(instance *resear
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleBinding(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleBinding(instance *apiv1alpha1.IntegrityEnforcer, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRoleBinding{}
 
@@ -432,7 +432,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleBinding(instance 
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateRole(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.Role) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateRole(instance *apiv1alpha1.IntegrityEnforcer, expected *rbacv1.Role) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.Role{}
 
@@ -475,7 +475,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateRole(instance *researchv1alp
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateRoleBinding(instance *researchv1alpha1.IntegrityEnforcer, expected *rbacv1.RoleBinding) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateRoleBinding(instance *apiv1alpha1.IntegrityEnforcer, expected *rbacv1.RoleBinding) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.RoleBinding{}
 
@@ -519,55 +519,55 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateRoleBinding(instance *resear
 
 // ie-admin
 func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleBindingForIEAdmin(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForIEAdmin(instance)
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateRoleBindingForIEAdmin(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildRoleBindingForIEAdmin(instance)
 	return r.createOrUpdateRoleBinding(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateRoleForIEAdmin(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildRoleForIEAdmin(instance)
 	return r.createOrUpdateRole(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleForIEAdmin(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForIEAdmin(instance)
 	return r.createOrUpdateClusterRole(instance, expected)
 }
 
 // for ie
 func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleBindingForIE(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForIE(instance)
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateRoleBindingForIE(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildRoleBindingForIE(instance)
 	return r.createOrUpdateRoleBinding(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateRoleForIE(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildRoleForIE(instance)
 	return r.createOrUpdateRole(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateClusterRoleForIE(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForIE(instance)
 	return r.createOrUpdateClusterRole(instance, expected)
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdatePodSecurityPolicy(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdatePodSecurityPolicy(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildPodSecurityPolicy(instance)
 	found := &policyv1.PodSecurityPolicy{}
@@ -616,7 +616,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePodSecurityPolicy(instance *
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateSecret(instance *researchv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
 
@@ -660,7 +660,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSecret(instance *researchv1a
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateCertSecret(instance *researchv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateCertSecret(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
 
@@ -706,7 +706,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateCertSecret(instance *researc
 
 }
 
-func addCertValues(instance *researchv1alpha1.IntegrityEnforcer, expected *corev1.Secret) *corev1.Secret {
+func addCertValues(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Secret) *corev1.Secret {
 	reqLogger := log.WithValues(
 		"Secret.Namespace", instance.Namespace,
 		"Instance.Name", instance.Name,
@@ -730,13 +730,13 @@ func addCertValues(instance *researchv1alpha1.IntegrityEnforcer, expected *corev
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateRegKeySecret(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildRegKeySecretForCR(instance)
 	return r.createOrUpdateSecret(instance, expected)
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateKeyringSecret(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildKeyringSecretForIEFromValue(instance)
 	pubkeyName := pgpkey.GetPublicKeyringName()
 	expected.Data[pubkeyName] = instance.Spec.CertPool.KeyValue
@@ -744,7 +744,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateKeyringSecret(
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
-	instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildTlsSecretForIE(instance)
 	return r.createOrUpdateCertSecret(instance, expected)
 }
@@ -755,7 +755,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateConfigMap(instance *researchv1alpha1.IntegrityEnforcer, expected *v1.ConfigMap) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateConfigMap(instance *apiv1alpha1.IntegrityEnforcer, expected *v1.ConfigMap) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.ConfigMap{}
 
@@ -796,17 +796,17 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateConfigMap(instance *research
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateRuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateRuleTableConfigMap(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildRuleTableLockConfigMapForCR(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateIgnoreRuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateIgnoreRuleTableConfigMap(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildIgnoreRuleTableLockConfigMapForCR(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateForceCheckRuleTableConfigMap(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateForceCheckRuleTableConfigMap(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildForceCheckRuleTableLockConfigMapForCR(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
@@ -817,7 +817,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateForceCheckRuleTableConfigMap
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateDeployment(instance *researchv1alpha1.IntegrityEnforcer, expected *appsv1.Deployment) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateDeployment(instance *apiv1alpha1.IntegrityEnforcer, expected *appsv1.Deployment) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &appsv1.Deployment{}
 
@@ -871,7 +871,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateDeployment(instance *researc
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateWebhookDeployment(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateWebhookDeployment(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildDeploymentForCR(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
@@ -882,7 +882,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateWebhookDeployment(instance *
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateService(instance *researchv1alpha1.IntegrityEnforcer, expected *corev1.Service) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateService(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Service) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Service{}
 
@@ -924,7 +924,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateService(instance *researchv1
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateWebhookService(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateWebhookService(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildServiceForCR(instance)
 	return r.createOrUpdateService(instance, expected)
 }
@@ -935,7 +935,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateWebhookService(instance *res
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateWebhook(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateWebhook(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildMutatingWebhookConfigurationForIE(instance)
 	found := &admv1.MutatingWebhookConfiguration{}
@@ -990,7 +990,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateWebhook(instance *researchv1
 }
 
 // delete webhookconfiguration
-func (r *IntegrityEnforcerReconciler) deleteWebhook(instance *researchv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) deleteWebhook(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildMutatingWebhookConfigurationForIE(instance)
 	found := &admv1.MutatingWebhookConfiguration{}
@@ -1017,7 +1017,7 @@ func (r *IntegrityEnforcerReconciler) deleteWebhook(instance *researchv1alpha1.I
 }
 
 // wait function
-func (r *IntegrityEnforcerReconciler) isDeploymentAvailable(instance *researchv1alpha1.IntegrityEnforcer) bool {
+func (r *IntegrityEnforcerReconciler) isDeploymentAvailable(instance *apiv1alpha1.IntegrityEnforcer) bool {
 	ctx := context.Background()
 	found := &appsv1.Deployment{}
 

@@ -56,7 +56,7 @@ type resourceSigningProfiles struct {
 }
 
 // newResourceSigningProfiles returns a ResourceSigningProfiles
-func newResourceSigningProfiles(c *ResearchV1alpha1Client, namespace string) *resourceSigningProfiles {
+func newResourceSigningProfiles(c *ApisV1alpha1Client, namespace string) *resourceSigningProfiles {
 	return &resourceSigningProfiles{
 		client: c.RESTClient(),
 		ns:     namespace,

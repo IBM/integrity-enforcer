@@ -77,7 +77,7 @@ echo ""
 echo "------------- Create CR -------------"
 echo ""
 cd $IE_REPO_ROOT
-kubectl apply -f ${ENFORCER_DIR}config/samples/research_v1alpha1_integrityenforcer.yaml -n $IE_NS
+kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
 
 
 ################################
@@ -86,12 +86,12 @@ kubectl apply -f ${ENFORCER_DIR}config/samples/research_v1alpha1_integrityenforc
 
 # if [ $IE_ENV = "local" ]; then
 #     IE_OPERATOR_YAMl=${ENFORCER_LOCAL_DIR}"operator_local.yaml"
-#     IE_CR=${ENFORCER_LOCAL_DIR}"crds/research.ibm.com_v1alpha1_integrityenforcer_cr_local.yaml"
+#     IE_CR=${ENFORCER_LOCAL_DIR}"crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr_local.yaml"
 # fi
 
 # if [ $IE_ENV = "remote" ]; then
 #     IE_OPERATOR_YAMl=${ENFORCER_DIR}"deploy/operator.yaml"
-#     IE_CR=${ENFORCER_DIR}"deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml"
+#     IE_CR=${ENFORCER_DIR}"deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml"
 # fi
 
 # if [ ! -d $ENFORCER_DIR ];then
@@ -100,7 +100,7 @@ kubectl apply -f ${ENFORCER_DIR}config/samples/research_v1alpha1_integrityenforc
 #     echo ""
 #     echo "------------- Create crd -------------"
 #     echo ""
-#     kubectl create -f ${ENFORCER_DIR}deploy/crds/research.ibm.com_integrityenforcers_crd.yaml
+#     kubectl create -f ${ENFORCER_DIR}deploy/crds/apis.integrityenforcer.io_integrityenforcers_crd.yaml
 
 #     echo ""
 #     echo "------------- Install operator -------------"

@@ -66,7 +66,7 @@ spec:
                if [[ "$extension" == "yaml"  ||  "$extension" == "yml" ]]; then
 
                   rsigfile="rsig-$rsfilebasename"
-                  tmpring='{"apiVersion":"research.ibm.com/v1alpha1","kind":"ResourceSignature","metadata":{"annotations":{"messageScope":"spec","signature":""},"name":""},"spec":{"data":[{"message":"","signature":"","type":"resource"}]}}'
+                  tmpring='{"apiVersion":"apis.integrityenforcer.io/v1alpha1","kind":"ResourceSignature","metadata":{"annotations":{"messageScope":"spec","signature":""},"name":""},"spec":{"data":[{"message":"","signature":"","type":"resource"}]}}'
 
                   echo -e $tmprsig | yq r - --prettyPrint >> $rsigfile
                   msg=`cat $rsfile | $base`
@@ -80,7 +80,7 @@ spec:
 
                   cat $rsigfile
 
-                  yq w -i $rsigfile apiVersion research.ibm.com/v1alpha1
+                  yq w -i $rsigfile apiVersion apis.integrityenforcer.io/v1alpha1
                   yq w -i $rsigfile kind ResourceSignature
                   yq w -i $rsigfile spec.data.[0].message $msg
                   yq w -i $rsigfile spec.data.[0].signature $signature

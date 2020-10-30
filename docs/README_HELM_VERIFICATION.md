@@ -30,7 +30,7 @@ IE provides protection for Helm chart resources. To protect the Helm chart resou
    `/tmp/sample-chart-rsp.yaml` is generated, and the content is something like this.
 
    ```
-   apiVersion: research.ibm.com/v1alpha1
+   apiVersion: apis.integrityenforcer.io/v1alpha1
    kind: ResourceSigningProfile
    metadata:
      name: ac-test-chart-rsp

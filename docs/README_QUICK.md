@@ -62,12 +62,12 @@ oc create secret generic --save-config keyring-secret  -n integrity-enforcer-ns 
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Enforcer. For that, configure signPolicy in the following Integrity Enforcer Custom Resource [file](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Enforcer. For that, configure signPolicy in the following Integrity Enforcer Custom Resource [file](../operator/config/samples/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
 
 ```yaml
-# Edit operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml
+# Edit operator/config/samples/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml
 
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server
@@ -147,7 +147,7 @@ You can define which resources should be protected with signature in a cluster b
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -159,7 +159,7 @@ spec:
     - kind: Service
 EOF
 
-resourcesigningprofile.research.ibm.com/sample-rsp created
+resourcesigningprofile.apis.integrityenforcer.io/sample-rsp created
 ```
 
 See [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail specs.
@@ -203,7 +203,7 @@ Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature
 
 
 ```yaml
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSignature
 metadata:
   annotations:
@@ -221,7 +221,7 @@ spec:
 Create this resource.
 ```
 $ oc create -f /tmp/test-cm-rs.yaml -n secure-ns
-resourcesignature.research.ibm.com/rsig-test-cm created
+resourcesignature.apis.integrityenforcer.io/rsig-test-cm created
 ```
 
 
@@ -280,7 +280,7 @@ If you want to see the result of admission check, you can see the detail by usin
   "request.objectHashType": "",
   "request.uid": "bdb62f22-22f8-4a4d-9ead-cc034e4ce07b",
   "requestScope": "Namespaced",
-  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=research.ibm.com/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
+  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=apis.integrityenforcer.io/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
   "sig.allow": false,
   "sig.errMsg": "",
   "sig.errOccured": true,

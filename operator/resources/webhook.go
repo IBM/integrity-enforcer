@@ -19,7 +19,7 @@ package resources
 import (
 	"fmt"
 
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +29,7 @@ import (
 const defaultIEWebhookTimeout = 10
 
 //service
-func BuildServiceForCR(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Service {
+func BuildServiceForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Service {
 	var targetport intstr.IntOrString
 	targetport.Type = intstr.String
 	targetport.StrVal = "ac-api"
@@ -52,7 +52,7 @@ func BuildServiceForCR(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Service {
 }
 
 //webhook configuration
-func BuildMutatingWebhookConfigurationForIE(cr *researchv1alpha1.IntegrityEnforcer) *admv1.MutatingWebhookConfiguration {
+func BuildMutatingWebhookConfigurationForIE(cr *apiv1alpha1.IntegrityEnforcer) *admv1.MutatingWebhookConfiguration {
 
 	namespaced := admv1.NamespacedScope
 	cluster := admv1.ClusterScope

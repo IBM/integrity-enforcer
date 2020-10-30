@@ -5,7 +5,7 @@
 SignPolicy is a custom resource to define who can be a valid signer for resources in a namespace or for cluster scope resources.
 Only a SignPolicy resource is defined in IE namespace (`integrity-enforcer-ns` in this documentation)and initial SignPolicy resource is created during IE installation. You can access it by
 ```
-$ oc get signpolicies.research.ibm.com signer-policy -n integrity-enforcer-ns -o yaml > /tmp/sign-policy.yaml
+$ oc get signpolicies.apis.integrityenforcer.io signer-policy -n integrity-enforcer-ns -o yaml > /tmp/sign-policy.yaml
 ```
 
 You can configure the policy by adding the following snipet to `/tmp/sign-policy.yaml`
@@ -33,7 +33,7 @@ For matching signer, you can use the following attributes: `email`, `uid`, `coun
 Then, this policy is applied back to a cluster by:
 
 ```
-$ oc apply -f /tmp/sign-policy.yaml -n integrity-enforcer-ns signpolicy.research.ibm.com/signer-policy configured
+$ oc apply -f /tmp/sign-policy.yaml -n integrity-enforcer-ns signpolicy.apis.integrityenforcer.io/signer-policy configured
 ```
 
 You can define namespace matcher by using `excludeNamespaces`. For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`.

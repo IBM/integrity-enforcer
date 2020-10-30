@@ -56,7 +56,7 @@ type signPolicies struct {
 }
 
 // newSignPolicies returns a SignPolicies
-func newSignPolicies(c *ResearchV1alpha1Client, namespace string) *signPolicies {
+func newSignPolicies(c *ApisV1alpha1Client, namespace string) *signPolicies {
 	return &signPolicies{
 		client: c.RESTClient(),
 		ns:     namespace,

@@ -99,7 +99,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "c9a4fd8c.research.ibm.com",
+		LeaderElectionID:   "c9a4fd8c.apis.integrityenforcer.io",
 		Namespace:          watchNamespace, // namespaced-scope when the value is not an empty string
 	})
 	if err != nil {

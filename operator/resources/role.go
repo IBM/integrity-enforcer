@@ -19,7 +19,7 @@ package resources
 import (
 	"strings"
 
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	scc "github.com/openshift/api/security/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
@@ -28,7 +28,7 @@ import (
 )
 
 //scc
-func BuildSecurityContextConstraints(cr *researchv1alpha1.IntegrityEnforcer) *scc.SecurityContextConstraints {
+func BuildSecurityContextConstraints(cr *apiv1alpha1.IntegrityEnforcer) *scc.SecurityContextConstraints {
 	user := strings.Join([]string{"system:serviceaccount", cr.Namespace, cr.Spec.Security.ServiceAccountName}, ":")
 	privilegeEscalation := false
 	allowPrivilegeEscalation := false
@@ -76,7 +76,7 @@ func BuildSecurityContextConstraints(cr *researchv1alpha1.IntegrityEnforcer) *sc
 }
 
 //sa
-func BuildServiceAccountForIE(cr *researchv1alpha1.IntegrityEnforcer) *corev1.ServiceAccount {
+func BuildServiceAccountForIE(cr *apiv1alpha1.IntegrityEnforcer) *corev1.ServiceAccount {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -94,7 +94,7 @@ func BuildServiceAccountForIE(cr *researchv1alpha1.IntegrityEnforcer) *corev1.Se
 }
 
 //cluster role
-func BuildClusterRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRole {
+func BuildClusterRoleForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -110,7 +110,7 @@ func BuildClusterRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Clust
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{
-					"extensions", "", "research.ibm.com",
+					"extensions", "", "apis.integrityenforcer.io",
 				},
 				Resources: []string{
 					"secrets", "namespaces", "resourcesignatures", "enforcerconfigs", "signpolicies", "signpolicies", "resourcesigningprofiles", "resourcesignatures",
@@ -161,7 +161,7 @@ func BuildClusterRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Clust
 }
 
 //cluster role-binding
-func BuildClusterRoleBindingForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRoleBinding {
+func BuildClusterRoleBindingForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -191,7 +191,7 @@ func BuildClusterRoleBindingForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv
 }
 
 //role
-func BuildRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
+func BuildRoleForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -222,7 +222,7 @@ func BuildRoleForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 }
 
 //role-binding
-func BuildRoleBindingForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.RoleBinding {
+func BuildRoleBindingForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.RoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -252,7 +252,7 @@ func BuildRoleBindingForIE(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.RoleB
 }
 
 //role
-func BuildRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
+func BuildRoleForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -285,7 +285,7 @@ func BuildRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 }
 
 //role-binding
-func BuildRoleBindingForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.RoleBinding {
+func BuildRoleBindingForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.RoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -309,7 +309,7 @@ func BuildRoleBindingForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.
 }
 
 //role
-func BuildClusterRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRole {
+func BuildClusterRoleForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -341,7 +341,7 @@ func BuildClusterRoleForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.
 }
 
 //role-binding
-func BuildClusterRoleBindingForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRoleBinding {
+func BuildClusterRoleBindingForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -365,7 +365,7 @@ func BuildClusterRoleBindingForIEAdmin(cr *researchv1alpha1.IntegrityEnforcer) *
 }
 
 //pod security policy
-func BuildPodSecurityPolicy(cr *researchv1alpha1.IntegrityEnforcer) *policyv1.PodSecurityPolicy {
+func BuildPodSecurityPolicy(cr *apiv1alpha1.IntegrityEnforcer) *policyv1.PodSecurityPolicy {
 	labels := map[string]string{
 		"app": cr.Name,
 	}

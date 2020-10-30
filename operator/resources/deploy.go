@@ -24,7 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	researchv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -33,7 +33,7 @@ const ignoreTableLockCMName = "ie-ignore-table-lock"
 const forceCheckTableLockCMName = "ie-force-check-table-lock"
 
 //deployment
-func BuildDeploymentForCR(cr *researchv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
+func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
 
 	var volumemounts []v1.VolumeMount
@@ -343,7 +343,7 @@ func EqualAnnotations(found map[string]string, expected map[string]string) bool 
 }
 
 // ie-rule-table-lock ConfigMap
-func BuildRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+func BuildRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
 	labels := cr.Spec.MetaLabels
 
 	return &v1.ConfigMap{
@@ -357,7 +357,7 @@ func BuildRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v
 }
 
 // ie-ignore-table-lock ConfigMap
-func BuildIgnoreRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+func BuildIgnoreRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
 	labels := cr.Spec.MetaLabels
 
 	return &v1.ConfigMap{
@@ -371,7 +371,7 @@ func BuildIgnoreRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforc
 }
 
 // ie-force-check-table-lock ConfigMap
-func BuildForceCheckRuleTableLockConfigMapForCR(cr *researchv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+func BuildForceCheckRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
 	labels := cr.Spec.MetaLabels
 
 	return &v1.ConfigMap{

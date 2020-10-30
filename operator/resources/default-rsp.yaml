@@ -1,4 +1,4 @@
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: default-rsp

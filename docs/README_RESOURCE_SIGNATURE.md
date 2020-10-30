@@ -9,7 +9,7 @@ IE supports two modes of signature verification.
 `spec.verifyType` should be set either `pgp` (default) or `x509`.
 
 ```
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server

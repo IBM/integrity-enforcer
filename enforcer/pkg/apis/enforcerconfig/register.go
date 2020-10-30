@@ -17,5 +17,5 @@
 package enforcerconfig
 
 const (
-	GroupName = "research.ibm.com"
+	GroupName = "apis.integrityenforcer.io"
 )

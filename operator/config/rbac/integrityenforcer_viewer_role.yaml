@@ -5,7 +5,7 @@ metadata:
   name: integrityenforcer-viewer-role
 rules:
 - apiGroups:
-  - research.ibm.com
+  - apis.integrityenforcer.io
   resources:
   - integrityenforcers
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - research.ibm.com
+  - apis.integrityenforcer.io
   resources:
   - integrityenforcers/status
   verbs:

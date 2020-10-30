@@ -5,7 +5,7 @@
 You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceSigningProfile` (RSP) is created in the same namespace. The example below shows a definition to protect config map and service resource in `secure-ns` namespace. Only a single RSP can be defined in each namespace.
 
 ```yaml
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -86,7 +86,7 @@ ignoreAttrs:
 For cluster-scope resources, cluster scope custom resource `ClusterResourceSigningProfile` (CRSP) are used. The example below shows definition to protect ClusterRoleBinding resource `sample-crb`.
 
 ```
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ClusterResourceSigningProfile
 metadata:
   name: sample-crsp
@@ -118,7 +118,7 @@ If `disabled` is set to `true`, the RSP (CRSP) becomes invalid and ignored when 
 When you want to delete RSP, set `delete` to `true`, then IE will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
 
 ```
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -132,7 +132,7 @@ spec:
 
 The whole RSP is represented like this.
 ```
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp

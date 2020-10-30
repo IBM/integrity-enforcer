@@ -88,7 +88,7 @@ This section describe the steps for deploying Integrity Enforcer (IE) on your lo
 
     Configure signPolicy in the following `integrity-enforcer` Custom Resource file:
 
-    Edit [`deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml) to specify a signer for a namespace `secure-ns`.
+    Edit [`config/samples/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml`](../operator/deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml) to specify a signer for a namespace `secure-ns`.
 
     Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
 

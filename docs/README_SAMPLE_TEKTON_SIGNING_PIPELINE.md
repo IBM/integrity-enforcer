@@ -207,7 +207,7 @@ The sample Tekton signing pipeline would pull sources of an application from a s
    In the target cluster, check if resource signature is successfully deployed.
 
    ```
-      $ oc get resourcesignature.research.ibm.com rsig-ie-sample-app -n integrity-enforcer-ns
+      $ oc get resourcesignature.apis.integrityenforcer.io rsig-ie-sample-app -n integrity-enforcer-ns
       NAME                 AGE
       rsig-ie-sample-app   29s
 
