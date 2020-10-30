@@ -1,7 +1,7 @@
 domain: integrityenforcer.io
 layout: go.kubebuilder.io/v2
-projectName: operator
-repo: github.com/IBM/integrity-enforcer/operator
+projectName: integrity-enforcer-operator
+repo: github.com/IBM/integrity-enforcer/integrity-enforcer-operator
 resources:
 - group: apis
   kind: IntegrityEnforcer

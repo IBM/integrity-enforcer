@@ -22,7 +22,7 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      serviceAccountName: integrity-enforcer-operator
+      serviceAccountName: integrity-enforcer-operator-manager
       imagePullSecrets:
       - name: mappregkey
       containers:
@@ -31,7 +31,6 @@ spec:
         args:
         - --enable-leader-election
         image: controller:latest
-        imagePullPolicy: Always
         name: manager
         resources:
           limits:

@@ -8,5 +8,5 @@ roleRef:
   name: leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: integrity-enforcer-operator
-  namespace: integrity-enforcer-system
+  name: integrity-enforcer-operator-manager
+  namespace: integrity-enforcer-operator-system

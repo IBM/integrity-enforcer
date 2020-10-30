@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= 0.0.3
+VERSION ?= 0.0.4
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -69,10 +69,8 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-go-build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o build/_output/bin/ie-operator  main.go
 # Build the docker image
-docker-build: test go-build
+docker-build: test
 	docker build . -t ${IMG}
 
 # Push the docker image

@@ -28,14 +28,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	iev1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	scc "github.com/openshift/api/security/v1"
+
+	apisv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
+	"github.com/IBM/integrity-enforcer/integrity-enforcer-operator/controllers"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
-	"github.com/IBM/integrity-enforcer/operator/controllers"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -44,16 +45,15 @@ import (
 
 var (
 	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup=>>>>>>>>>>>>")
+	setupLog = ctrl.Log.WithName("setup")
 )
 
 func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1beta1.AddToScheme(scheme))
 
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
-	utilruntime.Must(iev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apisv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(scc.AddToScheme(scheme))
 
 	utilruntime.Must(ec.AddToScheme(scheme))
@@ -99,7 +99,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "c9a4fd8c.apis.integrityenforcer.io",
+		LeaderElectionID:   "b67154b9.integrityenforcer.io",
 		Namespace:          watchNamespace, // namespaced-scope when the value is not an empty string
 	})
 	if err != nil {
@@ -118,10 +118,6 @@ func main() {
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
-	setupLog.Info("added scehme")
-	grpVersion := scheme.PrioritizedVersionsAllGroups()
-	fmt.Println(grpVersion)
-	//setupLog.Info("scheme: %v", grpVersion)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

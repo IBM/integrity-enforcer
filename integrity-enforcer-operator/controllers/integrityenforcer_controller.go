@@ -20,15 +20,15 @@ import (
 	"context"
 	"time"
 
-	iev1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	corev1 "k8s.io/api/core/v1"
+	apisv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_integrityenforcer")
@@ -58,7 +58,7 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 
 	// Fetch the IntegrityEnforcer instance
-	instance := &iev1alpha1.IntegrityEnforcer{}
+	instance := &apisv1alpha1.IntegrityEnforcer{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -262,12 +262,11 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	time.Sleep(5 * time.Second)
 
 	return ctrl.Result{}, nil
-
 }
 
 func (r *IntegrityEnforcerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&iev1alpha1.IntegrityEnforcer{}).
+		For(&apisv1alpha1.IntegrityEnforcer{}).
 		Owns(&corev1.Pod{}).
 		Complete(r)
 }

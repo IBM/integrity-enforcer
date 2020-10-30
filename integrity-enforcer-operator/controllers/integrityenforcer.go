@@ -21,9 +21,9 @@ import (
 	"time"
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
-	apiv1alpha1 "github.com/IBM/integrity-enforcer/operator/api/v1alpha1"
-	"github.com/IBM/integrity-enforcer/operator/pgpkey"
-	res "github.com/IBM/integrity-enforcer/operator/resources"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
+	"github.com/IBM/integrity-enforcer/integrity-enforcer-operator/pgpkey"
+	res "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/resources"
 	scc "github.com/openshift/api/security/v1"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +33,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
-	cert "github.com/IBM/integrity-enforcer/operator/cert"
+	cert "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/cert"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
