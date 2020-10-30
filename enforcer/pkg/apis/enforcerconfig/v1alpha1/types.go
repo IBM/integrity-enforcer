@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
+	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

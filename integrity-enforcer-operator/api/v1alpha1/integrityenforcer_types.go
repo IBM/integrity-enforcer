@@ -22,8 +22,8 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
-	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
+	iec "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )

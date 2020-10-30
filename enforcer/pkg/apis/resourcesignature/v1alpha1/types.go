@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/util/mapnode"
 	yaml "gopkg.in/yaml.v2"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
