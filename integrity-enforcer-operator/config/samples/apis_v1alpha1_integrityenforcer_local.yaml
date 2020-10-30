@@ -76,7 +76,7 @@ spec:
       enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
-    image: ie-logging:local
+    image: integrityenforcer/ie-logging:0.0.4dev
     imagePullPolicy: IfNotPresent
     name: forwarder
     resources:
@@ -114,7 +114,7 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     enforcePolicyReloadSec: 10
-    image: ie-server:local
+    image: integrityenforcer/ie-server:0.0.4dev
     imagePullPolicy: IfNotPresent
     name: server
     port: 8443

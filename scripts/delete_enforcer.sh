@@ -59,7 +59,14 @@ echo ""
 
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
 cd $ENFORCER_DIR
-kubectl delete -n $IE_NS -f config/samples/apis_v1alpha1_integrityenforcer.yaml
+
+if [ $IE_ENV = "local" ]; then
+   kubectl delete -n $IE_NS -f config/samples/apis_v1alpha1_integrityenforcer_local.yaml
+else
+   kubectl delete -n $IE_NS -f config/samples/apis_v1alpha1_integrityenforcer.yaml
+fi
+
+
 kustomize build config/default | kubectl delete -f -
 cd ${IE_REPO_ROOT}
 

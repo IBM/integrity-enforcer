@@ -41,7 +41,6 @@ fi
 
 IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
 ENFORCER_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
-ENFORCER_LOCAL_DIR=${IE_REPO_ROOT}"/develop/local-deploy/"
 
 echo ""
 echo "------------- Set integrity-enforcer operator watch namespace -------------"
@@ -70,8 +69,12 @@ echo ""
 echo "------------- Create CR -------------"
 echo ""
 cd $IE_REPO_ROOT
-kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
 
+if [ $IE_ENV = "local" ]; then
+   kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer_local.yaml -n $IE_NS
+else
+   kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
+fi
 
 ################################
 # previous script commands here
