@@ -2,7 +2,7 @@
 
 ## Clone Repo
 ```
-$ git clone git@github.ibm.com:mutation-advisor/integrity-enforcer.git
+$ git clone git@github.com:IBM/integrity-enforcer.git
 $ cd integrity-enforcer
 ```
 

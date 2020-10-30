@@ -1,4 +1,4 @@
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server
@@ -28,7 +28,7 @@ spec:
       - name: "HelmClusterSigner"
         subjects:
         - email: cluster_signer@signer.com
-    ieResource: "research.ibm.com"
+    ieResource: "apis.integrityenforcer.io"
     ieAdminUserGroup: "system:masters,system:cluster-admins"
     ignore:
     - kind: Event
