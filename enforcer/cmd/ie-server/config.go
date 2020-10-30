@@ -94,10 +94,6 @@ func (conf *Config) InitEnforcerConfig() bool {
 	return renew
 }
 
-func (conf *Config) HelmIntegrityEnabled() bool {
-	return true
-}
-
 func LoadEnforceConfig(namespace, cmname string) *cfg.EnforcerConfig {
 
 	config, err := rest.InClusterConfig()
