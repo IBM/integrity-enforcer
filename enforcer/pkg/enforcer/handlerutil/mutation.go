@@ -14,25 +14,25 @@
 // limitations under the License.
 //
 
-package enforcer
+package handlerutil
 
 import (
 	"strings"
 
-	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
+	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/util/mapnode"
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, signingProfile protect.SigningProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, signingProfile profile.SigningProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct {
 	VerifiedOwners []*common.Owner
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile protect.SigningProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile profile.SigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -194,7 +194,7 @@ func MutationMessage(resourceName string, diffResult []mapnode.Difference) (msg 
 	return msg
 }
 
-func GetMAResult(ma4kInput *Ma4kInput, rules []*protect.AttrsPattern) (*MAResult, error) {
+func GetMAResult(ma4kInput *Ma4kInput, rules []*profile.AttrsPattern) (*MAResult, error) {
 	mr := &MAResult{}
 	oldObject, _ := mapnode.NewFromMap(ma4kInput.Before)
 	newObject, _ := mapnode.NewFromMap(ma4kInput.After)
@@ -241,7 +241,7 @@ func GetMAResult(ma4kInput *Ma4kInput, rules []*protect.AttrsPattern) (*MAResult
 	return mr, nil
 }
 
-func generateMaskKeys(rules []*protect.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
+func generateMaskKeys(rules []*profile.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
 	reqFields := map[string]string{}
 	reqFields["Namespace"] = namespace
 	reqFields["Name"] = name

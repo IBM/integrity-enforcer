@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package sign
+package pgp
 
 import (
 	"os/user"

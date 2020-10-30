@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
-	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	config "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 )
 
 /**********************************************

@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	"github.com/ghodss/yaml"
 	"github.com/jinzhu/copier"
 	"github.com/oliveagle/jsonpath"

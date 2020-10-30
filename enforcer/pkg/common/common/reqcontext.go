@@ -25,7 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )

@@ -25,14 +25,14 @@ import (
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/helmreleasemetadata/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/plugins/helm"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
-	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
-	pkix "github.com/IBM/integrity-enforcer/enforcer/pkg/sign/pkix"
+	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
+	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/util/mapnode"
+	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/util/sign/pgp"
+	x509 "github.com/IBM/integrity-enforcer/enforcer/pkg/util/sign/x509"
 )
 
 /**********************************************
@@ -42,7 +42,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile protect.SigningProfile) (*SigVerifyResult, error)
+	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error)
 }
 
 /**********************************************
@@ -67,7 +67,7 @@ func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespac
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile protect.SigningProfile) (*SigVerifyResult, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -165,7 +165,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 
 	} else if self.VerifyType == VerifyTypeX509 {
 		certificate := []byte(sig.data["certificate"])
-		certOk, reasonFail, err := pkix.VerifyCertificate(certificate, self.CertPoolPath)
+		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.CertPoolPath)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in certificate verification",
@@ -183,17 +183,17 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			vsinfo = nil
 			retErr = nil
 		} else {
-			cert, err := pkix.ParseCertificate(certificate)
+			cert, err := x509.ParseCertificate(certificate)
 			if err != nil {
 				logger.Error("Failed to parse certificate; ", err)
 			}
-			pubKeyBytes, err := pkix.GetPublicKeyFromCertificate(certificate)
+			pubKeyBytes, err := x509.GetPublicKeyFromCertificate(certificate)
 			if err != nil {
 				logger.Error("Failed to get public key from certificate; ", err)
 			}
 			message := []byte(sig.data["message"])
 			signature := []byte(sig.data["signature"])
-			sigOk, reasonFail, err := pkix.VerifySignature(message, signature, pubKeyBytes)
+			sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
 			if err != nil {
 				vcerr = &common.CheckError{
 					Msg:    "Error occured in signature verification",
@@ -234,7 +234,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*protect.AttrsPattern, allowDiffPatterns []*mapnode.Difference, resScope string, signType SignatureType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*profile.AttrsPattern, allowDiffPatterns []*mapnode.Difference, resScope string, signType SignatureType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -473,7 +473,7 @@ func decompress(str string) string {
 	return s
 }
 
-func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*protect.KustomizePattern) []*mapnode.Difference {
+func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*profile.KustomizePattern) []*mapnode.Difference {
 	ref := reqc.ResourceRef()
 	name := reqc.Name
 	kustomizedName := name
@@ -515,7 +515,7 @@ type HelmVerifier struct {
 	KeyringPath  string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile protect.SigningProfile) (*SigVerifyResult, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error

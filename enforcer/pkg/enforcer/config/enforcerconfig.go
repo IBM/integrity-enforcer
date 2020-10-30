@@ -18,10 +18,10 @@ package config
 
 import (
 	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	"github.com/jinzhu/copier"
 )
 
@@ -42,8 +42,8 @@ type EnforcerConfig struct {
 	Log   *LoggingScopeConfig `json:"log,omitempty"`
 
 	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
-	Allow         []protect.RequestPattern           `json:"allow,omitempty"`
-	Ignore        []protect.RequestPattern           `json:"ignore,omitempty"`
+	Allow         []profile.RequestPattern           `json:"allow,omitempty"`
+	Ignore        []profile.RequestPattern           `json:"ignore,omitempty"`
 	SignPolicy    *policy.SignPolicy                 `json:"signPolicy,omitempty"`
 	Mode          IntegrityEnforcerMode              `json:"mode,omitempty"`
 	Plugin        []PluginConfig                     `json:"plugin,omitempty"`
@@ -88,8 +88,8 @@ type PluginConfig struct {
 
 type LogScopeConfig struct {
 	Enabled bool                     `json:"enabled,omitempty"`
-	InScope []protect.RequestPattern `json:"inScope,omitempty"`
-	Ignore  []protect.RequestPattern `json:"ignore,omitempty"`
+	InScope []profile.RequestPattern `json:"inScope,omitempty"`
+	Ignore  []profile.RequestPattern `json:"ignore,omitempty"`
 }
 
 func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {

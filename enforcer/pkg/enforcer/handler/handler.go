@@ -27,15 +27,15 @@ import (
 	rsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
-	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	ctlconfig "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
-	patchutil "github.com/IBM/integrity-enforcer/enforcer/pkg/control/patch"
-	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/control/sign"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
+	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
+	config "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
+	handlerutil "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/handlerutil"
+	loader "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/loader"
+	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/sign"
+	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
@@ -52,13 +52,13 @@ import (
 type RequestHandler struct {
 	config *config.EnforcerConfig
 	ctx    *CheckContext
-	loader *Loader
+	loader *loader.Loader
 	reqc   *common.ReqContext
 }
 
 func NewRequestHandler(config *config.EnforcerConfig) *RequestHandler {
 	cc := InitCheckContext(config)
-	return &RequestHandler{config: config, loader: &Loader{Config: config}, ctx: cc}
+	return &RequestHandler{config: config, loader: &loader.Loader{Config: config}, ctx: cc}
 }
 
 func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
@@ -78,7 +78,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	// Start IE world from here ...
 
 	//init loader
-	self.initLoader()
+	self.loader = loader.NewLoader(self.config, self.reqc)
 
 	if self.config.Log.IncludeRequest {
 		self.ctx.IncludeRequest = true
@@ -149,7 +149,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	var errMsg string
-	var denyingProfile protect.SigningProfile
+	var denyingProfile profile.SigningProfile
 	if !self.ctx.Aborted && self.ctx.Protected && !allowed {
 
 		signingProfiles := self.loader.SigningProfile(profileReferences)
@@ -458,13 +458,13 @@ func (self *RequestHandler) createPatch() []byte {
 		name := self.reqc.Name
 		reqJson := self.reqc.RequestJsonStr
 		if self.config.PatchEnabled() {
-			patch = patchutil.CreatePatch(name, reqJson, labels, deleteKeys)
+			patch = handlerutil.CreatePatch(name, reqJson, labels, deleteKeys)
 		}
 	}
 	return patch
 }
 
-func (self *RequestHandler) evalSignature(signingProfile protect.SigningProfile) (*common.SignatureEvalResult, error) {
+func (self *RequestHandler) evalSignature(signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error) {
 	signPolicy := self.loader.MergedSignPolicy()
 	plugins := self.GetEnabledPlugins()
 	if evaluator, err := sign.NewSignatureEvaluator(self.config, signPolicy, plugins); err != nil {
@@ -476,11 +476,11 @@ func (self *RequestHandler) evalSignature(signingProfile protect.SigningProfile)
 	}
 }
 
-func (self *RequestHandler) evalMutation(signingProfile protect.SigningProfile) (*common.MutationEvalResult, error) {
+func (self *RequestHandler) evalMutation(signingProfile profile.SigningProfile) (*common.MutationEvalResult, error) {
 	reqc := self.reqc
 	owners := []*common.Owner{}
 	//ignoreAttrs := self.GetIgnoreAttrs()
-	if checker, err := NewMutationChecker(owners); err != nil {
+	if checker, err := handlerutil.NewMutationChecker(owners); err != nil {
 		return nil, err
 	} else {
 		return checker.Eval(reqc, signingProfile)
@@ -491,23 +491,6 @@ func (self *RequestHandler) abort(reason string, err error) {
 	self.ctx.Aborted = true
 	self.ctx.AbortReason = reason
 	self.ctx.Error = err
-}
-
-func (self *RequestHandler) initLoader() {
-	enforcerNamespace := self.config.Namespace
-	requestNamespace := self.reqc.Namespace
-	signatureNamespace := self.config.SignatureNamespace // for non-existing namespace / cluster scope
-	profileNamespace := self.config.ProfileNamespace     // for non-existing namespace / cluster scope
-	reqApiVersion := self.reqc.GroupVersion()
-	reqKind := self.reqc.Kind
-	loader := &Loader{
-		Config:            self.config,
-		SignPolicy:        ctlconfig.NewSignPolicyLoader(enforcerNamespace),
-		RSP:               ctlconfig.NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, self.config.CommonProfile),
-		RuleTable:         ctlconfig.NewRuleTableLoader(enforcerNamespace),
-		ResourceSignature: ctlconfig.NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
-	}
-	self.loader = loader
 }
 
 func (self *RequestHandler) checkIfDryRunAdmission() bool {
@@ -528,7 +511,7 @@ func (self *RequestHandler) checkIfIEResource() bool {
 	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"apis.integrityenforcer.io"
 	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
 		self.reqc.Namespace == self.config.Namespace &&
-		(self.reqc.Name == ctlconfig.DefaultRuleTableLockCMName || self.reqc.Name == ctlconfig.DefaultIgnoreTableLockCMName || self.reqc.Name == ctlconfig.DefaultForceCheckTableLockCMName))
+		(self.reqc.Name == loader.DefaultRuleTableLockCMName || self.reqc.Name == loader.DefaultIgnoreTableLockCMName || self.reqc.Name == loader.DefaultForceCheckTableLockCMName))
 	return isIECustomResource || isIELockConfigMap
 }
 
@@ -670,104 +653,4 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 		return err
 	}
 	return nil
-}
-
-/**********************************************
-
-				Loader
-
-***********************************************/
-
-type Loader struct {
-	Config            *config.EnforcerConfig
-	SignPolicy        *ctlconfig.SignPolicyLoader
-	RuleTable         *ctlconfig.RuleTableLoader
-	RSP               *ctlconfig.RSPLoader
-	ResourceSignature *ctlconfig.ResSigLoader
-}
-
-func (self *Loader) UnprotectedRequestMatchPattern() []protect.RequestPattern {
-	return self.Config.Ignore
-}
-
-func (self *Loader) ProtectRules() *protect.RuleTable {
-	table := self.RuleTable.GetData()
-	return table
-}
-
-func (self *Loader) IgnoreRules() *protect.RuleTable {
-	table := self.RuleTable.GetIgnoreData()
-	return table
-}
-
-func (self *Loader) ForceCheckRules() *protect.RuleTable {
-	table := self.RuleTable.GetForceCheckData()
-	return table
-}
-
-func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []protect.SigningProfile {
-	signingProfiles := []protect.SigningProfile{}
-
-	rsps := self.RSP.GetByReferences(profileReferences)
-	for _, d := range rsps {
-		if !d.Spec.Disabled {
-			signingProfiles = append(signingProfiles, d)
-		}
-	}
-
-	return signingProfiles
-
-}
-
-func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
-	err := self.RuleTable.Update(reqc)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (self *Loader) UpdateProfileStatus(profile protect.SigningProfile, reqc *common.ReqContext, errMsg string) error {
-	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (self *Loader) RefreshRuleTable() error {
-	err := self.RuleTable.Refresh()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
-	sp := self.SignPolicy.GetData()
-	conditions := []policy.BreakGlassCondition{}
-	if sp != nil {
-		conditions = append(conditions, sp.Spec.SignPolicy.BreakGlass...)
-	}
-	return conditions
-}
-
-func (self *Loader) DetectOnlyMode() bool {
-	return self.Config.Mode == config.DetectMode
-}
-
-func (self *Loader) MergedSignPolicy() *policy.SignPolicy {
-	iepol := self.Config.SignPolicy
-	spol := self.SignPolicy.GetData()
-
-	data := &policy.SignPolicy{}
-	data = data.Merge(iepol)
-	data = data.Merge(spol.Spec.SignPolicy)
-	return data
-}
-
-func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.ResourceSignatureList {
-	items := self.ResourceSignature.GetData()
-
-	return &rsig.ResourceSignatureList{Items: items}
 }

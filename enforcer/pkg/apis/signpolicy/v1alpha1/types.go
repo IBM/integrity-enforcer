@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
+	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

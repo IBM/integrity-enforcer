@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package patchutil
+package handlerutil
 
 import (
 	"encoding/json"

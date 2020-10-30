@@ -21,12 +21,12 @@ import (
 	"fmt"
 
 	vrsig "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesignature/v1alpha1"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/config"
-	common "github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
+	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
+	config "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
 	helm "github.com/IBM/integrity-enforcer/enforcer/pkg/plugins/helm"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/policy"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 )
 
 type VerifyType string
@@ -64,7 +64,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile protect.SigningProfile) (*common.SignatureEvalResult, error)
+	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
@@ -177,7 +177,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile protect.SigningProfile) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
 	ref := reqc.ResourceRef()
@@ -264,7 +264,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	}
 }
 
-func findAttrsPattern(reqc *common.ReqContext, attrs []*protect.AttrsPattern) []string {
+func findAttrsPattern(reqc *common.ReqContext, attrs []*profile.AttrsPattern) []string {
 	reqFields := reqc.Map()
 	masks := []string{}
 	for _, attr := range attrs {

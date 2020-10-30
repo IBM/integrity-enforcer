@@ -19,8 +19,7 @@ package v1alpha1
 import (
 	"time"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
-	v1 "k8s.io/api/core/v1"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,13 +32,13 @@ type ResourceSigningProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
 	Delete   bool `json:"delete,omitempty"`
 
-	ProtectRules      []*protect.Rule             `json:"protectRules,omitempty"`
-	IgnoreRules       []*protect.Rule             `json:"ignoreRules,omitempty"`
-	ForceCheckRules   []*protect.Rule             `json:"forceCheckRules,omitempty"`
-	KustomizePatterns []*protect.KustomizePattern `json:"kustomizePatterns,omitempty"`
-	ProtectAttrs      []*protect.AttrsPattern     `json:"protectAttrs,omitempty"`
-	UnprotectAttrs    []*protect.AttrsPattern     `json:"unprotectAttrs,omitempty"`
-	IgnoreAttrs       []*protect.AttrsPattern     `json:"ignoreAttrs,omitempty"`
+	ProtectRules      []*profile.Rule             `json:"protectRules,omitempty"`
+	IgnoreRules       []*profile.Rule             `json:"ignoreRules,omitempty"`
+	ForceCheckRules   []*profile.Rule             `json:"forceCheckRules,omitempty"`
+	KustomizePatterns []*profile.KustomizePattern `json:"kustomizePatterns,omitempty"`
+	ProtectAttrs      []*profile.AttrsPattern     `json:"protectAttrs,omitempty"`
+	UnprotectAttrs    []*profile.AttrsPattern     `json:"unprotectAttrs,omitempty"`
+	IgnoreAttrs       []*profile.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
 // ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy
@@ -48,9 +47,9 @@ type ResourceSigningProfileStatus struct {
 }
 
 type ProfileStatusDetail struct {
-	Request *protect.Request `json:"request,omitempty"`
+	Request *profile.Request `json:"request,omitempty"`
 	Count   int              `json:"count,omitempty"`
-	History []protect.Result `json:"history,omitempty"`
+	History []profile.Result `json:"history,omitempty"`
 }
 
 // +genclient
@@ -75,52 +74,13 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.ProtectRules) == 0
 }
 
-func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *protect.Rule) {
+func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *profile.Rule) {
 	for _, rule := range self.Spec.ProtectRules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
 		}
 	}
 	return false, nil
-}
-
-func (self ResourceSigningProfile) ToRuleTable() *protect.RuleTable {
-	gvk := self.GroupVersionKind()
-	source := &v1.ObjectReference{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		Namespace:  self.GetNamespace(),
-		Name:       self.GetName(),
-	}
-	table := protect.NewRuleTable()
-	table = table.Add(self.Spec.ProtectRules, source)
-	return table
-}
-
-func (self ResourceSigningProfile) ToIgnoreRuleTable() *protect.RuleTable {
-	gvk := self.GroupVersionKind()
-	source := &v1.ObjectReference{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		Namespace:  self.GetNamespace(),
-		Name:       self.GetName(),
-	}
-	table := protect.NewRuleTable()
-	table = table.Add(self.Spec.IgnoreRules, source)
-	return table
-}
-
-func (self ResourceSigningProfile) ToForceCheckRuleTable() *protect.RuleTable {
-	gvk := self.GroupVersionKind()
-	source := &v1.ObjectReference{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		Namespace:  self.GetNamespace(),
-		Name:       self.GetName(),
-	}
-	table := protect.NewRuleTable()
-	table = table.Add(self.Spec.ForceCheckRules, source)
-	return table
 }
 
 func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) ResourceSigningProfile {
@@ -134,8 +94,8 @@ func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) Resourc
 	return newProfile
 }
 
-func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*protect.KustomizePattern {
-	patterns := []*protect.KustomizePattern{}
+func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*profile.KustomizePattern {
+	patterns := []*profile.KustomizePattern{}
 	for _, kustPattern := range self.Spec.KustomizePatterns {
 		if kustPattern.MatchWith(reqFields) {
 			patterns = append(patterns, kustPattern)
@@ -144,8 +104,8 @@ func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*pro
 	return patterns
 }
 
-func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
-	patterns := []*protect.AttrsPattern{}
+func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*profile.AttrsPattern {
+	patterns := []*profile.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.ProtectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
@@ -154,8 +114,8 @@ func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*
 	return patterns
 }
 
-func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) []*protect.AttrsPattern {
-	patterns := []*protect.AttrsPattern{}
+func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) []*profile.AttrsPattern {
+	patterns := []*profile.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.UnprotectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
@@ -164,8 +124,8 @@ func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) [
 	return patterns
 }
 
-func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*protect.AttrsPattern {
-	patterns := []*protect.AttrsPattern{}
+func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*profile.AttrsPattern {
+	patterns := []*profile.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.IgnoreAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
@@ -174,7 +134,7 @@ func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*p
 	return patterns
 }
 
-func (self *ResourceSigningProfile) UpdateStatus(request *protect.Request, errMsg string) *ResourceSigningProfile {
+func (self *ResourceSigningProfile) UpdateStatus(request *profile.Request, errMsg string) *ResourceSigningProfile {
 	reqId := -1
 	var detail ProfileStatusDetail
 	for i, d := range self.Status.Details {
@@ -187,7 +147,7 @@ func (self *ResourceSigningProfile) UpdateStatus(request *protect.Request, errMs
 		detail = ProfileStatusDetail{
 			Request: request,
 			Count:   1,
-			History: []protect.Result{
+			History: []profile.Result{
 				{
 					Message:   errMsg,
 					Timestamp: time.Now().UTC().Format(layout),
@@ -197,7 +157,7 @@ func (self *ResourceSigningProfile) UpdateStatus(request *protect.Request, errMs
 		self.Status.Details = append(self.Status.Details, detail)
 	} else if reqId < len(self.Status.Details) {
 		detail.Count = detail.Count + 1
-		newResult := protect.Result{
+		newResult := profile.Result{
 			Message:   errMsg,
 			Timestamp: time.Now().UTC().Format(layout),
 		}

@@ -28,12 +28,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/cache"
 	hrmclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/kubeutil"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/mapnode"
-	sign "github.com/IBM/integrity-enforcer/enforcer/pkg/sign"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/util/cache"
+	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
+	mapnode "github.com/IBM/integrity-enforcer/enforcer/pkg/util/mapnode"
+	pgp "github.com/IBM/integrity-enforcer/enforcer/pkg/util/sign/pgp"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/provenance"
 	"helm.sh/helm/v3/pkg/release"
@@ -136,7 +137,7 @@ func GetPackageInfo(rawBytes []byte, chartRepo, chartDir string) (*HelmInfo, err
 	}, nil
 }
 
-func VerifyPackage(filePath, provPath, keyringPath string) (*sign.Signer, error) {
+func VerifyPackage(filePath, provPath, keyringPath string) (*common.SignerInfo, error) {
 	sig, err := provenance.NewFromKeyring(keyringPath, "")
 	if err != nil {
 		return nil, err
@@ -146,8 +147,8 @@ func VerifyPackage(filePath, provPath, keyringPath string) (*sign.Signer, error)
 	if veri.SignedBy == nil {
 		return nil, nil
 	}
-	signIdt := sign.GetFirstIdentity(veri.SignedBy)
-	signer := &sign.Signer{
+	signIdt := pgp.GetFirstIdentity(veri.SignedBy)
+	signer := &common.SignerInfo{
 		Email:   signIdt.UserId.Email,
 		Name:    signIdt.UserId.Name,
 		Comment: signIdt.UserId.Comment,
@@ -426,7 +427,7 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 	return message
 }
 
-func VerifyChartAndProv(chart, prov []byte, keyringPath string) (bool, *sign.Signer, string, error) {
+func VerifyChartAndProv(chart, prov []byte, keyringPath string) (bool, *common.SignerInfo, string, error) {
 	chartPath := filepath.Join(tempDir, "chart.tgz")
 	provPath := filepath.Join(tempDir, "chart.tgz.prov")
 	err := ioutil.WriteFile(chartPath, chart, 0644)

@@ -21,7 +21,7 @@
 package v1alpha1
 
 import (
-	protect "github.com/IBM/integrity-enforcer/enforcer/pkg/protect"
+	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -30,12 +30,12 @@ func (in *ProfileStatusDetail) DeepCopyInto(out *ProfileStatusDetail) {
 	*out = *in
 	if in.Request != nil {
 		in, out := &in.Request, &out.Request
-		*out = new(protect.Request)
+		*out = new(profile.Request)
 		**out = **in
 	}
 	if in.History != nil {
 		in, out := &in.History, &out.History
-		*out = make([]protect.Result, len(*in))
+		*out = make([]profile.Result, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -119,7 +119,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	*out = *in
 	if in.ProtectRules != nil {
 		in, out := &in.ProtectRules, &out.ProtectRules
-		*out = make([]*protect.Rule, len(*in))
+		*out = make([]*profile.Rule, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
@@ -129,7 +129,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	}
 	if in.IgnoreRules != nil {
 		in, out := &in.IgnoreRules, &out.IgnoreRules
-		*out = make([]*protect.Rule, len(*in))
+		*out = make([]*profile.Rule, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
@@ -139,7 +139,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	}
 	if in.ForceCheckRules != nil {
 		in, out := &in.ForceCheckRules, &out.ForceCheckRules
-		*out = make([]*protect.Rule, len(*in))
+		*out = make([]*profile.Rule, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
@@ -149,7 +149,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	}
 	if in.KustomizePatterns != nil {
 		in, out := &in.KustomizePatterns, &out.KustomizePatterns
-		*out = make([]*protect.KustomizePattern, len(*in))
+		*out = make([]*profile.KustomizePattern, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
@@ -159,7 +159,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	}
 	if in.ProtectAttrs != nil {
 		in, out := &in.ProtectAttrs, &out.ProtectAttrs
-		*out = make([]*protect.AttrsPattern, len(*in))
+		*out = make([]*profile.AttrsPattern, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
@@ -169,7 +169,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	}
 	if in.UnprotectAttrs != nil {
 		in, out := &in.UnprotectAttrs, &out.UnprotectAttrs
-		*out = make([]*protect.AttrsPattern, len(*in))
+		*out = make([]*profile.AttrsPattern, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
@@ -179,7 +179,7 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 	}
 	if in.IgnoreAttrs != nil {
 		in, out := &in.IgnoreAttrs, &out.IgnoreAttrs
-		*out = make([]*protect.AttrsPattern, len(*in))
+		*out = make([]*profile.AttrsPattern, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]

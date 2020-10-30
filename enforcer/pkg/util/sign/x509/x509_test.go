@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package pkix
+package x509
 
 import (
 	"io/ioutil"

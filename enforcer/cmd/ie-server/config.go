@@ -14,38 +14,42 @@
 // limitations under the License.
 //
 
-package config
+package main
 
 import (
+	"context"
 	"os"
 	"strconv"
 	"time"
 
-	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/config"
+	ecfgclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/enforcerconfig/clientset/versioned/typed/enforcerconfig/v1alpha1"
+	cfg "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 /**********************************************
 
-		Configs for Helm Release
+					Config
 
 ***********************************************/
 
-type AdmissionControlConfig struct {
+type Config struct {
 	EnforcerConfig *cfg.EnforcerConfig
 	lastUpdated    time.Time
 }
 
-func NewAdmissionControlConfig() *AdmissionControlConfig {
-	acConfig := &AdmissionControlConfig{}
-	return acConfig
+func NewConfig() *Config {
+	config := &Config{}
+	return config
 }
 
-func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
+func (conf *Config) InitEnforcerConfig() bool {
 
 	renew := false
 	t := time.Now()
-	if ac.EnforcerConfig != nil {
+	if conf.EnforcerConfig != nil {
 
 		interval := 20
 		if s := os.Getenv("ENFORCER_CM_RELOAD_SEC"); s != "" {
@@ -54,7 +58,7 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 			}
 		}
 
-		duration := t.Sub(ac.lastUpdated)
+		duration := t.Sub(conf.lastUpdated)
 		if int(duration.Seconds()) > interval {
 			renew = true
 		}
@@ -67,10 +71,10 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 		enforcerConfigName := os.Getenv("ENFORCER_CONFIG_NAME")
 		enforcerConfig := LoadEnforceConfig(enforcerNs, enforcerConfigName)
 		if enforcerConfig == nil {
-			if ac.EnforcerConfig == nil {
+			if conf.EnforcerConfig == nil {
 				log.Fatal("Failed to initialize EnforcerConfig. Exiting...")
 			} else {
-				enforcerConfig = ac.EnforcerConfig
+				enforcerConfig = conf.EnforcerConfig
 				log.Warn("The loaded EnforcerConfig is nil, re-use the existing one.")
 			}
 		}
@@ -82,14 +86,35 @@ func (ac *AdmissionControlConfig) InitEnforcerConfig() bool {
 
 		if enforcerConfig != nil {
 			enforcerConfig.ChartRepo = chartRepo
-			ac.EnforcerConfig = enforcerConfig
-			ac.lastUpdated = t
+			conf.EnforcerConfig = enforcerConfig
+			conf.lastUpdated = t
 		}
 	}
 
 	return renew
 }
 
-func (ac *AdmissionControlConfig) HelmIntegrityEnabled() bool {
+func (conf *Config) HelmIntegrityEnabled() bool {
 	return true
+}
+
+func LoadEnforceConfig(namespace, cmname string) *cfg.EnforcerConfig {
+
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil
+	}
+	clientset, err := ecfgclient.NewForConfig(config)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	ecres, err := clientset.EnforcerConfigs(namespace).Get(context.Background(), cmname, metav1.GetOptions{})
+	if err != nil {
+		log.Error("failed to get EnforcerConfig:", err.Error())
+		return nil
+	}
+
+	ec := ecres.Spec.EnforcerConfig
+	return ec
 }

@@ -23,9 +23,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	config "github.com/IBM/integrity-enforcer/enforcer/pkg/control/config"
-	enforcer "github.com/IBM/integrity-enforcer/enforcer/pkg/control/enforcer"
-	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/logger"
+	handler "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/handler"
+	loader "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/loader"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-var acConfig *config.AdmissionControlConfig
+// singleton
+var config *Config
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -47,32 +48,32 @@ type WebhookServer struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	acConfig = config.NewAdmissionControlConfig()
-	acConfig.InitEnforcerConfig()
-	logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
-	logger.InitServerLogger(acConfig.EnforcerConfig.LoggerConfig())
+	config = NewConfig()
+	config.InitEnforcerConfig()
+	logger.InitContextLogger(config.EnforcerConfig.ContextLoggerConfig())
+	logger.InitServerLogger(config.EnforcerConfig.LoggerConfig())
 	logger.Info("Integrity Enforcer has been started.")
 
-	cfgBytes, _ := json.Marshal(acConfig)
+	cfgBytes, _ := json.Marshal(config)
 	logger.Trace(string(cfgBytes))
 	logger.Info("EnforcerConfig is loaded.")
 
-	config.InitRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultRuleTableLockCMName)
-	config.InitIgnoreRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultIgnoreTableLockCMName)
-	config.InitForceCheckRuleTable(acConfig.EnforcerConfig.Namespace, config.DefaultForceCheckTableLockCMName)
+	loader.InitRuleTable(config.EnforcerConfig.Namespace, loader.DefaultRuleTableLockCMName)
+	loader.InitIgnoreRuleTable(config.EnforcerConfig.Namespace, loader.DefaultIgnoreTableLockCMName)
+	loader.InitForceCheckRuleTable(config.EnforcerConfig.Namespace, loader.DefaultForceCheckTableLockCMName)
 	logger.Info("RuleTable has been set.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 
-	renew := acConfig.InitEnforcerConfig()
+	renew := config.InitEnforcerConfig()
 	if renew {
-		logger.InitContextLogger(acConfig.EnforcerConfig.ContextLoggerConfig())
-		logger.InitServerLogger(acConfig.EnforcerConfig.LoggerConfig())
+		logger.InitContextLogger(config.EnforcerConfig.ContextLoggerConfig())
+		logger.InitServerLogger(config.EnforcerConfig.LoggerConfig())
 	}
 
 	//create context
-	reqHandler := enforcer.NewRequestHandler(acConfig.EnforcerConfig)
+	reqHandler := handler.NewRequestHandler(config.EnforcerConfig)
 	admissionRequest := admissionReviewReq.Request
 
 	//process request

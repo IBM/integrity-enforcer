@@ -17,7 +17,7 @@
 package policy
 
 import (
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/control/common"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	"github.com/jinzhu/copier"
 )
 
