@@ -29,11 +29,6 @@ if [ -z "$IE_NS" ]; then
     exit 1
 fi
 
-if [ -z "$IE_OP_NS" ]; then
-    echo "IE_OP_NS is empty. Please set namespace name for integrity-enforcer-operator."
-    exit 1
-fi
-
 if [ -z "$IE_ENV" ]; then
     echo "IE_ENV is empty. Please set local or remote."
     exit 1
@@ -47,7 +42,6 @@ fi
 IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
 ENFORCER_DIR=${IE_REPO_ROOT}"/operator/"
 ENFORCER_LOCAL_DIR=${IE_REPO_ROOT}"/develop/local-deploy/"
-IE_OP_DEFAULT_NS=ie-operator-ns
 
 echo ""
 echo "------------- Set integrity-enforcer operator watch namespace -------------"
@@ -67,7 +61,6 @@ kustomize build ${ENFORCER_DIR}config/crd | kubectl apply -f -
 echo ""
 echo "------------- Install operator -------------"
 echo ""
-sed -i "s/$IE_OP_DEFAULT_NS/$IE_OP_NS/g" ${ENFORCER_DIR}config/default/kustomization.yaml
 
 cd ${ENFORCER_DIR}config/manager
 kustomize edit set image controller=${IMG}
