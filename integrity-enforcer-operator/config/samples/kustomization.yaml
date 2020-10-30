@@ -1,4 +1,5 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- apis_v1alpha1_integrityenforcer.yaml
+ - apis_v1alpha1_integrityenforcer.yaml
+#- apis_v1alpha1_integrityenforcer_local.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

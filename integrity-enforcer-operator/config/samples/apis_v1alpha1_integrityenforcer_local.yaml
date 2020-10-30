@@ -3,6 +3,7 @@ kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server
 spec:
+  namespace: integrity-enforcer-ns
   affinity: {}
   resourceSigningProfile: {}
   enforcerConfig:
@@ -48,12 +49,11 @@ spec:
         enabled: true
         inScope:
         - kind: '*'
-      logLevel: info
+      logLevel: trace
   enforcerConfigCrName: ie-config
-  # imagePullSecrets:
-  # - name: REPLACEME
+  imagePullSecrets: []
   globalConfig: 
-    openShift: true
+    detectionMode: false
   certPoolConfig:
     createIfNotExist: false
     keyValue: test
@@ -74,10 +74,10 @@ spec:
       scheme: http
     http:
       enabled: false
-      endpoint: http://sample-http-server
+      endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
     image: integrityenforcer/ie-logging:0.0.4dev
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     name: forwarder
     resources:
       limits:
@@ -91,8 +91,6 @@ spec:
       runAsUser: 1000
     stdOutput: true
   replicaCount: 1
-  maxSurge: 1
-  maxUnavailable: 0
   security:
     clusterRole: ie-cluster-role
     clusterRoleBinding: ie-cluster-role-binding
@@ -117,7 +115,7 @@ spec:
     contextLogEnabled: true
     enforcePolicyReloadSec: 10
     image: integrityenforcer/ie-server:0.0.4dev
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     name: server
     port: 8443
     resources:
