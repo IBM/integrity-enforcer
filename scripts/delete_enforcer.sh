@@ -50,8 +50,8 @@ if [ ${IE_ENV} = "remote" ]; then
     IE_CR="operator/deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml"
 fi
 
-ENFORCER_DIR="${IE_REPO_ROOT}/operator/"
-ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/operator/deploy"
+ENFORCER_DIR="${IE_REPO_ROOT}/integrity-enforcer-operator/"
+ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/integrity-enforcer-operator/deploy"
 
 echo ""
 echo "------------- Delete integrity-enforcer -------------"

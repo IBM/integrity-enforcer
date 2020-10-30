@@ -40,7 +40,7 @@ if [ -z "$IE_REPO_ROOT" ]; then
 fi
 
 IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
-ENFORCER_DIR=${IE_REPO_ROOT}"/operator/"
+ENFORCER_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
 ENFORCER_LOCAL_DIR=${IE_REPO_ROOT}"/develop/local-deploy/"
 
 echo ""
