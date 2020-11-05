@@ -61,10 +61,10 @@ const (
 ***********************************************/
 
 type ResourceRef struct {
-	Name       string `json:"name"`
-	Namespace  string `json:"namespace"`
-	Kind       string `json:"kind"`
-	ApiVersion string `json:"apiVersion"`
+	Name       string
+	Namespace  string
+	Kind       string
+	ApiVersion string
 }
 
 func (self *ResourceRef) Equals(ref *ResourceRef) bool {
