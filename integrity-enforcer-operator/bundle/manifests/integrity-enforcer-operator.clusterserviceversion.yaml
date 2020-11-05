@@ -1,0 +1,484 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "apis.integrityenforcer.io/v1alpha1",
+          "kind": "IntegrityEnforcer",
+          "metadata": {
+            "name": "integrity-enforcer-server"
+          },
+          "spec": {
+            "affinity": {},
+            "certPoolConfig": {
+              "createIfNotExist": false,
+              "keyValue": "test",
+              "name": "ie-certpool-secret"
+            },
+            "enforcerConfig": {
+              "ieAdminUserGroup": "system:masters,system:cluster-admins",
+              "ieResource": "apis.integrityenforcer.io",
+              "ignore": [
+                {
+                  "kind": "Event"
+                },
+                {
+                  "kind": "Lease"
+                },
+                {
+                  "kind": "Endpoints"
+                },
+                {
+                  "kind": "TokenReview"
+                },
+                {
+                  "kind": "SubjectAccessReview"
+                },
+                {
+                  "kind": "SelfSubjectAccessReview"
+                }
+              ],
+              "log": {
+                "consoleLog": {
+                  "enabled": true,
+                  "inScope": [
+                    {
+                      "kind": "*"
+                    }
+                  ]
+                },
+                "contextLog": {
+                  "enabled": true,
+                  "inScope": [
+                    {
+                      "kind": "*"
+                    }
+                  ]
+                },
+                "logLevel": "info"
+              },
+              "patch": {
+                "enabled": true
+              },
+              "plugin": [
+                {
+                  "enabled": false,
+                  "name": "helm"
+                }
+              ],
+              "signPolicy": {
+                "policies": [
+                  {
+                    "namespaces": [
+                      "*"
+                    ],
+                    "signers": [
+                      "ClusterSigner",
+                      "HelmClusterSigner"
+                    ]
+                  },
+                  {
+                    "scope": "Cluster",
+                    "signers": [
+                      "ClusterSigner",
+                      "HelmClusterSigner"
+                    ]
+                  }
+                ],
+                "signers": [
+                  {
+                    "name": "ClusterSigner",
+                    "subjects": [
+                      {
+                        "commonName": "ClusterAdmin"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "HelmClusterSigner",
+                    "subjects": [
+                      {
+                        "email": "cluster_signer@signer.com"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "verifyType": "pgp"
+            },
+            "enforcerConfigCrName": "ie-config",
+            "globalConfig": {
+              "openShift": true
+            },
+            "keyRingConfig": {
+              "createIfNotExist": false,
+              "keyValue": "test",
+              "name": "keyring-secret"
+            },
+            "labels": {
+              "app": "ie-server"
+            },
+            "logger": {
+              "enabled": true,
+              "es": {
+                "enabled": false,
+                "host": "10.200.10.10",
+                "indexPrefix": "ac-log",
+                "port": 9200,
+                "scheme": "http"
+              },
+              "esSecretName": "es-tls-certs",
+              "http": {
+                "enabled": false,
+                "endpoint": "http://sample-http-server"
+              },
+              "image": "integrityenforcer/ie-logging:0.0.4dev",
+              "imagePullPolicy": "Always",
+              "name": "forwarder",
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "200m",
+                  "memory": "256Mi"
+                }
+              },
+              "securityContext": {
+                "runAsNonRoot": true,
+                "runAsUser": 1000
+              },
+              "stdOutput": true
+            },
+            "maxSurge": 1,
+            "maxUnavailable": 0,
+            "replicaCount": 1,
+            "resourceSigningProfile": {},
+            "security": {
+              "autoIEAdminRoleCreationDisabled": false,
+              "clusterRole": "ie-cluster-role",
+              "clusterRoleBinding": "ie-cluster-role-binding",
+              "ieAdminSubjects": [
+                {
+                  "apiGroup": "rbac.authorization.k8s.io",
+                  "kind": "Group",
+                  "name": "system:masters"
+                },
+                {
+                  "apiGroup": "rbac.authorization.k8s.io",
+                  "kind": "Group",
+                  "name": "system:cluster-admins"
+                }
+              ],
+              "podSecurityPolicyName": "ie-psp",
+              "securityContext": {
+                "runAsNonRoot": true,
+                "runAsUser": 1000580000
+              },
+              "securityContextConstraintsName": "ie-scc",
+              "serviceAccountName": "ie-sa"
+            },
+            "selector": {
+              "app": "ie-server"
+            },
+            "server": {
+              "chartBaseUrl": "http://sample-chart-repo-server/charts",
+              "contextLogEnabled": true,
+              "enforcePolicyReloadSec": 10,
+              "image": "integrityenforcer/ie-server:0.0.4dev",
+              "imagePullPolicy": "Always",
+              "name": "server",
+              "port": 8443,
+              "resources": {
+                "limits": {
+                  "cpu": "500m",
+                  "memory": "512Mi"
+                },
+                "requests": {
+                  "cpu": "200m",
+                  "memory": "256Mi"
+                }
+              },
+              "securityContext": {}
+            },
+            "webhookClusterResource": {
+              "apiGroups": [
+                "*"
+              ],
+              "apiVersions": [
+                "*"
+              ],
+              "resources": [
+                "*"
+              ]
+            },
+            "webhookConfigName": "ie-webhook-config",
+            "webhookNamespacedResource": {
+              "apiGroups": [
+                "*"
+              ],
+              "apiVersions": [
+                "*"
+              ],
+              "resources": [
+                "*"
+              ]
+            },
+            "webhookServerTlsSecretName": "ie-server-tls",
+            "webhookServiceName": "ie-server"
+          }
+        }
+      ]
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.1.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  name: integrity-enforcer-operator.v0.0.7
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: IntegrityEnforcer is the Schema for the integrityenforcers API
+      displayName: Integrity Enforcer
+      kind: IntegrityEnforcer
+      name: integrityenforcers.apis.integrityenforcer.io
+      version: v1alpha1
+  description: Integrity Enforcer Operator
+  displayName: Integrity Enforcer Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - admissionregistration.k8s.io
+          resources:
+          - mutatingwebhookconfigurations
+          verbs:
+          - '*'
+        - apiGroups:
+          - apiextensions.k8s.io
+          resources:
+          - customresourcedefinitions
+          verbs:
+          - '*'
+        - apiGroups:
+          - apis.integrityenforcer.io
+          resources:
+          - enforcerconfigs
+          - helmreleasemetadatas
+          - integrityenforcers
+          - resourcesignatures
+          - resourcesigningprofiles
+          - signpolicies
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - deployments
+          - replicasets
+          - statefulsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - replicasets
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resourceNames:
+          - integrity-enforcer-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - secrets
+          - serviceaccounts
+          - services
+          - services/finalizers
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - policy
+          resources:
+          - podsecuritypolicies
+          verbs:
+          - '*'
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          - clusterroles
+          - rolebindings
+          - roles
+          verbs:
+          - '*'
+        - apiGroups:
+          - security.openshift.io
+          resources:
+          - securitycontextconstraints
+          verbs:
+          - '*'
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: integrity-enforcer-operator-manager
+      deployments:
+      - name: integrity-enforcer-operator-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --metrics-addr=127.0.0.1:8080
+                - --enable-leader-election
+                command:
+                - /manager
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                image: quay.io/gajananan/integrity-enforcer-operator:0.0.7dev
+                name: manager
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 500Mi
+                  requests:
+                    cpu: 200m
+                    memory: 200Mi
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=10
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                resources: {}
+              imagePullSecrets:
+              - name: mappregkey
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+              serviceAccountName: integrity-enforcer-operator-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps/status
+          verbs:
+          - get
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: integrity-enforcer-operator-manager
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - integrity
+  links:
+  - name: Integrity Enforcer Operator
+    url: https://integrity-enforcer-operator.domain
+  maturity: alpha
+  provider:
+    name: IBM
+    url: https://github.com/ibm/integrity-enforcer
+  version: 0.0.7
