@@ -38,27 +38,27 @@ func BuildRegKeySecretForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 }
 
 // //server-secret.yaml
-func BuildKeyringSecretForIEFromValue(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
-	metaLabels := map[string]string{
-		"app":                    cr.Name,
-		"app.kubernetes.io/name": cr.Spec.CertPool.Name,
-		// "app.kubernetes.io/component":  instance.ReleaseName(),
-		"app.kubernetes.io/managed-by": "operator",
-		// "app.kubernetes.io/instance":   instance.ReleaseName(),
-		// "release":                      instance.ReleaseName(),
-		"role": "security",
-	}
-	sec := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.CertPool.Name,
-			Namespace: cr.Namespace,
-			Labels:    metaLabels,
-		},
-		Data: make(map[string][]byte),
-		Type: corev1.SecretTypeOpaque,
-	}
-	return sec
-}
+// func BuildKeyringSecretForIEFromValue(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
+// 	metaLabels := map[string]string{
+// 		"app":                    cr.Name,
+// 		"app.kubernetes.io/name": cr.Spec.CertPool.Name,
+// 		// "app.kubernetes.io/component":  instance.ReleaseName(),
+// 		"app.kubernetes.io/managed-by": "operator",
+// 		// "app.kubernetes.io/instance":   instance.ReleaseName(),
+// 		// "release":                      instance.ReleaseName(),
+// 		"role": "security",
+// 	}
+// 	sec := &corev1.Secret{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      cr.Spec.CertPool.Name,
+// 			Namespace: cr.Namespace,
+// 			Labels:    metaLabels,
+// 		},
+// 		Data: make(map[string][]byte),
+// 		Type: corev1.SecretTypeOpaque,
+// 	}
+// 	return sec
+// }
 
 // ie-server-tls
 func BuildTlsSecretForIE(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {

@@ -49,17 +49,17 @@ spec:
         enabled: true
         inScope:
         - kind: '*'
-      logLevel: trace
+      logLevel: info
   enforcerConfigCrName: ie-config
   imagePullSecrets: []
   globalConfig: 
     detectionMode: false
-  certPoolConfig:
-    createIfNotExist: false
+  certPoolConfigs:
+  - createIfNotExist: false
     keyValue: test
     name: ie-certpool-secret
-  keyRingConfig:
-    createIfNotExist: false
+  keyRingConfigs:
+  - createIfNotExist: false
     keyValue: test
     name: keyring-secret
   labels:

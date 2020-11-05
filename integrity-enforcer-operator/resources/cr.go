@@ -37,6 +37,7 @@ const signerPolicyName = "signer-policy"
 const defaultResourceSigningProfileYamlPath = "/resources/default-rsp.yaml"
 const defaultCertPoolPath = "/ie-certpool-secret/"
 const defaultKeyringPath = "/keyring/pubring.gpg"
+const defaultKeyringFilename = "pubring.gpg"
 
 var log = logf.Log.WithName("controller_integrityenforcer")
 
@@ -64,7 +65,11 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
 	}
 	if len(ecc.Spec.EnforcerConfig.KeyPathList) == 0 {
-		ecc.Spec.EnforcerConfig.KeyPathList = []string{defaultKeyringPath}
+		keyPathList := []string{}
+		for _, keyConf := range cr.Spec.KeyRings {
+			keyPathList = append(keyPathList, fmt.Sprintf("/%s/%s", keyConf.Name, defaultKeyringFilename))
+		}
+		ecc.Spec.EnforcerConfig.KeyPathList = keyPathList
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile

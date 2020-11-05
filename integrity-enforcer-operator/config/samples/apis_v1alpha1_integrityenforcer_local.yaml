@@ -16,7 +16,8 @@ spec:
       - name: "SampleSigner"
         subjects:
         - email: "sample_signer@signer.com"
-  enforcerConfigCrName: ie-config
+  keyRingConfigs:
+  - name: keyring-secret
   server:
     imagePullPolicy: IfNotPresent
   logger:

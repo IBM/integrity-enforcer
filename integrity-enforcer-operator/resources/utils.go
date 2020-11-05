@@ -85,8 +85,11 @@ func getOperatorServiceAccount() string {
 	return saUser
 }
 
-func MergeDefaultIntegrityEnforcerCR(cr *apiv1alpha1.IntegrityEnforcer) *apiv1alpha1.IntegrityEnforcer {
-	deafultCRBytes, _ := ioutil.ReadFile(defaultIECRYamlPath)
+func MergeDefaultIntegrityEnforcerCR(cr *apiv1alpha1.IntegrityEnforcer, srcYamlPath string) *apiv1alpha1.IntegrityEnforcer {
+	if srcYamlPath == "" {
+		srcYamlPath = defaultIECRYamlPath
+	}
+	deafultCRBytes, _ := ioutil.ReadFile(srcYamlPath)
 	defaultCRJsonBytes, err := yaml.YAMLToJSON(deafultCRBytes)
 	if err != nil {
 		fmt.Println("failed to convert yaml2json; " + err.Error())

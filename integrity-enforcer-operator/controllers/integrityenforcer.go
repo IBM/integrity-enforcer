@@ -24,7 +24,6 @@ import (
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
-	"github.com/IBM/integrity-enforcer/integrity-enforcer-operator/pgpkey"
 	res "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/resources"
 	scc "github.com/openshift/api/security/v1"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
@@ -720,15 +719,26 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePodSecurityPolicy(instance *
 
 ***********************************************/
 
-func (r *IntegrityEnforcerReconciler) keyRingSecretExists(instance *apiv1alpha1.IntegrityEnforcer) bool {
+func (r *IntegrityEnforcerReconciler) isKeyRingReady(instance *apiv1alpha1.IntegrityEnforcer) (bool, string) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
-
-	err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.KeyRing.Name, Namespace: instance.Namespace}, found)
-	if err == nil {
-		return true
+	okCount := 0
+	nonReadyKey := ""
+	for _, keyConf := range instance.Spec.KeyRings {
+		if keyConf.CreateIfNotExist {
+			okCount += 1
+			continue
+		}
+		err := r.Get(ctx, types.NamespacedName{Name: keyConf.Name, Namespace: instance.Namespace}, found)
+		if err == nil {
+			okCount += 1
+		} else {
+			nonReadyKey = keyConf.Name
+			break
+		}
 	}
-	return false
+	ok := (okCount == len(instance.Spec.KeyRings))
+	return ok, nonReadyKey
 }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
@@ -850,13 +860,13 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateRegKeySecret(
 	return r.createOrUpdateSecret(instance, expected)
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateKeyringSecret(
-	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
-	expected := res.BuildKeyringSecretForIEFromValue(instance)
-	pubkeyName := pgpkey.GetPublicKeyringName()
-	expected.Data[pubkeyName] = instance.Spec.CertPool.KeyValue
-	return r.createOrUpdateSecret(instance, expected)
-}
+// func (r *IntegrityEnforcerReconciler) createOrUpdateKeyringSecret(
+// 	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+// 	expected := res.BuildKeyringSecretForIEFromValue(instance)
+// 	pubkeyName := pgpkey.GetPublicKeyringName()
+// 	expected.Data[pubkeyName] = instance.Spec.CertPool.KeyValue
+// 	return r.createOrUpdateSecret(instance, expected)
+// }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
 	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {

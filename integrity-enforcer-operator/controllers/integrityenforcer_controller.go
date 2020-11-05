@@ -77,11 +77,11 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	var recErr error
 
 	if !instance.Spec.IgnoreDefaultIECR {
-		instance = resources.MergeDefaultIntegrityEnforcerCR(instance)
+		instance = resources.MergeDefaultIntegrityEnforcerCR(instance, "")
 	}
 
-	if !r.keyRingSecretExists(instance) && !instance.Spec.KeyRing.CreateIfNotExist {
-		reqLogger.Info(fmt.Sprintf("KeyRing secret \"%s\" does not exist. Skip reconciling.", instance.Spec.KeyRing.Name))
+	if ok, nonReadyKey := r.isKeyRingReady(instance); !ok {
+		reqLogger.Info(fmt.Sprintf("KeyRing secret \"%s\" does not exist. Skip reconciling.", nonReadyKey))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -147,12 +147,12 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	//Secret
-	if instance.Spec.CertPool.CreateIfNotExist {
-		recResult, recErr = r.createOrUpdateKeyringSecret(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
-	}
+	// if instance.Spec.CertPool.CreateIfNotExist {
+	// 	recResult, recErr = r.createOrUpdateKeyringSecret(instance)
+	// 	if recErr != nil || recResult.Requeue {
+	// 		return recResult, recErr
+	// 	}
+	// }
 
 	// create registry secret if name and value are found in CR
 	if instance.Spec.RegKeySecret.Name != "" && instance.Spec.RegKeySecret.Value != nil {
