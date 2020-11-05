@@ -384,7 +384,7 @@ const (
 	REASON_IE_ADMIN
 	REASON_IGNORED_SA
 	REASON_NOT_PROTECTED
-	REASON_BLOCK_DELETE
+	REASON_BLOCK_IE_RESOURCE_OPERATION
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
 	REASON_ABORTED
@@ -438,9 +438,9 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "not protected",
 		Code:    "unprotected",
 	},
-	REASON_BLOCK_DELETE: {
-		Message: "block delete IE resouce",
-		Code:    "block-delete",
+	REASON_BLOCK_IE_RESOURCE_OPERATION: {
+		Message: "block oprations for IE resouce",
+		Code:    "block-ieresource-operation",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",

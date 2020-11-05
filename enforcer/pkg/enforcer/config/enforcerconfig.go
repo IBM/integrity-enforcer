@@ -17,12 +17,15 @@
 package config
 
 import (
+	"strings"
+
 	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	"github.com/jinzhu/copier"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type IntegrityEnforcerMode string
@@ -35,6 +38,14 @@ const (
 
 type PatchConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
+}
+
+type IEResourceCondition struct {
+	OperatorNamespace      string `json:"operatorNamespace,omitempty"`
+	OperatorPodName        string `json:"operatorName,omitempty"`
+	OperatorServiceAccount string `json:"operatorServiceAccount,omitempty"`
+	CRNamespace            string `json:"crNamespace,omitempty"`
+	CRName                 string `json:"crName,omitempty"`
 }
 
 type EnforcerConfig struct {
@@ -57,9 +68,10 @@ type EnforcerConfig struct {
 	ChartDir           string   `json:"chartPath,omitempty"`
 	ChartRepo          string   `json:"chartRepo,omitempty"`
 
-	IEResource       string `json:"ieResource,omitempty"`
-	IEAdminUserGroup string `json:"ieAdminUserGroup,omitempty"`
-	IEServerUserName string `json:"ieServerUserName,omitempty"`
+	IEResource          string               `json:"ieResource,omitempty"`
+	IEResourceCondition *IEResourceCondition `json:"ieResourceCondition,omitempty"`
+	IEAdminUserGroup    string               `json:"ieAdminUserGroup,omitempty"`
+	IEServerUserName    string               `json:"ieServerUserName,omitempty"`
 }
 
 type LoggingScopeConfig struct {
@@ -77,6 +89,53 @@ type LoggingScopeConfig struct {
 type PluginConfig struct {
 	Name    string `json:"name,omitempty"`
 	Enabled bool   `json:"enabled,omitempty"`
+}
+
+func (self *IEResourceCondition) Match(reqc *common.ReqContext) bool {
+	opPodName := self.OperatorPodName
+	if reqc.Kind == "Pod" && reqc.Namespace == self.OperatorNamespace && reqc.Name == opPodName {
+		return true
+	}
+	tmpParts := strings.Split(opPodName, "-")
+	if len(tmpParts) > 1 {
+		opRsName := strings.Join(tmpParts[:len(tmpParts)-1], "-")
+		if reqc.Kind == "ReplicaSet" && reqc.Namespace == self.OperatorNamespace && reqc.Name == opRsName {
+			return true
+		}
+	}
+	if len(tmpParts) > 2 {
+		opDeployName := strings.Join(tmpParts[:len(tmpParts)-2], "-")
+		if reqc.Kind == "Deployment" && reqc.Namespace == self.OperatorNamespace && reqc.Name == opDeployName {
+			return true
+		}
+	}
+
+	if reqc.Kind == common.IECustomResourceKind && reqc.Namespace == self.CRNamespace && reqc.Name == self.CRName {
+		return true
+	}
+
+	obj := &unstructured.Unstructured{}
+
+	rawObject := reqc.RawObject
+	if reqc.Operation == "UPDATE" || reqc.Operation == "DELETE" {
+		rawObject = reqc.RawOldObject
+	}
+
+	err := obj.UnmarshalJSON(rawObject)
+	if err != nil {
+		logger.Warn("Failed to unmarshal for parse reqc; ", err.Error())
+		return false
+	}
+
+	ownerRefs := obj.GetOwnerReferences()
+	if len(ownerRefs) == 0 {
+		return false
+	}
+	owner := ownerRefs[0]
+	if owner.Kind == common.IECustomResourceKind && reqc.Namespace == self.CRNamespace && owner.Name == self.CRName {
+		return true
+	}
+	return false
 }
 
 /**********************************************

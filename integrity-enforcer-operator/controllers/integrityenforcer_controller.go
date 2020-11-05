@@ -248,12 +248,6 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return recResult, recErr
 	}
 
-	// ConfigMap (ResourceLock)
-	recResult, recErr = r.createOrUpdateResourceLockConfigMap(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
 	//Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {

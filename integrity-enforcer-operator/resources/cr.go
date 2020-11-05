@@ -19,12 +19,14 @@ package resources
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
 	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
+	econf "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,6 +72,15 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 			keyPathList = append(keyPathList, fmt.Sprintf("/%s/%s", keyConf.Name, defaultKeyringFilename))
 		}
 		ecc.Spec.EnforcerConfig.KeyPathList = keyPathList
+	}
+	if ecc.Spec.EnforcerConfig.IEResourceCondition == nil {
+		ecc.Spec.EnforcerConfig.IEResourceCondition = &econf.IEResourceCondition{
+			OperatorNamespace:      os.Getenv("POD_NAMESPACE"),
+			OperatorPodName:        os.Getenv("POD_NAME"),
+			OperatorServiceAccount: getOperatorServiceAccount(),
+			CRNamespace:            cr.GetNamespace(),
+			CRName:                 cr.GetName(),
+		}
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile

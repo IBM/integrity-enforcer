@@ -936,11 +936,6 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateForceCheckRuleTableConfigMap
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateResourceLockConfigMap(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
-	expected := res.BuildResourceLockConfigMapForCR(instance)
-	return r.createOrUpdateConfigMap(instance, expected)
-}
-
 /**********************************************
 
 				Deployment

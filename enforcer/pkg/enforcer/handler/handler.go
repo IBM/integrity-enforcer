@@ -346,11 +346,11 @@ func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalRea
 		dr.Verified = false
 		dr.Message = self.ctx.AbortReason
 		dr.ReasonCode = common.REASON_ABORTED
-	} else if self.reqc.IsDeleteRequest() && self.reqc.Kind != "ResourceSignature" && !self.checkIfIEAdminRequest() && !self.checkIfIEServerRequest() {
+	} else if !self.checkIfIEAdminRequest() && !self.checkIfIEServerRequest() && !self.checkIfIEOperatorRequest() {
 		dr.Allow = false
 		dr.Verified = true
-		dr.ReasonCode = common.REASON_BLOCK_DELETE
-		dr.Message = common.ReasonCodeMap[common.REASON_BLOCK_DELETE].Message
+		dr.ReasonCode = common.REASON_BLOCK_IE_RESOURCE_OPERATION
+		dr.Message = common.ReasonCodeMap[common.REASON_BLOCK_IE_RESOURCE_OPERATION].Message
 	} else if allowed {
 		dr.Allow = true
 		dr.Verified = true
@@ -513,8 +513,8 @@ func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 }
 
 func (self *RequestHandler) checkIfIEResource() bool {
-	lockConfig := self.loader.GetLockConfig()
-	isIEResouce := handlerutil.MatchLockConfig(lockConfig, self.reqc)
+	ieResCondition := self.config.IEResourceCondition
+	isIEResouce := ieResCondition.Match(self.reqc)
 	return isIEResouce
 }
 
@@ -531,12 +531,7 @@ func (self *RequestHandler) checkIfIEServerRequest() bool {
 }
 
 func (self *RequestHandler) checkIfIEOperatorRequest() bool {
-	lockConfig := self.loader.GetLockConfig()
-	ieOperatorSA, ok := lockConfig["operatorSA"]
-	if !ok {
-		return false
-	}
-	return common.MatchPattern(ieOperatorSA, self.reqc.UserName) //"service account for integrity-enforcer-operator"
+	return common.ExactMatch(self.config.IEResourceCondition.OperatorServiceAccount, self.reqc.UserName) //"service account for integrity-enforcer-operator"
 }
 
 func (self *RequestHandler) GetEnabledPlugins() map[string]bool {
