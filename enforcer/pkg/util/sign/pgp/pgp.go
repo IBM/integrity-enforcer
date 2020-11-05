@@ -18,7 +18,6 @@ package pgp
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -79,9 +78,6 @@ func VerifySignature(keyPathList []string, msg, sig string) (bool, string, *Sign
 	if keyRing, err := LoadKeyRing(keyPathList); err != nil {
 		return false, "Error when loading key ring", nil, err
 	} else if signer, _ := openpgp.CheckArmoredDetachedSignature(keyRing, cfgReader, sigReader); signer == nil {
-		keyRingBytes, _ := json.Marshal(keyRing)
-		fmt.Println("[DEBUG] KeyRing: " + string(keyRingBytes))
-
 		return false, "Signed by unauthrized entity (signer is not in public key), or invalid format signature", nil, nil
 	} else {
 		idt := GetFirstIdentity(signer)
@@ -168,12 +164,10 @@ func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
 	entities := []*openpgp.Entity{}
 	for _, keyPath := range keyPathList {
 		if keyRingReader, err := os.Open(keyPath); err != nil {
-			fmt.Println("[DEBUG] os.Open() Error: " + err.Error())
 			continue
 		} else {
 			tmpList, err := openpgp.ReadKeyRing(keyRingReader)
 			if err != nil {
-				fmt.Println("[DEBUG] ReadKeyRingError: " + err.Error())
 				continue
 			}
 			for _, tmp := range tmpList {
