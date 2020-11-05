@@ -24,6 +24,9 @@ import (
 )
 
 const (
+	IECustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
+	IECustomResourceKind       = "IntegrityEnforcer"
+
 	SignatureCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
 	SignatureCustomResourceKind       = "ResourceSignature"
 	PolicyCustomResourceAPIVersion    = "apis.integrityenforcer.io/v1alpha1"
@@ -58,10 +61,10 @@ const (
 ***********************************************/
 
 type ResourceRef struct {
-	Name       string
-	Namespace  string
-	Kind       string
-	ApiVersion string
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	Kind       string `json:"kind"`
+	ApiVersion string `json:"apiVersion"`
 }
 
 func (self *ResourceRef) Equals(ref *ResourceRef) bool {

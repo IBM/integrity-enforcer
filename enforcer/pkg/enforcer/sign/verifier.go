@@ -52,17 +52,16 @@ type VerifierInterface interface {
 ***********************************************/
 
 type ResourceVerifier struct {
-	VerifyType   VerifyType
-	Namespace    string
-	CertPoolPath string
-	KeyringPath  string
+	VerifyType  VerifyType
+	Namespace   string
+	KeyPathList []string
 }
 
-func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespace, certPoolPath, keyringPath string) VerifierInterface {
+func NewVerifier(verifyType VerifyType, signType SignatureType, enforcerNamespace string, keyPathList []string) VerifierInterface {
 	if signType == SignatureTypeResource || signType == SignatureTypeApplyingResource || signType == SignatureTypePatch {
-		return &ResourceVerifier{Namespace: enforcerNamespace, VerifyType: verifyType, CertPoolPath: certPoolPath, KeyringPath: keyringPath}
+		return &ResourceVerifier{Namespace: enforcerNamespace, VerifyType: verifyType, KeyPathList: keyPathList}
 	} else if signType == SignatureTypeHelm {
-		return &HelmVerifier{Namespace: enforcerNamespace, VerifyType: verifyType, CertPoolPath: certPoolPath, KeyringPath: keyringPath}
+		return &HelmVerifier{Namespace: enforcerNamespace, VerifyType: verifyType, KeyPathList: keyPathList}
 	}
 	return nil
 }
@@ -136,7 +135,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	if self.VerifyType == VerifyTypePGP {
 		message := sig.data["message"]
 		signature := sig.data["signature"]
-		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyringPath, message, signature)
+		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyPathList, message, signature)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in signature verification",
@@ -165,7 +164,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 
 	} else if self.VerifyType == VerifyTypeX509 {
 		certificate := []byte(sig.data["certificate"])
-		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.CertPoolPath)
+		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.KeyPathList)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in certificate verification",
@@ -509,10 +508,9 @@ type SigVerifyResult struct {
 ***********************************************/
 
 type HelmVerifier struct {
-	VerifyType   VerifyType
-	Namespace    string
-	CertPoolPath string
-	KeyringPath  string
+	VerifyType  VerifyType
+	Namespace   string
+	KeyPathList []string
 }
 
 func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error) {
@@ -555,7 +553,7 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 
 			helmChart := hrmObj.Spec.Chart
 			helmProv := hrmObj.Spec.Prov
-			ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyringPath)
+			ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyPathList)
 			if err != nil {
 				vcerr = &common.CheckError{
 					Msg:    "Error occured in helm chart verification",

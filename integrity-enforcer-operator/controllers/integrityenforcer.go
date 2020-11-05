@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -32,6 +34,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cert "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/cert"
 
@@ -44,6 +47,71 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+/**********************************************
+
+				Namespace
+
+***********************************************/
+
+const ieTargetNamespaceLabelKey = "integrity-enforced"
+const ieTargetNamespaceLabelValue = "true"
+
+func (r *IntegrityEnforcerReconciler) attachLabelToNamespace(instance *apiv1alpha1.IntegrityEnforcer, expected *v1.Namespace) (ctrl.Result, error) {
+	ctx := context.Background()
+
+	found := &v1.Namespace{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"Namespace.Name", expected.Name)
+
+	// If CRD does not exist, create it and requeue
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: ""}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info(fmt.Sprintf("Skip reconcile: namespace \"%s\" does not exist, skip to attach IE label to this namespace.", expected.Name))
+		return ctrl.Result{}, nil
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.ObjectMeta.Labels, found.ObjectMeta.Labels) {
+			labels := expected.ObjectMeta.Labels
+			expected.ObjectMeta = found.ObjectMeta
+			expected.ObjectMeta.Labels = labels
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	// No extra validation
+
+	// No reconcile was necessary
+	return ctrl.Result{}, nil
+
+}
+
+func (r *IntegrityEnforcerReconciler) attachLabelToNamespacesInCR(
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	for _, nsName := range instance.Spec.LabeledNamespaces {
+		expected := &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nsName,
+				Labels: map[string]string{
+					ieTargetNamespaceLabelKey: ieTargetNamespaceLabelValue,
+				},
+			},
+		}
+		res, err := r.attachLabelToNamespace(instance, expected)
+		if err != nil {
+			return res, err
+		}
+	}
+	return ctrl.Result{}, nil
+}
 
 /**********************************************
 
@@ -85,6 +153,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateCRD(instance *apiv1alpha1.In
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -164,6 +241,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *a
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -206,6 +292,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -248,6 +343,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfil
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -616,6 +720,17 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePodSecurityPolicy(instance *
 
 ***********************************************/
 
+func (r *IntegrityEnforcerReconciler) keyRingSecretExists(instance *apiv1alpha1.IntegrityEnforcer) bool {
+	ctx := context.Background()
+	found := &corev1.Secret{}
+
+	err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.KeyRing.Name, Namespace: instance.Namespace}, found)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
 func (r *IntegrityEnforcerReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
@@ -751,7 +866,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
 
 /**********************************************
 
-				ConfigMap (RuleTable)
+				ConfigMap
 
 ***********************************************/
 
@@ -808,6 +923,11 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateIgnoreRuleTableConfigMap(ins
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateForceCheckRuleTableConfigMap(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildForceCheckRuleTableLockConfigMapForCR(instance)
+	return r.createOrUpdateConfigMap(instance, expected)
+}
+
+func (r *IntegrityEnforcerReconciler) createOrUpdateResourceLockConfigMap(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	expected := res.BuildResourceLockConfigMapForCR(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 

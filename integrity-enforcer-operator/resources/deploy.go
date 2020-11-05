@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 
@@ -31,6 +32,7 @@ import (
 const ruleTableLockCMName = "ie-rule-table-lock"
 const ignoreTableLockCMName = "ie-ignore-table-lock"
 const forceCheckTableLockCMName = "ie-force-check-table-lock"
+const ieResourceLockCMName = "ie-resource-lock"
 
 //deployment
 func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
@@ -381,5 +383,31 @@ func BuildForceCheckRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforce
 			Labels:    labels,
 		},
 		BinaryData: map[string][]byte{"table": nil},
+	}
+}
+
+// ie-resource-lock ConfigMap
+func BuildResourceLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforcer) *v1.ConfigMap {
+	labels := cr.Spec.MetaLabels
+
+	operatorNamespace := os.Getenv("POD_NAMESPACE")
+	operatorName := os.Getenv("POD_NAME")
+	operatorSA := getOperatorServiceAccount()
+	crNamespace := cr.GetNamespace()
+	crName := cr.GetName()
+
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ieResourceLockCMName,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Data: map[string]string{
+			"operatorNamespace": operatorNamespace,
+			"operatorName":      operatorName,
+			"operatorSA":        operatorSA,
+			"crNamespace":       crNamespace,
+			"crName":            crName,
+		},
 	}
 }

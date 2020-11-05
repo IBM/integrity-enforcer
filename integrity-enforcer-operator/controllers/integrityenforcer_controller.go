@@ -18,10 +18,10 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,6 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	apisv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
+	"github.com/IBM/integrity-enforcer/integrity-enforcer-operator/resources"
 )
 
 var log = logf.Log.WithName("controller_integrityenforcer")
@@ -40,7 +41,7 @@ type IntegrityEnforcerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=core,resources=pods;services;serviceaccounts;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods;services;serviceaccounts;services/finalizers;endpoints;persistentvolumeclaims;events;configmaps;secrets;namespaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers,resourceNames=integrity-enforcer-operator,verbs=update
@@ -73,6 +74,21 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	var recResult ctrl.Result
 	var recErr error
+
+	if !instance.Spec.IgnoreDefaultIECR {
+		instance = resources.MergeDefaultIntegrityEnforcerCR(instance)
+	}
+
+	if !r.keyRingSecretExists(instance) && !instance.Spec.KeyRing.CreateIfNotExist {
+		reqLogger.Info(fmt.Sprintf("KeyRing secret \"%s\" does not exist. Skip reconciling.", instance.Spec.KeyRing.Name))
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// attach label to namespaces
+	recResult, recErr = r.attachLabelToNamespacesInCR(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
 
 	if instance.Spec.GlobalConfig.OpenShift {
 		// SecurityContextConstraints (SCC)
@@ -231,6 +247,12 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return recResult, recErr
 	}
 
+	// ConfigMap (ResourceLock)
+	recResult, recErr = r.createOrUpdateResourceLockConfigMap(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	//Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {
@@ -267,6 +289,6 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 func (r *IntegrityEnforcerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&apisv1alpha1.IntegrityEnforcer{}).
-		Owns(&corev1.Pod{}).
+		Owns(&apisv1alpha1.IntegrityEnforcer{}).
 		Complete(r)
 }

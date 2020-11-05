@@ -46,13 +46,15 @@ type IntegrityEnforcerSpec struct {
 	Tolerations      []v1.Toleration           `json:"tolerations,omitempty"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Security     SecurityConfig  `json:"security,omitempty"`
-	KeyRing      KeyRingConfig   `json:"keyRingConfig,omitempty"`
-	CertPool     CertPoolConfig  `json:"certPoolConfig,omitempty"`
-	Server       ServerContainer `json:"server,omitempty"`
-	Logger       LoggerContainer `json:"logger,omitempty"`
-	RegKeySecret RegKeySecret    `json:"regKeySecret,omitempty"`
-	GlobalConfig GlobalConfig    `json:"globalConfig,omitempty"`
+	IgnoreDefaultIECR bool            `json:"ignoreDefaultIECR,omitempty"`
+	LabeledNamespaces []string        `json:"labeledNamespaces,omitempty"`
+	Security          SecurityConfig  `json:"security,omitempty"`
+	KeyRing           KeyRingConfig   `json:"keyRingConfig,omitempty"`
+	CertPool          CertPoolConfig  `json:"certPoolConfig,omitempty"`
+	Server            ServerContainer `json:"server,omitempty"`
+	Logger            LoggerContainer `json:"logger,omitempty"`
+	RegKeySecret      RegKeySecret    `json:"regKeySecret,omitempty"`
+	GlobalConfig      GlobalConfig    `json:"globalConfig,omitempty"`
 
 	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
 	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`

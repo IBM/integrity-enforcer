@@ -35,6 +35,7 @@ type Loader struct {
 	Config            *config.EnforcerConfig
 	SignPolicy        *SignPolicyLoader
 	RuleTable         *RuleTableLoader
+	LockConfig        *LockConfigLoader
 	RSP               *RSPLoader
 	ResourceSignature *ResSigLoader
 }
@@ -51,6 +52,7 @@ func NewLoader(cfg *config.EnforcerConfig, reqc *common.ReqContext) *Loader {
 		SignPolicy:        NewSignPolicyLoader(enforcerNamespace),
 		RSP:               NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
 		RuleTable:         NewRuleTableLoader(enforcerNamespace),
+		LockConfig:        NewLockConfigLoader(enforcerNamespace),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
 	}
 	return loader
@@ -73,6 +75,10 @@ func (self *Loader) IgnoreRules() *RuleTable {
 func (self *Loader) ForceCheckRules() *RuleTable {
 	table := self.RuleTable.GetForceCheckData()
 	return table
+}
+
+func (self *Loader) GetLockConfig() map[string]string {
+	return self.LockConfig.GetData()
 }
 
 func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []profile.SigningProfile {

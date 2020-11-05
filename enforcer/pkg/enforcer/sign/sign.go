@@ -203,7 +203,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	verifyType := VerifyType(self.config.VerifyType)
 
 	// create verifier
-	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, self.config.CertPoolPath, self.config.KeyringPath)
+	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, self.config.KeyPathList)
 
 	// verify signature
 	sigVerifyResult, err := verifier.Verify(rsig, reqc, signingProfile)

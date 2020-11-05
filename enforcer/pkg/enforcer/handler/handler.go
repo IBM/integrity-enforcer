@@ -110,7 +110,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		}
 
 		self.ctx.IEResource = true
-		if self.checkIfIEAdminRequest() || self.checkIfIEServerRequest() {
+		if self.checkIfIEAdminRequest() || self.checkIfIEServerRequest() || self.checkIfIEOperatorRequest() {
 			allowed = true
 			evalReason = common.REASON_IE_ADMIN
 		} else {
@@ -150,7 +150,7 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	var errMsg string
 	var denyingProfile profile.SigningProfile
-	if !self.ctx.Aborted && self.ctx.Protected && !allowed {
+	if !self.ctx.Aborted && !self.ctx.IEResource && self.ctx.Protected && !allowed {
 
 		signingProfiles := self.loader.SigningProfile(profileReferences)
 		allowCount := 0
@@ -252,8 +252,11 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		}()
 	}
 
-	if self.ctx.Allow && self.ctx.IEResource && self.checkIfProfileResource() {
-		self.loader.UpdateRuleTable(self.reqc)
+	if self.ctx.Allow && self.checkIfProfileResource() {
+		err := self.loader.UpdateRuleTable(self.reqc)
+		if err != nil {
+			logger.Error("Failed to update RuleTable; ", err)
+		}
 	}
 
 	if !self.ctx.Allow && !self.ctx.IEResource && denyingProfile != nil {
@@ -424,7 +427,9 @@ func (self *RequestHandler) logContext() {
 	if self.ctx.ContextLogEnabled {
 		cLogger := logger.GetContextLogger()
 		logBytes := self.ctx.convertToLogBytes(self.reqc)
-		cLogger.SendLog(logBytes)
+		if self.reqc.ResourceScope == "Namespaced" || (self.reqc.ResourceScope == "Cluster" && self.ctx.Protected) {
+			cLogger.SendLog(logBytes)
+		}
 	}
 }
 
@@ -508,11 +513,9 @@ func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 }
 
 func (self *RequestHandler) checkIfIEResource() bool {
-	isIECustomResource := (self.reqc.ApiGroup == self.config.IEResource) //"apis.integrityenforcer.io"
-	isIELockConfigMap := (self.reqc.Kind == "ConfigMap" &&
-		self.reqc.Namespace == self.config.Namespace &&
-		(self.reqc.Name == loader.DefaultRuleTableLockCMName || self.reqc.Name == loader.DefaultIgnoreTableLockCMName || self.reqc.Name == loader.DefaultForceCheckTableLockCMName))
-	return isIECustomResource || isIELockConfigMap
+	lockConfig := self.loader.GetLockConfig()
+	isIEResouce := handlerutil.MatchLockConfig(lockConfig, self.reqc)
+	return isIEResouce
 }
 
 func (self *RequestHandler) checkIfProfileResource() bool {
@@ -525,6 +528,15 @@ func (self *RequestHandler) checkIfIEAdminRequest() bool {
 
 func (self *RequestHandler) checkIfIEServerRequest() bool {
 	return common.MatchPattern(self.config.IEServerUserName, self.reqc.UserName) //"service account for integrity-enforcer"
+}
+
+func (self *RequestHandler) checkIfIEOperatorRequest() bool {
+	lockConfig := self.loader.GetLockConfig()
+	ieOperatorSA, ok := lockConfig["operatorSA"]
+	if !ok {
+		return false
+	}
+	return common.MatchPattern(ieOperatorSA, self.reqc.UserName) //"service account for integrity-enforcer-operator"
 }
 
 func (self *RequestHandler) GetEnabledPlugins() map[string]bool {

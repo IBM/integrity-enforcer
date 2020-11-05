@@ -24,6 +24,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
+	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,11 +63,8 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 	if ecc.Spec.EnforcerConfig.IEServerUserName == "" {
 		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
 	}
-	if ecc.Spec.EnforcerConfig.CertPoolPath == "" {
-		ecc.Spec.EnforcerConfig.CertPoolPath = defaultCertPoolPath
-	}
-	if ecc.Spec.EnforcerConfig.KeyringPath == "" {
-		ecc.Spec.EnforcerConfig.KeyringPath = defaultKeyringPath
+	if len(ecc.Spec.EnforcerConfig.KeyPathList) == 0 {
+		ecc.Spec.EnforcerConfig.KeyPathList = []string{defaultKeyringPath}
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile
@@ -77,6 +75,14 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 		if err != nil {
 			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
 			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
+		}
+		operatorSA := getOperatorServiceAccount()
+		if operatorSA != "" {
+			// add IE operator SA to ignoreRules in commonProfile
+			operatorSAPattern := profile.RulePattern(operatorSA)
+			ignoreRules := defaultrsp.Spec.IgnoreRules
+			ignoreRules = append(ignoreRules, &profile.Rule{Match: []*profile.RequestPattern{{UserName: &operatorSAPattern}}})
+			defaultrsp.Spec.IgnoreRules = ignoreRules
 		}
 		ecc.Spec.EnforcerConfig.CommonProfile = &(defaultrsp.Spec)
 	}
