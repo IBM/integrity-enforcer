@@ -1,5 +1,5 @@
 # Current Operator version
-VERSION ?= 0.0.14
+VERSION ?= 0.0.4
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -120,4 +120,4 @@ bundle: manifests
 # Build the bundle image.
 .PHONY: bundle-build
 bundle-build:
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) . --no-cache
+	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
