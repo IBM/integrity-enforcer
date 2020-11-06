@@ -149,7 +149,7 @@ metadata:
               },
               "securityContext": {
                 "runAsNonRoot": true,
-                "runAsUser": 1000
+                "runAsUser": 1000190000
               },
               "stdOutput": true
             },
@@ -176,7 +176,7 @@ metadata:
               "podSecurityPolicyName": "ie-psp",
               "securityContext": {
                 "runAsNonRoot": true,
-                "runAsUser": 1000580000
+                "runAsUser": 1000190000
               },
               "securityContextConstraintsName": "ie-scc",
               "serviceAccountName": "ie-sa"
@@ -235,7 +235,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: integrity-enforcer-operator.v0.0.7
+  name: integrity-enforcer-operator.v0.0.11
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -273,6 +273,7 @@ spec:
           - enforcerconfigs
           - helmreleasemetadatas
           - integrityenforcers
+          - integrityenforcers/finalizers
           - resourcesignatures
           - resourcesigningprofiles
           - signpolicies
@@ -405,7 +406,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/gajananan/integrity-enforcer-operator:0.0.7dev
+                image: integrityenforcer/integrity-enforcer-operator:0.0.4dev
                 name: manager
                 resources:
                   limits:
@@ -481,4 +482,4 @@ spec:
   provider:
     name: IBM
     url: https://github.com/ibm/integrity-enforcer
-  version: 0.0.7
+  version: 0.0.11

@@ -24,6 +24,7 @@ rules:
   - enforcerconfigs
   - helmreleasemetadatas
   - integrityenforcers
+  - integrityenforcers/finalizers
   - resourcesignatures
   - resourcesigningprofiles
   - signpolicies

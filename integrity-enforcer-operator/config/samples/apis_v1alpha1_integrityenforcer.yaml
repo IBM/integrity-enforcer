@@ -88,7 +88,7 @@ spec:
         memory: 256Mi
     securityContext:
       runAsNonRoot: true
-      runAsUser: 1000
+      runAsUser: 1000190000
     stdOutput: true
   replicaCount: 1
   maxSurge: 1
@@ -99,7 +99,7 @@ spec:
     podSecurityPolicyName: ie-psp
     securityContext:
       runAsNonRoot: true
-      runAsUser: 1000580000
+      runAsUser: 1000190000
     securityContextConstraintsName:  ie-scc
     serviceAccountName: ie-sa
     ieAdminSubjects:
