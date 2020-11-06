@@ -235,7 +235,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: integrity-enforcer-operator.v0.0.11
+  name: integrity-enforcer-operator.v0.0.14
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -465,13 +465,13 @@ spec:
         serviceAccountName: integrity-enforcer-operator-manager
     strategy: deployment
   installModes:
-  - supported: false
+  - supported: true
     type: OwnNamespace
-  - supported: false
+  - supported: true
     type: SingleNamespace
   - supported: false
     type: MultiNamespace
-  - supported: true
+  - supported: false
     type: AllNamespaces
   keywords:
   - integrity
@@ -482,4 +482,4 @@ spec:
   provider:
     name: IBM
     url: https://github.com/ibm/integrity-enforcer
-  version: 0.0.11
+  version: 0.0.14
