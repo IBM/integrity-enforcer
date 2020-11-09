@@ -18,4 +18,3 @@ spec:
         - email: "sample_signer@signer.com"
   keyRingConfigs:
   - name: keyring-secret
-  enforcerConfigCrName: ie-config

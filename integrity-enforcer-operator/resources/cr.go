@@ -19,7 +19,6 @@ package resources
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -30,24 +29,20 @@ import (
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const defaultRspName = "default-rsp"
-const primaryRspName = "primary-rsp"
-const signerPolicyName = "signer-policy"
 const defaultResourceSigningProfileYamlPath = "/resources/default-rsp.yaml"
-const defaultCertPoolPath = "/ie-certpool-secret/"
-const defaultKeyringPath = "/keyring/pubring.gpg"
 const defaultKeyringFilename = "pubring.gpg"
 
 var log = logf.Log.WithName("controller_integrityenforcer")
 
 // enforcer config cr
-func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerConfig {
+func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer, scheme *runtime.Scheme) *ec.EnforcerConfig {
 	ecc := &ec.EnforcerConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.EnforcerConfigCrName,
+			Name:      cr.GetEnforcerConfigCRName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: ec.EnforcerConfigSpec{
@@ -64,7 +59,7 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 		ecc.Spec.EnforcerConfig.ProfileNamespace = cr.Namespace
 	}
 	if ecc.Spec.EnforcerConfig.IEServerUserName == "" {
-		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.Spec.Security.ServiceAccountName)
+		ecc.Spec.EnforcerConfig.IEServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.GetServiceAccountName())
 	}
 	if len(ecc.Spec.EnforcerConfig.KeyPathList) == 0 {
 		keyPathList := []string{}
@@ -73,14 +68,11 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 		}
 		ecc.Spec.EnforcerConfig.KeyPathList = keyPathList
 	}
-	if ecc.Spec.EnforcerConfig.IEResourceCondition == nil {
-		ecc.Spec.EnforcerConfig.IEResourceCondition = &econf.IEResourceCondition{
-			OperatorNamespace:      os.Getenv("POD_NAMESPACE"),
-			OperatorPodName:        os.Getenv("POD_NAME"),
-			OperatorServiceAccount: getOperatorServiceAccount(),
-			CRNamespace:            cr.GetNamespace(),
-			CRName:                 cr.GetName(),
-		}
+	operatorSA := getOperatorServiceAccount()
+
+	ecc.Spec.EnforcerConfig.IEResourceCondition = &econf.IEResourceCondition{
+		References:             cr.GetIEResourceList(scheme),
+		OperatorServiceAccount: operatorSA,
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile
@@ -89,10 +81,9 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer) *ec.EnforcerCon
 		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
 
 		if err != nil {
-			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.Spec.EnforcerConfigCrName)
+			reqLogger := log.WithValues("BuildEnforcerConfigForIE", cr.GetEnforcerConfigCRName())
 			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
 		}
-		operatorSA := getOperatorServiceAccount()
 		if operatorSA != "" {
 			// add IE operator SA to ignoreRules in commonProfile
 			operatorSAPattern := profile.RulePattern(operatorSA)
@@ -134,7 +125,7 @@ func BuildSignEnforcePolicyForIE(cr *apiv1alpha1.IntegrityEnforcer) *iespol.Sign
 	}
 	epcr := &iespol.SignPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      signerPolicyName,
+			Name:      cr.GetSignPolicyCRName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: iespol.SignPolicySpec{
@@ -152,7 +143,7 @@ func BuildPrimaryResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer) 
 		primaryrsp.Spec = *cr.Spec.PrimaryRsp
 	}
 
-	primaryrsp.ObjectMeta.Name = primaryRspName
+	primaryrsp.ObjectMeta.Name = cr.GetPrimaryRSPName()
 	primaryrsp.ObjectMeta.Namespace = cr.Namespace
 	return primaryrsp
 }
