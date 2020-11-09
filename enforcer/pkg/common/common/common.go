@@ -60,8 +60,6 @@ const (
 
 ***********************************************/
 
-type ResourceRefList []*ResourceRef
-
 type ResourceRef struct {
 	Name       string `json:"name"`
 	Namespace  string `json:"namespace"`
@@ -74,26 +72,6 @@ func (self *ResourceRef) Equals(ref *ResourceRef) bool {
 		self.Namespace == ref.Namespace &&
 		self.Kind == ref.Kind &&
 		self.ApiVersion == ref.ApiVersion)
-}
-
-func (self *ResourceRefList) Contains(ref *ResourceRef) bool {
-	for _, refi := range *self {
-		if refi.Equals(ref) {
-			return true
-		}
-	}
-	return false
-}
-
-func (self *ResourceRefList) Add(ref *ResourceRef) {
-	newList := []*ResourceRef{}
-	for _, refi := range *self {
-		newList = append(newList, refi)
-	}
-	newList = append(newList, ref)
-	newList2 := ResourceRefList(newList)
-	self = &newList2
-	return
 }
 
 /**********************************************
