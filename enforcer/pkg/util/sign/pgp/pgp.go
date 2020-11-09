@@ -78,7 +78,7 @@ func VerifySignature(keyPathList []string, msg, sig string) (bool, string, *Sign
 	if keyRing, err := LoadKeyRing(keyPathList); err != nil {
 		return false, "Error when loading key ring", nil, err
 	} else if signer, _ := openpgp.CheckArmoredDetachedSignature(keyRing, cfgReader, sigReader); signer == nil {
-		return false, "Signed by unauthrized entity (signer is not in public key), or invalid format signature", nil, nil
+		return false, "Signed by unauthrized subject (signer is not in public key), or invalid format signature", nil, nil
 	} else {
 		idt := GetFirstIdentity(signer)
 		return true, "", NewSignerFromUserId(idt.UserId), nil
