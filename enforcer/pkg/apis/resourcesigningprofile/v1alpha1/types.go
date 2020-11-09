@@ -30,7 +30,8 @@ const maxHistoryLength = 3
 // ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
 type ResourceSigningProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
-	Delete   bool `json:"delete,omitempty"`
+	// `TargetNamespaces` is used only for profile in IE NS
+	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
 
 	ProtectRules      []*profile.Rule             `json:"protectRules,omitempty"`
 	IgnoreRules       []*profile.Rule             `json:"ignoreRules,omitempty"`
