@@ -65,7 +65,7 @@ func TestEndToEndCAVerification(t *testing.T) {
 	}
 	t.Log("signature verification result:", sigOk)
 
-	certOk, _, err := VerifyCertificate(serviceCertificate, testCertPoolDir)
+	certOk, _, err := VerifyCertificate(serviceCertificate, []string{testCertPoolDir})
 	if err != nil {
 		t.Error(err)
 	}

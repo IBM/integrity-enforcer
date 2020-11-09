@@ -50,7 +50,7 @@ func TestSign(t *testing.T) {
 	msg := `abc
 `
 	keyringPath := getDefaultPrivateRingPath()
-	sig, reasonFail, err := DetachSign(keyringPath, msg, "")
+	sig, reasonFail, err := DetachSign([]string{keyringPath}, msg, "")
 	sigPrefix := `-----BEGIN PGP SIGNATURE-----`
 	if !strings.HasPrefix(sig, sigPrefix) {
 		t.Errorf("Failed to generate signature. sig: %s, reasonFail: %s, err: %s", sig, reasonFail, err)
@@ -61,13 +61,13 @@ func TestVerify(t *testing.T) {
 	msg := `abc
 `
 	secringPath := getDefaultPrivateRingPath()
-	sig, reasonFail, err := DetachSign(secringPath, msg, "")
+	sig, reasonFail, err := DetachSign([]string{secringPath}, msg, "")
 	if reasonFail != "" || err != nil {
 		t.Errorf("Failed to generate signature. sig: %s, reasonFail: %s, err: %s", sig, reasonFail, err)
 	}
 
 	keyringPath := getDefaultPublicRingPath()
-	verified, reasonFail, signer, err := VerifySignature(keyringPath, msg, sig)
+	verified, reasonFail, signer, err := VerifySignature([]string{keyringPath}, msg, sig)
 
 	if !verified {
 		t.Errorf("Failed to verify. verified: %t, reasonFail: %s, signaer: %s, err: %s", verified, reasonFail, signer, err)

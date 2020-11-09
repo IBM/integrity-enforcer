@@ -427,7 +427,7 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 	return message
 }
 
-func VerifyChartAndProv(chart, prov []byte, keyringPath string) (bool, *common.SignerInfo, string, error) {
+func VerifyChartAndProv(chart, prov []byte, keyPathList []string) (bool, *common.SignerInfo, string, error) {
 	chartPath := filepath.Join(tempDir, "chart.tgz")
 	provPath := filepath.Join(tempDir, "chart.tgz.prov")
 	err := ioutil.WriteFile(chartPath, chart, 0644)
@@ -440,14 +440,15 @@ func VerifyChartAndProv(chart, prov []byte, keyringPath string) (bool, *common.S
 		msg := fmt.Sprintf("Error in verifying chart file; %s", err.Error())
 		return false, nil, msg, fmt.Errorf("%s", msg)
 	}
-	signer, err := VerifyPackage(chartPath, provPath, keyringPath)
-	if err != nil {
-		msg := fmt.Sprintf("Error in verifying chart file; %s", err.Error())
-		return false, nil, msg, fmt.Errorf("%s", msg)
-	} else if signer == nil {
-		msg := fmt.Sprintf("Failed to verify helm chart and its provenance.")
-		return false, nil, msg, nil
-	} else {
-		return true, signer, "", nil
+	for _, keyringPath := range keyPathList {
+		signer, err := VerifyPackage(chartPath, provPath, keyringPath)
+		if err != nil {
+			continue
+		}
+		if signer != nil {
+			return true, signer, "", nil
+		}
 	}
+	msg := fmt.Sprintf("Failed to verify helm chart and its provenance.")
+	return false, nil, msg, nil
 }

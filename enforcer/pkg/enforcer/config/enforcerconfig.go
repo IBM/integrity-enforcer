@@ -37,6 +37,11 @@ type PatchConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
+type IEResourceCondition struct {
+	References             []*common.ResourceRef `json:"references,omitempty"`
+	OperatorServiceAccount string                `json:"operatorServiceAccount,omitempty"`
+}
+
 type EnforcerConfig struct {
 	Patch *PatchConfig        `json:"patch,omitempty"`
 	Log   *LoggingScopeConfig `json:"log,omitempty"`
@@ -49,18 +54,18 @@ type EnforcerConfig struct {
 	Plugin        []PluginConfig                     `json:"plugin,omitempty"`
 	CommonProfile *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`
 
-	Namespace          string `json:"namespace,omitempty"`
-	SignatureNamespace string `json:"signatureNamespace,omitempty"`
-	ProfileNamespace   string `json:"profileNamespace,omitempty"`
-	VerifyType         string `json:"verifyType"`
-	CertPoolPath       string `json:"certPoolPath,omitempty"`
-	KeyringPath        string `json:"keyringPath,omitempty"`
-	ChartDir           string `json:"chartPath,omitempty"`
-	ChartRepo          string `json:"chartRepo,omitempty"`
+	Namespace          string   `json:"namespace,omitempty"`
+	SignatureNamespace string   `json:"signatureNamespace,omitempty"`
+	ProfileNamespace   string   `json:"profileNamespace,omitempty"`
+	VerifyType         string   `json:"verifyType"`
+	KeyPathList        []string `json:"keyPathList,omitempty"`
+	ChartDir           string   `json:"chartPath,omitempty"`
+	ChartRepo          string   `json:"chartRepo,omitempty"`
 
-	IEResource       string `json:"ieResource,omitempty"`
-	IEAdminUserGroup string `json:"ieAdminUserGroup,omitempty"`
-	IEServerUserName string `json:"ieServerUserName,omitempty"`
+	IEResource          string               `json:"ieResource,omitempty"`
+	IEResourceCondition *IEResourceCondition `json:"ieResourceCondition,omitempty"`
+	IEAdminUserGroup    string               `json:"ieAdminUserGroup,omitempty"`
+	IEServerUserName    string               `json:"ieServerUserName,omitempty"`
 }
 
 type LoggingScopeConfig struct {
@@ -78,6 +83,16 @@ type LoggingScopeConfig struct {
 type PluginConfig struct {
 	Name    string `json:"name,omitempty"`
 	Enabled bool   `json:"enabled,omitempty"`
+}
+
+func (self *IEResourceCondition) Match(reqc *common.ReqContext) bool {
+	ref := reqc.ResourceRef()
+	for _, refi := range self.References {
+		if refi.Equals(ref) {
+			return true
+		}
+	}
+	return false
 }
 
 /**********************************************

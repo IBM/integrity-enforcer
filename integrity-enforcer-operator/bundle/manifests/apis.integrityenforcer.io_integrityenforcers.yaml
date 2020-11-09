@@ -371,16 +371,18 @@ spec:
                       type: array
                   type: object
               type: object
-            certPoolConfig:
-              properties:
-                createIfNotExist:
-                  type: boolean
-                keyValue:
-                  format: byte
-                  type: string
-                name:
-                  type: string
-              type: object
+            certPoolConfigs:
+              items:
+                properties:
+                  createIfNotExist:
+                    type: boolean
+                  keyValue:
+                    format: byte
+                    type: string
+                  name:
+                    type: string
+                type: object
+              type: array
             defaultResourceSigningProfile:
               description: ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
               properties:
@@ -685,8 +687,6 @@ spec:
                         type: string
                     type: object
                   type: array
-                certPoolPath:
-                  type: string
                 chartPath:
                   type: string
                 chartRepo:
@@ -974,6 +974,29 @@ spec:
                   type: string
                 ieResource:
                   type: string
+                ieResourceCondition:
+                  properties:
+                    operatorServiceAccount:
+                      type: string
+                    references:
+                      items:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - apiVersion
+                        - kind
+                        - name
+                        - namespace
+                        type: object
+                      type: array
+                  type: object
                 ieServerUserName:
                   type: string
                 ignore:
@@ -998,8 +1021,10 @@ spec:
                         type: string
                     type: object
                   type: array
-                keyringPath:
-                  type: string
+                keyPathList:
+                  items:
+                    type: string
+                  type: array
                 log:
                   properties:
                     consoleLog:
@@ -1175,6 +1200,8 @@ spec:
                         properties:
                           name:
                             type: string
+                          secret:
+                            type: string
                           subjects:
                             items:
                               properties:
@@ -1227,6 +1254,8 @@ spec:
                 roks:
                   type: boolean
               type: object
+            ignoreDefaultIECR:
+              type: boolean
             imagePullSecrets:
               items:
                 description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
@@ -1236,16 +1265,22 @@ spec:
                     type: string
                 type: object
               type: array
-            keyRingConfig:
-              properties:
-                createIfNotExist:
-                  type: boolean
-                keyValue:
-                  format: byte
-                  type: string
-                name:
-                  type: string
-              type: object
+            keyRingConfigs:
+              items:
+                properties:
+                  createIfNotExist:
+                    type: boolean
+                  keyValue:
+                    format: byte
+                    type: string
+                  name:
+                    type: string
+                type: object
+              type: array
+            labeledNamespaces:
+              items:
+                type: string
+              type: array
             labels:
               additionalProperties:
                 type: string
@@ -1961,6 +1996,8 @@ spec:
                   items:
                     properties:
                       name:
+                        type: string
+                      secret:
                         type: string
                       subjects:
                         items:

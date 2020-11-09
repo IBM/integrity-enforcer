@@ -35,7 +35,7 @@ func BuildServiceForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Service {
 	targetport.StrVal = "ac-api"
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.WebhookServiceName,
+			Name:      cr.GetWebhookServiceName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -74,7 +74,7 @@ func BuildMutatingWebhookConfigurationForIE(cr *apiv1alpha1.IntegrityEnforcer) *
 
 	wc := &admv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.WebhookConfigName,
+			Name:      cr.GetWebhookConfigName(),
 			Namespace: cr.Namespace,
 		},
 		Webhooks: []admv1.MutatingWebhook{
@@ -93,7 +93,7 @@ func BuildMutatingWebhookConfigurationForIE(cr *apiv1alpha1.IntegrityEnforcer) *
 				},
 				ClientConfig: admv1.WebhookClientConfig{
 					Service: &admv1.ServiceReference{
-						Name:      cr.Spec.WebhookServiceName,
+						Name:      cr.GetWebhookServiceName(),
 						Namespace: cr.Namespace,
 						Path:      path, //"/mutate"
 					},

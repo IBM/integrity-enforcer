@@ -11,63 +11,7 @@ metadata:
             "name": "integrity-enforcer-server"
           },
           "spec": {
-            "affinity": {},
-            "certPoolConfig": {
-              "createIfNotExist": false,
-              "keyValue": "test",
-              "name": "ie-certpool-secret"
-            },
             "enforcerConfig": {
-              "ieAdminUserGroup": "system:masters,system:cluster-admins",
-              "ieResource": "apis.integrityenforcer.io",
-              "ignore": [
-                {
-                  "kind": "Event"
-                },
-                {
-                  "kind": "Lease"
-                },
-                {
-                  "kind": "Endpoints"
-                },
-                {
-                  "kind": "TokenReview"
-                },
-                {
-                  "kind": "SubjectAccessReview"
-                },
-                {
-                  "kind": "SelfSubjectAccessReview"
-                }
-              ],
-              "log": {
-                "consoleLog": {
-                  "enabled": true,
-                  "inScope": [
-                    {
-                      "kind": "*"
-                    }
-                  ]
-                },
-                "contextLog": {
-                  "enabled": true,
-                  "inScope": [
-                    {
-                      "kind": "*"
-                    }
-                  ]
-                },
-                "logLevel": "info"
-              },
-              "patch": {
-                "enabled": true
-              },
-              "plugin": [
-                {
-                  "enabled": false,
-                  "name": "helm"
-                }
-              ],
               "signPolicy": {
                 "policies": [
                   {
@@ -75,32 +19,17 @@ metadata:
                       "*"
                     ],
                     "signers": [
-                      "ClusterSigner",
-                      "HelmClusterSigner"
-                    ]
-                  },
-                  {
-                    "scope": "Cluster",
-                    "signers": [
-                      "ClusterSigner",
-                      "HelmClusterSigner"
+                      "SampleSigner"
                     ]
                   }
                 ],
                 "signers": [
                   {
-                    "name": "ClusterSigner",
+                    "name": "SampleSigner",
+                    "secret": "keyring-secret",
                     "subjects": [
                       {
-                        "commonName": "ClusterAdmin"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "HelmClusterSigner",
-                    "subjects": [
-                      {
-                        "email": "cluster_signer@signer.com"
+                        "email": "sample_signer@signer.com"
                       }
                     ]
                   }
@@ -108,134 +37,19 @@ metadata:
               },
               "verifyType": "pgp"
             },
-            "enforcerConfigCrName": "ie-config",
-            "globalConfig": {
-              "openShift": true
-            },
-            "keyRingConfig": {
-              "createIfNotExist": false,
-              "keyValue": "test",
-              "name": "keyring-secret"
-            },
-            "labels": {
-              "app": "ie-server"
-            },
-            "logger": {
-              "enabled": true,
-              "es": {
-                "enabled": false,
-                "host": "10.200.10.10",
-                "indexPrefix": "ac-log",
-                "port": 9200,
-                "scheme": "http"
-              },
-              "esSecretName": "es-tls-certs",
-              "http": {
-                "enabled": false,
-                "endpoint": "http://sample-http-server"
-              },
-              "image": "integrityenforcer/ie-logging:0.0.4dev",
-              "imagePullPolicy": "Always",
-              "name": "forwarder",
-              "resources": {
-                "limits": {
-                  "cpu": "500m",
-                  "memory": "512Mi"
-                },
-                "requests": {
-                  "cpu": "200m",
-                  "memory": "256Mi"
-                }
-              },
-              "securityContext": {
-                "runAsNonRoot": true,
-                "runAsUser": 1000190000
-              },
-              "stdOutput": true
-            },
-            "maxSurge": 1,
-            "maxUnavailable": 0,
-            "replicaCount": 1,
-            "resourceSigningProfile": {},
-            "security": {
-              "autoIEAdminRoleCreationDisabled": false,
-              "clusterRole": "ie-cluster-role",
-              "clusterRoleBinding": "ie-cluster-role-binding",
-              "ieAdminSubjects": [
-                {
-                  "apiGroup": "rbac.authorization.k8s.io",
-                  "kind": "Group",
-                  "name": "system:masters"
-                },
-                {
-                  "apiGroup": "rbac.authorization.k8s.io",
-                  "kind": "Group",
-                  "name": "system:cluster-admins"
-                }
-              ],
-              "podSecurityPolicyName": "ie-psp",
-              "securityContext": {
-                "runAsNonRoot": true,
-                "runAsUser": 1000190000
-              },
-              "securityContextConstraintsName": "ie-scc",
-              "serviceAccountName": "ie-sa"
-            },
-            "selector": {
-              "app": "ie-server"
-            },
-            "server": {
-              "chartBaseUrl": "http://sample-chart-repo-server/charts",
-              "contextLogEnabled": true,
-              "enforcePolicyReloadSec": 10,
-              "image": "integrityenforcer/ie-server:0.0.4dev",
-              "imagePullPolicy": "Always",
-              "name": "server",
-              "port": 8443,
-              "resources": {
-                "limits": {
-                  "cpu": "500m",
-                  "memory": "512Mi"
-                },
-                "requests": {
-                  "cpu": "200m",
-                  "memory": "256Mi"
-                }
-              },
-              "securityContext": {}
-            },
-            "webhookClusterResource": {
-              "apiGroups": [
-                "*"
-              ],
-              "apiVersions": [
-                "*"
-              ],
-              "resources": [
-                "*"
-              ]
-            },
-            "webhookConfigName": "ie-webhook-config",
-            "webhookNamespacedResource": {
-              "apiGroups": [
-                "*"
-              ],
-              "apiVersions": [
-                "*"
-              ],
-              "resources": [
-                "*"
-              ]
-            },
-            "webhookServerTlsSecretName": "ie-server-tls",
-            "webhookServiceName": "ie-server"
+            "keyRingConfigs": [
+              {
+                "name": "keyring-secret"
+              }
+            ],
+            "namespace": "integrity-enforcer-ns"
           }
         }
       ]
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: integrity-enforcer-operator.v0.0.4
+  name: integrity-enforcer-operator.v0.0.18
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -338,6 +152,16 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - namespaces
+          verbs:
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
           - pods
           verbs:
           - get
@@ -402,11 +226,16 @@ spec:
                 command:
                 - /manager
                 env:
-                - name: WATCH_NAMESPACE
+                - name: POD_NAME
                   valueFrom:
                     fieldRef:
-                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                      fieldPath: metadata.name
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
                 image: integrityenforcer/integrity-enforcer-operator:0.0.4dev
+                imagePullPolicy: Always
                 name: manager
                 resources:
                   limits:
@@ -482,4 +311,4 @@ spec:
   provider:
     name: IBM
     url: https://github.com/ibm/integrity-enforcer
-  version: 0.0.4
+  version: 0.0.18
