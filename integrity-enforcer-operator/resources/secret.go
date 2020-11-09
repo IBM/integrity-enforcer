@@ -26,7 +26,7 @@ import (
 func BuildRegKeySecretForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.RegKeySecret.Name,
+			Name:      cr.GetRegKeySecretName(),
 			Namespace: cr.Namespace,
 		},
 		Data: map[string][]byte{
@@ -37,35 +37,12 @@ func BuildRegKeySecretForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	return sec
 }
 
-// //server-secret.yaml
-func BuildKeyringSecretForIEFromValue(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
-	metaLabels := map[string]string{
-		"app":                    cr.Name,
-		"app.kubernetes.io/name": cr.Spec.CertPool.Name,
-		// "app.kubernetes.io/component":  instance.ReleaseName(),
-		"app.kubernetes.io/managed-by": "operator",
-		// "app.kubernetes.io/instance":   instance.ReleaseName(),
-		// "release":                      instance.ReleaseName(),
-		"role": "security",
-	}
-	sec := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.CertPool.Name,
-			Namespace: cr.Namespace,
-			Labels:    metaLabels,
-		},
-		Data: make(map[string][]byte),
-		Type: corev1.SecretTypeOpaque,
-	}
-	return sec
-}
-
 // ie-server-tls
 func BuildTlsSecretForIE(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Secret {
 	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.WebhookServerTlsSecretName,
+			Name:      cr.GetWebhookServerTlsSecretName(),
 			Namespace: cr.Namespace,
 		},
 		Data: map[string][]byte{

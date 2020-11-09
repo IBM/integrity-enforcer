@@ -3,143 +3,19 @@ kind: IntegrityEnforcer
 metadata:
   name: integrity-enforcer-server
 spec:
-  affinity: {}
-  resourceSigningProfile: {}
+  namespace: integrity-enforcer-ns
   enforcerConfig:
     verifyType: pgp # x509
-    plugin:
-    - name: helm
-      enabled: false
     signPolicy:
       policies:
       - namespaces:
         - "*"
         signers:
-        - "ClusterSigner"
-        - "HelmClusterSigner"
-      - scope: Cluster
-        signers:
-        - "ClusterSigner"
-        - "HelmClusterSigner"
+        - "SampleSigner"
       signers:
-      - name: "ClusterSigner"
+      - name: "SampleSigner"
+        secret: keyring-secret
         subjects:
-        - commonName: "ClusterAdmin"
-      - name: "HelmClusterSigner"
-        subjects:
-        - email: cluster_signer@signer.com
-    ieResource: "apis.integrityenforcer.io"
-    ieAdminUserGroup: "system:masters,system:cluster-admins"
-    ignore:
-    - kind: Event
-    - kind: Lease
-    - kind: Endpoints
-    - kind: TokenReview
-    - kind: SubjectAccessReview
-    - kind: SelfSubjectAccessReview
-    patch:
-      enabled: true
-    log:
-      consoleLog:
-        enabled: true
-        inScope:
-        - kind: '*'
-      contextLog:
-        enabled: true
-        inScope:
-        - kind: '*'
-      logLevel: info
-  enforcerConfigCrName: ie-config
-  # imagePullSecrets:
-  # - name: REPLACEME
-  globalConfig: 
-    openShift: true
-  certPoolConfig:
-    createIfNotExist: false
-    keyValue: test
-    name: ie-certpool-secret
-  keyRingConfig:
-    createIfNotExist: false
-    keyValue: test
-    name: keyring-secret
-  labels:
-    app: ie-server
-  logger:
-    enabled: true
-    es:
-      enabled: false
-      host: 10.200.10.10
-      indexPrefix: ac-log
-      port: 9200
-      scheme: http
-    http:
-      enabled: false
-      endpoint: http://sample-http-server
-    esSecretName: es-tls-certs
-    image: integrityenforcer/ie-logging:0.0.4dev
-    imagePullPolicy: Always
-    name: forwarder
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-    stdOutput: true
-  replicaCount: 1
-  maxSurge: 1
-  maxUnavailable: 0
-  security:
-    clusterRole: ie-cluster-role
-    clusterRoleBinding: ie-cluster-role-binding
-    podSecurityPolicyName: ie-psp
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000580000
-    securityContextConstraintsName:  ie-scc
-    serviceAccountName: ie-sa
-    ieAdminSubjects:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: Group
-        name: system:masters
-      - apiGroup: rbac.authorization.k8s.io
-        kind: Group
-        name: system:cluster-admins
-    autoIEAdminRoleCreationDisabled: false
-  selector:
-    app: ie-server
-  server:
-    chartBaseUrl: http://sample-chart-repo-server/charts
-    contextLogEnabled: true
-    enforcePolicyReloadSec: 10
-    image: integrityenforcer/ie-server:0.0.4dev
-    imagePullPolicy: Always
-    name: server
-    port: 8443
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
-    securityContext: {}
-  webhookConfigName: ie-webhook-config
-  webhookServerTlsSecretName: ie-server-tls
-  webhookServiceName: ie-server
-  webhookNamespacedResource:
-    apiGroups: ["*"]
-    apiVersions: ["*"]
-    resources: ["*"]
-  webhookClusterResource:
-    apiGroups: ["*"]
-    apiVersions: ["*"]
-    resources: ["*"]
-    # OCP4.4 or earlier, need to select resources.
-    # - podsecuritypolicies
-    # - clusterrolebindings
-    # - clusterroles
+        - email: "sample_signer@signer.com"
+  keyRingConfigs:
+  - name: keyring-secret

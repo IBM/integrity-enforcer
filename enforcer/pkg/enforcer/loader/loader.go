@@ -48,7 +48,7 @@ func NewLoader(cfg *config.EnforcerConfig, reqc *common.ReqContext) *Loader {
 	reqKind := reqc.Kind
 	loader := &Loader{
 		Config:            cfg,
-		SignPolicy:        NewSignPolicyLoader(enforcerNamespace),
+		SignPolicy:        NewSignPolicyLoader(enforcerNamespace, cfg.SignPolicy),
 		RSP:               NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
 		RuleTable:         NewRuleTableLoader(enforcerNamespace),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),

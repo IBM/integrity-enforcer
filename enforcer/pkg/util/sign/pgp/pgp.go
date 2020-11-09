@@ -65,7 +65,7 @@ func GetFirstIdentity(signer *openpgp.Entity) *openpgp.Identity {
 	return nil
 }
 
-func VerifySignature(keyringPath, msg, sig string) (bool, string, *Signer, error) {
+func VerifySignature(keyPathList []string, msg, sig string) (bool, string, *Signer, error) {
 	if msg == "" {
 		return false, "Message to be verified is empty", nil, nil
 	}
@@ -75,10 +75,10 @@ func VerifySignature(keyringPath, msg, sig string) (bool, string, *Signer, error
 	cfgReader := strings.NewReader(msg)
 	sigReader := strings.NewReader(sig)
 
-	if keyRing, err := LoadKeyRing(keyringPath); err != nil {
+	if keyRing, err := LoadKeyRing(keyPathList); err != nil {
 		return false, "Error when loading key ring", nil, err
 	} else if signer, _ := openpgp.CheckArmoredDetachedSignature(keyRing, cfgReader, sigReader); signer == nil {
-		return false, "Signature is invalid", nil, nil
+		return false, "Signed by unauthrized subject (signer is not in public key), or invalid format signature", nil, nil
 	} else {
 		idt := GetFirstIdentity(signer)
 		return true, "", NewSignerFromUserId(idt.UserId), nil
@@ -129,7 +129,7 @@ func EntityListToSlice(keyring openpgp.EntityList) []*openpgp.Entity {
 	return entSlice
 }
 
-func DetachSign(keyringPath, msg string, signer string) (string, string, error) {
+func DetachSign(keyPathList []string, msg string, signer string) (string, string, error) {
 	if msg == "" {
 		return "", "Message to be signed is empty", nil
 	}
@@ -137,7 +137,7 @@ func DetachSign(keyringPath, msg string, signer string) (string, string, error) 
 	msgReader := strings.NewReader(msg)
 	sigWriter := bytes.NewBufferString(sig)
 
-	keyRing, err := LoadKeyRing(keyringPath)
+	keyRing, err := LoadKeyRing(keyPathList)
 	if err != nil {
 		return "", "Error when loading key ring", err
 	}
@@ -160,11 +160,20 @@ func DetachSign(keyringPath, msg string, signer string) (string, string, error) 
 	return sigWriter.String(), "", nil
 }
 
-func LoadKeyRing(keyringPath string) (openpgp.EntityList, error) {
-	pubkeyFileName := keyringPath
-	if keyRingReader, err := os.Open(pubkeyFileName); err != nil {
-		return nil, err
-	} else {
-		return openpgp.ReadKeyRing(keyRingReader)
+func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
+	entities := []*openpgp.Entity{}
+	for _, keyPath := range keyPathList {
+		if keyRingReader, err := os.Open(keyPath); err != nil {
+			continue
+		} else {
+			tmpList, err := openpgp.ReadKeyRing(keyRingReader)
+			if err != nil {
+				continue
+			}
+			for _, tmp := range tmpList {
+				entities = append(entities, tmp)
+			}
+		}
 	}
+	return openpgp.EntityList(entities), nil
 }

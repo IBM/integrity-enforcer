@@ -24,6 +24,9 @@ import (
 )
 
 const (
+	IECustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
+	IECustomResourceKind       = "IntegrityEnforcer"
+
 	SignatureCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
 	SignatureCustomResourceKind       = "ResourceSignature"
 	PolicyCustomResourceAPIVersion    = "apis.integrityenforcer.io/v1alpha1"
@@ -58,10 +61,10 @@ const (
 ***********************************************/
 
 type ResourceRef struct {
-	Name       string
-	Namespace  string
-	Kind       string
-	ApiVersion string
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	Kind       string `json:"kind"`
+	ApiVersion string `json:"apiVersion"`
 }
 
 func (self *ResourceRef) Equals(ref *ResourceRef) bool {
@@ -381,7 +384,7 @@ const (
 	REASON_IE_ADMIN
 	REASON_IGNORED_SA
 	REASON_NOT_PROTECTED
-	REASON_BLOCK_DELETE
+	REASON_BLOCK_IE_RESOURCE_OPERATION
 	REASON_NOT_ENFORCED
 	REASON_SKIP_DELETE
 	REASON_ABORTED
@@ -435,9 +438,9 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Message: "not protected",
 		Code:    "unprotected",
 	},
-	REASON_BLOCK_DELETE: {
-		Message: "block delete IE resouce",
-		Code:    "block-delete",
+	REASON_BLOCK_IE_RESOURCE_OPERATION: {
+		Message: "block oprations for IE resouce",
+		Code:    "block-ieresource-operation",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",

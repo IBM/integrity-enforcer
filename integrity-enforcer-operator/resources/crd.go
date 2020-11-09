@@ -73,7 +73,7 @@ func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomResource
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "signpolicies.apis.integrityenforcer.io",
+			Name:      cr.GetSignPolicyCRDName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
@@ -163,7 +163,7 @@ func BuildEnforcerConfigCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomReso
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "enforcerconfigs.apis.integrityenforcer.io",
+			Name:      cr.GetEnforcerConfigCRDName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
@@ -204,7 +204,7 @@ func BuildResourceSignatureCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.CustomR
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "resourcesignatures.apis.integrityenforcer.io",
+			Name:      cr.GetResourceSignatureCRDName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
@@ -245,7 +245,7 @@ func BuildHelmReleaseMetadataCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.Custo
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helmreleasemetadatas.apis.integrityenforcer.io",
+			Name:      cr.GetHelmReleaseMetadataCRDName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
@@ -286,7 +286,7 @@ func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityEnforcer) *extv1.Cu
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "resourcesigningprofiles.apis.integrityenforcer.io",
+			Name:      cr.GetResourceSigningProfileCRDName(),
 			Namespace: cr.Namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{

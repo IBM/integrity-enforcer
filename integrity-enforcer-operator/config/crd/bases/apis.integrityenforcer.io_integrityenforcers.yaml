@@ -923,8 +923,6 @@ spec:
                         type: string
                     type: object
                   type: array
-                certPoolPath:
-                  type: string
                 chartPath:
                   type: string
                 chartRepo:
@@ -1237,8 +1235,10 @@ spec:
                         type: string
                     type: object
                   type: array
-                keyringPath:
-                  type: string
+                keyPathList:
+                  items:
+                    type: string
+                  type: array
                 log:
                   properties:
                     consoleLog:
@@ -1466,6 +1466,8 @@ spec:
                 roks:
                   type: boolean
               type: object
+            ignoreDefaultIECR:
+              type: boolean
             imagePullSecrets:
               items:
                 description: LocalObjectReference contains enough information to let
@@ -1487,6 +1489,10 @@ spec:
                 name:
                   type: string
               type: object
+            labeledNamespaces:
+              items:
+                type: string
+              type: array
             labels:
               additionalProperties:
                 type: string

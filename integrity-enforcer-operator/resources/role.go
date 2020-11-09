@@ -29,7 +29,7 @@ import (
 
 //scc
 func BuildSecurityContextConstraints(cr *apiv1alpha1.IntegrityEnforcer) *scc.SecurityContextConstraints {
-	user := strings.Join([]string{"system:serviceaccount", cr.Namespace, cr.Spec.Security.ServiceAccountName}, ":")
+	user := strings.Join([]string{"system:serviceaccount", cr.Namespace, cr.GetServiceAccountName()}, ":")
 	privilegeEscalation := false
 	allowPrivilegeEscalation := false
 	var priority int32 = 500001
@@ -46,7 +46,7 @@ func BuildSecurityContextConstraints(cr *apiv1alpha1.IntegrityEnforcer) *scc.Sec
 			APIVersion: scc.GroupVersion.Group + "/" + scc.GroupVersion.Version,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.Security.SecurityContextConstraintsName,
+			Name:   cr.GetSecurityContextConstraintsName(),
 			Labels: metaLabels,
 		},
 		Priority:                        &priority,
@@ -85,7 +85,7 @@ func BuildServiceAccountForIE(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Service
 	}
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ServiceAccountName,
+			Name:      cr.GetServiceAccountName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -103,7 +103,7 @@ func BuildClusterRoleForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.ClusterRol
 	}
 	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ClusterRole,
+			Name:      cr.GetClusterRoleName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -170,14 +170,14 @@ func BuildClusterRoleBindingForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.Clu
 	}
 	rolebinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ClusterRoleBinding,
+			Name:      cr.GetClusterRoleBindingName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      cr.Spec.Security.ServiceAccountName,
+				Name:      cr.GetServiceAccountName(),
 				Namespace: cr.Namespace,
 			},
 		},
@@ -200,7 +200,7 @@ func BuildRoleForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 	}
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ClusterRole + "-sim",
+			Name:      cr.GetDryRunRoleName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -231,14 +231,14 @@ func BuildRoleBindingForIE(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.RoleBindin
 	}
 	rolebinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ClusterRoleBinding + "-sim",
+			Name:      cr.GetDryRunRoleBindingName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      cr.Spec.Security.ServiceAccountName,
+				Name:      cr.GetServiceAccountName(),
 				Namespace: cr.Namespace,
 			},
 		},
@@ -261,7 +261,7 @@ func BuildRoleForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.Role {
 	}
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ie-admin-role",
+			Name:      cr.GetIEAdminRoleName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -294,7 +294,7 @@ func BuildRoleBindingForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.RoleB
 	}
 	rolebinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ie-admin-rolebinding",
+			Name:      cr.GetIEAdminRoleBindingName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -318,7 +318,7 @@ func BuildClusterRoleForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv1.Clust
 	}
 	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ie-admin-clusterrole",
+			Name:      cr.GetIEAdminClusterRoleName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -350,7 +350,7 @@ func BuildClusterRoleBindingForIEAdmin(cr *apiv1alpha1.IntegrityEnforcer) *rbacv
 	}
 	rolebinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ie-admin-clusterrolebinding",
+			Name:      cr.GetIEAdminClusterRoleBindingName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -371,7 +371,7 @@ func BuildPodSecurityPolicy(cr *apiv1alpha1.IntegrityEnforcer) *policyv1.PodSecu
 	}
 	psp := &policyv1.PodSecurityPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.PodSecurityPolicyName,
+			Name:      cr.GetPodSecurityPolicyName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},

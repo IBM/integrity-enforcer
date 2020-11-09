@@ -18,11 +18,12 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
-	"github.com/IBM/integrity-enforcer/integrity-enforcer-operator/pgpkey"
 	res "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/resources"
 	scc "github.com/openshift/api/security/v1"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
@@ -32,6 +33,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cert "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/cert"
 
@@ -44,6 +46,71 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+/**********************************************
+
+				Namespace
+
+***********************************************/
+
+const ieTargetNamespaceLabelKey = "integrity-enforced"
+const ieTargetNamespaceLabelValue = "true"
+
+func (r *IntegrityEnforcerReconciler) attachLabelToNamespace(instance *apiv1alpha1.IntegrityEnforcer, expected *v1.Namespace) (ctrl.Result, error) {
+	ctx := context.Background()
+
+	found := &v1.Namespace{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"Namespace.Name", expected.Name)
+
+	// If CRD does not exist, create it and requeue
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: ""}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info(fmt.Sprintf("Skip reconcile: namespace \"%s\" does not exist, skip to attach IE label to this namespace.", expected.Name))
+		return ctrl.Result{}, nil
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.ObjectMeta.Labels, found.ObjectMeta.Labels) {
+			labels := expected.ObjectMeta.Labels
+			expected.ObjectMeta = found.ObjectMeta
+			expected.ObjectMeta.Labels = labels
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	// No extra validation
+
+	// No reconcile was necessary
+	return ctrl.Result{}, nil
+
+}
+
+func (r *IntegrityEnforcerReconciler) attachLabelToNamespacesInCR(
+	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+	for _, nsName := range instance.Spec.LabeledNamespaces {
+		expected := &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nsName,
+				Labels: map[string]string{
+					ieTargetNamespaceLabelKey: ieTargetNamespaceLabelValue,
+				},
+			},
+		}
+		res, err := r.attachLabelToNamespace(instance, expected)
+		if err != nil {
+			return res, err
+		}
+	}
+	return ctrl.Result{}, nil
+}
 
 /**********************************************
 
@@ -85,6 +152,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateCRD(instance *apiv1alpha1.In
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -132,7 +208,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCRD(
 func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	expected := res.BuildEnforcerConfigForIE(instance)
+	expected := res.BuildEnforcerConfigForIE(instance, r.Scheme)
 	found := &ec.EnforcerConfig{}
 
 	reqLogger := r.Log.WithValues(
@@ -164,6 +240,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *a
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -177,6 +262,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1
 	ctx := context.Background()
 	found := &spol.SignPolicy{}
 	expected := res.BuildSignEnforcePolicyForIE(instance)
+
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"SignPolicy.Name", expected.Name)
@@ -206,6 +292,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -219,6 +314,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfil
 	ctx := context.Background()
 	found := &rsp.ResourceSigningProfile{}
 	expected := res.BuildPrimaryResourceSigningProfileForIE(instance)
+
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"PrimaryResourceSigningProfile.Name", expected.Name)
@@ -248,6 +344,15 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfil
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
+	} else {
+		if !reflect.DeepEqual(expected.Spec, found.Spec) {
+			expected.ObjectMeta = found.ObjectMeta
+			err = r.Update(ctx, expected)
+			if err != nil {
+				reqLogger.Error(err, "Failed to update the resource")
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// No extra validation
@@ -267,6 +372,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSCC(instance *apiv1alpha1.In
 	ctx := context.Background()
 	expected := res.BuildSecurityContextConstraints(instance)
 	found := &scc.SecurityContextConstraints{}
+
 	found.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "security.openshift.io",
 		Kind:    "SecurityContextConstraints",
@@ -616,6 +722,28 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePodSecurityPolicy(instance *
 
 ***********************************************/
 
+func (r *IntegrityEnforcerReconciler) isKeyRingReady(instance *apiv1alpha1.IntegrityEnforcer) (bool, string) {
+	ctx := context.Background()
+	found := &corev1.Secret{}
+	okCount := 0
+	nonReadyKey := ""
+	for _, keyConf := range instance.Spec.KeyRings {
+		if keyConf.CreateIfNotExist {
+			okCount += 1
+			continue
+		}
+		err := r.Get(ctx, types.NamespacedName{Name: keyConf.Name, Namespace: instance.Namespace}, found)
+		if err == nil {
+			okCount += 1
+		} else {
+			nonReadyKey = keyConf.Name
+			break
+		}
+	}
+	ok := (okCount == len(instance.Spec.KeyRings))
+	return ok, nonReadyKey
+}
+
 func (r *IntegrityEnforcerReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
@@ -713,7 +841,7 @@ func addCertValues(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Sec
 		"Secret.Name", expected.Name)
 
 	// generate and put certsß
-	ca, tlsKey, tlsCert, err := cert.GenerateCert(instance.Spec.WebhookServiceName, instance.Namespace)
+	ca, tlsKey, tlsCert, err := cert.GenerateCert(instance.GetWebhookServiceName(), instance.Namespace)
 	if err != nil {
 		reqLogger.Error(err, "Failed to generate certs")
 	}
@@ -735,14 +863,6 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateRegKeySecret(
 	return r.createOrUpdateSecret(instance, expected)
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateKeyringSecret(
-	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
-	expected := res.BuildKeyringSecretForIEFromValue(instance)
-	pubkeyName := pgpkey.GetPublicKeyringName()
-	expected.Data[pubkeyName] = instance.Spec.CertPool.KeyValue
-	return r.createOrUpdateSecret(instance, expected)
-}
-
 func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
 	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	expected := res.BuildTlsSecretForIE(instance)
@@ -751,7 +871,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
 
 /**********************************************
 
-				ConfigMap (RuleTable)
+				ConfigMap
 
 ***********************************************/
 
@@ -888,7 +1008,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateService(instance *apiv1alpha
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
-		"Instance.Spec.ServiceName", instance.Spec.WebhookServiceName,
+		"Instance.Spec.ServiceName", instance.GetWebhookServiceName(),
 		"Service.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
@@ -958,7 +1078,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateWebhook(instance *apiv1alpha
 		reqLogger.Info("Creating a new resource")
 		// locad cabundle
 		secret := &corev1.Secret{}
-		err = r.Get(ctx, types.NamespacedName{Name: instance.Spec.WebhookServerTlsSecretName, Namespace: instance.Namespace}, secret)
+		err = r.Get(ctx, types.NamespacedName{Name: instance.GetWebhookServerTlsSecretName(), Namespace: instance.Namespace}, secret)
 		if err != nil {
 			reqLogger.Error(err, "Fail to load CABundle from Secret")
 		}

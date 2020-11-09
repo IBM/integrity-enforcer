@@ -17,6 +17,9 @@
 package policy
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	"github.com/jinzhu/copier"
 )
@@ -85,6 +88,44 @@ func (self *SignPolicy) Merge(data *SignPolicy) *SignPolicy {
 	return merged
 }
 
+func (self *SignPolicy) GetCandidatePubkeys(keyPathList []string, namespace string) []string {
+	candidates := []string{}
+	for _, spc := range self.Policies {
+		var included, excluded bool
+		if namespace == "" {
+			if spc.Scope == ScopeCluster {
+				included = true
+				excluded = false
+			}
+		} else {
+			if spc.Scope != ScopeCluster {
+				included = common.MatchWithPatternArray(namespace, spc.Namespaces)
+				excluded = common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+			}
+		}
+		if !included || excluded {
+			continue
+		}
+		for _, signerName := range spc.Signers {
+			for _, signerCondition := range self.Signers {
+				if signerCondition.Name == signerName {
+					candidates = append(candidates, signerCondition.Secret)
+				}
+			}
+		}
+	}
+	candidateKeys := []string{}
+	for _, keyPath := range keyPathList {
+		for _, secretName := range candidates {
+			if strings.HasPrefix(keyPath, fmt.Sprintf("/%s/", secretName)) {
+				candidateKeys = append(candidateKeys, keyPath)
+				break
+			}
+		}
+	}
+	return candidateKeys
+}
+
 func (self *SignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
@@ -133,6 +174,7 @@ type SignPolicyCondition struct {
 
 type SignerCondition struct {
 	Name     string                `json:"name,omitempty"`
+	Secret   string                `json:"secret,omitempty"`
 	Subjects []SubjectMatchPattern `json:"subjects,omitempty"`
 }
 
