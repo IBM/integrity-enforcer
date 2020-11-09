@@ -208,7 +208,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCRD(
 func (r *IntegrityEnforcerReconciler) createOrUpdateEnforcerConfigCR(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	expected := res.BuildEnforcerConfigForIE(instance)
+	expected := res.BuildEnforcerConfigForIE(instance, r.Scheme)
 	found := &ec.EnforcerConfig{}
 
 	reqLogger := r.Log.WithValues(
@@ -262,6 +262,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1
 	ctx := context.Background()
 	found := &spol.SignPolicy{}
 	expected := res.BuildSignEnforcePolicyForIE(instance)
+
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"SignPolicy.Name", expected.Name)
@@ -313,6 +314,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfil
 	ctx := context.Background()
 	found := &rsp.ResourceSigningProfile{}
 	expected := res.BuildPrimaryResourceSigningProfileForIE(instance)
+
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"PrimaryResourceSigningProfile.Name", expected.Name)
@@ -370,6 +372,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSCC(instance *apiv1alpha1.In
 	ctx := context.Background()
 	expected := res.BuildSecurityContextConstraints(instance)
 	found := &scc.SecurityContextConstraints{}
+
 	found.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "security.openshift.io",
 		Kind:    "SecurityContextConstraints",
@@ -838,7 +841,7 @@ func addCertValues(instance *apiv1alpha1.IntegrityEnforcer, expected *corev1.Sec
 		"Secret.Name", expected.Name)
 
 	// generate and put certsß
-	ca, tlsKey, tlsCert, err := cert.GenerateCert(instance.Spec.WebhookServiceName, instance.Namespace)
+	ca, tlsKey, tlsCert, err := cert.GenerateCert(instance.GetWebhookServiceName(), instance.Namespace)
 	if err != nil {
 		reqLogger.Error(err, "Failed to generate certs")
 	}
@@ -859,14 +862,6 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateRegKeySecret(
 	expected := res.BuildRegKeySecretForCR(instance)
 	return r.createOrUpdateSecret(instance, expected)
 }
-
-// func (r *IntegrityEnforcerReconciler) createOrUpdateKeyringSecret(
-// 	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
-// 	expected := res.BuildKeyringSecretForIEFromValue(instance)
-// 	pubkeyName := pgpkey.GetPublicKeyringName()
-// 	expected.Data[pubkeyName] = instance.Spec.CertPool.KeyValue
-// 	return r.createOrUpdateSecret(instance, expected)
-// }
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateTlsSecret(
 	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
@@ -1013,7 +1008,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateService(instance *apiv1alpha
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
-		"Instance.Spec.ServiceName", instance.Spec.WebhookServiceName,
+		"Instance.Spec.ServiceName", instance.GetWebhookServiceName(),
 		"Service.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
@@ -1083,7 +1078,7 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateWebhook(instance *apiv1alpha
 		reqLogger.Info("Creating a new resource")
 		// locad cabundle
 		secret := &corev1.Secret{}
-		err = r.Get(ctx, types.NamespacedName{Name: instance.Spec.WebhookServerTlsSecretName, Namespace: instance.Namespace}, secret)
+		err = r.Get(ctx, types.NamespacedName{Name: instance.GetWebhookServerTlsSecretName(), Namespace: instance.Namespace}, secret)
 		if err != nil {
 			reqLogger.Error(err, "Fail to load CABundle from Secret")
 		}

@@ -76,6 +76,7 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	var recResult ctrl.Result
 	var recErr error
 
+	// apply default config if not ignored
 	if !instance.Spec.IgnoreDefaultIECR {
 		instance = resources.MergeDefaultIntegrityEnforcerCR(instance, "")
 	}
@@ -147,13 +148,6 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 	}
 
 	//Secret
-	// if instance.Spec.CertPool.CreateIfNotExist {
-	// 	recResult, recErr = r.createOrUpdateKeyringSecret(instance)
-	// 	if recErr != nil || recResult.Requeue {
-	// 		return recResult, recErr
-	// 	}
-	// }
-
 	// create registry secret if name and value are found in CR
 	if instance.Spec.RegKeySecret.Name != "" && instance.Spec.RegKeySecret.Value != nil {
 		recResult, recErr = r.createOrUpdateRegKeySecret(instance)

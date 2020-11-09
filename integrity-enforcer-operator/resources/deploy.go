@@ -28,11 +28,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-const ruleTableLockCMName = "ie-rule-table-lock"
-const ignoreTableLockCMName = "ie-ignore-table-lock"
-const forceCheckTableLockCMName = "ie-force-check-table-lock"
-const ieResourceLockCMName = "ie-resource-lock"
-
 //deployment
 func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
@@ -49,7 +44,7 @@ func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment 
 	}
 
 	volumes = []v1.Volume{
-		SecretVolume("ie-tls-certs", cr.Spec.WebhookServerTlsSecretName),
+		SecretVolume("ie-tls-certs", cr.GetWebhookServerTlsSecretName()),
 		EmptyDirVolume("log-volume"),
 		EmptyDirVolume("tmp"),
 	}
@@ -119,7 +114,7 @@ func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment 
 			},
 			{
 				Name:  "ENFORCER_CONFIG_NAME",
-				Value: cr.Spec.EnforcerConfigCrName,
+				Value: cr.GetEnforcerConfigCRName(),
 			},
 			{
 				Name:  "CHART_BASE_URL",
@@ -210,7 +205,7 @@ func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment 
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name,
+			Name:      cr.GetIEServerDeploymentName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -231,7 +226,7 @@ func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityEnforcer) *appsv1.Deployment 
 				},
 				Spec: v1.PodSpec{
 					ImagePullSecrets:   cr.Spec.ImagePullSecrets,
-					ServiceAccountName: cr.Spec.Security.ServiceAccountName,
+					ServiceAccountName: cr.GetServiceAccountName(),
 					SecurityContext:    cr.Spec.Security.PodSecurityContext,
 					Containers:         containers,
 					NodeSelector:       cr.Spec.NodeSelector,
@@ -325,7 +320,7 @@ func BuildRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforcer) *v1.Con
 
 	return &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ruleTableLockCMName,
+			Name:      cr.GetRuleTableLockCMName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -339,7 +334,7 @@ func BuildIgnoreRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforcer) *
 
 	return &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ignoreTableLockCMName,
+			Name:      cr.GetIgnoreTableLockCMName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -353,7 +348,7 @@ func BuildForceCheckRuleTableLockConfigMapForCR(cr *apiv1alpha1.IntegrityEnforce
 
 	return &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      forceCheckTableLockCMName,
+			Name:      cr.GetForceCheckTableLockCMName(),
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},

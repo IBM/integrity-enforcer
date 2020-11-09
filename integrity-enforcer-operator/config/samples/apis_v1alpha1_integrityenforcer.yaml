@@ -14,8 +14,8 @@ spec:
         - "SampleSigner"
       signers:
       - name: "SampleSigner"
+        secret: keyring-secret
         subjects:
         - email: "sample_signer@signer.com"
   keyRingConfigs:
   - name: keyring-secret
-  enforcerConfigCrName: ie-config
