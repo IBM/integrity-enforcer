@@ -91,9 +91,6 @@ type IntegrityEnforcerSpec struct {
 	PrimaryRsp           *rsp.ResourceSigningProfileSpec `json:"resourceSigningProfile,omitempty"`
 	DefaultRsp           *rsp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
 
-	// this will be filled through reconcile, and then embeded in EnforcerConfig
-	IEResourceList []*common.ResourceRef `json:"-"`
-
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
 	WebhookConfigName          string     `json:"webhookConfigName,omitempty"`
