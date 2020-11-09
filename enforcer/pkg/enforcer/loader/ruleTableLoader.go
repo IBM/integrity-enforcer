@@ -195,9 +195,9 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 		if err != nil {
 			logger.Error(err)
 		}
-		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref)
-		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref)
-		tmpSAData2 = tmpSAData2.Add(newProfile.Spec.ForceCheckRules, ref)
+		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref, newProfile.Spec.TargetNamespaces)
+		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref, newProfile.Spec.TargetNamespaces)
+		tmpSAData2 = tmpSAData2.Add(newProfile.Spec.ForceCheckRules, ref, newProfile.Spec.TargetNamespaces)
 	}
 
 	self.Rule = tmpData

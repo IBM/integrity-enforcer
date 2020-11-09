@@ -541,21 +541,21 @@ func (self *RequestHandler) GetEnabledPlugins() map[string]bool {
 func (self *RequestHandler) checkIfProtected() (bool, []*v1.ObjectReference) {
 	reqFields := self.reqc.Map()
 	table := self.loader.ProtectRules()
-	protected, matchedProfileRefs := table.Match(reqFields)
+	protected, matchedProfileRefs := table.Match(reqFields, self.config.Namespace)
 	return protected, matchedProfileRefs
 }
 
 func (self *RequestHandler) checkIfIgnored() (bool, []*v1.ObjectReference) {
 	reqFields := self.reqc.Map()
 	table := self.loader.IgnoreRules()
-	matched, matchedProfileRefs := table.Match(reqFields)
+	matched, matchedProfileRefs := table.Match(reqFields, self.config.Namespace)
 	return matched, matchedProfileRefs
 }
 
 func (self *RequestHandler) checkIfForced() (bool, []*v1.ObjectReference) {
 	reqFields := self.reqc.Map()
 	table := self.loader.ForceCheckRules()
-	matched, matchedProfileRefs := table.Match(reqFields)
+	matched, matchedProfileRefs := table.Match(reqFields, self.config.Namespace)
 	return matched, matchedProfileRefs
 }
 

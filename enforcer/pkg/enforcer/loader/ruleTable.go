@@ -24,6 +24,7 @@ import (
 	"os"
 
 	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/util/kubeutil"
 	v1 "k8s.io/api/core/v1"
@@ -45,8 +46,9 @@ const (
 type RuleTable []RuleItem
 
 type RuleItem struct {
-	Rule   *profile.Rule       `json:"rule,omitempty"`
-	Source *v1.ObjectReference `json:"source,omitempty"`
+	Rule             *profile.Rule       `json:"rule,omitempty"`
+	Source           *v1.ObjectReference `json:"source,omitempty"`
+	TargetNamespaces []string            `json:"targetNamespaces,omitempty"`
 }
 
 func (self *RuleTable) Update(namespace, name string) error {
@@ -127,10 +129,10 @@ func NewRuleTable() *RuleTable {
 	return &newTable
 }
 
-func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference) *RuleTable {
+func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference, targetNs []string) *RuleTable {
 	newTable := *self
 	for _, rule := range rules {
-		newTable = append(newTable, RuleItem{Rule: rule, Source: source})
+		newTable = append(newTable, RuleItem{Rule: rule, Source: source, TargetNamespaces: targetNs})
 	}
 	return &newTable
 }
@@ -158,10 +160,10 @@ func (self *RuleTable) Remove(subject *v1.ObjectReference) *RuleTable {
 	return &newTable
 }
 
-func (self *RuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectReference) {
+func (self *RuleTable) Match(reqFields map[string]string, enforcerNS string) (bool, []*v1.ObjectReference) {
 	matchedSources := []*v1.ObjectReference{}
 	for _, item := range *self {
-		if item.Match(reqFields) {
+		if item.Match(reqFields, enforcerNS) {
 			matchedSources = append(matchedSources, item.Source)
 		}
 	}
@@ -171,18 +173,36 @@ func (self *RuleTable) Match(reqFields map[string]string) (bool, []*v1.ObjectRef
 	return true, matchedSources
 }
 
-func (self *RuleItem) Match(reqFields map[string]string) bool {
+func (self *RuleItem) Match(reqFields map[string]string, enforcerNS string) bool {
 	reqNamespace := ""
 	if tmp, ok := reqFields["Namespace"]; ok && tmp != "" {
 		reqNamespace = tmp
 	}
-	// if namespaced scope request, use only rules from the namespace
-	if reqNamespace != "" {
-		if self.Source.Namespace != reqNamespace {
-			return false
-		}
+	// ignore this RuleItem if the namaespace is different
+	if !self.CheckNamespace(reqNamespace, enforcerNS) {
+		return false
 	}
+	// if namespace is matched, evaluate rules with the request
 	return self.Rule.MatchWithRequest(reqFields)
+}
+
+func (self *RuleItem) CheckNamespace(reqNamespace, enforcerNamespace string) bool {
+	namespaceMatched := false
+	if reqNamespace != "" {
+		if self.Source.Namespace == enforcerNamespace {
+			// if RSP is in IE NS, use `TargetNamespaces` for namespace matching
+			namespaceMatched = common.MatchWithPatternArray(reqNamespace, self.TargetNamespaces)
+		} else {
+			// if RSP is in the other NS, it is used for requests in the same namespace
+			if self.Source.Namespace == reqNamespace {
+				namespaceMatched = true
+			}
+		}
+	} else {
+		// for cluster scope request, all RSPs are available
+		namespaceMatched = true
+	}
+	return namespaceMatched
 }
 
 func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType RuleTableType) *RuleTable {
@@ -194,12 +214,16 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 		Name:       sProfile.GetName(),
 	}
 	table := NewRuleTable()
+	targetNs := []string{}
+	if len(sProfile.Spec.TargetNamespaces) > 0 {
+		targetNs = sProfile.Spec.TargetNamespaces
+	}
 	if tableType == RuleTableTypeProtect {
-		table = table.Add(sProfile.Spec.ProtectRules, source)
+		table = table.Add(sProfile.Spec.ProtectRules, source, targetNs)
 	} else if tableType == RuleTableTypeIgnore {
-		table = table.Add(sProfile.Spec.IgnoreRules, source)
+		table = table.Add(sProfile.Spec.IgnoreRules, source, targetNs)
 	} else if tableType == RuleTableTypeForce {
-		table = table.Add(sProfile.Spec.ForceCheckRules, source)
+		table = table.Add(sProfile.Spec.ForceCheckRules, source, targetNs)
 	}
 
 	return table
