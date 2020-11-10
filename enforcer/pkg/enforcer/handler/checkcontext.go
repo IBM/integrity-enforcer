@@ -59,7 +59,6 @@ type CheckContext struct {
 
 type CheckResult struct {
 	SignatureEvalResult *common.SignatureEvalResult `json:"signature"`
-	ResolveOwnerResult  *common.ResolveOwnerResult  `json:"owner"`
 	MutationEvalResult  *common.MutationEvalResult  `json:"mutation"`
 }
 
@@ -73,10 +72,6 @@ func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
 		Result: &CheckResult{
 			SignatureEvalResult: &common.SignatureEvalResult{
 				Allow:   false,
-				Checked: false,
-			},
-			ResolveOwnerResult: &common.ResolveOwnerResult{
-				Owners:  &common.OwnerList{},
 				Checked: false,
 			},
 			MutationEvalResult: &common.MutationEvalResult{
@@ -106,7 +101,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 		"request.uid":  reqc.RequestUid,
 		"type":         reqc.Type,
 		"request.dump": "",
-		"creator":      reqc.OrgMetadata.Annotations.CreatedBy(),
 		"requestScope": reqc.ResourceScope,
 
 		//context
@@ -127,27 +121,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 
 	if self.Error != nil {
 		logRecord["error"] = self.Error.Error()
-	}
-
-	if reqc.OrgMetadata != nil {
-		md := reqc.OrgMetadata
-		if md.OwnerRef != nil {
-			logRecord["org.ownerKind"] = md.OwnerRef.Kind
-			logRecord["org.ownerName"] = md.OwnerRef.Name
-			logRecord["org.ownerNamespace"] = md.OwnerRef.Namespace
-			logRecord["org.ownerApiVersion"] = md.OwnerRef.ApiVersion
-		}
-		// logRecord["org.integrityVerified"] = strconv.FormatBool(md.IntegrityVerified)
-	}
-
-	if reqc.ClaimedMetadata != nil {
-		md := reqc.ClaimedMetadata
-		if md.OwnerRef != nil {
-			logRecord["claim.ownerKind"] = md.OwnerRef.Kind
-			logRecord["claim.ownerName"] = md.OwnerRef.Name
-			logRecord["claim.ownerNamespace"] = md.OwnerRef.Namespace
-			logRecord["claim.ownerApiVersion"] = md.OwnerRef.ApiVersion
-		}
 	}
 
 	if reqc.IntegrityValue != nil {
@@ -174,34 +147,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 			}
 		} else {
 			logRecord["sig.errOccured"] = false
-		}
-	}
-
-	//context from owner resolve
-	if self.Result != nil && self.Result.ResolveOwnerResult != nil {
-		r := self.Result.ResolveOwnerResult
-		if r.Error != nil {
-			logRecord["own.errOccured"] = true
-			logRecord["own.errMsg"] = r.Error.Msg
-			logRecord["own.errReason"] = r.Error.Reason
-			if r.Error.Error != nil {
-				logRecord["own.error"] = r.Error.Error.Error()
-			}
-		} else {
-			logRecord["own.errOccured"] = false
-		}
-		if r.Owners != nil {
-			logRecord["own.verified"] = r.Verified
-			vowners := r.Owners.VerifiedOwners()
-			if len(vowners) > 0 {
-				vownerRef := vowners[len(vowners)-1].Ref
-				logRecord["own.kind"] = vownerRef.Kind
-				logRecord["own.name"] = vownerRef.Name
-				logRecord["own.apiVersion"] = vownerRef.ApiVersion
-				logRecord["own.namespace"] = vownerRef.Namespace
-			}
-			s, _ := json.Marshal(r.Owners.OwnerRefs())
-			logRecord["own.owners"] = string(s)
 		}
 	}
 

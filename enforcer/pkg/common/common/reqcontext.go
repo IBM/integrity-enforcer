@@ -45,7 +45,6 @@ type ObjectMetadata struct {
 	K8sCreatedBy          string              `json:"k8sCreatedBy"`
 	K8sServiceAccountName string              `json:"k8sServiceAccountName"`
 	K8sServiceAccountUid  string              `json:"k8sServiceAccountUid"`
-	OwnerRef              *ResourceRef        `json:"ownerRef"`
 	Annotations           *ResourceAnnotation `json:"annotations"`
 	Labels                *ResourceLabel      `json:"labels"`
 }
@@ -74,16 +73,6 @@ type ReqContext struct {
 	Type            string          `json:"Type"`
 	ObjectHashType  string          `json:"objectHashType"`
 	ObjectHash      string          `json:"objectHash"`
-}
-
-func (reqc *ReqContext) OwnerRef() *ResourceRef {
-	if reqc.IsCreateRequest() {
-		return reqc.ClaimedMetadata.OwnerRef
-	} else if reqc.IsUpdateRequest() || reqc.IsDeleteRequest() {
-		return reqc.OrgMetadata.OwnerRef
-	} else {
-		return nil
-	}
 }
 
 func (reqc *ReqContext) ResourceRef() *ResourceRef {
@@ -130,10 +119,6 @@ func (rc *ReqContext) IsCreateRequest() bool {
 
 func (rc *ReqContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
-}
-
-func (rc *ReqContext) IsCreator() bool {
-	return rc.UserName != "" && rc.UserName == rc.OrgMetadata.Annotations.CreatedBy()
 }
 
 func (rc *ReqContext) IsEnforcePolicyRequest() bool {
@@ -275,23 +260,11 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		K8sServiceAccountUid:  pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.uid"),
 		Annotations:           pr.getAnnotations("oldObject.metadata.annotations"),
 		Labels:                pr.getLabels("oldObject.metadata.labels"),
-		OwnerRef: &ResourceRef{
-			Kind:       pr.getValue("oldObject.metadata.ownerReferences.0.kind"),
-			Name:       pr.getValue("oldObject.metadata.ownerReferences.0.name"),
-			Namespace:  namespace,
-			ApiVersion: pr.getValue("oldObject.metadata.ownerReferences.0.apiVersion"),
-		},
 	}
 
 	claimedMetadata := &ObjectMetadata{
 		Annotations: pr.getAnnotations("object.metadata.annotations"),
 		Labels:      pr.getLabels("object.metadata.labels"),
-		OwnerRef: &ResourceRef{
-			Kind:       pr.getValue("object.metadata.ownerReferences.0.kind"),
-			Name:       pr.getValue("object.metadata.ownerReferences.0.name"),
-			Namespace:  namespace,
-			ApiVersion: pr.getValue("object.metadata.ownerReferences.0.apiVersion"),
-		},
 	}
 
 	kind := pr.getValue("kind.kind")
@@ -331,11 +304,6 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.labels.\"%s\"", ResourceIntegrityLabelKey),
 	fmt.Sprintf("metadata.labels.\"%s\"", ReasonLabelKey),
-	"metadata.annotations.sigOwnerApiVersion",
-	"metadata.annotations.sigOwnerKind",
-	"metadata.annotations.sigOwnerName",
-	"metadata.annotations.signOwnerRefType",
-	"metadata.annotations.resourceSignatureName",
 	"metadata.annotations.message",
 	"metadata.annotations.signature",
 	"metadata.annotations.certificate",

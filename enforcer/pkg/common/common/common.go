@@ -68,7 +68,8 @@ type ResourceRef struct {
 }
 
 func (self *ResourceRef) Equals(ref *ResourceRef) bool {
-	return (self.Name == ref.Name &&
+	return (ref != nil &&
+		self.Name == ref.Name &&
 		self.Namespace == ref.Namespace &&
 		self.Kind == ref.Kind &&
 		self.ApiVersion == ref.ApiVersion)
@@ -120,10 +121,6 @@ func (self *ResourceLabel) IntegrityVerified() bool {
 	return self.getString(ResourceIntegrityLabelKey) == LabelValueVerified
 }
 
-func (self *ResourceLabel) CreatedBy() string {
-	return self.getString("ie-createdBy")
-}
-
 func (self *ResourceLabel) getString(key string) string {
 	if s, ok := self.values[key]; ok {
 		return s
@@ -158,40 +155,24 @@ type ResourceAnnotation struct {
 	values map[string]string
 }
 
-func NewResourceAnnotation(values map[string]string) *ResourceAnnotation {
-	return &ResourceAnnotation{
-		values: values,
-	}
-}
-
 type SignatureAnnotation struct {
-	ResourceSignatureName string
-	SignatureType         string
-	Signature             string
-	Certificate           string
-	Message               string
-	MessageScope          string
-	MutableAttrs          string
+	SignatureType string
+	Signature     string
+	Certificate   string
+	Message       string
+	MessageScope  string
+	MutableAttrs  string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
-		ResourceSignatureName: self.getString("resourceSignatureName"),
-		Signature:             self.getString("signature"),
-		SignatureType:         self.getString("signatureType"),
-		Certificate:           self.getString("certificate"),
-		Message:               self.getString("message"),
-		MessageScope:          self.getString("messageScope"),
-		MutableAttrs:          self.getString("mutableAttrs"),
+		Signature:     self.getString("signature"),
+		SignatureType: self.getString("signatureType"),
+		Certificate:   self.getString("certificate"),
+		Message:       self.getString("message"),
+		MessageScope:  self.getString("messageScope"),
+		MutableAttrs:  self.getString("mutableAttrs"),
 	}
-}
-
-func (self *ResourceAnnotation) IntegrityVerified() bool {
-	return self.getBool("integrityVerified", false)
-}
-
-func (self *ResourceAnnotation) CreatedBy() string {
-	return self.getString("ie-createdBy")
 }
 
 func (self *ResourceAnnotation) getString(key string) string {
@@ -309,55 +290,6 @@ func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
 	// 	si.SerialNumber = dn.SerialNumber
 	// }
 	return si
-}
-
-type ResolveOwnerResult struct {
-	Owners   *OwnerList  `json:"owners"`
-	Verified bool        `json:"verified"`
-	Checked  bool        `json:"checked"`
-	Error    *CheckError `json:"error"`
-}
-
-func (self *ResolveOwnerResult) setOwnerVerified() {
-	if self.Owners == nil || self.Owners.Owners == nil {
-		self.Verified = false
-		return
-	}
-	owners := self.Owners.Owners
-	self.Verified = owners[len(owners)-1].IsIntegrityVerified()
-}
-
-type Owner struct {
-	Ref        *ResourceRef
-	OwnerRef   *ResourceRef
-	Annotation *ResourceAnnotation
-	Label      *ResourceLabel
-}
-
-func (self *Owner) IsIntegrityVerified() bool {
-	return self.Label.IntegrityVerified()
-}
-
-type OwnerList struct {
-	Owners []*Owner
-}
-
-func (self *OwnerList) OwnerRefs() []ResourceRef {
-	var ownerRefs []ResourceRef
-	for _, ow := range self.Owners {
-		ownerRefs = append(ownerRefs, *ow.Ref)
-	}
-	return ownerRefs
-}
-
-func (self *OwnerList) VerifiedOwners() []*Owner {
-	var verifiedOwners []*Owner
-	for _, ow := range self.Owners {
-		if ow.IsIntegrityVerified() {
-			verifiedOwners = append(verifiedOwners, ow)
-		}
-	}
-	return verifiedOwners
 }
 
 type MutationEvalResult struct {
