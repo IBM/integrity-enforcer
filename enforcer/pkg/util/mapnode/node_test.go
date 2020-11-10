@@ -464,7 +464,7 @@ func TestNode(t *testing.T) {
 		"key1.key11",
 		"key2.1",
 	}
-	keepNode4 := testNode4.Filter(keepKeys)
+	keepNode4 := testNode4.Extract(keepKeys)
 	keepNode4JSON := keepNode4.ToJson()
 	// t.Log("10,", keepNode4JSON)
 
@@ -496,7 +496,7 @@ func TestNode(t *testing.T) {
 		"spec.template.spec.containers[0].env[1]",
 		"spec.template.spec.containers[].env[2]",
 	}
-	maskedEnvNode := deployOperatorNode.Filter(keepKeys2).Mask(mask2)
+	maskedEnvNode := deployOperatorNode.Extract(keepKeys2).Mask(mask2)
 	// maskedEnvNode := deployOperatorNode.Filter(keepKeys2)
 	// t.Log("15,", maskedEnvNode.ToYAML())
 

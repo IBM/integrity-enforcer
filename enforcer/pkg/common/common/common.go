@@ -27,17 +27,9 @@ const (
 
 	SignatureCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
 	SignatureCustomResourceKind       = "ResourceSignature"
-	PolicyCustomResourceAPIVersion    = "apis.integrityenforcer.io/v1alpha1"
-	PolicyCustomResourceKind          = "EnforcePolicy"
 
-	IEPolicyCustomResourceAPIVersion      = "apis.integrityenforcer.io/v1alpha1"
-	IEPolicyCustomResourceKind            = "IntegrityEnforcerPolicy"
-	DefaultPolicyCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
-	DefaultPolicyCustomResourceKind       = "IEDefaultPolicy"
-	SignerPolicyCustomResourceAPIVersion  = "apis.integrityenforcer.io/v1alpha1"
-	SignerPolicyCustomResourceKind        = "SignPolicy"
-	AppPolicyCustomResourceAPIVersion     = "apis.integrityenforcer.io/v1alpha1"
-	AppPolicyCustomResourceKind           = "AppEnforcePolicy"
+	SignerPolicyCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
+	SignerPolicyCustomResourceKind       = "SignPolicy"
 )
 
 const (

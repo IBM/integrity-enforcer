@@ -12,29 +12,6 @@ metadata:
           },
           "spec": {
             "enforcerConfig": {
-              "signPolicy": {
-                "policies": [
-                  {
-                    "namespaces": [
-                      "*"
-                    ],
-                    "signers": [
-                      "SampleSigner"
-                    ]
-                  }
-                ],
-                "signers": [
-                  {
-                    "name": "SampleSigner",
-                    "secret": "keyring-secret",
-                    "subjects": [
-                      {
-                        "email": "sample_signer@signer.com"
-                      }
-                    ]
-                  }
-                ]
-              },
               "verifyType": "pgp"
             },
             "keyRingConfigs": [
@@ -42,14 +19,37 @@ metadata:
                 "name": "keyring-secret"
               }
             ],
-            "namespace": "integrity-enforcer-ns"
+            "namespace": "integrity-enforcer-ns",
+            "signPolicy": {
+              "policies": [
+                {
+                  "namespaces": [
+                    "*"
+                  ],
+                  "signers": [
+                    "SampleSigner"
+                  ]
+                }
+              ],
+              "signers": [
+                {
+                  "name": "SampleSigner",
+                  "secret": "keyring-secret",
+                  "subjects": [
+                    {
+                      "email": "sample_signer@signer.com"
+                    }
+                  ]
+                }
+              ]
+            }
           }
         }
       ]
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: integrity-enforcer-operator.v0.0.18
+  name: integrity-enforcer-operator.v0.0.21
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -226,6 +226,10 @@ spec:
                 command:
                 - /manager
                 env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: POD_NAME
                   valueFrom:
                     fieldRef:
@@ -311,4 +315,4 @@ spec:
   provider:
     name: IBM
     url: https://github.com/ibm/integrity-enforcer
-  version: 0.0.18
+  version: 0.0.21
