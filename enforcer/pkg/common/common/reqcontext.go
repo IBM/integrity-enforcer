@@ -18,7 +18,6 @@ package common
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strconv"
 
@@ -251,23 +250,4 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 	}
 	return rc
 
-}
-
-var CommonMessageMask = []string{
-	fmt.Sprintf("metadata.labels.\"%s\"", ResourceIntegrityLabelKey),
-	fmt.Sprintf("metadata.labels.\"%s\"", ReasonLabelKey),
-	"metadata.annotations.message",
-	"metadata.annotations.signature",
-	"metadata.annotations.certificate",
-	"metadata.annotations.signPaths",
-	"metadata.annotations.namespace",
-	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
-	"metadata.managedFields",
-	"metadata.creationTimestamp",
-	"metadata.generation",
-	"metadata.annotations.deprecated.daemonset.template.generation",
-	"metadata.namespace",
-	"metadata.resourceVersion",
-	"metadata.selfLink",
-	"metadata.uid",
 }
