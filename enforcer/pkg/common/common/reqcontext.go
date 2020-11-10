@@ -132,10 +132,6 @@ func (rc *ReqContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
 }
 
-func (rc *ReqContext) IsCreator() bool {
-	return rc.UserName != "" && rc.UserName == rc.OrgMetadata.Annotations.CreatedBy()
-}
-
 func (rc *ReqContext) IsEnforcePolicyRequest() bool {
 	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
 }

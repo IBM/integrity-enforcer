@@ -120,10 +120,6 @@ func (self *ResourceLabel) IntegrityVerified() bool {
 	return self.getString(ResourceIntegrityLabelKey) == LabelValueVerified
 }
 
-func (self *ResourceLabel) CreatedBy() string {
-	return self.getString("ie-createdBy")
-}
-
 func (self *ResourceLabel) getString(key string) string {
 	if s, ok := self.values[key]; ok {
 		return s
@@ -188,10 +184,6 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 
 func (self *ResourceAnnotation) IntegrityVerified() bool {
 	return self.getBool("integrityVerified", false)
-}
-
-func (self *ResourceAnnotation) CreatedBy() string {
-	return self.getString("ie-createdBy")
 }
 
 func (self *ResourceAnnotation) getString(key string) string {

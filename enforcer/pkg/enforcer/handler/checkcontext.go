@@ -106,7 +106,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 		"request.uid":  reqc.RequestUid,
 		"type":         reqc.Type,
 		"request.dump": "",
-		"creator":      reqc.OrgMetadata.Annotations.CreatedBy(),
 		"requestScope": reqc.ResourceScope,
 
 		//context
