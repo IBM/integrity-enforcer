@@ -47,12 +47,7 @@ type CheckContext struct {
 	SignatureEvalResult *common.SignatureEvalResult `json:"signature"`
 	MutationEvalResult  *common.MutationEvalResult  `json:"mutation"`
 
-	ConsoleLogEnabled bool `json:"-"`
-	ContextLogEnabled bool `json:"-"`
-	ReasonCode        int  `json:"reasonCode"`
-
-	AllowByBreakGlassMode bool `json:"allowByBreakGlassMode"`
-	AllowByDetectOnlyMode bool `json:"allowByDetectOnlyMode"`
+	ReasonCode int `json:"reasonCode"`
 }
 
 func InitCheckContext(config *config.EnforcerConfig) *CheckContext {

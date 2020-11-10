@@ -80,14 +80,6 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	//init loader
 	self.loader = loader.NewLoader(self.config, self.reqc)
 
-	if self.config.Log.ConsoleLog.IsInScope(reqc) {
-		self.ctx.ConsoleLogEnabled = true
-	}
-
-	if self.config.Log.ContextLog.IsInScope(reqc) {
-		self.ctx.ContextLogEnabled = true
-	}
-
 	//init logger
 	logger.InitSessionLogger(reqc.Namespace,
 		reqc.Name,
@@ -232,8 +224,6 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	self.ctx.Verified = dr.Verified
 	self.ctx.ReasonCode = dr.ReasonCode
 	self.ctx.Message = dr.Message
-	self.ctx.AllowByDetectOnlyMode = dr.AllowByDetectOnlyMode
-	self.ctx.AllowByBreakGlassMode = dr.AllowByBreakGlassMode
 
 	//create admission response
 	admissionResponse := createAdmissionResponse(self.ctx.Allow, self.ctx.Message)
@@ -278,12 +268,10 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 }
 
 type DecisionResult struct {
-	Allow                 bool
-	Verified              bool
-	ReasonCode            int
-	Message               string
-	AllowByDetectOnlyMode bool
-	AllowByBreakGlassMode bool
+	Allow      bool
+	Verified   bool
+	ReasonCode int
+	Message    string
 }
 
 func (self *RequestHandler) evalFinalDecision(allowed bool, evalReason int, errMsg string) *DecisionResult {
@@ -315,13 +303,11 @@ func (self *RequestHandler) evalFinalDecision(allowed bool, evalReason int, errM
 	if !dr.Allow && self.ctx.DetectOnlyModeEnabled {
 		dr.Allow = true
 		dr.Verified = false
-		dr.AllowByDetectOnlyMode = true
 		dr.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		dr.ReasonCode = common.REASON_DETECTION
 	} else if !dr.Allow && self.ctx.BreakGlassModeEnabled {
 		dr.Allow = true
 		dr.Verified = false
-		dr.AllowByBreakGlassMode = true
 		dr.Message = common.ReasonCodeMap[common.REASON_BREAK_GLASS].Message
 		dr.ReasonCode = common.REASON_BREAK_GLASS
 	}
@@ -362,7 +348,6 @@ func (self *RequestHandler) evalFinalDecisionForIEResource(allowed bool, evalRea
 	if !dr.Allow && self.ctx.DetectOnlyModeEnabled {
 		dr.Allow = true
 		dr.Verified = false
-		dr.AllowByDetectOnlyMode = true
 		dr.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		dr.ReasonCode = common.REASON_DETECTION
 	}
@@ -413,14 +398,14 @@ func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionRespons
 }
 
 func (self *RequestHandler) logEntry() {
-	if self.ctx.ConsoleLogEnabled {
+	if self.CheckIfConsoleLogEnabled() {
 		sLogger := logger.GetSessionLogger()
 		sLogger.Trace("New Admission Request Received")
 	}
 }
 
 func (self *RequestHandler) logContext() {
-	if self.ctx.ContextLogEnabled {
+	if self.CheckIfContextLogEnabled() {
 		cLogger := logger.GetContextLogger()
 		logRecord := self.ctx.convertToLogRecord(self.reqc)
 		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
@@ -438,7 +423,7 @@ func (self *RequestHandler) logContext() {
 }
 
 func (self *RequestHandler) logExit() {
-	if self.ctx.ConsoleLogEnabled {
+	if self.CheckIfConsoleLogEnabled() {
 		sLogger := logger.GetSessionLogger()
 		sLogger.WithFields(log.Fields{
 			"allowed": self.ctx.Allow,
@@ -590,6 +575,14 @@ func (self *RequestHandler) CheckIfBreakGlassEnabled() bool {
 
 func (self *RequestHandler) CheckIfDetectOnly() bool {
 	return self.loader.DetectOnlyMode()
+}
+
+func (self *RequestHandler) CheckIfConsoleLogEnabled() bool {
+	return self.config.Log.ConsoleLog.IsInScope(self.reqc)
+}
+
+func (self *RequestHandler) CheckIfContextLogEnabled() bool {
+	return self.config.Log.ContextLog.IsInScope(self.reqc)
 }
 
 func (self *RequestHandler) createOrUpdateEvent() error {
