@@ -155,12 +155,6 @@ type ResourceAnnotation struct {
 	values map[string]string
 }
 
-func NewResourceAnnotation(values map[string]string) *ResourceAnnotation {
-	return &ResourceAnnotation{
-		values: values,
-	}
-}
-
 type SignatureAnnotation struct {
 	ResourceSignatureName string
 	SignatureType         string
