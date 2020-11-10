@@ -203,7 +203,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 				retErr = err
 			} else if sigOk {
 				vcerr = nil
-				vsinfo = common.NewSignerInfoFromCert(cert)
+				vsinfo = x509.NewSignerInfoFromCert(cert)
 				retErr = nil
 			} else {
 				vcerr = &common.CheckError{
