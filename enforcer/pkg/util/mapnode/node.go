@@ -241,7 +241,8 @@ func (n *Node) Merge(n2 *Node) (*Node, error) {
 	return emptyNode(), errors.New("Unsupported type of node.")
 }
 
-func (n *Node) Filter(filterKeys []string) *Node {
+// extract elements that match input key
+func (n *Node) Extract(filterKeys []string) *Node {
 	m := n.Ravel()
 	allKeysInNode := []string{}
 	for k := range m {
@@ -283,6 +284,7 @@ func (n *Node) Filter(filterKeys []string) *Node {
 	return node
 }
 
+// remove elements that match input key
 func (t *Node) Mask(keys []string) *Node {
 	validKeys := t.validateKeyList(keys)
 	node := t.recursiveMask("", validKeys)
@@ -419,6 +421,7 @@ func (n *Node) GetNodeByJSONPath(jpathKey string) (*Node, bool) {
 	return foundNode, true
 }
 
+// convert key "foo[1].bar" to "foo.1.bar" and then generate actual existing keys by generateKeyList()
 func (t *Node) validateKeyList(keys []string) []string {
 	newKeys := []string{}
 	for i, key := range keys {
@@ -438,6 +441,12 @@ func (t *Node) validateKeyList(keys []string) []string {
 	return newKeys
 }
 
+func GetConcreteKeys(keys []string, n *Node) []string {
+	validatedKeyList := n.validateKeyList(keys)
+	return validatedKeyList
+}
+
+// expand input key "foo[].bar" to actual exsiting keys like ["foo.1.bar", "foo.2.bar"]
 func (t *Node) generateKeyList(concatKey string) []string {
 	if !strings.Contains(concatKey, "[]") {
 		return []string{}

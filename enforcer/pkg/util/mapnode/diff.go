@@ -18,6 +18,7 @@ package mapnode
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -87,6 +88,10 @@ func (dr *DiffResult) Remove(patterns []*Difference) *DiffResult {
 }
 
 func (dr *DiffResult) Filter(maskKeys []string) (*DiffResult, *DiffResult, []string) {
+	for i, key := range maskKeys {
+		// to match diff fields with maskKey prefix, "*" is added here
+		maskKeys[i] = fmt.Sprintf("%s*", key)
+	}
 	filtered := &DiffResult{}
 	unfiltered := &DiffResult{}
 	matchedKeys := []string{}

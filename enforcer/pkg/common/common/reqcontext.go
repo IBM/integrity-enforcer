@@ -121,24 +121,8 @@ func (rc *ReqContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
 }
 
-func (rc *ReqContext) IsEnforcePolicyRequest() bool {
-	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsIEPolicyRequest() bool {
-	return rc.GroupVersion() == IEPolicyCustomResourceAPIVersion && rc.Kind == IEPolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsIEDefaultPolicyRequest() bool {
-	return rc.GroupVersion() == DefaultPolicyCustomResourceAPIVersion && rc.Kind == DefaultPolicyCustomResourceKind
-}
-
 func (rc *ReqContext) IsSignPolicyRequest() bool {
 	return rc.GroupVersion() == SignerPolicyCustomResourceAPIVersion && rc.Kind == SignerPolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsAppEnforcePolicyRequest() bool {
-	return rc.GroupVersion() == AppPolicyCustomResourceAPIVersion && rc.Kind == AppPolicyCustomResourceKind
 }
 
 func (rc *ReqContext) IsResourceSignatureRequest() bool {

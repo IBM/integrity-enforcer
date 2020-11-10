@@ -383,10 +383,17 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPattern
 	}
 
 	matched := false
-	maskedOrgNode := orgNode.Mask(mask)
-	maskedReqNode := reqNode.Mask(mask)
+	orgNodeToCompare := orgNode.Copy()
+	reqNodeToCompare := reqNode.Copy()
+	if len(focus) > 0 {
+		orgNodeToCompare = orgNode.Extract(focus)
+		reqNodeToCompare = reqNode.Extract(focus)
+	} else {
+		orgNodeToCompare = orgNode.Mask(mask)
+		reqNodeToCompare = reqNode.Mask(mask)
+	}
 
-	dr := maskedOrgNode.Diff(maskedReqNode)
+	dr := orgNodeToCompare.Diff(reqNodeToCompare)
 	if dr != nil && len(allowDiffPatterns) > 0 {
 		dr = dr.Remove(allowDiffPatterns)
 	}
@@ -394,12 +401,6 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPattern
 
 	if dr == nil {
 		matched = true
-	} else {
-		if len(focus) > 0 {
-			if !focusKeyExistInDiffResult(focus, dr) {
-				matched = true
-			}
-		}
 	}
 
 	if !matched && dr != nil {
@@ -435,17 +436,6 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 		}
 	}
 	return message
-}
-
-func focusKeyExistInDiffResult(focus []string, dr *mapnode.DiffResult) bool {
-	for _, diffFullKey := range dr.Keys() {
-		for _, focusKey := range focus {
-			if strings.HasPrefix(diffFullKey, focusKey) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func base64decode(str string) string {

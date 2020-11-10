@@ -56,7 +56,7 @@ rsigsig=`echo -e "$rsigspec" > temp-rsig.yaml; gpg -u $SIGNER --detach-sign --ar
 
 
 # name of resource signature
-resApiVer=`cat $INPUT_FILE | yq r - -j | jq -r '.apiVersion'`
+resApiVer=`cat $INPUT_FILE | yq r - -j | jq -r '.apiVersion' | sed 's/\//_/g'`
 resKind=`cat $INPUT_FILE | yq r - -j | jq -r '.kind'`
 reslowerkind=`cat $INPUT_FILE | yq r - -j | jq -r '.kind' | tr '[:upper:]' '[:lower:]'`
 resname=`cat $INPUT_FILE | yq r - -j | jq -r '.metadata.name'`
