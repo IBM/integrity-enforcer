@@ -68,7 +68,8 @@ type ResourceRef struct {
 }
 
 func (self *ResourceRef) Equals(ref *ResourceRef) bool {
-	return (self.Name == ref.Name &&
+	return (ref != nil &&
+		self.Name == ref.Name &&
 		self.Namespace == ref.Namespace &&
 		self.Kind == ref.Kind &&
 		self.ApiVersion == ref.ApiVersion)
