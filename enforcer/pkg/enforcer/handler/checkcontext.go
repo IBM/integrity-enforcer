@@ -17,7 +17,6 @@
 package enforcer
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
 
@@ -50,7 +49,6 @@ type CheckContext struct {
 
 	ConsoleLogEnabled bool `json:"-"`
 	ContextLogEnabled bool `json:"-"`
-	IncludeRequest    bool `json:"-"`
 	ReasonCode        int  `json:"reasonCode"`
 
 	AllowByBreakGlassMode bool `json:"allowByBreakGlassMode"`
@@ -76,7 +74,7 @@ func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
 	return cc
 }
 
-func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
+func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
@@ -158,9 +156,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 
 	}
 
-	if self.IncludeRequest && !reqc.IsSecret() {
-		logRecord["request.dump"] = reqc.RequestJsonStr
-	}
 	logRecord["request.objectHashType"] = reqc.ObjectHashType
 	logRecord["request.objectHash"] = reqc.ObjectHash
 
@@ -171,10 +166,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 
 	logRecord["timestamp"] = ts
 
-	logBytes, err := json.Marshal(logRecord)
-	if err != nil {
-		logger.Error(err)
-		return []byte("")
-	}
-	return logBytes
+	return logRecord
+
 }

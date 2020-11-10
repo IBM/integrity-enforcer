@@ -80,10 +80,6 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	//init loader
 	self.loader = loader.NewLoader(self.config, self.reqc)
 
-	if self.config.Log.IncludeRequest {
-		self.ctx.IncludeRequest = true
-	}
-
 	if self.config.Log.ConsoleLog.IsInScope(reqc) {
 		self.ctx.ConsoleLogEnabled = true
 	}
@@ -426,7 +422,15 @@ func (self *RequestHandler) logEntry() {
 func (self *RequestHandler) logContext() {
 	if self.ctx.ContextLogEnabled {
 		cLogger := logger.GetContextLogger()
-		logBytes := self.ctx.convertToLogBytes(self.reqc)
+		logRecord := self.ctx.convertToLogRecord(self.reqc)
+		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
+			logRecord["request.dump"] = self.reqc.RequestJsonStr
+		}
+		logBytes, err := json.Marshal(logRecord)
+		if err != nil {
+			logger.Error(err)
+			logBytes = []byte("")
+		}
 		if self.reqc.ResourceScope == "Namespaced" || (self.reqc.ResourceScope == "Cluster" && self.ctx.Protected) {
 			cLogger.SendLog(logBytes)
 		}
