@@ -48,7 +48,7 @@ func NewLoader(cfg *config.EnforcerConfig, reqc *common.ReqContext) *Loader {
 	reqKind := reqc.Kind
 	loader := &Loader{
 		Config:            cfg,
-		SignPolicy:        NewSignPolicyLoader(enforcerNamespace, cfg.SignPolicy),
+		SignPolicy:        NewSignPolicyLoader(enforcerNamespace),
 		RSP:               NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
 		RuleTable:         NewRuleTableLoader(enforcerNamespace),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
@@ -126,14 +126,9 @@ func (self *Loader) DetectOnlyMode() bool {
 	return self.Config.Mode == config.DetectMode
 }
 
-func (self *Loader) MergedSignPolicy() *policy.SignPolicy {
-	iepol := self.Config.SignPolicy
+func (self *Loader) GetSignPolicy() *policy.SignPolicy {
 	spol := self.SignPolicy.GetData()
-
-	data := &policy.SignPolicy{}
-	data = data.Merge(iepol)
-	data = data.Merge(spol.Spec.SignPolicy)
-	return data
+	return spol.Spec.SignPolicy
 }
 
 func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.ResourceSignatureList {

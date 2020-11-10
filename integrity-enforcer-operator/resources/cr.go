@@ -135,15 +135,12 @@ func BuildSignEnforcePolicyForIE(cr *apiv1alpha1.IntegrityEnforcer) *iespol.Sign
 	return epcr
 }
 
-// primary rsp
-func BuildPrimaryResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer) *rsp.ResourceSigningProfile {
-	primaryrsp := &rsp.ResourceSigningProfile{}
+func BuildResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig) *rsp.ResourceSigningProfile {
+	rspfromcr := &rsp.ResourceSigningProfile{}
 
-	if cr.Spec.PrimaryRsp != nil {
-		primaryrsp.Spec = *cr.Spec.PrimaryRsp
-	}
+	rspfromcr.Spec = *(prof.ResourceSigningProfileSpec)
 
-	primaryrsp.ObjectMeta.Name = cr.GetPrimaryRSPName()
-	primaryrsp.ObjectMeta.Namespace = cr.Namespace
-	return primaryrsp
+	rspfromcr.ObjectMeta.Name = prof.Name
+	rspfromcr.ObjectMeta.Namespace = cr.Namespace
+	return rspfromcr
 }

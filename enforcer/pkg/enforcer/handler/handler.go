@@ -470,7 +470,7 @@ func (self *RequestHandler) createPatch() []byte {
 }
 
 func (self *RequestHandler) evalSignature(signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error) {
-	signPolicy := self.loader.MergedSignPolicy()
+	signPolicy := self.loader.GetSignPolicy()
 	plugins := self.GetEnabledPlugins()
 	if evaluator, err := sign.NewSignatureEvaluator(self.config, signPolicy, plugins); err != nil {
 		return nil, err

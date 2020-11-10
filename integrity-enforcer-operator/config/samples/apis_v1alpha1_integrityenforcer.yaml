@@ -6,16 +6,16 @@ spec:
   namespace: integrity-enforcer-ns
   enforcerConfig:
     verifyType: pgp # x509
-    signPolicy:
-      policies:
-      - namespaces:
-        - "*"
-        signers:
-        - "SampleSigner"
+  signPolicy:
+    policies:
+    - namespaces:
+      - "*"
       signers:
-      - name: "SampleSigner"
-        secret: keyring-secret
-        subjects:
-        - email: "sample_signer@signer.com"
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      secret: keyring-secret
+      subjects:
+      - email: "sample_signer@signer.com"
   keyRingConfigs:
   - name: keyring-secret

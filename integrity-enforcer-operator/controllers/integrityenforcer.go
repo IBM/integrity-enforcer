@@ -310,14 +310,14 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdatePrimaryResourceSigningProfileCR(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCR(instance *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rsp.ResourceSigningProfile{}
-	expected := res.BuildPrimaryResourceSigningProfileForIE(instance)
+	expected := res.BuildResourceSigningProfileForIE(instance, prof)
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
-		"PrimaryResourceSigningProfile.Name", expected.Name)
+		"ResourceSigningProfile.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)

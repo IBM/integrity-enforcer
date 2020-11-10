@@ -24,7 +24,6 @@ import (
 
 	spolapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 	spolclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
-	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/util/cache"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,12 +37,11 @@ type SignPolicyLoader struct {
 	interval          time.Duration
 	enforcerNamespace string
 
-	Client      *spolclient.ApisV1alpha1Client
-	Data        *spolapi.SignPolicy
-	defaultData *policy.SignPolicy
+	Client *spolclient.ApisV1alpha1Client
+	Data   *spolapi.SignPolicy
 }
 
-func NewSignPolicyLoader(enforcerNamespace string, policyInConfig *policy.SignPolicy) *SignPolicyLoader {
+func NewSignPolicyLoader(enforcerNamespace string) *SignPolicyLoader {
 	interval := time.Second * 10
 	config, _ := rest.InClusterConfig()
 	client, _ := spolclient.NewForConfig(config)
@@ -52,7 +50,6 @@ func NewSignPolicyLoader(enforcerNamespace string, policyInConfig *policy.SignPo
 		interval:          interval,
 		enforcerNamespace: enforcerNamespace,
 		Client:            client,
-		defaultData:       policyInConfig,
 	}
 }
 
@@ -91,10 +88,6 @@ func (self *SignPolicyLoader) Load() {
 	data := &spolapi.SignPolicy{}
 	if len(list1.Items) > 0 {
 		data = &(list1.Items[0])
-	}
-	if data.Spec.SignPolicy != nil && self.defaultData != nil {
-		merged := data.Spec.SignPolicy.Merge(self.defaultData)
-		data.Spec.SignPolicy = merged
 	}
 	self.Data = data
 	return
