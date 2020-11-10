@@ -30,25 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const (
-	HashTypeDefault      = "default"
-	HashTypeHelmSecret   = "helmSecret"
-	HashTypeHelmResource = "helmResource"
-)
-
-type IntegrityValue struct {
-	ServiceAccount string `json:"spec.maIntegrity.serviceAccount"`
-	Signature      string `json:"spec.maIntegrity.signature"`
-}
-
-type ObjectMetadata struct {
-	K8sCreatedBy          string              `json:"k8sCreatedBy"`
-	K8sServiceAccountName string              `json:"k8sServiceAccountName"`
-	K8sServiceAccountUid  string              `json:"k8sServiceAccountUid"`
-	Annotations           *ResourceAnnotation `json:"annotations"`
-	Labels                *ResourceLabel      `json:"labels"`
-}
-
 type ReqContext struct {
 	ResourceScope   string          `json:"resourceScope,omitempty"`
 	DryRun          bool            `json:"dryRun"`
@@ -62,7 +43,6 @@ type ReqContext struct {
 	ApiVersion      string          `json:"apiVersion"`
 	Kind            string          `json:"kind"`
 	Operation       string          `json:"operation"`
-	IntegrityValue  *IntegrityValue `json:"integrityValues"`
 	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
 	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
 	UserInfo        string          `json:"userInfo"`
@@ -73,6 +53,11 @@ type ReqContext struct {
 	Type            string          `json:"Type"`
 	ObjectHashType  string          `json:"objectHashType"`
 	ObjectHash      string          `json:"objectHash"`
+}
+
+type ObjectMetadata struct {
+	Annotations *ResourceAnnotation `json:"annotations"`
+	Labels      *ResourceLabel      `json:"labels"`
 }
 
 func (reqc *ReqContext) ResourceRef() *ResourceRef {
@@ -119,30 +104,6 @@ func (rc *ReqContext) IsCreateRequest() bool {
 
 func (rc *ReqContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
-}
-
-func (rc *ReqContext) IsEnforcePolicyRequest() bool {
-	return rc.GroupVersion() == PolicyCustomResourceAPIVersion && rc.Kind == PolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsIEPolicyRequest() bool {
-	return rc.GroupVersion() == IEPolicyCustomResourceAPIVersion && rc.Kind == IEPolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsIEDefaultPolicyRequest() bool {
-	return rc.GroupVersion() == DefaultPolicyCustomResourceAPIVersion && rc.Kind == DefaultPolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsSignPolicyRequest() bool {
-	return rc.GroupVersion() == SignerPolicyCustomResourceAPIVersion && rc.Kind == SignerPolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsAppEnforcePolicyRequest() bool {
-	return rc.GroupVersion() == AppPolicyCustomResourceAPIVersion && rc.Kind == AppPolicyCustomResourceKind
-}
-
-func (rc *ReqContext) IsResourceSignatureRequest() bool {
-	return rc.GroupVersion() == SignatureCustomResourceAPIVersion && rc.Kind == SignatureCustomResourceKind
 }
 
 func (rc *ReqContext) IsSecret() bool {
@@ -249,17 +210,9 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		namespace = pr.getValue("object.metdata.namespace")
 	}
 
-	integrityValues := &IntegrityValue{
-		ServiceAccount: pr.getValue("object.spec.maIntegrity.serviceAccount"),
-		Signature:      pr.getValue("object.spec.maIntegrity.signature"),
-	}
-
 	orgMetadata := &ObjectMetadata{
-		K8sCreatedBy:          pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/created-by"),
-		K8sServiceAccountName: pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.name"),
-		K8sServiceAccountUid:  pr.getValue("oldObject.metadata.annotations.kubernetes\\.io/service-account\\.uid"),
-		Annotations:           pr.getAnnotations("oldObject.metadata.annotations"),
-		Labels:                pr.getLabels("oldObject.metadata.labels"),
+		Annotations: pr.getAnnotations("oldObject.metadata.annotations"),
+		Labels:      pr.getLabels("oldObject.metadata.labels"),
 	}
 
 	claimedMetadata := &ObjectMetadata{
@@ -283,7 +236,6 @@ func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
 		RequestJsonStr:  pr.JsonStr,
 		Name:            name,
 		Operation:       pr.getValue("operation"),
-		IntegrityValue:  integrityValues,
 		ApiGroup:        pr.getValue("kind.group"),
 		ApiVersion:      pr.getValue("kind.version"),
 		Kind:            kind,
