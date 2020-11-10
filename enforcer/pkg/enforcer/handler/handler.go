@@ -58,7 +58,7 @@ type RequestHandler struct {
 
 func NewRequestHandler(config *config.EnforcerConfig) *RequestHandler {
 	cc := InitCheckContext(config)
-	return &RequestHandler{config: config, loader: &loader.Loader{Config: config}, ctx: cc}
+	return &RequestHandler{config: config, loader: &loader.Loader{}, ctx: cc}
 }
 
 func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
@@ -488,7 +488,7 @@ func (self *RequestHandler) checkIfDryRunAdmission() bool {
 
 func (self *RequestHandler) checkIfUnprocessedInIE() bool {
 	reqc := self.reqc
-	for _, d := range self.loader.UnprotectedRequestMatchPattern() {
+	for _, d := range self.config.Ignore {
 		if d.Match(reqc.Map()) {
 			return true
 		}
@@ -574,7 +574,7 @@ func (self *RequestHandler) CheckIfBreakGlassEnabled() bool {
 }
 
 func (self *RequestHandler) CheckIfDetectOnly() bool {
-	return self.loader.DetectOnlyMode()
+	return (self.config.Mode == config.DetectMode)
 }
 
 func (self *RequestHandler) CheckIfConsoleLogEnabled() bool {
