@@ -483,13 +483,8 @@ func (self *RequestHandler) evalSignature(signingProfile profile.SigningProfile)
 
 func (self *RequestHandler) evalMutation(signingProfile profile.SigningProfile) (*common.MutationEvalResult, error) {
 	reqc := self.reqc
-	owners := []*common.Owner{}
-	//ignoreAttrs := self.GetIgnoreAttrs()
-	if checker, err := handlerutil.NewMutationChecker(owners); err != nil {
-		return nil, err
-	} else {
-		return checker.Eval(reqc, signingProfile)
-	}
+	checker := handlerutil.NewMutationChecker()
+	return checker.Eval(reqc, signingProfile)
 }
 
 func (self *RequestHandler) abort(reason string, err error) {

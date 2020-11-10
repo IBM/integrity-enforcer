@@ -28,8 +28,10 @@ type MutationChecker interface {
 	Eval(reqc *common.ReqContext, signingProfile profile.SigningProfile) (*common.MutationEvalResult, error)
 }
 
-type ConcreteMutationChecker struct {
-	VerifiedOwners []*common.Owner
+type ConcreteMutationChecker struct{}
+
+func NewMutationChecker() MutationChecker {
+	return &ConcreteMutationChecker{}
 }
 
 func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile profile.SigningProfile) (*common.MutationEvalResult, error) {
@@ -38,11 +40,6 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 		common.ResourceIntegrityLabelKey,
 		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
-		"metadata.annotations.sigOwnerKind",
-		"metadata.annotations.sigOwnerApiVersion",
-		"metadata.annotations.sigOwnerName",
-		"metadata.annotations.resourceSignatureName",
-		"metadata.annotations.signOwnerRefType",
 		"status",
 		"metadata.creationTimestamp",
 		"metadata.uid",
@@ -93,7 +90,7 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 		newObj = v.ToMap()
 	}
 
-	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj, self.VerifiedOwners)
+	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj)
 
 	reqFields := reqc.Map()
 
@@ -128,21 +125,14 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 	}
 }
 
-func NewMutationChecker(owners []*common.Owner) (MutationChecker, error) {
-	return &ConcreteMutationChecker{
-		VerifiedOwners: owners,
-	}, nil
-}
-
 type Ma4kInput struct {
-	Before       map[string]interface{} `json:"before"`
-	After        map[string]interface{} `json:"after"`
-	Namespace    string                 `json:"namespace"`
-	UserName     string                 `json:"userName"`
-	Kind         string                 `json:"kind"`
-	Name         string                 `json:"name"`
-	UserGroups   []string               `json:"userGroups"`
-	IntegrityRef *common.ResourceRef    `json:"owner"`
+	Before     map[string]interface{} `json:"before"`
+	After      map[string]interface{} `json:"after"`
+	Namespace  string                 `json:"namespace"`
+	UserName   string                 `json:"userName"`
+	Kind       string                 `json:"kind"`
+	Name       string                 `json:"name"`
+	UserGroups []string               `json:"userGroups"`
 }
 
 type MAResult struct {
@@ -155,20 +145,15 @@ type MAResult struct {
 	Error       error
 }
 
-func NewMa4kInput(namespace, kind, name, username string, usergroups []string, oldObj map[string]interface{}, newObj map[string]interface{}, owners []*common.Owner) *Ma4kInput {
-	var ownerRef *common.ResourceRef
-	for _, ow := range owners {
-		ownerRef = ow.Ref
-	}
+func NewMa4kInput(namespace, kind, name, username string, usergroups []string, oldObj map[string]interface{}, newObj map[string]interface{}) *Ma4kInput {
 	ma4kInput := &Ma4kInput{
-		Before:       oldObj,
-		After:        newObj,
-		Namespace:    namespace,
-		Name:         name,
-		Kind:         kind,
-		UserName:     username,
-		UserGroups:   usergroups,
-		IntegrityRef: ownerRef,
+		Before:     oldObj,
+		After:      newObj,
+		Namespace:  namespace,
+		Name:       name,
+		Kind:       kind,
+		UserName:   username,
+		UserGroups: usergroups,
 	}
 	return ma4kInput
 }
