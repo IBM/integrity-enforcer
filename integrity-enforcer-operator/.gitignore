@@ -7,6 +7,7 @@ build/_output/
 *.so
 *.dylib
 bin
+database/index.db
 
 # Test binary, build with `go test -c`
 *.test

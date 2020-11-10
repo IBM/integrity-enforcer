@@ -182,7 +182,7 @@ type HttpConfig struct {
 }
 
 type ProfileConfig struct {
-	*rsp.ResourceSigningProfileSpec
+	*rsp.ResourceSigningProfileSpec `json:"resourceSigningProfileSpec,omitempty"`
 	Name string `json:"name,omitempty"`
 }
 
