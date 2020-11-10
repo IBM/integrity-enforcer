@@ -136,7 +136,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 			logRecord["org.ownerNamespace"] = md.OwnerRef.Namespace
 			logRecord["org.ownerApiVersion"] = md.OwnerRef.ApiVersion
 		}
-		// logRecord["org.integrityVerified"] = strconv.FormatBool(md.IntegrityVerified)
 	}
 
 	if reqc.ClaimedMetadata != nil {

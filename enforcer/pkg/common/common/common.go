@@ -183,10 +183,6 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	}
 }
 
-func (self *ResourceAnnotation) IntegrityVerified() bool {
-	return self.getBool("integrityVerified", false)
-}
-
 func (self *ResourceAnnotation) getString(key string) string {
 	if s, ok := self.values[key]; ok {
 		return s
