@@ -205,8 +205,8 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 				allowed = false
 				evalReason = evalReasonForThisProfile
 				errMsg = errMsgForThisProfile
-				self.ctx.Result.SignatureEvalResult = signResultForThisProfile
-				self.ctx.Result.MutationEvalResult = mutationResultForThisProfile
+				self.ctx.SignatureEvalResult = signResultForThisProfile
+				self.ctx.MutationEvalResult = mutationResultForThisProfile
 				break
 			} else {
 				allowCount += 1
@@ -215,8 +215,8 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 				allowed = true
 				evalReason = evalReasonForThisProfile
 				errMsg = errMsgForThisProfile
-				self.ctx.Result.SignatureEvalResult = signResultForThisProfile
-				self.ctx.Result.MutationEvalResult = mutationResultForThisProfile
+				self.ctx.SignatureEvalResult = signResultForThisProfile
+				self.ctx.MutationEvalResult = mutationResultForThisProfile
 			}
 		}
 
@@ -453,7 +453,7 @@ func (self *RequestHandler) createPatch() []byte {
 		if !self.ctx.Verified {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueUnverified
 			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ctx.ReasonCode].Code
-		} else if self.ctx.Result.SignatureEvalResult.Allow {
+		} else if self.ctx.SignatureEvalResult.Allow {
 			labels[common.ResourceIntegrityLabelKey] = common.LabelValueVerified
 			labels[common.ReasonLabelKey] = common.ReasonCodeMap[self.ctx.ReasonCode].Code
 		} else {
