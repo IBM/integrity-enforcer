@@ -21,8 +21,6 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base='base64'
 fi
 
-splitfilename="split.yaml"
-
 yq read $INPUT_FILE -d 0 > $OUT_FILE
 
 yq d $OUT_FILE  metadata.annotations.message -i
