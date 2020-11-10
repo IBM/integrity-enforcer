@@ -19,7 +19,6 @@ package config
 import (
 	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
-	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	"github.com/jinzhu/copier"
@@ -49,7 +48,6 @@ type EnforcerConfig struct {
 	// Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
 	Allow         []profile.RequestPattern           `json:"allow,omitempty"`
 	Ignore        []profile.RequestPattern           `json:"ignore,omitempty"`
-	SignPolicy    *policy.SignPolicy                 `json:"signPolicy,omitempty"`
 	Mode          IntegrityEnforcerMode              `json:"mode,omitempty"`
 	Plugin        []PluginConfig                     `json:"plugin,omitempty"`
 	CommonProfile *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`

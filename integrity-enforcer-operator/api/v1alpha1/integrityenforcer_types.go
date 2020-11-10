@@ -46,8 +46,7 @@ const (
 	DefaultResourceSignatureCRDName      = "resourcesignatures.apis.integrityenforcer.io"
 	DefaultResourceSigningProfileCRDName = "resourcesigningprofiles.apis.integrityenforcer.io"
 	DefaultHelmReleaseMetadataCRDName    = "helmreleasemetadatas.apis.integrityenforcer.io"
-	DefaultSignPolicyCRName              = "signer-policy"
-	DefaultPrimaryRSPName                = "primary-rsp"
+	DefaultSignPolicyCRName              = "sign-policy"
 	DefaultIEAdminClusterRoleName        = "ie-admin-clusterrole"
 	DefaultIEAdminClusterRoleBindingName = "ie-admin-clusterrolebinding"
 	DefaultIEAdminRoleName               = "ie-admin-role"
@@ -75,21 +74,19 @@ type IntegrityEnforcerSpec struct {
 	Tolerations      []v1.Toleration           `json:"tolerations,omitempty"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	IgnoreDefaultIECR bool             `json:"ignoreDefaultIECR,omitempty"`
-	LabeledNamespaces []string         `json:"labeledNamespaces,omitempty"`
-	Security          SecurityConfig   `json:"security,omitempty"`
-	KeyRings          []KeyRingConfig  `json:"keyRingConfigs,omitempty"`
-	CertPools         []CertPoolConfig `json:"certPoolConfigs,omitempty"`
-	Server            ServerContainer  `json:"server,omitempty"`
-	Logger            LoggerContainer  `json:"logger,omitempty"`
-	RegKeySecret      RegKeySecret     `json:"regKeySecret,omitempty"`
-	GlobalConfig      GlobalConfig     `json:"globalConfig,omitempty"`
+	IgnoreDefaultIECR bool            `json:"ignoreDefaultIECR,omitempty"`
+	LabeledNamespaces []string        `json:"labeledNamespaces,omitempty"`
+	Security          SecurityConfig  `json:"security,omitempty"`
+	KeyRings          []KeyRingConfig `json:"keyRingConfigs,omitempty"`
+	Server            ServerContainer `json:"server,omitempty"`
+	Logger            LoggerContainer `json:"logger,omitempty"`
+	RegKeySecret      RegKeySecret    `json:"regKeySecret,omitempty"`
+	GlobalConfig      GlobalConfig    `json:"globalConfig,omitempty"`
 
-	EnforcerConfigCrName string                          `json:"enforcerConfigCrName,omitempty"`
-	EnforcerConfig       *iec.EnforcerConfig             `json:"enforcerConfig,omitempty"`
-	SignPolicy           *policy.SignPolicy              `json:"signPolicy,omitempty"`
-	PrimaryRsp           *rsp.ResourceSigningProfileSpec `json:"resourceSigningProfile,omitempty"`
-	DefaultRsp           *rsp.ResourceSigningProfileSpec `json:"defaultResourceSigningProfile,omitempty"`
+	EnforcerConfigCrName    string              `json:"enforcerConfigCrName,omitempty"`
+	EnforcerConfig          *iec.EnforcerConfig `json:"enforcerConfig,omitempty"`
+	SignPolicy              *policy.SignPolicy  `json:"signPolicy,omitempty"`
+	ResourceSigningProfiles []*ProfileConfig    `json:"resourceSigningProfiles,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
@@ -184,6 +181,11 @@ type HttpConfig struct {
 	// CaFile      string `json:"caFile,omitempty"`
 }
 
+type ProfileConfig struct {
+	*rsp.ResourceSigningProfileSpec
+	Name string `json:"name,omitempty"`
+}
+
 // IntegrityEnforcerStatus defines the observed state of IntegrityEnforcer
 type IntegrityEnforcerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -245,10 +247,6 @@ func (self *IntegrityEnforcer) GetEnforcerConfigCRName() string {
 
 func (self *IntegrityEnforcer) GetSignPolicyCRName() string {
 	return DefaultSignPolicyCRName
-}
-
-func (self *IntegrityEnforcer) GetPrimaryRSPName() string {
-	return DefaultPrimaryRSPName
 }
 
 func (self *IntegrityEnforcer) GetRegKeySecretName() string {
@@ -406,12 +404,6 @@ func (self *IntegrityEnforcer) GetIEResourceList(scheme *runtime.Scheme) []*comm
 			Namespace:  self.Namespace,
 		},
 		{
-			ApiVersion: _rspType.APIVersion,
-			Kind:       _rspType.Kind,
-			Name:       self.GetPrimaryRSPName(),
-			Namespace:  self.Namespace,
-		},
-		{
 			ApiVersion: _secretType.APIVersion,
 			Kind:       _secretType.Kind,
 			Name:       self.GetRegKeySecretName(),
@@ -503,6 +495,17 @@ func (self *IntegrityEnforcer) GetIEResourceList(scheme *runtime.Scheme) []*comm
 			Name:       self.GetIEServerDeploymentName(),
 			Namespace:  self.Namespace,
 		},
+	}
+	if len(self.Spec.ResourceSigningProfiles) > 0 {
+		for _, prof := range self.Spec.ResourceSigningProfiles {
+			tmpRef := &common.ResourceRef{
+				ApiVersion: _rspType.APIVersion,
+				Kind:       _rspType.Kind,
+				Name:       prof.Name,
+				Namespace:  self.Namespace,
+			}
+			ieResourceList = append(ieResourceList, tmpRef)
+		}
 	}
 
 	return ieResourceList

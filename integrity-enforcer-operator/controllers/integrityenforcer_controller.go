@@ -140,10 +140,12 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return recResult, recErr
 	}
 
-	if instance.Spec.PrimaryRsp != nil {
-		recResult, recErr = r.createOrUpdatePrimaryResourceSigningProfileCR(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
+	if len(instance.Spec.ResourceSigningProfiles) > 0 {
+		for _, prof := range instance.Spec.ResourceSigningProfiles {
+			recResult, recErr = r.createOrUpdateResourceSigningProfileCR(instance, prof)
+			if recErr != nil || recResult.Requeue {
+				return recResult, recErr
+			}
 		}
 	}
 
