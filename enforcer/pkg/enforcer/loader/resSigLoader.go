@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
@@ -57,7 +58,7 @@ func NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKin
 		interval:           interval,
 		signatureNamespace: signatureNamespace,
 		requestNamespace:   requestNamespace,
-		reqApiVersion:      reqApiVersion,
+		reqApiVersion:      strings.ReplaceAll(reqApiVersion, "/", "_"), // `apps/v1` -> `apps_v1` because "/" cannot be used in label value
 		reqKind:            reqKind,
 		Client:             client,
 	}
