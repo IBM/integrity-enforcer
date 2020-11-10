@@ -29,6 +29,8 @@ import (
 	"math/big"
 	"path"
 	"time"
+
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 )
 
 var startTimeInt int64
@@ -304,4 +306,43 @@ func VerifyCertificate(certPemBytes []byte, certPathList []string) (bool, string
 
 func isSelfSignedCert(cert *x509.Certificate) bool {
 	return bytes.Equal(cert.RawSubject, cert.RawIssuer)
+}
+
+func NewSignerInfoFromCert(cert *x509.Certificate) *common.SignerInfo {
+	si := NewSignerInfoFromPKIXName(cert.Subject)
+	si.SerialNumber = cert.SerialNumber
+	return si
+}
+
+func NewSignerInfoFromPKIXName(dn pkix.Name) *common.SignerInfo {
+	si := &common.SignerInfo{}
+
+	if dn.Country != nil {
+		si.Country = dn.Country[0]
+	}
+	if dn.Organization != nil {
+		si.Organization = dn.Organization[0]
+	}
+	if dn.OrganizationalUnit != nil {
+		si.OrganizationalUnit = dn.OrganizationalUnit[0]
+	}
+	if dn.Locality != nil {
+		si.Locality = dn.Locality[0]
+	}
+	if dn.Province != nil {
+		si.Province = dn.Province[0]
+	}
+	if dn.StreetAddress != nil {
+		si.StreetAddress = dn.StreetAddress[0]
+	}
+	if dn.PostalCode != nil {
+		si.PostalCode = dn.PostalCode[0]
+	}
+	if dn.CommonName != "" {
+		si.CommonName = dn.CommonName
+	}
+	// if dn.SerialNumber != "" {
+	// 	si.SerialNumber = dn.SerialNumber
+	// }
+	return si
 }

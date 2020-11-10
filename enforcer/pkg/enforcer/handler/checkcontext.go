@@ -123,11 +123,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 		logRecord["error"] = self.Error.Error()
 	}
 
-	if reqc.IntegrityValue != nil {
-		logRecord["maIntegrity.serviceAccount"] = reqc.IntegrityValue.ServiceAccount
-		logRecord["maIntegrity.signature"] = reqc.IntegrityValue.Signature
-	}
-
 	//context from sign policy eval
 	if self.Result != nil && self.Result.SignatureEvalResult != nil {
 		r := self.Result.SignatureEvalResult

@@ -17,8 +17,6 @@
 package common
 
 import (
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"math/big"
 	"strconv"
 )
@@ -243,45 +241,6 @@ func (self *SignerInfo) GetName() string {
 		return self.Name
 	}
 	return ""
-}
-
-func NewSignerInfoFromCert(cert *x509.Certificate) *SignerInfo {
-	si := NewSignerInfoFromPKIXName(cert.Subject)
-	si.SerialNumber = cert.SerialNumber
-	return si
-}
-
-func NewSignerInfoFromPKIXName(dn pkix.Name) *SignerInfo {
-	si := &SignerInfo{}
-
-	if dn.Country != nil {
-		si.Country = dn.Country[0]
-	}
-	if dn.Organization != nil {
-		si.Organization = dn.Organization[0]
-	}
-	if dn.OrganizationalUnit != nil {
-		si.OrganizationalUnit = dn.OrganizationalUnit[0]
-	}
-	if dn.Locality != nil {
-		si.Locality = dn.Locality[0]
-	}
-	if dn.Province != nil {
-		si.Province = dn.Province[0]
-	}
-	if dn.StreetAddress != nil {
-		si.StreetAddress = dn.StreetAddress[0]
-	}
-	if dn.PostalCode != nil {
-		si.PostalCode = dn.PostalCode[0]
-	}
-	if dn.CommonName != "" {
-		si.CommonName = dn.CommonName
-	}
-	// if dn.SerialNumber != "" {
-	// 	si.SerialNumber = dn.SerialNumber
-	// }
-	return si
 }
 
 type MutationEvalResult struct {

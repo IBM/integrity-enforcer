@@ -203,7 +203,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 				retErr = err
 			} else if sigOk {
 				vcerr = nil
-				vsinfo = common.NewSignerInfoFromCert(cert)
+				vsinfo = x509.NewSignerInfoFromCert(cert)
 				retErr = nil
 			} else {
 				vcerr = &common.CheckError{
@@ -358,7 +358,7 @@ func getMaskDef(kind string) []string {
 		logger.Error(err)
 		return []string{}
 	}
-	maskDef["*"] = common.CommonMessageMask
+	maskDef["*"] = CommonMessageMask
 
 	masks := []string{}
 	masks = append(masks, maskDef["*"]...)
@@ -587,4 +587,23 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 	}
 	return svresult, retErr
 
+}
+
+var CommonMessageMask = []string{
+	fmt.Sprintf("metadata.labels.\"%s\"", common.ResourceIntegrityLabelKey),
+	fmt.Sprintf("metadata.labels.\"%s\"", common.ReasonLabelKey),
+	"metadata.annotations.message",
+	"metadata.annotations.signature",
+	"metadata.annotations.certificate",
+	"metadata.annotations.signPaths",
+	"metadata.annotations.namespace",
+	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
+	"metadata.managedFields",
+	"metadata.creationTimestamp",
+	"metadata.generation",
+	"metadata.annotations.deprecated.daemonset.template.generation",
+	"metadata.namespace",
+	"metadata.resourceVersion",
+	"metadata.selfLink",
+	"metadata.uid",
 }
