@@ -17,6 +17,7 @@
 package cache
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -24,6 +25,7 @@ import (
 const defaultCacheDuration = time.Second * 5
 
 var cache *Cache
+var mu sync.RWMutex
 
 type CachedObject struct {
 	rawObject interface{}
@@ -34,14 +36,16 @@ type CachedObject struct {
 
 type Cache struct {
 	data map[string]*CachedObject
-	mu   sync.RWMutex
 }
 
 func init() {
+	mu.Lock()
 	cache = NewCache()
+	fmt.Println(fmt.Sprintf("[DEBUG] cache pointer: %p", cache))
 }
 
 func NewCache() *Cache {
+	defer mu.Unlock()
 	data := make(map[string]*CachedObject)
 	return &Cache{
 		data: data,
@@ -93,20 +97,18 @@ func (self *Cache) clearExpiredItem() {
 }
 
 func (self *Cache) Set(name string, object interface{}, ttl *time.Duration) {
-	self.mu.Lock()
+	defer mu.Unlock()
 	self.clearExpiredItem()
 
 	now := time.Now()
 	obj := NewCachedObject(object, now, ttl)
 	self.data[name] = obj
-	self.mu.Unlock()
 }
 
 func (self *Cache) Get(name string) interface{} {
-	self.mu.RLock()
+	defer mu.Unlock()
 	now := time.Now()
 	obj, ok := self.data[name]
-	self.mu.RUnlock()
 	if !ok {
 		return nil
 	}
@@ -117,6 +119,7 @@ func (self *Cache) Get(name string) interface{} {
 }
 
 func (self *Cache) GetString(name string) string {
+	mu.Lock()
 	obj := self.Get(name)
 	if obj == nil {
 		return ""
@@ -129,17 +132,21 @@ func (self *Cache) GetString(name string) string {
 }
 
 func Set(name string, object interface{}, ttl *time.Duration) {
+	mu.Lock()
 	cache.Set(name, object, ttl)
 }
 
 func SetString(name string, object string, ttl *time.Duration) {
+	mu.Lock()
 	cache.Set(name, object, ttl)
 }
 
 func Get(name string) interface{} {
+	mu.Lock()
 	return cache.Get(name)
 }
 
 func GetString(name string) string {
+	mu.Lock()
 	return cache.GetString(name)
 }

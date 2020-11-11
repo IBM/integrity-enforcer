@@ -63,6 +63,11 @@ func NewRequestHandler(config *config.EnforcerConfig) *RequestHandler {
 
 func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 
+	reqNamespace := req.Namespace
+	if !self.checkIfMonitoringNamespace(reqNamespace) {
+		return createAdmissionResponse(true, "this namespace is not monitored")
+	}
+
 	// init
 	reqc := common.NewReqContext(req)
 	self.reqc = reqc
@@ -484,6 +489,10 @@ func (self *RequestHandler) abort(reason string, err error) {
 
 func (self *RequestHandler) checkIfDryRunAdmission() bool {
 	return self.reqc.DryRun
+}
+
+func (self *RequestHandler) checkIfMonitoringNamespace(reqNamespace string) bool {
+	return common.MatchWithPatternArray(reqNamespace, self.config.MonitoringNamespaces)
 }
 
 func (self *RequestHandler) checkIfUnprocessedInIE() bool {

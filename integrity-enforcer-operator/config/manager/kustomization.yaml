@@ -6,4 +6,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: integrityenforcer/integrity-enforcer-operator
-  newTag: 0.0.4dev
+  newTag: 0.0.4dev2
