@@ -182,8 +182,8 @@ type HttpConfig struct {
 }
 
 type ProfileConfig struct {
-	*rsp.ResourceSigningProfileSpec `json:"resourceSigningProfileSpec,omitempty"`
-	Name string `json:"name,omitempty"`
+	*rsp.ResourceSigningProfileSpec `json:",omitempty"`
+	Name                            string `json:"name,omitempty"`
 }
 
 // IntegrityEnforcerStatus defines the observed state of IntegrityEnforcer

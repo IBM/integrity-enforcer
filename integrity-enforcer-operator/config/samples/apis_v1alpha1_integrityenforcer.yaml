@@ -6,10 +6,14 @@ spec:
   namespace: integrity-enforcer-ns
   enforcerConfig:
     verifyType: pgp # x509
-    monitoringNamespaces:
-    - secure-ns
-    - test-ns
-    - integrity-*
+    monitoringNamespace:
+      include:
+      - "*"
+      exclude:
+      - "kube-*"
+      - "openshift-*"
+    log:
+      logLevel: trace
   signPolicy:
     policies:
     - namespaces:
@@ -20,10 +24,6 @@ spec:
     - name: "SampleSigner"
       secret: keyring-secret
       subjects:
-      - email: "hirokuni.kitahara1@ibm.com"
+      - email: "sample_signer@signer.com"
   keyRingConfigs:
   - name: keyring-secret
-  server:
-    image: integrityenforcer/ie-server:0.0.4dev2
-  logger:
-    image: integrityenforcer/ie-logging:0.0.4dev2

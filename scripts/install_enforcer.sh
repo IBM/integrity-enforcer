@@ -39,7 +39,7 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
-IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev2
+IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
 ENFORCER_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
 
 echo ""

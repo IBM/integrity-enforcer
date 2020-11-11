@@ -25,20 +25,20 @@ if [ -z "$IE_REPO_ROOT" ]; then
 fi
 
 SERVICE_NAME=ie-server
-IMAGE_LOCAL=integrityenforcer/ie-server:0.0.4dev2
+IMAGE_LOCAL=integrityenforcer/ie-server:0.0.4dev
 IMAGE_REMOTE=${IMAGE_LOCAL}
 # IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
 BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
 
 LOGG_BASEDIR=${IE_REPO_ROOT}/logging/
-LOGG_IMAGE_LOCAL=integrityenforcer/ie-logging:0.0.4dev2
+LOGG_IMAGE_LOCAL=integrityenforcer/ie-logging:0.0.4dev
 LOGG_IMAGE_REMOTE=${LOGG_IMAGE_LOCAL}
 # LOGG_IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
 
 OPERATOR_BASEDIR=${IE_REPO_ROOT}/integrity-enforcer-operator/
 OPERATOR_IMAGE_NAME=integrity-enforcer-operator
-OPERATOR_IMAGE_LOCAL=integrityenforcer/${OPERATOR_IMAGE_NAME}:0.0.4dev2
+OPERATOR_IMAGE_LOCAL=integrityenforcer/${OPERATOR_IMAGE_NAME}:0.0.4dev
 OPERATOR_IMAGE_REMOTE=${OPERATOR_IMAGE_LOCAL}
 # OPERATOR_IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
 

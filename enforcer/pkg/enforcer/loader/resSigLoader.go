@@ -49,7 +49,7 @@ type ResSigLoader struct {
 	Data   []*rsigapi.ResourceSignature
 }
 
-func NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind string) *ResSigLoader {
+func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader {
 	interval := time.Second * 0
 	config, _ := rest.InClusterConfig()
 	client, _ := rsigclient.NewForConfig(config)
@@ -58,25 +58,26 @@ func NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKin
 		interval:           interval,
 		signatureNamespace: signatureNamespace,
 		requestNamespace:   requestNamespace,
-		reqApiVersion:      strings.ReplaceAll(reqApiVersion, "/", "_"), // `apps/v1` -> `apps_v1` because "/" cannot be used in label value
-		reqKind:            reqKind,
 		Client:             client,
 	}
 }
 
-func (self *ResSigLoader) GetData() []*rsigapi.ResourceSignature {
+func (self *ResSigLoader) GetData(reqc *common.ReqContext) []*rsigapi.ResourceSignature {
 	if len(self.Data) == 0 {
-		self.Load()
+		self.Load(reqc)
 	}
 	return self.Data
 }
 
-func (self *ResSigLoader) Load() {
+func (self *ResSigLoader) Load(reqc *common.ReqContext) {
 	var err error
 	var list1, list2 *rsigapi.ResourceSignatureList
 	var keyName string
 
-	labelSelector := fmt.Sprintf("%s=%s,%s=%s", common.ResSigLabelApiVer, self.reqApiVersion, common.ResSigLabelKind, self.reqKind)
+	// For ApiVersion label, `apps_v1` is used instead of `apps/v1`, because "/" cannot be used in label value
+	reqApiVersion := strings.ReplaceAll(reqc.GroupVersion(), "/", "_")
+	reqKind := reqc.Kind
+	labelSelector := fmt.Sprintf("%s=%s,%s=%s", common.ResSigLabelApiVer, reqApiVersion, common.ResSigLabelKind, reqKind)
 
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.signatureNamespace, labelSelector)
 	if cached := cache.GetString(keyName); cached == "" {
