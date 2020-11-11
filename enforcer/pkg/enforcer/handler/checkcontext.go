@@ -17,7 +17,6 @@
 package enforcer
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
 
@@ -33,33 +32,22 @@ import (
 ***********************************************/
 
 type CheckContext struct {
-	DetectOnlyModeEnabled bool `json:"detectOnly"`
-	BreakGlassModeEnabled bool `json:"breakGlass"`
+	DetectOnlyModeEnabled bool   `json:"detectOnly"`
+	BreakGlassModeEnabled bool   `json:"breakGlass"`
+	IgnoredSA             bool   `json:"ignoredSA"`
+	Protected             bool   `json:"protected"`
+	IEResource            bool   `json:"ieresource"`
+	Allow                 bool   `json:"allow"`
+	Verified              bool   `json:"verified"`
+	Aborted               bool   `json:"aborted"`
+	AbortReason           string `json:"abortReason"`
+	Error                 error  `json:"error"`
+	Message               string `json:"msg"`
 
-	Result *CheckResult `json:"result"`
-
-	IgnoredSA   bool   `json:"ignoredSA"`
-	Protected   bool   `json:"protected"`
-	IEResource  bool   `json:"ieresource"`
-	Allow       bool   `json:"allow"`
-	Verified    bool   `json:"verified"`
-	Aborted     bool   `json:"aborted"`
-	AbortReason string `json:"abortReason"`
-	Error       error  `json:"error"`
-	Message     string `json:"msg"`
-
-	ConsoleLogEnabled bool `json:"-"`
-	ContextLogEnabled bool `json:"-"`
-	IncludeRequest    bool `json:"-"`
-	ReasonCode        int  `json:"reasonCode"`
-
-	AllowByBreakGlassMode bool `json:"allowByBreakGlassMode"`
-	AllowByDetectOnlyMode bool `json:"allowByDetectOnlyMode"`
-}
-
-type CheckResult struct {
 	SignatureEvalResult *common.SignatureEvalResult `json:"signature"`
 	MutationEvalResult  *common.MutationEvalResult  `json:"mutation"`
+
+	ReasonCode int `json:"reasonCode"`
 }
 
 func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
@@ -69,21 +57,19 @@ func InitCheckContext(config *config.EnforcerConfig) *CheckContext {
 		Aborted:   false,
 		Allow:     false,
 		Verified:  false,
-		Result: &CheckResult{
-			SignatureEvalResult: &common.SignatureEvalResult{
-				Allow:   false,
-				Checked: false,
-			},
-			MutationEvalResult: &common.MutationEvalResult{
-				IsMutated: false,
-				Checked:   false,
-			},
+		SignatureEvalResult: &common.SignatureEvalResult{
+			Allow:   false,
+			Checked: false,
+		},
+		MutationEvalResult: &common.MutationEvalResult{
+			IsMutated: false,
+			Checked:   false,
 		},
 	}
 	return cc
 }
 
-func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
+func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
@@ -124,8 +110,8 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 	}
 
 	//context from sign policy eval
-	if self.Result != nil && self.Result.SignatureEvalResult != nil {
-		r := self.Result.SignatureEvalResult
+	if self.SignatureEvalResult != nil {
+		r := self.SignatureEvalResult
 		if r.Signer != nil {
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
@@ -146,8 +132,8 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 	}
 
 	//context from mutation eval
-	if self.Result != nil && self.Result.MutationEvalResult != nil {
-		r := self.Result.MutationEvalResult
+	if self.MutationEvalResult != nil {
+		r := self.MutationEvalResult
 		if r.Error != nil {
 			logRecord["ma.errOccured"] = true
 			logRecord["ma.errMsg"] = r.Error.Msg
@@ -165,9 +151,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 
 	}
 
-	if self.IncludeRequest && !reqc.IsSecret() {
-		logRecord["request.dump"] = reqc.RequestJsonStr
-	}
 	logRecord["request.objectHashType"] = reqc.ObjectHashType
 	logRecord["request.objectHash"] = reqc.ObjectHash
 
@@ -178,10 +161,6 @@ func (self *CheckContext) convertToLogBytes(reqc *common.ReqContext) []byte {
 
 	logRecord["timestamp"] = ts
 
-	logBytes, err := json.Marshal(logRecord)
-	if err != nil {
-		logger.Error(err)
-		return []byte("")
-	}
-	return logBytes
+	return logRecord
+
 }

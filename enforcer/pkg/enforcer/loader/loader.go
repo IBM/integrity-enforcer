@@ -32,7 +32,6 @@ import (
 ***********************************************/
 
 type Loader struct {
-	Config            *config.EnforcerConfig
 	SignPolicy        *SignPolicyLoader
 	RuleTable         *RuleTableLoader
 	RSP               *RSPLoader
@@ -47,17 +46,12 @@ func NewLoader(cfg *config.EnforcerConfig, reqc *common.ReqContext) *Loader {
 	reqApiVersion := reqc.GroupVersion()
 	reqKind := reqc.Kind
 	loader := &Loader{
-		Config:            cfg,
 		SignPolicy:        NewSignPolicyLoader(enforcerNamespace),
 		RSP:               NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
 		RuleTable:         NewRuleTableLoader(enforcerNamespace),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
 	}
 	return loader
-}
-
-func (self *Loader) UnprotectedRequestMatchPattern() []profile.RequestPattern {
-	return self.Config.Ignore
 }
 
 func (self *Loader) ProtectRules() *RuleTable {
@@ -120,10 +114,6 @@ func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
 		conditions = append(conditions, sp.Spec.SignPolicy.BreakGlass...)
 	}
 	return conditions
-}
-
-func (self *Loader) DetectOnlyMode() bool {
-	return self.Config.Mode == config.DetectMode
 }
 
 func (self *Loader) GetSignPolicy() *policy.SignPolicy {
