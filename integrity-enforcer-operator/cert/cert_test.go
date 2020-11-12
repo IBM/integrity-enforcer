@@ -23,12 +23,6 @@ import (
 	"testing"
 )
 
-const (
-	PEMTypePrivateKey  string = "RSA PRIVATE KEY"
-	PEMTypePublicKey   string = "PUBLIC KEY"
-	PEMTypeCertificate string = "CERTIFICATE"
-)
-
 func TestGenerateCert(t *testing.T) {
 	caCertPEMBytes, _, tlsCertPEMBytes, err := GenerateCert("test-service", "test-ns")
 	if err != nil {
