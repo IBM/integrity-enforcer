@@ -24,7 +24,8 @@ REGISTRY ?= quay.io/open-cluster-management
 
 #IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
 
-VERSION=0.0.4dev
+VERSION=0.0.18dev
+PREV_VERSION=0.0.17dev
 IE_IMAGE=ie-server
 IE_LOGGING=ie-logging
 export IE_OPERATOR=integrity-enforcer-operator
@@ -36,6 +37,8 @@ export IE_LOGGING_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_LOGGING):$(VERSION)
 export IE_OPERATOR_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_OPERATOR):$(VERSION)
 export IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_BUNDLE):$(VERSION)
 export IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_INDEX):$(VERSION)
+
+export IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION ?= $(REGISTRY)/$(IE_INDEX):$(PREV_VERSION)
 
 # Github host to use for checking the source tree;
 # Override this variable ue with your own value if you're working on forked repo.

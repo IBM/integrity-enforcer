@@ -48,7 +48,7 @@ docker push ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Prepare ie-operator bundle index
 echo -----------------------------
-echo [3/4] Add bundle to index
+echo [3/4] Adding bundle to index
 
 
 EXISTING_INDEX=$(docker pull ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION})
