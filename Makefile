@@ -20,22 +20,22 @@ TRAVIS_BUILD ?= 1
 # Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
 #IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
 #VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-#REGISTRY ?= quay.io/open-cluster-management
+REGISTRY ?= quay.io/open-cluster-management
 
 #IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
 
-VERSION=0.0.22dev
+VERSION=0.0.4dev
 IE_IMAGE=ie-server
 IE_LOGGING=ie-logging
 IE_OPERATOR=integrity-enforcer-operator
 IE_BUNDLE=integrity-enforcer-operator-bundle
 IE_INDEX=integrity-enforcer-operator-index
 
-export IE_ENFORCER_IMAGE_NAME_AND_VERSION ?= $IE_IMAGE:$VERSION
-export IE_LOGGING_IMAGE_NAME_AND_VERSION ?= $IE_LOGGING:$VERSION
-export IE_OPERATOR_IMAGE_NAME_AND_VERSION ?= $IE_OPERATOR:$VERSION
-export IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION ?= $IE_BUNDLE:$VERSION
-export IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION ?= $IE_INDEX:$VERSION
+export IE_ENFORCER_IMAGE_NAME_AND_VERSION ?= $REGISTRY/$IE_IMAGE:$VERSION
+export IE_LOGGING_IMAGE_NAME_AND_VERSION ?= $REGISTRY/$IE_LOGGING:$VERSION
+export IE_OPERATOR_IMAGE_NAME_AND_VERSION ?= $REGISTRY/$IE_OPERATOR:$VERSION
+export IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION ?= $REGISTRY/$IE_BUNDLE:$VERSION
+export IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION ?= $REGISTRY/$IE_INDEX:$VERSION
 
 # Github host to use for checking the source tree;
 # Override this variable ue with your own value if you're working on forked repo.
