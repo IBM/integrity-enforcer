@@ -20,7 +20,7 @@ TRAVIS_BUILD ?= 1
 # Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
 #IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
 #VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-REGISTRY ?= quay.io/open-cluster-management
+REGISTRY ?= quay.io/gajananan  #quay.io/open-cluster-management
 
 #IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
 
