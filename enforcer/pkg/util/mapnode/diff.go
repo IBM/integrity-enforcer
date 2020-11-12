@@ -45,6 +45,30 @@ func (d *Difference) Equal(d2 *Difference) bool {
 	return equal
 }
 
+type DiffPattern Difference
+
+func (d *DiffPattern) Match(d2 *Difference) bool {
+	if d.Key == d2.Key {
+		if reflect.DeepEqual(d.Values, d2.Values) {
+			return true
+		}
+		d1before, _ := d.Values["before"]
+		d2before, _ := d2.Values["before"]
+		d1after, _ := d.Values["after"]
+		d2after, _ := d2.Values["after"]
+		d1bStr, ok1 := d1before.(string)
+		d2bStr, ok2 := d2before.(string)
+		d1aStr, ok3 := d1after.(string)
+		d2aStr, ok4 := d2after.(string)
+		if ok1 && ok2 && ok3 && ok4 {
+			if isListed(d2bStr, d1bStr) && isListed(d2aStr, d1aStr) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 type DiffResult struct {
 	Items []Difference `json:"items"`
 }
@@ -69,13 +93,13 @@ func (dr *DiffResult) Size() int {
 	return len(dr.Items)
 }
 
-func (dr *DiffResult) Remove(patterns []*Difference) *DiffResult {
+func (dr *DiffResult) Remove(patterns []*DiffPattern) *DiffResult {
 	items := []Difference{}
 	for _, d := range dr.Items {
 		d0 := &d
 		patternMatched := false
 		for _, p := range patterns {
-			if (d0).Equal(p) {
+			if (p).Match(d0) {
 				patternMatched = true
 				break
 			}
