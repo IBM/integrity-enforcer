@@ -12,6 +12,7 @@ services:
 branches:
   only:
     - master
+    - fix/setup-travis
     - /^release-[0-9]+\..*$/
   
 env:
