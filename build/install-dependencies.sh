@@ -45,4 +45,14 @@ if ! [ -x "$(command -v kustomize)" ]; then
 	sudo mv ./kustomize /usr/local/bin/kustomize
 fi
 
+
+if ! [ -x "$(command -v yq)" ]; then
+	sudo wget https://github.com/mikefarah/yq/releases/download/3.3.2/yq_linux_amd64 -O /usr/bin/yq
+	sudo chmod +x /usr/bin/yq
+fi
+
+if ! [ -x "$(command -v jq)" ]; then
+	sudo apt -y install jq
+fi
+
 echo "Finished setting up dependencies."

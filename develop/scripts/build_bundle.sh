@@ -39,6 +39,19 @@ cd $IE_REPO_ROOT/integrity-enforcer-operator
 echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${IE_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
+
+
+csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
+cat $csvfile | yq r - -j >  tmp.json
+
+change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "OwnNamespace").supported=true)') && echo "$change" >  tmp.json
+change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "SingleNamespace").supported=true)') && echo "$change" > tmp.json
+change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "MultiNamespace").supported=false)') && echo "$change" > tmp.json
+change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamespaces").supported=false)') && echo "$change" > tmp.json
+
+cat tmp.json  | yq r - -P > $csvfile
+rm tmp.json
+
 make bundle-build BUNDLE_IMG=${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Push ie-operator bundle
