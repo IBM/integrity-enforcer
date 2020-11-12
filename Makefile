@@ -27,9 +27,9 @@ REGISTRY ?= quay.io/open-cluster-management
 VERSION=0.0.4dev
 IE_IMAGE=ie-server
 IE_LOGGING=ie-logging
-IE_OPERATOR=integrity-enforcer-operator
-IE_BUNDLE=integrity-enforcer-operator-bundle
-IE_INDEX=integrity-enforcer-operator-index
+export IE_OPERATOR=integrity-enforcer-operator
+export IE_BUNDLE=integrity-enforcer-operator-bundle
+export IE_INDEX=integrity-enforcer-operator-index
 
 export IE_ENFORCER_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_IMAGE):$(VERSION)
 export IE_LOGGING_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_LOGGING):$(VERSION)
