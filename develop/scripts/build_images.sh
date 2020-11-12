@@ -42,7 +42,6 @@ BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
 LOGG_BASEDIR=${IE_REPO_ROOT}/logging/
 OPERATOR_BASEDIR=${IE_REPO_ROOT}/integrity-enforcer-operator/
-echo "..............test: ${IE_ENFORCER_IMAGE_NAME_AND_VERSION}"
 
 # Build ie-server image
 echo -----------------------------
