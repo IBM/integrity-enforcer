@@ -1,48 +1,104 @@
-language: node_js
-node_js:
-- 10
-sudo: false
-before_install:
-- openssl aes-256-cbc -K $encrypted_225a7d4b2fd8_key -iv $encrypted_225a7d4b2fd8_iv -in ie_travis_gh_deploy_key.enc -out ie_travis_gh_deploy_key -d
-- chmod 600 ie_travis_gh_deploy_key
-- eval `ssh-agent -s`
-- ssh-add ie_travis_gh_deploy_key
-install:
-- pushd .
-- cd ${DIR_TEMPLATE}
-- npm install -g gitbook-cli
-- npm install
-- which gitbook
-- popd
+language: go
+
+service:
+  - docker
+
+go:
+   - "1.14.x"
+
+services:
+  - docker
 
 branches:
   only:
-  - master
-  - add-docs
-script:
-- pushd .
-- cd ${DIR_TEMPLATE}
-- gitbook install
-- gitbook build
-- git push -f git@github.com:${GH_REPO}.git --delete gh-pages
-- pushd .
-- cd _book
-- git init
-- git checkout -b gh-pages
-- git add .
-- git commit -m "Publishing site on `date "+%Y-%m-%d %H:%M:%S"`"
-- git push -f git@github.com:${GH_REPO}.git gh-pages
-- popd
-- rm -rf _book
-- popd
-before_deploy:
-- git config --global user.email "muew@jp.ibm.com"
-- git config --global user.name "Yuji Watanabe"
-- git config --global push.default simple
+    - master
+    - /^release-[0-9]+\..*$/
+  
 env:
   global:
-  - DIR_TEMPLATE=docs
-  - GH_REPO=IBM/integrity-enforcer
-notifications:
-  slack:
-    secure: DGSuvNzEJJRaCqmlcNVIhbYsAsrkaGuIjyYTjTEUOpmrD7oK+xnaquERM+KrfQMCAFJX8/MnT4lfJg56PPfEMQ/Y7HxmXZg8q/LxQg9D3a6Q3V9oGj2imxQZMaaaIl7OA/GvxIl1o8+JI5nlAT4whABJ6ZPZ1KCLzgTzcg/ODAFaQMRwV6ZfX3F6cAecpilrRcPlmwDkC5LdiuvslbdXv9XQcVBtYml/OAoqFfdf+H9nrcF9BGhAk2Rm6beHci4xjwwN9usgQuDbtwzld0ZS2F/r7h/DYo9Xpe7It8K/lw58ddDxr9tsZY3qG2I2cwkW79E1llXiIf7EWfqlbSHHXvqId/3Giqe/RdAk9XuXkLeAQImn1rzQW1P+BCQo+Z1oLh0VCLDr/NatRWRpZqvJ3UyvTOpGKwQPNDwNk6N6d1uiCMREh/Foe6YIzzf+OWSBnw+pVk5AQ+ls8g+Kpda7RvoAXE99pcxAewH683rsRq+qwDakRtoJGeThCOyIDVeneGJVdb1XZ4G6mKb9tYy+Zc5wAQAECl+PiqJg/3NbdTUCr554Qk1AIs2/RQ9runy2iAJyoo5bSK6ajIbPL3uLL1MS9O8AGa5wcSrbdM91/ZoMWuvu+KGlap/liZKaIuLvws/kFEGN+aoZvhcISRmwEGIzocfscfdkL37W+kHf2UI=
+    # Required
+    - OS=linux
+    - COMPONENT_TAG_EXTENSION="-${TRAVIS_COMMIT}"
+    # Component Specific
+    #- COMPONENT_TYPE="make"  ?????
+    - COMPONENT_INIT_COMMAND=${TRAVIS_BUILD_DIR}/build/install-dependencies.sh
+    - COMPONENT_BUILD_COMMAND=${TRAVIS_BUILD_DIR}/build/build.sh
+    - COMPONENT_UNIT_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-unit-tests.sh
+    - COMPONENT_E2E_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-e2e-tests.sh
+
+
+stages:
+  # - lint
+  - build
+  #- unit-test
+  #- test-e2e
+  #- publish
+
+jobs:
+  include:
+    # - stage: lint
+    #   name: "Run code lint"
+    #   if: type = pull_request
+    #   script: bash ${TRAVIS_BUILD_DIR}/build/run-code-lint.sh
+    - stage: build
+      name: "Build the image and push it"
+      script:
+         - echo $TRAVIS_BUILD_DIR
+         - ./build/install-dependencies.sh
+         - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+         - export IE_ENV=remote
+         - |
+            make build-images
+            make build-bundle
+
+# --------------------------Enable later -----------------------------------
+#        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
+#        - make copyright-check TRAVIS_BRANCH=${TRAVIS_BRANCH}
+#        - |
+#          make
+#          make component/build
+#          make component/push
+#          if [ "$IMAGE_SCAN" != "false" ]; then make security/scans; fi;
+#        - if [ "$TRAVIS_PULL_REQUEST" == "false" -a "$TRAVIS_BRANCH" == "master" ]; then 
+#            export COMPONENT_NEWTAG="latest-dev";
+#            make component/tag;
+#            export COMPONENT_VERSION="latest";
+#            export COMPONENT_TAG_EXTENSION="-dev";
+#            make component/push;
+#          fi;	
+
+#    - stage: unit-test
+#      name: "Run unit test"
+#      script:
+#        - set -e
+#        # Set the image tag differently for PRs
+#        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
+#        # Bootstrap the build harness, pull test image, and run unit tests.
+#        - |
+#          make
+#          make component/test/unit
+#        - |
+#          set +e
+#          make stop-instrumented  
+#          set -e
+#          make coverage-merge
+#          make go/gosec-install
+#          gosec -fmt sonarqube -out gosec.json -no-fail ./...
+#          make sonar/js
+#    - stage: test-e2e
+#      name: "Deploy the image to a cluster and run e2e tests"
+#      if: type = pull_request
+#      script:
+#        #Check out a clusterpool, set up oc, deploy, run e2e tests, and return clusterpool cluster
+#        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
+#        - |
+#          make
+#          make component/pull
+#          make component/test/e2e
+#    - stage: publish
+#      name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
+#      if: type = push AND branch =~ /^release-[0-9]+\..*$/
+#      script:
+#        - |
+#          make
+#          make pipeline-manifest/update PIPELINE_MANIFEST_COMPONENT_SHA256=${TRAVIS_COMMIT} PIPELINE_MANIFEST_COMPONENT_REPO=${TRAVIS_REPO_SLUG} PIPELINE_MANIFEST_BRANCH=${TRAVIS_BRANCH}
