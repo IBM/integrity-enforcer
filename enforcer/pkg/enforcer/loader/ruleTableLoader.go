@@ -20,10 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
+	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/util/cache"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +46,7 @@ type RuleTableLoader struct {
 	Ignore     *RuleTable
 	ForceCheck *RuleTable
 
+	interval          time.Duration
 	enforcerNamespace string
 }
 
@@ -57,6 +60,7 @@ func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 		Ignore:            NewRuleTable(),
 		ForceCheck:        NewRuleTable(),
 		enforcerNamespace: enforcerNamespace,
+		interval:          time.Second * 10,
 	}
 }
 
@@ -146,21 +150,66 @@ func (self *RuleTableLoader) GetForceCheckData() *RuleTable {
 }
 
 func (self *RuleTableLoader) Load() {
-	tmpData, err := GetRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
-	if err != nil {
-		logger.Error(err)
+	var tmpData1, tmpData2, tmpData3 *RuleTable
+	var keyName string
+	var err error
+	keyName = fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultRuleTableLockCMName)
+	if cached := cache.GetString(keyName); cached == "" {
+		tmpData1, err = GetRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
+		if err != nil {
+			logger.Error("failed to get RuleTable:", err)
+		}
+
+		logger.Trace("RuleTable reloaded.")
+		tmp, _ := json.Marshal(tmpData1)
+		cache.SetString(keyName, string(tmp), &(self.interval))
+	} else {
+		err = json.Unmarshal([]byte(cached), &tmpData1)
+		if err != nil {
+			logger.Error("failed to Unmarshal cached RuleTable:", err)
+			return
+		}
 	}
-	self.Rule = tmpData
-	tmpIgnoreData, err := GetRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
-	if err != nil {
-		logger.Error(err)
+
+	keyName = fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultIgnoreTableLockCMName)
+	if cached := cache.GetString(keyName); cached == "" {
+		tmpData2, err = GetRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
+		if err != nil {
+			logger.Error("failed to get IgnoreRuleTable:", err)
+		}
+
+		logger.Trace("IgnoreRuleTable reloaded.")
+		tmp, _ := json.Marshal(tmpData2)
+		cache.SetString(keyName, string(tmp), &(self.interval))
+	} else {
+		err = json.Unmarshal([]byte(cached), &tmpData2)
+		if err != nil {
+			logger.Error("failed to Unmarshal cached IgnoreRuleTable:", err)
+			return
+		}
 	}
-	self.Ignore = tmpIgnoreData
-	tmpSAData2, err := GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
-	if err != nil {
-		logger.Error(err)
+
+	keyName = fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+	if cached := cache.GetString(keyName); cached == "" {
+		tmpData3, err = GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+		if err != nil {
+			logger.Error("failed to get ForceCheckRuleTable:", err)
+		}
+
+		logger.Trace("ForceCheckRuleTable reloaded.")
+		tmp, _ := json.Marshal(tmpData3)
+		cache.SetString(keyName, string(tmp), &(self.interval))
+	} else {
+		err = json.Unmarshal([]byte(cached), &tmpData3)
+		if err != nil {
+			logger.Error("failed to Unmarshal cached ForceCheckRuleTable:", err)
+			return
+		}
 	}
-	self.ForceCheck = tmpSAData2
+
+	self.Rule = tmpData1
+	self.Ignore = tmpData2
+	self.ForceCheck = tmpData3
 	return
 }
 
@@ -183,11 +232,11 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 	}
 	tmpIgnoreData = tmpIgnoreData.Remove(ref)
 
-	tmpSAData2, err := GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+	tmpForceCheckData, err := GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
 	if err != nil {
 		logger.Error(err)
 	}
-	tmpSAData2 = tmpSAData2.Remove(ref)
+	tmpForceCheckData = tmpForceCheckData.Remove(ref)
 
 	if reqc.IsCreateRequest() || reqc.IsUpdateRequest() {
 		var newProfile rspapi.ResourceSigningProfile
@@ -195,9 +244,9 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 		if err != nil {
 			logger.Error(err)
 		}
-		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref, newProfile.Spec.TargetNamespaces)
-		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref, newProfile.Spec.TargetNamespaces)
-		tmpSAData2 = tmpSAData2.Add(newProfile.Spec.ForceCheckRules, ref, newProfile.Spec.TargetNamespaces)
+		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref, newProfile.Spec.TargetNamespaceSelector)
+		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref, newProfile.Spec.TargetNamespaceSelector)
+		tmpForceCheckData = tmpForceCheckData.Add(newProfile.Spec.ForceCheckRules, ref, newProfile.Spec.TargetNamespaceSelector)
 	}
 
 	self.Rule = tmpData
@@ -206,13 +255,28 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 	self.Ignore = tmpIgnoreData
 	self.Ignore.Update(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
 
-	self.ForceCheck = tmpSAData2
+	self.ForceCheck = tmpForceCheckData
 	self.ForceCheck.Update(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+
+	self.ResetCache()
 	return nil
 }
 
-func (self *RuleTableLoader) Refresh() error {
-	// TODO: implement Refresh function
-	// need to consider that this Loader is initialized every request
+func (self *RuleTableLoader) ResetCache() error {
+	cache.Unset(fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultRuleTableLockCMName))
+	cache.Unset(fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultIgnoreTableLockCMName))
+	cache.Unset(fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultForceCheckTableLockCMName))
 	return nil
+}
+
+func (self *RuleTableLoader) GetTargetNamespaces() *common.NamespaceSelector {
+	self.Load()
+	selector1 := self.Rule.TargetNamespaces(self.enforcerNamespace)
+	selector2 := self.Ignore.TargetNamespaces(self.enforcerNamespace)
+	selector3 := self.ForceCheck.TargetNamespaces(self.enforcerNamespace)
+	merged := &common.NamespaceSelector{}
+	merged = merged.Merge(selector1)
+	merged = merged.Merge(selector2)
+	merged = merged.Merge(selector3)
+	return merged
 }

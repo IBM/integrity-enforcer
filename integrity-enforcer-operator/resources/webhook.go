@@ -80,17 +80,6 @@ func BuildMutatingWebhookConfigurationForIE(cr *apiv1alpha1.IntegrityEnforcer) *
 		Webhooks: []admv1.MutatingWebhook{
 			{
 				Name: fmt.Sprintf("ac-server.%s.svc", cr.Namespace),
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      "integrity-enforced",
-							Operator: "In",
-							Values: []string{
-								"true",
-							},
-						},
-					},
-				},
 				ClientConfig: admv1.WebhookClientConfig{
 					Service: &admv1.ServiceReference{
 						Name:      cr.GetWebhookServiceName(),

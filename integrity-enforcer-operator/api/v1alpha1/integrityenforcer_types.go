@@ -75,7 +75,6 @@ type IntegrityEnforcerSpec struct {
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	IgnoreDefaultIECR bool            `json:"ignoreDefaultIECR,omitempty"`
-	LabeledNamespaces []string        `json:"labeledNamespaces,omitempty"`
 	Security          SecurityConfig  `json:"security,omitempty"`
 	KeyRings          []KeyRingConfig `json:"keyRingConfigs,omitempty"`
 	Server            ServerContainer `json:"server,omitempty"`
@@ -182,8 +181,8 @@ type HttpConfig struct {
 }
 
 type ProfileConfig struct {
-	*rsp.ResourceSigningProfileSpec `json:"resourceSigningProfileSpec,omitempty"`
-	Name string `json:"name,omitempty"`
+	*rsp.ResourceSigningProfileSpec `json:",omitempty"`
+	Name                            string `json:"name,omitempty"`
 }
 
 // IntegrityEnforcerStatus defines the observed state of IntegrityEnforcer

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"time"
 
+	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,16 +31,15 @@ const maxHistoryLength = 3
 // ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
 type ResourceSigningProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
-	// `TargetNamespaces` is used only for profile in IE NS
-	TargetNamespaces []string `json:"targetNamespaces,omitempty"`
-
-	ProtectRules      []*profile.Rule             `json:"protectRules,omitempty"`
-	IgnoreRules       []*profile.Rule             `json:"ignoreRules,omitempty"`
-	ForceCheckRules   []*profile.Rule             `json:"forceCheckRules,omitempty"`
-	KustomizePatterns []*profile.KustomizePattern `json:"kustomizePatterns,omitempty"`
-	ProtectAttrs      []*profile.AttrsPattern     `json:"protectAttrs,omitempty"`
-	UnprotectAttrs    []*profile.AttrsPattern     `json:"unprotectAttrs,omitempty"`
-	IgnoreAttrs       []*profile.AttrsPattern     `json:"ignoreAttrs,omitempty"`
+	// `TargetNamespaceSelector` is used only for profile in IE NS
+	TargetNamespaceSelector *common.NamespaceSelector   `json:"targetNamespaceSelector,omitempty"`
+	ProtectRules            []*profile.Rule             `json:"protectRules,omitempty"`
+	IgnoreRules             []*profile.Rule             `json:"ignoreRules,omitempty"`
+	ForceCheckRules         []*profile.Rule             `json:"forceCheckRules,omitempty"`
+	KustomizePatterns       []*profile.KustomizePattern `json:"kustomizePatterns,omitempty"`
+	ProtectAttrs            []*profile.AttrsPattern     `json:"protectAttrs,omitempty"`
+	UnprotectAttrs          []*profile.AttrsPattern     `json:"unprotectAttrs,omitempty"`
+	IgnoreAttrs             []*profile.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
 // ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy

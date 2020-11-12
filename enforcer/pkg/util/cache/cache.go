@@ -102,6 +102,13 @@ func (self *Cache) Set(name string, object interface{}, ttl *time.Duration) {
 	self.mu.Unlock()
 }
 
+func (self *Cache) Unset(name string) {
+	self.mu.Lock()
+	newData := deleteKey(self.data, []string{name})
+	self.data = newData
+	self.mu.Unlock()
+}
+
 func (self *Cache) Get(name string) interface{} {
 	self.mu.RLock()
 	now := time.Now()
@@ -130,6 +137,10 @@ func (self *Cache) GetString(name string) string {
 
 func Set(name string, object interface{}, ttl *time.Duration) {
 	cache.Set(name, object, ttl)
+}
+
+func Unset(name string) {
+	cache.Unset(name)
 }
 
 func SetString(name string, object string, ttl *time.Duration) {

@@ -38,18 +38,16 @@ type Loader struct {
 	ResourceSignature *ResSigLoader
 }
 
-func NewLoader(cfg *config.EnforcerConfig, reqc *common.ReqContext) *Loader {
+func NewLoader(cfg *config.EnforcerConfig, reqNamespace string) *Loader {
 	enforcerNamespace := cfg.Namespace
-	requestNamespace := reqc.Namespace
+	requestNamespace := reqNamespace
 	signatureNamespace := cfg.SignatureNamespace // for non-existing namespace / cluster scope
 	profileNamespace := cfg.ProfileNamespace     // for non-existing namespace / cluster scope
-	reqApiVersion := reqc.GroupVersion()
-	reqKind := reqc.Kind
 	loader := &Loader{
 		SignPolicy:        NewSignPolicyLoader(enforcerNamespace),
 		RSP:               NewRSPLoader(enforcerNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
 		RuleTable:         NewRuleTableLoader(enforcerNamespace),
-		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace, reqApiVersion, reqKind),
+		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace),
 	}
 	return loader
 }
@@ -91,16 +89,12 @@ func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
 	return nil
 }
 
-func (self *Loader) UpdateProfileStatus(profile profile.SigningProfile, reqc *common.ReqContext, errMsg string) error {
-	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
-	if err != nil {
-		return err
-	}
-	return nil
+func (self *Loader) ProfileTargetNamespaces() *common.NamespaceSelector {
+	return self.RuleTable.GetTargetNamespaces()
 }
 
-func (self *Loader) RefreshRuleTable() error {
-	err := self.RuleTable.Refresh()
+func (self *Loader) UpdateProfileStatus(profile profile.SigningProfile, reqc *common.ReqContext, errMsg string) error {
+	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
 	if err != nil {
 		return err
 	}
@@ -122,7 +116,7 @@ func (self *Loader) GetSignPolicy() *policy.SignPolicy {
 }
 
 func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.ResourceSignatureList {
-	items := self.ResourceSignature.GetData()
+	items := self.ResourceSignature.GetData(reqc)
 
 	return &rsig.ResourceSignatureList{Items: items}
 }

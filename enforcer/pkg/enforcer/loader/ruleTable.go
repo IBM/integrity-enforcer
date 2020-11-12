@@ -46,9 +46,9 @@ const (
 type RuleTable []RuleItem
 
 type RuleItem struct {
-	Rule             *profile.Rule       `json:"rule,omitempty"`
-	Source           *v1.ObjectReference `json:"source,omitempty"`
-	TargetNamespaces []string            `json:"targetNamespaces,omitempty"`
+	Rule                    *profile.Rule             `json:"rule,omitempty"`
+	Source                  *v1.ObjectReference       `json:"source,omitempty"`
+	TargetNamespaceSelector *common.NamespaceSelector `json:"targetNamespaceSelector,omitempty"`
 }
 
 func (self *RuleTable) Update(namespace, name string) error {
@@ -129,10 +129,10 @@ func NewRuleTable() *RuleTable {
 	return &newTable
 }
 
-func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference, targetNs []string) *RuleTable {
+func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference, targetNs *common.NamespaceSelector) *RuleTable {
 	newTable := *self
 	for _, rule := range rules {
-		newTable = append(newTable, RuleItem{Rule: rule, Source: source, TargetNamespaces: targetNs})
+		newTable = append(newTable, RuleItem{Rule: rule, Source: source, TargetNamespaceSelector: targetNs})
 	}
 	return &newTable
 }
@@ -158,6 +158,18 @@ func (self *RuleTable) Remove(subject *v1.ObjectReference) *RuleTable {
 	}
 	newTable := RuleTable(items)
 	return &newTable
+}
+
+func (self *RuleTable) TargetNamespaces(enforcerNamespace string) *common.NamespaceSelector {
+	selector := &common.NamespaceSelector{}
+	for _, item := range *self {
+		if item.Source.Namespace == enforcerNamespace {
+			selector = selector.Merge(item.TargetNamespaceSelector)
+		} else {
+			selector.Include = append(selector.Include, item.Source.Namespace)
+		}
+	}
+	return selector
 }
 
 func (self *RuleTable) Match(reqFields map[string]string, enforcerNS string) (bool, []*v1.ObjectReference) {
@@ -191,7 +203,7 @@ func (self *RuleItem) CheckNamespace(reqNamespace, enforcerNamespace string) boo
 	if reqNamespace != "" {
 		if self.Source.Namespace == enforcerNamespace {
 			// if RSP is in IE NS, use `TargetNamespaces` for namespace matching
-			namespaceMatched = common.MatchWithPatternArray(reqNamespace, self.TargetNamespaces)
+			namespaceMatched = self.TargetNamespaceSelector.Match(reqNamespace)
 		} else {
 			// if RSP is in the other NS, it is used for requests in the same namespace
 			if self.Source.Namespace == reqNamespace {
@@ -214,9 +226,9 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 		Name:       sProfile.GetName(),
 	}
 	table := NewRuleTable()
-	targetNs := []string{}
-	if len(sProfile.Spec.TargetNamespaces) > 0 {
-		targetNs = sProfile.Spec.TargetNamespaces
+	var targetNs *common.NamespaceSelector
+	if sProfile.Spec.TargetNamespaceSelector != nil {
+		targetNs = sProfile.Spec.TargetNamespaceSelector
 	}
 	if tableType == RuleTableTypeProtect {
 		table = table.Add(sProfile.Spec.ProtectRules, source, targetNs)

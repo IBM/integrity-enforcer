@@ -19,6 +19,8 @@ package common
 import (
 	"math/big"
 	"strconv"
+
+	"github.com/jinzhu/copier"
 )
 
 const (
@@ -43,6 +45,40 @@ const (
 	LabelValueVerified   = "verified"
 	LabelValueUnverified = "unverified"
 )
+
+/**********************************************
+
+				NamespaceSelector
+
+***********************************************/
+
+type NamespaceSelector struct {
+	Include []string `json:"include,omitempty"`
+	Exclude []string `json:"exclude,omitempty"`
+}
+
+func (self *NamespaceSelector) Match(namespace string) bool {
+	included := MatchWithPatternArray(namespace, self.Include)
+	excluded := MatchWithPatternArray(namespace, self.Exclude)
+	return included && !excluded
+}
+
+func (s1 *NamespaceSelector) Merge(s2 *NamespaceSelector) *NamespaceSelector {
+	newSelector := &NamespaceSelector{}
+	newSelector.Include = GetUnionOfArrays(s1.Include, s2.Include)
+	newSelector.Exclude = GetUnionOfArrays(s1.Exclude, s2.Exclude)
+	return newSelector
+}
+
+func (s1 *NamespaceSelector) DeepCopyInto(s2 *NamespaceSelector) {
+	copier.Copy(&s2, &s1)
+}
+
+func (s1 *NamespaceSelector) DeepCopy() *NamespaceSelector {
+	s2 := &NamespaceSelector{}
+	s1.DeepCopyInto(s2)
+	return s2
+}
 
 /**********************************************
 

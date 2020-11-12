@@ -52,6 +52,32 @@ func ExactMatch(pattern, value string) bool {
 	return pattern == value
 }
 
+func ExactMatchWithPatternArray(value string, patternArray []string) bool {
+	for _, pattern := range patternArray {
+		if ExactMatch(pattern, value) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetUnionOfArrays(array1, array2 []string) []string {
+	newArray := []string{}
+	for _, val := range array1 {
+		exists := ExactMatchWithPatternArray(val, array1)
+		if !exists {
+			newArray = append(newArray, val)
+		}
+	}
+	for _, val := range array2 {
+		exists := ExactMatchWithPatternArray(val, array2)
+		if !exists {
+			newArray = append(newArray, val)
+		}
+	}
+	return newArray
+}
+
 func MatchPatternWithArray(pattern string, valueArray []string) bool {
 	for _, value := range valueArray {
 		if MatchPattern(pattern, value) {
