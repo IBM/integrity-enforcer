@@ -20,13 +20,13 @@ TRAVIS_BUILD ?= 1
 # Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
 IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
 VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-REGISTRY ?= quay.io/gajananan
+REGISTRY ?= quay.io/open-cluster-management
 
 IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
 
 # Github host to use for checking the source tree;
 # Override this variable ue with your own value if you're working on forked repo.
-GIT_HOST ?= github.com/gajananan
+GIT_HOST ?= github.com/IBM
 
 PWD := $(shell pwd)
 BASE_DIR := $(shell basename $(PWD))
