@@ -233,7 +233,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*profile.AttrsPattern, allowDiffPatterns []*mapnode.Difference, resScope string, signType SignatureType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*profile.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignatureType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -370,7 +370,7 @@ func getMaskDef(kind string) []string {
 	return masks
 }
 
-func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPatterns []*mapnode.Difference) (bool, string) {
+func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPatterns []*mapnode.DiffPattern) (bool, string) {
 	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error("Failed to load original message as *Node", string(orgObj))
@@ -462,7 +462,7 @@ func decompress(str string) string {
 	return s
 }
 
-func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*profile.KustomizePattern) []*mapnode.Difference {
+func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*profile.KustomizePattern) []*mapnode.DiffPattern {
 	ref := reqc.ResourceRef()
 	name := reqc.Name
 	kustomizedName := name
@@ -479,11 +479,11 @@ func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*profile.Kus
 		"before": name,
 		"after":  kustomizedName,
 	}
-	allowDiffPattern := &mapnode.Difference{
+	allowDiffPattern := &mapnode.DiffPattern{
 		Key:    key,
 		Values: values,
 	}
-	return []*mapnode.Difference{allowDiffPattern}
+	return []*mapnode.DiffPattern{allowDiffPattern}
 }
 
 type SigVerifyResult struct {
