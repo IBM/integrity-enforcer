@@ -76,6 +76,7 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(tlsKey),
 	})
 	cn = svcName + "." + NS + ".svc"
+
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(2020),
 		Subject: pkix.Name{
@@ -85,6 +86,7 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		NotAfter:    time.Now().AddDate(10, 0, 0),
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:    x509.KeyUsageDigitalSignature,
+		DNSNames:    []string{cn},
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &tlsKey.PublicKey, caKey)
@@ -97,6 +99,6 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		Bytes: certBytes,
 	})
 
-	//ca, tls.crt, tls.key,
+	//ca.crt, tls.key, tls.crt, error
 	return caPEM.Bytes(), tlsPrivKeyPEM.Bytes(), certPEM.Bytes(), err
 }
