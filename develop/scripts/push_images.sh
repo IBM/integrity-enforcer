@@ -21,6 +21,22 @@ if ! [ -x "$(command -v docker)" ]; then
 fi
 
 
+if [ -z "$IE_ENFORCER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_ENFORCER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
+
+if [ -z "$IE_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
+
+if [ -z "$IE_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
+
+
 
 # Push ie-server image
 echo -----------------------------
