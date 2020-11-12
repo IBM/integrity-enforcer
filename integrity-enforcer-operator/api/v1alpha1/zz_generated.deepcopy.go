@@ -213,11 +213,6 @@ func (in *IntegrityEnforcerSpec) DeepCopyInto(out *IntegrityEnforcerSpec) {
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
-	if in.LabeledNamespaces != nil {
-		in, out := &in.LabeledNamespaces, &out.LabeledNamespaces
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	in.Security.DeepCopyInto(&out.Security)
 	if in.KeyRings != nil {
 		in, out := &in.KeyRings, &out.KeyRings

@@ -46,9 +46,9 @@ const (
 type RuleTable []RuleItem
 
 type RuleItem struct {
-	Rule            *profile.Rule             `json:"rule,omitempty"`
-	Source          *v1.ObjectReference       `json:"source,omitempty"`
-	TargetNamespace *common.NamespaceSelector `json:"targetNamespace,omitempty"`
+	Rule                    *profile.Rule             `json:"rule,omitempty"`
+	Source                  *v1.ObjectReference       `json:"source,omitempty"`
+	TargetNamespaceSelector *common.NamespaceSelector `json:"targetNamespaceSelector,omitempty"`
 }
 
 func (self *RuleTable) Update(namespace, name string) error {
@@ -132,7 +132,7 @@ func NewRuleTable() *RuleTable {
 func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference, targetNs *common.NamespaceSelector) *RuleTable {
 	newTable := *self
 	for _, rule := range rules {
-		newTable = append(newTable, RuleItem{Rule: rule, Source: source, TargetNamespace: targetNs})
+		newTable = append(newTable, RuleItem{Rule: rule, Source: source, TargetNamespaceSelector: targetNs})
 	}
 	return &newTable
 }
@@ -164,7 +164,7 @@ func (self *RuleTable) TargetNamespaces(enforcerNamespace string) *common.Namesp
 	selector := &common.NamespaceSelector{}
 	for _, item := range *self {
 		if item.Source.Namespace == enforcerNamespace {
-			selector = selector.Merge(item.TargetNamespace)
+			selector = selector.Merge(item.TargetNamespaceSelector)
 		} else {
 			selector.Include = append(selector.Include, item.Source.Namespace)
 		}
@@ -203,7 +203,7 @@ func (self *RuleItem) CheckNamespace(reqNamespace, enforcerNamespace string) boo
 	if reqNamespace != "" {
 		if self.Source.Namespace == enforcerNamespace {
 			// if RSP is in IE NS, use `TargetNamespaces` for namespace matching
-			namespaceMatched = self.TargetNamespace.Match(reqNamespace)
+			namespaceMatched = self.TargetNamespaceSelector.Match(reqNamespace)
 		} else {
 			// if RSP is in the other NS, it is used for requests in the same namespace
 			if self.Source.Namespace == reqNamespace {
@@ -227,8 +227,8 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 	}
 	table := NewRuleTable()
 	var targetNs *common.NamespaceSelector
-	if sProfile.Spec.TargetNamespace != nil {
-		targetNs = sProfile.Spec.TargetNamespace
+	if sProfile.Spec.TargetNamespaceSelector != nil {
+		targetNs = sProfile.Spec.TargetNamespaceSelector
 	}
 	if tableType == RuleTableTypeProtect {
 		table = table.Add(sProfile.Spec.ProtectRules, source, targetNs)

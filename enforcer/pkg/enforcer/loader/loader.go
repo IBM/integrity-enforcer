@@ -89,7 +89,7 @@ func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
 	return nil
 }
 
-func (self *Loader) ProfileTargetingNamespaces() *common.NamespaceSelector {
+func (self *Loader) ProfileTargetNamespaces() *common.NamespaceSelector {
 	return self.RuleTable.GetTargetNamespaces()
 }
 

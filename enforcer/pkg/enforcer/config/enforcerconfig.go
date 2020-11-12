@@ -45,12 +45,12 @@ type EnforcerConfig struct {
 	Patch *PatchConfig        `json:"patch,omitempty"`
 	Log   *LoggingScopeConfig `json:"log,omitempty"`
 
-	MonitoringNamespace *common.NamespaceSelector          `json:"monitoringNamespace,omitempty"`
-	Allow               []profile.RequestPattern           `json:"allow,omitempty"`
-	Ignore              []profile.RequestPattern           `json:"ignore,omitempty"`
-	Mode                IntegrityEnforcerMode              `json:"mode,omitempty"`
-	Plugin              []PluginConfig                     `json:"plugin,omitempty"`
-	CommonProfile       *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`
+	InScopeNamespaceSelector *common.NamespaceSelector          `json:"inScopeNamespaceSelector,omitempty"`
+	Allow                    []profile.RequestPattern           `json:"allow,omitempty"`
+	Ignore                   []profile.RequestPattern           `json:"ignore,omitempty"`
+	Mode                     IntegrityEnforcerMode              `json:"mode,omitempty"`
+	Plugin                   []PluginConfig                     `json:"plugin,omitempty"`
+	CommonProfile            *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`
 
 	Namespace          string   `json:"namespace,omitempty"`
 	SignatureNamespace string   `json:"signatureNamespace,omitempty"`

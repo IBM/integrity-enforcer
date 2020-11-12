@@ -160,7 +160,7 @@ func (self *RuleTableLoader) Load() {
 			logger.Error("failed to get RuleTable:", err)
 		}
 
-		logger.Debug("RuleTable reloaded.")
+		logger.Trace("RuleTable reloaded.")
 		tmp, _ := json.Marshal(tmpData1)
 		cache.SetString(keyName, string(tmp), &(self.interval))
 	} else {
@@ -178,7 +178,7 @@ func (self *RuleTableLoader) Load() {
 			logger.Error("failed to get IgnoreRuleTable:", err)
 		}
 
-		logger.Debug("IgnoreRuleTable reloaded.")
+		logger.Trace("IgnoreRuleTable reloaded.")
 		tmp, _ := json.Marshal(tmpData2)
 		cache.SetString(keyName, string(tmp), &(self.interval))
 	} else {
@@ -196,7 +196,7 @@ func (self *RuleTableLoader) Load() {
 			logger.Error("failed to get ForceCheckRuleTable:", err)
 		}
 
-		logger.Debug("ForceCheckRuleTable reloaded.")
+		logger.Trace("ForceCheckRuleTable reloaded.")
 		tmp, _ := json.Marshal(tmpData3)
 		cache.SetString(keyName, string(tmp), &(self.interval))
 	} else {
@@ -244,9 +244,9 @@ func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
 		if err != nil {
 			logger.Error(err)
 		}
-		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref, newProfile.Spec.TargetNamespace)
-		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref, newProfile.Spec.TargetNamespace)
-		tmpForceCheckData = tmpForceCheckData.Add(newProfile.Spec.ForceCheckRules, ref, newProfile.Spec.TargetNamespace)
+		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref, newProfile.Spec.TargetNamespaceSelector)
+		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref, newProfile.Spec.TargetNamespaceSelector)
+		tmpForceCheckData = tmpForceCheckData.Add(newProfile.Spec.ForceCheckRules, ref, newProfile.Spec.TargetNamespaceSelector)
 	}
 
 	self.Rule = tmpData

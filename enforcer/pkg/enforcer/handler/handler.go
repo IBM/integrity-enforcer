@@ -68,7 +68,8 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	self.loader = loader.NewLoader(self.config, reqNamespace)
 
 	// check if reqNamespace matches EnforcerConfig.MonitoringNamespace and check if any RSP is targeting the namespace
-	if !self.checkIfMonitoringNamespace(reqNamespace) && !self.checkIfProfileTargetingNamespace(reqNamespace) {
+	// this check is done only for Namespaced request, and skip this for Cluster-scope request
+	if reqNamespace != "" && !self.checkIfInScopeNamespace(reqNamespace) && !self.checkIfProfileTargetNamespace(reqNamespace) {
 		return createAdmissionResponse(true, "this namespace is not monitored")
 	}
 
@@ -492,15 +493,20 @@ func (self *RequestHandler) checkIfDryRunAdmission() bool {
 	return self.reqc.DryRun
 }
 
-func (self *RequestHandler) checkIfProfileTargetingNamespace(reqNamespace string) bool {
-	targetNSSelector := self.loader.ProfileTargetingNamespaces()
+func (self *RequestHandler) checkIfProfileTargetNamespace(reqNamespace string) bool {
+	targetNSSelector := self.loader.ProfileTargetNamespaces()
+	if targetNSSelector == nil {
+		return false
+	}
 	return targetNSSelector.Match(reqNamespace)
 }
 
-func (self *RequestHandler) checkIfMonitoringNamespace(reqNamespace string) bool {
-	included := common.MatchWithPatternArray(reqNamespace, self.config.MonitoringNamespace.Include)
-	excluded := common.MatchWithPatternArray(reqNamespace, self.config.MonitoringNamespace.Exclude)
-	return included && !excluded
+func (self *RequestHandler) checkIfInScopeNamespace(reqNamespace string) bool {
+	inScopeNSSelector := self.config.InScopeNamespaceSelector
+	if inScopeNSSelector == nil {
+		return false
+	}
+	return inScopeNSSelector.Match(reqNamespace)
 }
 
 func (self *RequestHandler) checkIfUnprocessedInIE() bool {

@@ -33,7 +33,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cert "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/cert"
 
@@ -53,7 +52,6 @@ import (
 
 ***********************************************/
 
-const ieTargetNamespaceLabelKey = "integrity-enforced"
 const ieTargetNamespaceLabelValue = "true"
 
 func (r *IntegrityEnforcerReconciler) attachLabelToNamespace(instance *apiv1alpha1.IntegrityEnforcer, expected *v1.Namespace) (ctrl.Result, error) {
@@ -91,25 +89,6 @@ func (r *IntegrityEnforcerReconciler) attachLabelToNamespace(instance *apiv1alph
 	// No reconcile was necessary
 	return ctrl.Result{}, nil
 
-}
-
-func (r *IntegrityEnforcerReconciler) attachLabelToNamespacesInCR(
-	instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
-	for _, nsName := range instance.Spec.LabeledNamespaces {
-		expected := &v1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: nsName,
-				Labels: map[string]string{
-					ieTargetNamespaceLabelKey: ieTargetNamespaceLabelValue,
-				},
-			},
-		}
-		res, err := r.attachLabelToNamespace(instance, expected)
-		if err != nil {
-			return res, err
-		}
-	}
-	return ctrl.Result{}, nil
 }
 
 /**********************************************

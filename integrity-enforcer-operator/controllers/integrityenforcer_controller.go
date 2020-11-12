@@ -86,12 +86,6 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// attach label to namespaces
-	recResult, recErr = r.attachLabelToNamespacesInCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
 	if instance.Spec.GlobalConfig.OpenShift {
 		// SecurityContextConstraints (SCC)
 		recResult, recErr = r.createOrUpdateSCC(instance)
