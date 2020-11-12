@@ -12,8 +12,6 @@ spec:
       exclude:
       - "kube-*"
       - "openshift-*"
-    log:
-      logLevel: trace
   signPolicy:
     policies:
     - namespaces:
