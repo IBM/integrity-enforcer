@@ -20,26 +20,6 @@ TRAVIS_BUILD ?= 1
 # Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
 #IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
 #VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-REGISTRY ?= quay.io/gajananan
-#REGISTRY ?= quay.io/open-cluster-management
-
-#IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IMG)
-
-VERSION=0.0.18dev
-PREV_VERSION=0.0.17dev
-IE_IMAGE=ie-server
-IE_LOGGING=ie-logging
-export IE_OPERATOR=integrity-enforcer-operator
-export IE_BUNDLE=integrity-enforcer-operator-bundle
-export IE_INDEX=integrity-enforcer-operator-index
-
-export IE_ENFORCER_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_IMAGE):$(VERSION)
-export IE_LOGGING_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_LOGGING):$(VERSION)
-export IE_OPERATOR_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_OPERATOR):$(VERSION)
-export IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_BUNDLE):$(VERSION)
-export IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION ?= $(REGISTRY)/$(IE_INDEX):$(VERSION)
-
-export IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION ?= $(REGISTRY)/$(IE_INDEX):$(PREV_VERSION)
 
 # Github host to use for checking the source tree;
 # Override this variable ue with your own value if you're working on forked repo.
@@ -69,11 +49,10 @@ else
     $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
 endif
 
+include ie-build-default.conf
+export $(shell sed 's/=.*//' ie-build-default.conf)
 
-
-
-.PHONY: fmt lint test coverage build build-images
-
+.PHONY: int fmt lint test coverage build build-images
 
 
 ############################################################
@@ -125,14 +104,14 @@ build:
 ############################################################
 
 build-images:
-	./develop/scripts/travis_build_images.sh
+	./develop/scripts/build_images.sh
 
 
 ############################################################
 # bundle section
 ############################################################
 
-build-bundle:
+build-bundle: 
 	- ./develop/scripts/build_bundle.sh
 
 ############################################################

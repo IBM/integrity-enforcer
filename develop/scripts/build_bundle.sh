@@ -38,7 +38,7 @@ cd $IE_REPO_ROOT/integrity-enforcer-operator
 # Build ie-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle
+make bundle IMG=${IE_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 make bundle-build BUNDLE_IMG=${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Push ie-operator bundle
@@ -54,25 +54,25 @@ echo [3/4] Adding bundle to index
 docker pull ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
-        sudo $GOPATH/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
                       --tag ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 else
 	echo "Succesfulling pulled previous index"
-	sudo $GOPATH/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
                       --from-index ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
                       --tag ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 fi
 
-sudo rm tmp.Dockerfile
+rm -f tmp.Dockerfile
 
 # Build ie-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
-sudo docker build -f index.Dockerfile -t ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
+docker build -f index.Dockerfile -t ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
 # Push ie-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
-sudo docker push ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+docker push ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 
 echo "Completed building bundle and index"

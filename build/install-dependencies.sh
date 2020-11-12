@@ -30,9 +30,9 @@ if ! [ -x "$(command -v opm)" ]; then
 	fi
 
 	echo $GOPATH
-	wget -nv $OPM_URL -O $GOPATH/bin/opm
-	chmod +x $GOPATH/bin/opm
-	$GOPATH/bin/opm version
+	wget -nv $OPM_URL -O /usr/local/bin/opm
+	chmod +x /usr/local/bin/opm
+	/usr/local/bin/opm version
 fi
 
 if ! [ -x "$(command -v kustomize)" ]; then
@@ -42,7 +42,7 @@ if ! [ -x "$(command -v kustomize)" ]; then
 		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 	fi
 	chmod +x ./kustomize
-	mv ./kustomize $GOPATH/bin/kustomize
+	mv ./kustomize /usr/local/bin/kustomize
 fi
 
 echo "Finished setting up dependencies."
