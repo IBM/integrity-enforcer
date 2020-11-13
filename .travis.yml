@@ -13,6 +13,7 @@ branches:
   only:
     - master
     - fix/setup-travis
+    - fix/setup-e2e-travis
     - /^release-[0-9]+\..*$/
   
 env:
@@ -32,7 +33,7 @@ stages:
   # - lint
   - build
   #- unit-test
-  #- test-e2e
+  - test-e2e
   #- publish
 
 jobs:
@@ -51,7 +52,13 @@ jobs:
          - |
             make build-images
             make build-bundle
-
+    - stage: test-e2e
+      name: "Deploy the image to a cluster and run e2e tests"
+      script:
+        - ./build/install-dependencies.sh
+        - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+        - |
+          make test-e2e
 # --------------------------Enable later -----------------------------------
 #        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
 #        - make copyright-check TRAVIS_BRANCH=${TRAVIS_BRANCH}
