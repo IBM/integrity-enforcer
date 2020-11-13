@@ -28,8 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const integrityEnforcerOperatorCR = "../../config/samples/apis_v1alpha1_integrityenforcer_local.yaml"
-
 var _ = Describe("Test integrity enforcer server handling", func() {
 	Describe("Check operator status in ns:"+namespace, func() {
 		It("should be Running Status", func() {

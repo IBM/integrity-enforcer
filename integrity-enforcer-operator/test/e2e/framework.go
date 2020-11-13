@@ -22,9 +22,12 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
-	namespace         = "integrity-enforcer-operator-system"
-	ie_namespace      = os.Getenv("IE_OP_NS")
-	kubeconfigManaged = "../../kubeconfig_managed"
+	namespace                   = "integrity-enforcer-operator-system"
+	ie_namespace                = os.Getenv("IE_OP_NS")
+	enforcer_dir                = os.Getenv("ENFORCER_DIR")
+	deploy_dir                  = enforcer_dir + "/test/deploy/"
+	kubeconfigManaged           = enforcer_dir + "kubeconfig_managed"
+	integrityEnforcerOperatorCR = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
 )
 
 type Framework struct {

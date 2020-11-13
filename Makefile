@@ -163,11 +163,10 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 #kind-deploy-controller: check-env
 #	@echo installing config policy controller
 
-test-e2e: kind-create-cluster install-crds install-resources e2e-test delete-resources delete-crds kind-delete-cluster
+test-e2e: kind-create-cluster install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
-	@echo ENFORCER_DIR : $(ENFORCER_DIR)
 	kind create cluster --name test-managed
 	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
 
@@ -185,7 +184,6 @@ delete-crds:
 
 install-resources:
 	@echo
-	@echo IE_OP_NS : $(IE_OP_NS)
 	@echo creating namespaces
 	kubectl create ns $(IE_OP_NS)
 	@echo creating keyring-secret
@@ -196,12 +194,23 @@ install-resources:
 	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
 
 delete-resources:
+	@echo
 	@echo deleting keyring-secret
 	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
 
+setup-cr:
+	@echo
+	@echo prepare cr
+	@echo copy cr into test dir
+	cp $(ENFORCER_DIR)config/samples/apis_v1alpha1_integrityenforcer.yaml $(ENFORCER_DIR)test/deploy
+	@echo insert image
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image $(IE_LOGGING_IMAGE_NAME_AND_VERSION)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image $(IE_ENFORCER_IMAGE_NAME_AND_VERSION)
+
 e2e-test:
+	@echo
 	@echo run test
 	cd $(ENFORCER_DIR) && go test -v ./test/e2e -coverprofile cover.out
 
