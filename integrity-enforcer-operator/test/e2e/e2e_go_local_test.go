@@ -33,7 +33,7 @@ const integrityEnforcerOperatorCR = "../../config/samples/apis_v1alpha1_integrit
 var _ = Describe("Test integrity enforcer server handling", func() {
 	Describe("Check operator status in ns:"+namespace, func() {
 		It("should be Running Status", func() {
-			var timeout int = 60
+			var timeout int = 120
 			var wantFound bool = false
 			expected := "integrity-enforcer-operator-controller-manager"
 			framework := initFrameWork()
