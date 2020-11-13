@@ -29,7 +29,7 @@ import (
 )
 
 var _ = Describe("Test integrity enforcer server handling", func() {
-	Describe("Check operator status in ns:"+namespace, func() {
+	Describe("Check operator status in ns:"+ie_namespace, func() {
 		It("should be Running Status", func() {
 			var timeout int = 120
 			var wantFound bool = false
