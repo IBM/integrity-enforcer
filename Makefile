@@ -184,10 +184,10 @@ delete-crds:
 
 install-resources:
 	@echo creating namespaces
-	kubectl create ns integrity-enforcer-operator-system
+	kubectl create ns $(IE_OP_NS)
 	@echo
 	@echo creating keyring-secret
-	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
+	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
 	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=$(IE_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
@@ -195,11 +195,11 @@ install-resources:
 
 delete-resources:
 	@echo deleting keyring-secret
-	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
+	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
 	@echo deleting namespaces
-	kubectl delete ns integrity-enforcer-operator-system --force --grace-period=0
+	kubectl delete ns $(IE_OP_NS) --force --grace-period=0
 
 e2e-test:
 	@echo run test
