@@ -23,83 +23,9 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-# for test
-ENFORCER_DIR ?= $(PWD)
-WATCH_NAMESPACE ?= $(IE_NS)
-IE_NS ?= integrity-enforcer-operator-system
-ENVTEST_ASSETS_DIR ?= $(shell pwd)/test/testbin
 
 
 all: manager
-
-test-e2e: init-envtest-commands kind-create-cluster install-resources run-e2e-test delete-resources kind-delete-cluster
-
-# Prepare kind cluster for e2e test
-init-envtest-commands:
-	@echo setup envtest
-	mkdir -p $(ENVTEST_ASSETS_DIR)
-	./test/init-commands.sh $(ENVTEST_ASSETS_DIR)
-
-
-kind-create-cluster:
-	@echo
-	@echo "creating cluster"
-	$(ENVTEST_ASSETS_DIR)/kind create cluster --name test-managed --config ./test/kind-config.yaml
-	$(ENVTEST_ASSETS_DIR)/kind get kubeconfig --name test-managed > $(PWD)/kubeconfig_managed
-
-
-kind-delete-cluster:
-	@echo
-	@echo deleting cluster
-	$(ENVTEST_ASSETS_DIR)/kind delete cluster --name test-managed 
-
-# install-crds:
-# 	@echo installing crds
-# 	kubectl apply -f deploy/crds/policy.open-cluster-management.io_configurationpolicies_crd.yaml
-# 	kubectl apply -f test/crds/clusterversions.config.openshift.io.yaml
-# 	kubectl apply -f test/crds/securitycontextconstraints.security.openshift.io_crd.yaml
-# 	kubectl apply -f test/crds/apiservers.config.openshift.io_crd.yaml
-
-install-resources:
-	@echo
-	@echo creating namespaces
-	$(ENVTEST_ASSETS_DIR)/kubectl create ns integrity-enforcer-operator-system
-	@echo
-	@echo creating keyring-secret
-	$(ENVTEST_ASSETS_DIR)/kubectl create -f test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
-	@echo
-	@echo installing crd
-	$(ENVTEST_ASSETS_DIR)/kustomize build $(ENFORCER_DIR)/config/crd | $(ENVTEST_ASSETS_DIR)/kubectl apply -f -
-	@cd $(ENFORCER_DIR)/config/manager && $(ENVTEST_ASSETS_DIR)/kustomize edit set image controller=$(IMG)
-	@echo
-	@echo installing operator
-	$(ENVTEST_ASSETS_DIR)/kustomize build $(ENFORCER_DIR)/config/default | $(ENVTEST_ASSETS_DIR)/kubectl apply --validate=false -f -
-	
-
-delete-resources:
-	@echo
-	@echo deleting keyring-secret
-	$(ENVTEST_ASSETS_DIR)/kubectl delete -f test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
-	@echo
-	@echo deleting operator
-	$(ENVTEST_ASSETS_DIR)/kustomize build $(ENFORCER_DIR)/config/default | $(ENVTEST_ASSETS_DIR)/kubectl delete -f -
-	@echo
-	@echo deleting namespaces
-	-$(ENVTEST_ASSETS_DIR)/kubectl delete ns integrity-enforcer-operator-system
-
-
-# Run tests
-run-e2e-test:
-	@echo
-	@echo run test
-	go test -v ./test/e2e -coverprofile cover.out
-
-# Run tests
-# ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
-# test: generate fmt vet manifests
-# 	mkdir -p $(ENVTEST_ASSETS_DIR)
-# 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-# 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./test/e2e-go -coverprofile cover.out
 
 # Build manager binary
 manager: generate fmt vet

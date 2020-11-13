@@ -3,3 +3,5 @@ nohup.out
 docs/node_modules/
 docs/_book/
 *.gpg
+cover.out
+kubeconfig_managed

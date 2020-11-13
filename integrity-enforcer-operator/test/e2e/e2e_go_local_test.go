@@ -28,12 +28,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const integrityEnforcerOperatorCR = "../../config/samples/apis_v1alpha1_integrityenforcer_local.yaml"
-
 var _ = Describe("Test integrity enforcer server handling", func() {
-	Describe("Check operator status in ns:"+namespace, func() {
+	Describe("Check operator status in ns:"+ie_namespace, func() {
 		It("should be Running Status", func() {
-			var timeout int = 60
+			var timeout int = 120
 			var wantFound bool = false
 			expected := "integrity-enforcer-operator-controller-manager"
 			framework := initFrameWork()
@@ -65,17 +63,17 @@ var _ = Describe("Test integrity enforcer server handling", func() {
 			}, timeout, 1).Should(BeNil())
 		})
 	})
-	Describe("Install ie server in ns:"+namespace, func() {
+	Describe("Install ie server in ns:"+ie_namespace, func() {
 		It("should be created properly", func() {
 			By("Creating cr: " + integrityEnforcerOperatorCR)
 			var timeout int = 300
 			var wantFound bool = false
 			expected := "integrity-enforcer-server"
 			framework := initFrameWork()
-			Kubectl("apply", "-f", integrityEnforcerOperatorCR, "-n", framework.Namespace.Name)
+			Kubectl("apply", "-f", integrityEnforcerOperatorCR, "-n", ie_namespace)
 			Eventually(func() error {
 				var err error
-				pods, err := framework.KubeClientSet.CoreV1().Pods(framework.Namespace.Name).List(goctx.TODO(), metav1.ListOptions{})
+				pods, err := framework.KubeClientSet.CoreV1().Pods(ie_namespace).List(goctx.TODO(), metav1.ListOptions{})
 				if err != nil {
 					return err
 				}
