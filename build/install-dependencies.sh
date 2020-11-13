@@ -55,4 +55,25 @@ if ! [ -x "$(command -v jq)" ]; then
 	sudo apt -y install jq
 fi
 
+if ! [ -x "$(command -v kubectl)" ]; then
+	if [[ "$OS_NAME" == "Linux" ]]; then
+		curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+	elif [[ "$OS_NAME" == "Darwin" ]]; then
+		curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl"
+	fi
+        chmod +x ./kubectl
+        sudo ./kubectl /usr/local/bin/kubectl
+fi
+
+if ! [ -x "$(command -v kubectl)" ]; then
+        if [[ "$OS_NAME" == "Linux" ]]; then
+		curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64
+	elif [[ "$OS_NAME" == "Darwin" ]]; then
+		curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-darwin-amd64
+	fi
+
+        chmod +x ./kind
+        sudo ./kind /usr/local/bin/kind
+fi
+
 echo "Finished setting up dependencies."

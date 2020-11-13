@@ -121,11 +121,14 @@ build-images:
 	./develop/scripts/build_images.sh
 
 
+push-images:
+	./develop/scripts/push_images.sh
+
 ############################################################
 # bundle section
 ############################################################
 
-build-bundle: 
+build-bundle:
 	- ./develop/scripts/build_bundle.sh
 
 ############################################################
@@ -144,52 +147,77 @@ copyright-check:
 # e2e test section
 ############################################################
 .PHONY: kind-bootstrap-cluster
-kind-bootstrap-cluster: kind-create-cluster install-crds kind-deploy-controller install-resources
+kind-bootstrap-cluster: kind-create-cluster install-crds install-resources
 
 .PHONY: kind-bootstrap-cluster-dev
 kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 
-check-env:
-ifndef DOCKER_USER
-	$(error DOCKER_USER is undefined)
-endif
-ifndef DOCKER_PASS
-	$(error DOCKER_PASS is undefined)
-endif
+#check-env:
+#ifndef DOCKER_USER
+#	$(error DOCKER_USER is undefined)
+#endif
+#ifndef DOCKER_PASS
+#	$(error DOCKER_PASS is undefined)
+#endif
 
-kind-deploy-controller: check-env
-	@echo installing config policy controller
+#kind-deploy-controller: check-env
+#	@echo installing config policy controller
+
+test-e2e: kind-create-cluster install-crds install-resources e2e-test delete-resources delete-crds kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
-	kind create cluster --name test-managed
+	kind create cluster --name test-managed --config $(ENFORCER_DIR)test/kind-config.yaml
 	kind get kubeconfig --name test-managed > $(PWD)/kubeconfig_managed
 
 kind-delete-cluster:
+	@echo deleting cluster
 	kind delete cluster --name test-managed
 
 install-crds:
 	@echo installing crds
+	kustomize build $(ENFORCER_DIR)config/crd | kubectl apply -f -
+
+delete-crds:
+	@echo deleting crds
+	kustomize build $(ENFORCER_DIR)config/crd | kubectl delete -f -
 
 install-resources:
 	@echo creating namespaces
+	kubectl create ns integrity-enforcer-operator-system
+	@echo
+	@echo creating keyring-secret
+	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
+	@echo setting image
+	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=$(IE_OPERATOR_IMAGE_NAME_AND_VERSION)
+	@echo installing operator
+	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
+
+delete-resources:
+	@echo deleting keyring-secret
+	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
+	@echo deleting operator
+	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
+	@echo deleting namespaces
+	kubectl delete ns integrity-enforcer-operator-system --force --grace-period=0
 
 e2e-test:
-	${GOPATH}/bin/ginkgo -v --slowSpecThreshold=10 test/e2e
+	@echo run test
+	go test -v  $(ENFORCER_DIR)test/e2e -coverprofile cover.out
 
 ############################################################
 # e2e test coverage
 ############################################################
-build-instrumented:
-	go test -covermode=atomic -coverpkg=github.com/open-cluster-management/$(IMG)... -c -tags e2e ./cmd/manager -o build/_output/bin/$(IMG)-instrumented
+#build-instrumented:
+#	go test -covermode=atomic -coverpkg=github.com/open-cluster-management/$(IMG)... -c -tags e2e ./cmd/manager -o build/_output/bin/$(IMG)-instrumented
 
-run-instrumented:
-	WATCH_NAMESPACE="managed" ./build/_output/bin/$(IMG)-instrumented -test.run "^TestRunMain$$" -test.coverprofile=coverage_e2e.out &>/dev/null &
+#run-instrumented:
+#	WATCH_NAMESPACE="managed" ./build/_output/bin/$(IMG)-instrumented -test.run "^TestRunMain$$" -test.coverprofile=coverage_e2e.out &>/dev/null &
 
-stop-instrumented:
-	ps -ef | grep 'config-po' | grep -v grep | awk '{print $$2}' | xargs kill
+#stop-instrumented:
+#	ps -ef | grep 'config-po' | grep -v grep | awk '{print $$2}' | xargs kill
 
-coverage-merge:
-	@echo merging the coverage report
-	gocovmerge $(PWD)/coverage_* >> coverage.out
-	cat coverage.out
+#coverage-merge:
+#	@echo merging the coverage report
+#	gocovmerge $(PWD)/coverage_* >> coverage.out
+#	cat coverage.out
