@@ -49,11 +49,25 @@ else
     $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
 endif
 
-include ie-build-default.conf
-export $(shell sed 's/=.*//' ie-build-default.conf)
+ifeq ($(IE_REPO_ROOT),)
+$(error IE_REPO_ROOT is not set)
+endif
 
-.PHONY: int fmt lint test coverage build build-images
+include  .env
+export $(shell sed 's/=.*//' .env)
 
+ifeq ($(ENV_CONFIG),)
+$(error ENV_CONFIG is not set)
+endif
+
+include  $(ENV_CONFIG)
+export $(shell sed 's/=.*//' $(ENV_CONFIG))
+
+.PHONY: config int fmt lint test coverage build build-images
+
+
+config:
+	@[ "${ENV_CONFIG}" ] && echo "Env config is all good" || ( echo "ENV_CONFIG is not set"; exit 1 )
 
 ############################################################
 # format section
