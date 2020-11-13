@@ -55,6 +55,8 @@ jobs:
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
+        - ./build/install-dependencies.sh
+        - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
         - |
           make test-e2e
 # --------------------------Enable later -----------------------------------
