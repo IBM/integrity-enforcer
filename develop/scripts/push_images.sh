@@ -19,35 +19,29 @@ if ! [ -x "$(command -v docker)" ]; then
     echo 'Error: docker is not installed.' >&2
     exit 1
 fi
-if [ -z "$IE_REPO_ROOT" ]; then
-   echo "IE_REPO_ROOT is empty. Please set root directory for IE repository"
-   exit 1
+
+
+if [ -z "$IE_ENFORCER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_ENFORCER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
 fi
 
-SERVICE_NAME=ie-server
-IMAGE_LOCAL=integrityenforcer/ie-server:0.0.4dev
-IMAGE_REMOTE=${IMAGE_LOCAL}
-# IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
-BASEDIR=./deployment
-DOCKERFILE=./image/Dockerfile
+if [ -z "$IE_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
 
-LOGG_BASEDIR=${IE_REPO_ROOT}/logging/
-LOGG_IMAGE_LOCAL=integrityenforcer/ie-logging:0.0.4dev
-LOGG_IMAGE_REMOTE=${LOGG_IMAGE_LOCAL}
-# LOGG_IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
+if [ -z "$IE_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
 
-OPERATOR_BASEDIR=${IE_REPO_ROOT}/integrity-enforcer-operator/
-OPERATOR_IMAGE_NAME=integrity-enforcer-operator
-OPERATOR_IMAGE_LOCAL=integrityenforcer/${OPERATOR_IMAGE_NAME}:0.0.4dev
-OPERATOR_IMAGE_REMOTE=${OPERATOR_IMAGE_LOCAL}
-# OPERATOR_IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
 
 
 # Push ie-server image
 echo -----------------------------
 echo [1/3] Pushing ie-server image.
-docker tag ${IMAGE_LOCAL} ${IMAGE_REMOTE}
-docker push ${IMAGE_REMOTE}
+docker push ${IE_ENFORCER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
@@ -56,8 +50,7 @@ echo ""
 # Push ie-logging image
 echo -----------------------------
 echo [2/3] Pushing ie-logging image.
-docker tag ${LOGG_IMAGE_LOCAL} ${LOGG_IMAGE_REMOTE}
-docker push ${LOGG_IMAGE_REMOTE}
+docker push ${IE_LOGGING_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
@@ -65,8 +58,7 @@ echo ""
 # Push integrity-enforcer-operator image
 echo -----------------------------
 echo [3/3] Pushing integrity-enforcer-operator image.
-docker tag ${OPERATOR_IMAGE_LOCAL} ${OPERATOR_IMAGE_REMOTE}
-docker push ${OPERATOR_IMAGE_REMOTE}
+docker push ${IE_OPERATOR_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""

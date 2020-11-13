@@ -35,24 +35,34 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
+if [ -z "$IE_ENFORCER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_ENFORCER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
+
+if [ -z "$IE_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
+
+if [ -z "$IE_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IE_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    exit 1
+fi
+
+if [ -z "$IE_OPERATOR" ]; then
+    echo "IE_OPERATOR is empty. Please set ie build env settings."
+    exit 1
+fi
+
+
 SERVICE_NAME=ie-server
-IMAGE_LOCAL=integrityenforcer/ie-server:0.0.4dev
-IMAGE_REMOTE=${IMAGE_LOCAL}
-# IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
+
+
 BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
-
 LOGG_BASEDIR=${IE_REPO_ROOT}/logging/
-LOGG_IMAGE_LOCAL=integrityenforcer/ie-logging:0.0.4dev
-LOGG_IMAGE_REMOTE=${LOGG_IMAGE_LOCAL}
-# LOGG_IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
-
 OPERATOR_BASEDIR=${IE_REPO_ROOT}/integrity-enforcer-operator/
-OPERATOR_IMAGE_NAME=integrity-enforcer-operator
-OPERATOR_IMAGE_LOCAL=integrityenforcer/${OPERATOR_IMAGE_NAME}:0.0.4dev
-OPERATOR_IMAGE_REMOTE=${OPERATOR_IMAGE_LOCAL}
-# OPERATOR_IMAGE_REMOTE=<CUSTOM_IMAGE_NAME>
-
 
 # Build ie-server image
 echo -----------------------------
@@ -69,7 +79,7 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-docker build -f ${DOCKERFILE} -t ${IMAGE_LOCAL} image/
+docker build -f ${DOCKERFILE} -t ${IE_ENFORCER_IMAGE_NAME_AND_VERSION} image/
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -88,7 +98,7 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-docker build -t ${LOGG_IMAGE_LOCAL} ${LOGG_BASEDIR}
+docker build -t ${IE_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -108,9 +118,8 @@ if [ $exit_status -ne 0 ]; then
     exit 1
 fi
 
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${OPERATOR_IMAGE_NAME} main.go
-docker build . -t ${OPERATOR_IMAGE_LOCAL}
-# operator-sdk build ${OPERATOR_IMAGE_LOCAL}
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${IE_OPERATOR} main.go
+docker build . -t ${IE_OPERATOR_IMAGE_NAME_AND_VERSION}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
