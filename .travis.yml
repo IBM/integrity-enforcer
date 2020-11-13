@@ -61,7 +61,9 @@ jobs:
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
       if: env(ENABLE_PUBLISH) = true
       script:
+        - ./build/install-dependencies.sh
         - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+        - export IE_ENV=remote
         - |
           make build-bundle
 # --------------------------Enable later -----------------------------------
