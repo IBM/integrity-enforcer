@@ -13,6 +13,7 @@ branches:
   only:
     - master
     - fix/setup-travis
+    - fix/setup-e2e-travis
     - /^release-[0-9]+\..*$/
   
 env:
