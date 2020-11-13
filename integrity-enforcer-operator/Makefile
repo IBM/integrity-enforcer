@@ -66,7 +66,7 @@ install-resources:
 	$(ENVTEST_ASSETS_DIR)/kubectl create ns integrity-enforcer-operator-system
 	@echo
 	@echo creating keyring-secret
-	$(ENVTEST_ASSETS_DIR)/kubectl create -f test/deploy/ma_all_keyring_secret.yaml -n integrity-enforcer-operator-system
+	$(ENVTEST_ASSETS_DIR)/kubectl create -f test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
 	@echo
 	@echo installing crd
 	$(ENVTEST_ASSETS_DIR)/kustomize build $(ENFORCER_DIR)/config/crd | $(ENVTEST_ASSETS_DIR)/kubectl apply -f -
@@ -79,7 +79,7 @@ install-resources:
 delete-resources:
 	@echo
 	@echo deleting keyring-secret
-	$(ENVTEST_ASSETS_DIR)/kubectl delete -f test/deploy/ma_all_keyring_secret.yaml -n integrity-enforcer-operator-system
+	$(ENVTEST_ASSETS_DIR)/kubectl delete -f test/deploy/keyring_secret.yaml -n integrity-enforcer-operator-system
 	@echo
 	@echo deleting operator
 	$(ENVTEST_ASSETS_DIR)/kustomize build $(ENFORCER_DIR)/config/default | $(ENVTEST_ASSETS_DIR)/kubectl delete -f -
