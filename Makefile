@@ -200,8 +200,6 @@ delete-resources:
 	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
-	@echo deleting namespaces
-	kubectl delete ns $(IE_OP_NS) --force --grace-period=0
 
 e2e-test:
 	@echo run test
