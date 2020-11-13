@@ -28,13 +28,12 @@ env:
     - COMPONENT_UNIT_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-unit-tests.sh
     - COMPONENT_E2E_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-e2e-tests.sh
 
-
 stages:
   # - lint
   - build
   #- unit-test
   - test-e2e
-  #- publish
+  - publish
 
 jobs:
   include:
@@ -51,7 +50,6 @@ jobs:
          - export IE_ENV=remote
          - |
             make build-images
-            make build-bundle
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
@@ -59,6 +57,12 @@ jobs:
         - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
         - |
           make test-e2e
+    - stage: publish
+      name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
+      if: env(ENABLE_PUBLISH) = true
+      script:
+        - |
+          make build-bundle
 # --------------------------Enable later -----------------------------------
 #        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
 #        - make copyright-check TRAVIS_BRANCH=${TRAVIS_BRANCH}
