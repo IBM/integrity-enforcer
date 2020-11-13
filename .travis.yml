@@ -61,6 +61,7 @@ jobs:
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
       if: env(ENABLE_PUBLISH) = true
       script:
+        - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
         - |
           make build-bundle
 # --------------------------Enable later -----------------------------------
