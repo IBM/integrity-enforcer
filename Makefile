@@ -167,8 +167,9 @@ test-e2e: kind-create-cluster install-crds install-resources e2e-test delete-res
 
 kind-create-cluster:
 	@echo "creating cluster"
-	kind create cluster --name test-managed --config $(ENFORCER_DIR)test/kind-config.yaml
-	kind get kubeconfig --name test-managed > $(PWD)/kubeconfig_managed
+	@echo ENFORCER_DIR : $(ENFORCER_DIR)
+	kind create cluster --name test-managed
+	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
 
 kind-delete-cluster:
 	@echo deleting cluster
@@ -183,9 +184,10 @@ delete-crds:
 	kustomize build $(ENFORCER_DIR)config/crd | kubectl delete -f -
 
 install-resources:
+	@echo
+	@echo IE_OP_NS : $(IE_OP_NS)
 	@echo creating namespaces
 	kubectl create ns $(IE_OP_NS)
-	@echo
 	@echo creating keyring-secret
 	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
@@ -203,7 +205,7 @@ delete-resources:
 
 e2e-test:
 	@echo run test
-	go test -v  $(ENFORCER_DIR)test/e2e -coverprofile cover.out
+	cd $(ENFORCER_DIR) && go test -v ./test/e2e -coverprofile cover.out
 
 ############################################################
 # e2e test coverage

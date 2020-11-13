@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	. "github.com/onsi/ginkgo" //nolint:golint
 
@@ -22,6 +23,7 @@ import (
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	namespace         = "integrity-enforcer-operator-system"
+	ie_namespace      = os.Getenv("IE_OP_NS")
 	kubeconfigManaged = "../../kubeconfig_managed"
 )
 
