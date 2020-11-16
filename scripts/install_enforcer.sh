@@ -40,7 +40,7 @@ if [ -z "$IE_REPO_ROOT" ]; then
 fi
 
 IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
-ENFORCER_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
+ENFORCER_OP_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
 
 echo ""
 echo "------------- Set integrity-enforcer operator watch namespace -------------"
@@ -54,16 +54,16 @@ echo ""
 echo ""
 echo "------------- Create crd -------------"
 echo ""
-cd ${ENFORCER_DIR}
-kustomize build ${ENFORCER_DIR}config/crd | kubectl apply -f -
+cd ${ENFORCER_OP_DIR}
+kustomize build ${ENFORCER_OP_DIR}config/crd | kubectl apply -f -
 
 echo ""
 echo "------------- Install operator -------------"
 echo ""
 
-cd ${ENFORCER_DIR}config/manager
+cd ${ENFORCER_OP_DIR}config/manager
 kustomize edit set image controller=${IMG}
-kustomize build ${ENFORCER_DIR}config/default | kubectl apply -f -
+kustomize build ${ENFORCER_OP_DIR}config/default | kubectl apply -f -
 
 echo ""
 echo "------------- Create CR -------------"
@@ -71,9 +71,9 @@ echo ""
 cd $IE_REPO_ROOT
 
 if [ $IE_ENV = "local" ]; then
-   kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer_local.yaml -n $IE_NS
+   kubectl apply -f ${ENFORCER_OP_DIR}config/samples/apis_v1alpha1_integrityenforcer_local.yaml -n $IE_NS
 else
-   kubectl apply -f ${ENFORCER_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
+   kubectl apply -f ${ENFORCER_OP_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
 fi
 
 ################################

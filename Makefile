@@ -69,7 +69,6 @@ export $(shell sed 's/=.*//' $(ENV_CONFIG))
 config:
 	@[ "${ENV_CONFIG}" ] && echo "Env config is all good" || ( echo "ENV_CONFIG is not set"; exit 1 )
 
-include build/common/Makefile.common.mk
 
 ############################################################
 # format section
@@ -81,6 +80,15 @@ include build/common/Makefile.common.mk
 fmt: format-go
 
 
+format-go:
+	@set -e; \
+	GO_FMT=$$(git ls-files *.go | grep -v 'vendor/' | grep -v 'third_party/' | xargs gofmt -d); \
+	if [ -n "$${GO_FMT}" ] ; then \
+		echo "Please run go fmt"; \
+		echo "$$GO_FMT"; \
+		exit 1; \
+	fi
+
 ############################################################
 # check section
 ############################################################
@@ -90,7 +98,9 @@ check: lint
 # All available linters: lint-dockerfiles lint-scripts lint-yaml lint-copyright-banner lint-go lint-python lint-helm lint-markdown lint-sass lint-typescript lint-protos
 # Default value will run all linters, override these make target with your requirements:
 #    eg: lint: lint-go lint-yaml
-lint: lint-all
+lint:
+	@git diff-tree --check $(shell git hash-object -t tree /dev/null) HEAD $(shell ls -d * | grep -v vendor | grep -v docs | grep -v deploy | grep -v hack)
+
 
 
 ############################################################
@@ -149,7 +159,12 @@ copyright-check:
 ############################################################
 
 test-unit:
-	cd enforcer && go test -v ./... | { grep -v 'no test files'; true; }
+	$(shell cd $(ENFORCER_DIR) && go test -v ./... | { grep -v 'no test files'; true; } > results.txt)
+	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)results.txt | grep "FAIL:"))
+	cat $(ENFORCER_DIR)results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
+
+
 ############################################################
 # e2e test section
 ############################################################
@@ -175,7 +190,7 @@ test-e2e: kind-create-cluster install-crds install-resources setup-cr e2e-test d
 kind-create-cluster:
 	@echo "creating cluster"
 	kind create cluster --name test-managed
-	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
+	kind get kubeconfig --name test-managed > $(ENFORCER_OP_DIR)kubeconfig_managed
 
 kind-delete-cluster:
 	@echo deleting cluster
@@ -183,43 +198,46 @@ kind-delete-cluster:
 
 install-crds:
 	@echo installing crds
-	kustomize build $(ENFORCER_DIR)config/crd | kubectl apply -f -
+	kustomize build $(ENFORCER_OP_DIR)config/crd | kubectl apply -f -
 
 delete-crds:
 	@echo deleting crds
-	kustomize build $(ENFORCER_DIR)config/crd | kubectl delete -f -
+	kustomize build $(ENFORCER_OP_DIR)config/crd | kubectl delete -f -
 
 install-resources:
 	@echo
 	@echo creating namespaces
 	kubectl create ns $(IE_OP_NS)
 	@echo creating keyring-secret
-	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
+	kubectl create -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
-	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=$(IE_OPERATOR_IMAGE_NAME_AND_VERSION)
+	cd $(ENFORCER_OP_DIR)config/manager && kustomize edit set image controller=$(IE_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
-	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
+	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl apply --validate=false -f -
 
 delete-resources:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
+	kubectl delete -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
-	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
+	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl delete -f -
 
 setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(ENFORCER_DIR)config/samples/apis_v1alpha1_integrityenforcer.yaml $(ENFORCER_DIR)test/deploy
+	cp $(ENFORCER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer.yaml $(ENFORCER_OP_DIR)test/deploy
 	@echo insert image
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image $(IE_LOGGING_IMAGE_NAME_AND_VERSION)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image $(IE_ENFORCER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image $(IE_LOGGING_IMAGE_NAME_AND_VERSION)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image $(IE_ENFORCER_IMAGE_NAME_AND_VERSION)
 
 e2e-test:
 	@echo
 	@echo run test
-	cd $(ENFORCER_DIR) && go test -v ./test/e2e -coverprofile cover.out
+	$(shell cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e -coverprofile cover.out > $(ENFORCER_OP_DIR)e2e_results.txt)
+	$(eval FAILURES=$(shell cat e2e_results.txt | grep "FAIL:"))
+	cat $(ENFORCER_OP_DIR)e2e_results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more e2e tests failed. Failures: $(FAILURES)"; exit 1, echo "All e2e tests passed successfully."; exit 0)
 
 ############################################################
 # e2e test coverage
