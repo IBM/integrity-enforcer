@@ -99,8 +99,8 @@ check: lint
 # Default value will run all linters, override these make target with your requirements:
 #    eg: lint: lint-go lint-yaml
 lint:
-	cd $(ENFORCER_DIR) && golangci-lint run -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck
-	cd $(ENFORCER_OP_DIR) && golangci-lint run -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet
+	cd $(ENFORCER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck
+	cd $(ENFORCER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet
 
 ############################################################
 # test section
