@@ -69,6 +69,8 @@ export $(shell sed 's/=.*//' $(ENV_CONFIG))
 config:
 	@[ "${ENV_CONFIG}" ] && echo "Env config is all good" || ( echo "ENV_CONFIG is not set"; exit 1 )
 
+include build/common/Makefile.common.mk
+
 ############################################################
 # format section
 ############################################################
@@ -142,7 +144,12 @@ clean::
 copyright-check:
 	./build/copyright-check.sh $(TRAVIS_BRANCH)
 
+############################################################
+# unit test section
+############################################################
 
+test-unit:
+	cd enforcer && go test -v ./... | { grep -v 'no test files'; true; }
 ############################################################
 # e2e test section
 ############################################################

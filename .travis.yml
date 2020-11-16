@@ -30,7 +30,7 @@ env:
 stages:
   # - lint
   - build
-  #- unit-test
+  - unit-test
   - test-e2e
   - publish
 
@@ -49,6 +49,15 @@ jobs:
          - export IE_ENV=remote
          - |
             make build-images
+    - stage: unit-test
+      name: "Run unit test"
+      script:
+        - set -e
+        - ./build/install-dependencies.sh
+        - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+        # Bootstrap the build harness, pull test image, and run unit tests.
+        - |
+          make test-unit
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
