@@ -99,9 +99,8 @@ check: lint
 # Default value will run all linters, override these make target with your requirements:
 #    eg: lint: lint-go lint-yaml
 lint:
-	@git diff-tree --check $(shell git hash-object -t tree /dev/null) HEAD $(shell ls -d * | grep -v vendor | grep -v docs | grep -v deploy | grep -v hack)
-
-
+	cd $(ENFORCER_DIR) && golangci-lint run -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck
+	cd $(ENFORCER_OP_DIR) && golangci-lint run -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet
 
 ############################################################
 # test section
