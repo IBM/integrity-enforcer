@@ -27,7 +27,7 @@ endif
 
 .PHONY: default
 default::
-        @echo "Build Harness Bootstrapped"
+	@echo "Build Harness Bootstrapped"
 
 # Docker build flags
 DOCKER_BUILD_FLAGS := --build-arg VCS_REF=$(GIT_COMMIT) $(DOCKER_BUILD_FLAGS)
