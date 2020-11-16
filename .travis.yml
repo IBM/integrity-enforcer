@@ -59,19 +59,22 @@ jobs:
       name: "Build the image and push it"
       script:
          - |
-            make build-images
+            make init
+            make component/build
     - stage: test-unit
       name: "Run unit test"
       script:
         - set -e
         # Bootstrap the build harness, pull test image, and run unit tests.
         - |
-          make test-unit
+          make init
+          make component/test/unit
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
         - |
-          make test-e2e
+          make component/pull
+          make component/test/e2e
     - stage: publish
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
       if: env(ENABLE_PUBLISH) = true
