@@ -99,8 +99,15 @@ check: lint
 # Default value will run all linters, override these make target with your requirements:
 #    eg: lint: lint-go lint-yaml
 lint:
-	cd $(ENFORCER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck
-	cd $(ENFORCER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet
+	cd $(ENFORCER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > lint_results.txt
+	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(ENFORCER_DIR)lint_results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
+
+	cd $(ENFORCER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > lint_results.txt
+	$(eval FAILURES=$(shell cat $(ENFORCER_OP_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(ENFORCER_OP_DIR)lint_results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 ############################################################
 # test section
