@@ -76,5 +76,4 @@ if ! [ -x "$(command -v kind)" ]; then
         sudo mv ./kind /usr/local/bin/kind
 fi
 
-
 echo "Finished setting up dependencies."
