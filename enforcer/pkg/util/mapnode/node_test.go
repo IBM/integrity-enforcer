@@ -410,7 +410,6 @@ func TestNode(t *testing.T) {
                     "name": "sample-operator"
                 }
                 ],
-                "imagePullSecrets": [],
                 "serviceAccountName": "sample-operator"
             }
             }

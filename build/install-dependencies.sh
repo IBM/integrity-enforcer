@@ -37,9 +37,9 @@ fi
 
 if ! [ -x "$(command -v kustomize)" ]; then
 	if [[ "$OS_NAME" == "Linux" ]]; then
-		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash -s 3.8.5
 	elif [[ "$OS_NAME" == "Darwin" ]]; then
-		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash -s 3.8.5
 	fi
 	chmod +x ./kustomize
 	sudo mv ./kustomize /usr/local/bin/kustomize
@@ -74,6 +74,11 @@ if ! [ -x "$(command -v kind)" ]; then
 
         chmod +x ./kind
         sudo mv ./kind /usr/local/bin/kind
+fi
+
+# Install golangci-lint
+if ! [ -x "$(command -v golangci-lint)" ]; then
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)"/bin v1.32.0
 fi
 
 echo "Finished setting up dependencies."
