@@ -76,14 +76,5 @@ if ! [ -x "$(command -v kind)" ]; then
         sudo mv ./kind /usr/local/bin/kind
 fi
 
-if ! which gocovmerge > /dev/null; then
-    echo "Installing gocovmerge...";
-    go get -u github.com/wadey/gocovmerge;
-fi
-
-echo "Installing ginkgo ..."
-go get github.com/onsi/ginkgo/ginkgo
-go get github.com/onsi/gomega/...
-
 
 echo "Finished setting up dependencies."
