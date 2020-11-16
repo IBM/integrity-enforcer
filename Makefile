@@ -116,27 +116,6 @@ lint-op-verify:
 	cat $(ENFORCER_OP_DIR)lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
-############################################################
-# test section
-############################################################
-
-test:
-	@go test ${TESTARGS} `go list ./... | grep -v test/e2e`
-
-############################################################
-# coverage section
-############################################################
-
-coverage:
-	@build/common/scripts/codecov.sh
-
-
-############################################################
-# build section
-############################################################
-
-build:
-
 
 ############################################################
 # images section
@@ -171,7 +150,10 @@ copyright-check:
 # unit test section
 ############################################################
 
-test-unit: test-init test-verify
+test-unit: test-init-try test-init test-verify
+
+test-init-try:
+	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil)
 
 test-init:
 	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil) > results.txt
