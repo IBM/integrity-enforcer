@@ -32,7 +32,7 @@ before_install:
   - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
 
 stages:
-  #- lint
+  - lint
   - build
   - test-unit
   - test-e2e
