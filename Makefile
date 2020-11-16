@@ -159,7 +159,7 @@ copyright-check:
 ############################################################
 
 test-unit:
-	$(shell cd $(ENFORCER_DIR) && go test -v ./... | { grep -v 'no test files'; true; } > results.txt)
+	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil) > results.txt
 	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)results.txt | grep "FAIL:"))
 	cat $(ENFORCER_DIR)results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
