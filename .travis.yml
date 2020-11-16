@@ -40,12 +40,12 @@ stages:
 
 jobs:
   include:
-#    - stage: lint
-#      name: "Run code lint"
-#    #   if: type = pull_request
-#      script:
-#         - |
-#           make lint
+    - stage: lint
+      name: "Run code lint"
+    #   if: type = pull_request
+      script:
+         - |
+           make lint
     - stage: build
       name: "Build the image and push it"
       script:
