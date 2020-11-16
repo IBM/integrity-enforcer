@@ -98,13 +98,20 @@ check: lint
 # All available linters: lint-dockerfiles lint-scripts lint-yaml lint-copyright-banner lint-go lint-python lint-helm lint-markdown lint-sass lint-typescript lint-protos
 # Default value will run all linters, override these make target with your requirements:
 #    eg: lint: lint-go lint-yaml
-lint:
+lint: lint-init  lint-verify lint-op-init lint-op-verify
+
+lint-init:
 	cd $(ENFORCER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > lint_results.txt
+
+lint-verify:
 	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)lint_results.txt | grep "FAIL:"))
 	cat $(ENFORCER_DIR)lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
+lint-op-init:
 	cd $(ENFORCER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > lint_results.txt
+
+lint-op-verify:
 	$(eval FAILURES=$(shell cat $(ENFORCER_OP_DIR)lint_results.txt | grep "FAIL:"))
 	cat $(ENFORCER_OP_DIR)lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
@@ -164,8 +171,11 @@ copyright-check:
 # unit test section
 ############################################################
 
-test-unit:
+test-unit: test-init test-verify
+
+test-init:
 	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil) > results.txt
+test-verify:
 	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)results.txt | grep "FAIL:"))
 	cat $(ENFORCER_DIR)results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
