@@ -153,10 +153,10 @@ copyright-check:
 test-unit: test-init-try test-init test-verify
 
 test-init-try:
-	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil)
+	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp)
 
 test-init:
-	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil) > results.txt
+	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > results.txt
 test-verify:
 	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)results.txt | grep "FAIL:"))
 	cat $(ENFORCER_DIR)results.txt
