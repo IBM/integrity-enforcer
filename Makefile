@@ -83,6 +83,8 @@ endif
 include  $(ENV_CONFIG)
 export $(shell sed 's/=.*//' $(ENV_CONFIG))
 
+include $ENFORCER_OP_DIR/Makefile
+
 .PHONY: config int fmt lint test coverage build build-images
 
 

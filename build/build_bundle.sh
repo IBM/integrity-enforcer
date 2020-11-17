@@ -26,13 +26,15 @@ if ! [ -x "$(command -v opm)" ]; then
 fi
 
 
-if [ -z "$IE_REPO_ROOT" ]; then
-    echo "IE_REPO_ROOT is empty. Please set root directory for IE repository"
+if [ -z "$ENFORCER_OP_DIR" ]; then
+    echo "ENFORCER_OP_DIR is empty. Please set env."
     exit 1
 fi
 
 
 cd $ENFORCER_OP_DIR
+
+echo "Current directory: $(pwd)"
 
 export COMPONENT_VERSION=${VERSION}
 export COMPONENT_DOCKER_REPO=${REGISTRY}
