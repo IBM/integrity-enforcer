@@ -65,10 +65,15 @@ echo [2/4] Pushing bundle
 #docker push ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
 export COMPONENT_NAME=${IE_BUNDLE}
 export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
-if [ `go env GOOS` == "linux" ]; then
-    make component/push
-fi
+#if [ `go env GOOS` == "linux" ]; then
+#    make component/push
+#fi
 
+echo DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+echo DOCKER_USER: ${DOCKER_USER}
+echo DOCKER_PASS: ${DOCKER_PASS}
+docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 
 # Prepare ie-operator bundle index
 echo -----------------------------
@@ -100,8 +105,10 @@ echo [3/4]  Pushing bundle index
 #docker push ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
 export COMPONENT_NAME=${IE_INDEX}
 export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
-if [ `go env GOOS` == "linux" ]; then
-    make component/push
-fi
+#if [ `go env GOOS` == "linux" ]; then
+#    make component/push
+#fi
+
+make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 
 echo "Completed building bundle and index"
