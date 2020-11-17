@@ -54,7 +54,7 @@ jobs:
     #   if: type = pull_request
       script:
          - |
-           make lint
+            make lint
     - stage: build
       name: "Build the image and push it"
       script:
@@ -68,14 +68,15 @@ jobs:
         - set -e
         # Bootstrap the build harness, pull test image, and run unit tests.
         - |
-          make init
-          make component/test/unit
+           make init
+           make component/test/unit
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
-        - |
-          make component/pull
-          make component/test/e2e
+         - |
+            make init
+            make component/pull
+            make component/test/e2e
  #   - stage: publish
  #     name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
  #     if: env(ENABLE_PUBLISH) = true
