@@ -31,6 +31,7 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
+#source $IE_REPO_ROOT/ie-build.conf
 
 cd $IE_REPO_ROOT/integrity-enforcer-operator
 
@@ -40,6 +41,9 @@ echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${IE_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
+
+grep -r 0.0.18
+grep -r 0.0.19
 
 csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
