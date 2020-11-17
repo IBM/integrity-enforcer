@@ -40,3 +40,9 @@ if [ `go env GOOS` == "linux" ]; then
 fi
 
 echo "Building integrity enforcer completed : $(date)"
+
+echo "Building integrity enforcer bundle starting : $(date)"
+
+${ENFORCER_OP_DIR}build/build_bundle.sh
+
+echo "Building integrity enforcer bundle completed : $(date)"

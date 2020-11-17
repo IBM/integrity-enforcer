@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source ie-build.conf
 
 if ! [ -x "$(command -v docker)" ]; then
     echo 'Error: docker is not installed.' >&2

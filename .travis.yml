@@ -61,7 +61,6 @@ jobs:
          - |
             make init
             make component/build
-            build/build_bundle.sh
     - stage: test-unit
       name: "Run unit test"
       script:
