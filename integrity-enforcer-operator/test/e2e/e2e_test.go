@@ -77,7 +77,8 @@ var _ = Describe("Test integrity enforcer handling", func() {
 			var wantFound bool = false
 			expected := "integrity-enforcer-server"
 			framework := initFrameWork()
-			Kubectl("apply", "-f", integrityEnforcerOperatorCR, "-n", ie_namespace)
+			cmd_err := Kubectl("apply", "-f", integrityEnforcerOperatorCR, "-n", ie_namespace)
+			Expect(cmd_err).To(BeNil())
 			Eventually(func() error {
 				var err error
 				pods, err := framework.KubeClientSet.CoreV1().Pods(ie_namespace).List(goctx.TODO(), metav1.ListOptions{})
@@ -170,13 +171,12 @@ var _ = Describe("Test integrity enforcer handling", func() {
 	var _ = Describe("Test integrity enforcer function", func() {
 		framework := initFrameWork()
 		It("Test rsp should be created properly", func() {
-			time.Sleep(time.Second * 60)
+			time.Sleep(time.Second * 30)
 			var timeout int = 120
 			expected := "test-rsp"
-			By("Creating test namespace: " + test_namespace)
-			Kubectl("create", "ns", test_namespace)
-			By("Creating test rsp: " + test_rsp)
-			Kubectl("apply", "-f", test_rsp, "-n", test_namespace)
+			By("Creating test rsp: " + test_rsp + " ns: " + test_namespace)
+			cmd_err := Kubectl("apply", "-f", test_rsp, "-n", test_namespace)
+			Expect(cmd_err).To(BeNil())
 			Eventually(func() error {
 				var err error
 				rsp, err := framework.RSPClient.ResourceSigningProfiles(test_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
@@ -193,8 +193,9 @@ var _ = Describe("Test integrity enforcer handling", func() {
 			time.Sleep(time.Second * 15)
 			var timeout int = 60
 			expected := "test-configmap"
-			By("Creating test configmap in ns: " + test_namespace)
-			Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
+			By("Creating test configmap in ns: " + test_namespace + " : " + test_configmap)
+			cmd_err := Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
+			Expect(cmd_err).NotTo(BeNil())
 			Eventually(func() error {
 				events, err := framework.KubeClientSet.CoreV1().Events(test_namespace).List(goctx.TODO(), metav1.ListOptions{})
 				// _, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
@@ -213,19 +214,23 @@ var _ = Describe("Test integrity enforcer handling", func() {
 				return nil
 			}, timeout, 1).Should(BeNil())
 		})
-		// It("Test signed resouce should be allowed", func() {
-		// 	time.Sleep(time.Second * 15)
-		// 	var timeout int = 60
-		// 	expected := "test-configmap"
-		// 	By("Creating test configmap in ns: " + test_namespace)
-		// 	Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
-		// 	Eventually(func() error {
-		// 		_, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 		return nil
-		// 	}, timeout, 1).Should(BeNil())
-		// })
+		It("Test signed resouce should be allowed", func() {
+			time.Sleep(time.Second * 15)
+			var timeout int = 60
+			expected := "test-configmap-signed"
+			By("Creating resource signature in ns: " + test_namespace)
+			cmd_err := Kubectl("apply", "-f", test_configmap2_rs, "-n", test_namespace)
+			Expect(cmd_err).To(BeNil())
+			By("Creating test configmap in ns: " + test_namespace)
+			cmd_err = Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
+			Expect(cmd_err).To(BeNil())
+			Eventually(func() error {
+				_, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}, timeout, 1).Should(BeNil())
+		})
 	})
 })

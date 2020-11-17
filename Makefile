@@ -163,11 +163,11 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 #kind-deploy-controller: check-env
 #	@echo installing config policy controller
 
-TEST_IE_OPERATOR_IMAGE_NAME_AND_VERSION=localhost:5000/integrity-enforcer-operator:0.0.4dev
-TEST_IE_LOGGING_IMAGE_NAME_AND_VERSION=localhost:5000/ie-logging:0.0.4dev
-TEST_IE_ENFORCER_IMAGE_NAME_AND_VERSION=localhost:5000/ie-server:0.0.4dev
+TEST_SIGNERS=TestSigner
+TEST_SIGNER_SUBJECT_EMAIL=rurikudo@ibm.com
+TEST_SECRET=keyring_secret
 
-test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
+test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr sign-test-cm e2e-test delete-resources kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
@@ -197,6 +197,8 @@ install-resources:
 	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
 	@echo installing operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
+	@echo creating test namespace
+	kubectl create ns $(TEST_NS)
 
 delete-resources:
 	@echo
@@ -204,10 +206,15 @@ delete-resources:
 	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
+	@echo deleting test namespace
+	kubectl delete ns $(TEST_NS)
 
 setup-image:
 	@echo
 	@echo push image into local registry
+	docker tag $(IE_ENFORCER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_IMAGE):$(VERSION)
+	docker tag $(IE_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_LOGGING):$(VERSION)
+	docker tag $(IE_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_OPERATOR):$(VERSION)
 	docker push localhost:5000/$(IE_IMAGE):$(VERSION)
 	docker push localhost:5000/$(IE_LOGGING):$(VERSION)
 	docker push localhost:5000/$(IE_OPERATOR):$(VERSION)
@@ -220,6 +227,19 @@ setup-cr:
 	@echo insert image
 	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IE_LOGGING):$(VERSION)
 	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IE_IMAGE):$(VERSION)
+	@echo setup signer policy
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+
+
+sign-test-cm:
+	@echo
+	@echo generate resource signature
+	bash $(IE_REPO_ROOT)/scripts/gpg-rs-sign.sh "ruriko" $(ENFORCER_DIR)test/deploy/test-configmap2.yaml $(ENFORCER_DIR)test/deploy/test-configmap2-rs.yaml
+	# kubectl create -f $(ENFORCER_DIR)test/deploy/test-configmap2-rs.yaml -n $(TEST_NS)
 
 
 e2e-test:

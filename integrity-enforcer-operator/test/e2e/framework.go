@@ -25,13 +25,15 @@ import (
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	ie_namespace                = os.Getenv("IE_OP_NS")
-	test_namespace              = "test-ns"
+	test_namespace              = os.Getenv("TEST_NS")
 	enforcer_dir                = os.Getenv("ENFORCER_DIR")
 	deploy_dir                  = enforcer_dir + "test/deploy/"
 	kubeconfigManaged           = enforcer_dir + "kubeconfig_managed"
 	integrityEnforcerOperatorCR = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
 	test_rsp                    = deploy_dir + "test-rsp.yaml"
 	test_configmap              = deploy_dir + "test-configmap.yaml"
+	test_configmap2             = deploy_dir + "test-configmap2.yaml"
+	test_configmap2_rs          = deploy_dir + "test-configmap2-rs.yaml"
 )
 
 type Framework struct {
