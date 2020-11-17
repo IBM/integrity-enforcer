@@ -17,16 +17,21 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+
+	// "k8s.io/client-go/tools/events"
 	"k8s.io/klog"
 )
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	ie_namespace                = os.Getenv("IE_OP_NS")
+	test_namespace              = "test-ns"
 	enforcer_dir                = os.Getenv("ENFORCER_DIR")
-	deploy_dir                  = enforcer_dir + "/test/deploy/"
+	deploy_dir                  = enforcer_dir + "test/deploy/"
 	kubeconfigManaged           = enforcer_dir + "kubeconfig_managed"
 	integrityEnforcerOperatorCR = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
+	test_rsp                    = deploy_dir + "test-rsp.yaml"
+	test_configmap              = deploy_dir + "test-configmap.yaml"
 )
 
 type Framework struct {

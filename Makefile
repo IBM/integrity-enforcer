@@ -163,11 +163,16 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 #kind-deploy-controller: check-env
 #	@echo installing config policy controller
 
+TEST_IE_OPERATOR_IMAGE_NAME_AND_VERSION=localhost:5000/integrity-enforcer-operator:0.0.4dev
+TEST_IE_LOGGING_IMAGE_NAME_AND_VERSION=localhost:5000/ie-logging:0.0.4dev
+TEST_IE_ENFORCER_IMAGE_NAME_AND_VERSION=localhost:5000/ie-server:0.0.4dev
+
 test-e2e: kind-create-cluster install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
-	kind create cluster --name test-managed
+	# kind create cluster --name test-managed
+	bash $(ENFORCER_DIR)/test/create-kind-cluster.sh
 	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
 
 kind-delete-cluster:
@@ -189,7 +194,7 @@ install-resources:
 	@echo creating keyring-secret
 	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
-	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=$(IE_OPERATOR_IMAGE_NAME_AND_VERSION)
+	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
 	@echo installing operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
 
@@ -200,14 +205,22 @@ delete-resources:
 	@echo deleting operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
 
+setup-image:
+	@echo
+	@echo push image into local registry
+	docker push localhost:5000/$(IE_IMAGE):$(VERSION)
+	docker push localhost:5000/$(IE_LOGGING):$(VERSION)
+	docker push localhost:5000/$(IE_OPERATOR):$(VERSION)
+
 setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(ENFORCER_DIR)config/samples/apis_v1alpha1_integrityenforcer.yaml $(ENFORCER_DIR)test/deploy
+	cp $(ENFORCER_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
 	@echo insert image
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image $(IE_LOGGING_IMAGE_NAME_AND_VERSION)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image $(IE_ENFORCER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IE_LOGGING):$(VERSION)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IE_IMAGE):$(VERSION)
+
 
 e2e-test:
 	@echo
