@@ -22,12 +22,10 @@ import (
 	"fmt"
 	"time"
 
-	rspapi "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	cache "github.com/IBM/integrity-enforcer/enforcer/pkg/util/cache"
 	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/rest"
@@ -60,7 +58,7 @@ func NewRuleTableLoader(enforcerNamespace string) *RuleTableLoader {
 		Ignore:            NewRuleTable(),
 		ForceCheck:        NewRuleTable(),
 		enforcerNamespace: enforcerNamespace,
-		interval:          time.Second * 10,
+		interval:          time.Second * 30,
 	}
 }
 
@@ -155,6 +153,10 @@ func (self *RuleTableLoader) Load() {
 	var err error
 	keyName = fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultRuleTableLockCMName)
 	if cached := cache.GetString(keyName); cached == "" {
+		err = InitRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
+		if err != nil {
+			logger.Error("failed to reload RuleTable:", err)
+		}
 		tmpData1, err = GetRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
 		if err != nil {
 			logger.Error("failed to get RuleTable:", err)
@@ -173,6 +175,10 @@ func (self *RuleTableLoader) Load() {
 
 	keyName = fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultIgnoreTableLockCMName)
 	if cached := cache.GetString(keyName); cached == "" {
+		err = InitIgnoreRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
+		if err != nil {
+			logger.Error("failed to reload RuleTable:", err)
+		}
 		tmpData2, err = GetRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
 		if err != nil {
 			logger.Error("failed to get IgnoreRuleTable:", err)
@@ -191,6 +197,10 @@ func (self *RuleTableLoader) Load() {
 
 	keyName = fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultForceCheckTableLockCMName)
 	if cached := cache.GetString(keyName); cached == "" {
+		err = InitForceCheckRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
+		if err != nil {
+			logger.Error("failed to reload RuleTable:", err)
+		}
 		tmpData3, err = GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
 		if err != nil {
 			logger.Error("failed to get ForceCheckRuleTable:", err)
@@ -213,55 +223,6 @@ func (self *RuleTableLoader) Load() {
 	return
 }
 
-func (self *RuleTableLoader) Update(reqc *common.ReqContext) error {
-	ref := &v1.ObjectReference{
-		APIVersion: reqc.GroupVersion(),
-		Kind:       reqc.Kind,
-		Name:       reqc.Name,
-		Namespace:  reqc.Namespace,
-	}
-	tmpData, err := GetRuleTable(self.enforcerNamespace, DefaultRuleTableLockCMName)
-	if err != nil {
-		logger.Error(err)
-	}
-	tmpData = tmpData.Remove(ref)
-
-	tmpIgnoreData, err := GetRuleTable(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
-	if err != nil {
-		logger.Error(err)
-	}
-	tmpIgnoreData = tmpIgnoreData.Remove(ref)
-
-	tmpForceCheckData, err := GetRuleTable(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
-	if err != nil {
-		logger.Error(err)
-	}
-	tmpForceCheckData = tmpForceCheckData.Remove(ref)
-
-	if reqc.IsCreateRequest() || reqc.IsUpdateRequest() {
-		var newProfile rspapi.ResourceSigningProfile
-		err = json.Unmarshal(reqc.RawObject, &newProfile)
-		if err != nil {
-			logger.Error(err)
-		}
-		tmpData = tmpData.Add(newProfile.Spec.ProtectRules, ref, newProfile.Spec.TargetNamespaceSelector)
-		tmpIgnoreData = tmpIgnoreData.Add(newProfile.Spec.IgnoreRules, ref, newProfile.Spec.TargetNamespaceSelector)
-		tmpForceCheckData = tmpForceCheckData.Add(newProfile.Spec.ForceCheckRules, ref, newProfile.Spec.TargetNamespaceSelector)
-	}
-
-	self.Rule = tmpData
-	self.Rule.Update(self.enforcerNamespace, DefaultRuleTableLockCMName)
-
-	self.Ignore = tmpIgnoreData
-	self.Ignore.Update(self.enforcerNamespace, DefaultIgnoreTableLockCMName)
-
-	self.ForceCheck = tmpForceCheckData
-	self.ForceCheck.Update(self.enforcerNamespace, DefaultForceCheckTableLockCMName)
-
-	self.ResetCache()
-	return nil
-}
-
 func (self *RuleTableLoader) ResetCache() error {
 	cache.Unset(fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultRuleTableLockCMName))
 	cache.Unset(fmt.Sprintf("RuleTableLoader/%s/get/%s", self.enforcerNamespace, DefaultIgnoreTableLockCMName))
@@ -269,14 +230,14 @@ func (self *RuleTableLoader) ResetCache() error {
 	return nil
 }
 
-func (self *RuleTableLoader) GetTargetNamespaces() *common.NamespaceSelector {
+func (self *RuleTableLoader) GetTargetNamespaces() []string {
 	self.Load()
-	selector1 := self.Rule.TargetNamespaces(self.enforcerNamespace)
-	selector2 := self.Ignore.TargetNamespaces(self.enforcerNamespace)
-	selector3 := self.ForceCheck.TargetNamespaces(self.enforcerNamespace)
-	merged := &common.NamespaceSelector{}
-	merged = merged.Merge(selector1)
-	merged = merged.Merge(selector2)
-	merged = merged.Merge(selector3)
-	return merged
+	list1 := self.Rule.NamespaceList(self.enforcerNamespace)
+	list2 := self.Ignore.NamespaceList(self.enforcerNamespace)
+	list3 := self.ForceCheck.NamespaceList(self.enforcerNamespace)
+	listUnion := []string{}
+	listUnion = common.GetUnionOfArrays(listUnion, list1)
+	listUnion = common.GetUnionOfArrays(listUnion, list2)
+	listUnion = common.GetUnionOfArrays(listUnion, list3)
+	return listUnion
 }

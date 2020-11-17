@@ -27,6 +27,7 @@ import (
 	"github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	kubeutil "github.com/IBM/integrity-enforcer/enforcer/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/enforcer/pkg/util/logger"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -46,9 +47,9 @@ const (
 type RuleTable []RuleItem
 
 type RuleItem struct {
-	Rule                    *profile.Rule             `json:"rule,omitempty"`
-	Source                  *v1.ObjectReference       `json:"source,omitempty"`
-	TargetNamespaceSelector *common.NamespaceSelector `json:"targetNamespaceSelector,omitempty"`
+	Rule       *profile.Rule       `json:"rule,omitempty"`
+	Source     *v1.ObjectReference `json:"source,omitempty"`
+	Namespaces []string            `json:"namespaces,omitempty"`
 }
 
 func (self *RuleTable) Update(namespace, name string) error {
@@ -129,10 +130,10 @@ func NewRuleTable() *RuleTable {
 	return &newTable
 }
 
-func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference, targetNs *common.NamespaceSelector) *RuleTable {
+func (self *RuleTable) Add(rules []*profile.Rule, source *v1.ObjectReference, namespaces []string) *RuleTable {
 	newTable := *self
 	for _, rule := range rules {
-		newTable = append(newTable, RuleItem{Rule: rule, Source: source, TargetNamespaceSelector: targetNs})
+		newTable = append(newTable, RuleItem{Rule: rule, Source: source, Namespaces: namespaces})
 	}
 	return &newTable
 }
@@ -160,16 +161,12 @@ func (self *RuleTable) Remove(subject *v1.ObjectReference) *RuleTable {
 	return &newTable
 }
 
-func (self *RuleTable) TargetNamespaces(enforcerNamespace string) *common.NamespaceSelector {
-	selector := &common.NamespaceSelector{}
+func (self *RuleTable) NamespaceList(enforcerNamespace string) []string {
+	namespaceList := []string{}
 	for _, item := range *self {
-		if item.Source.Namespace == enforcerNamespace && item.TargetNamespaceSelector != nil {
-			selector = selector.Merge(item.TargetNamespaceSelector)
-		} else {
-			selector.Include = append(selector.Include, item.Source.Namespace)
-		}
+		namespaceList = common.GetUnionOfArrays(namespaceList, item.Namespaces)
 	}
-	return selector
+	return namespaceList
 }
 
 func (self *RuleTable) Match(reqFields map[string]string, enforcerNS string) (bool, []*v1.ObjectReference) {
@@ -201,15 +198,7 @@ func (self *RuleItem) Match(reqFields map[string]string, enforcerNS string) bool
 func (self *RuleItem) CheckNamespace(reqNamespace, enforcerNamespace string) bool {
 	namespaceMatched := false
 	if reqNamespace != "" {
-		if self.Source.Namespace == enforcerNamespace && self.TargetNamespaceSelector != nil {
-			// if RSP is in IE NS, use `TargetNamespaces` for namespace matching
-			namespaceMatched = self.TargetNamespaceSelector.Match(reqNamespace)
-		} else {
-			// if RSP is in the other NS, it is used for requests in the same namespace
-			if self.Source.Namespace == reqNamespace {
-				namespaceMatched = true
-			}
-		}
+		namespaceMatched = common.ExactMatchWithPatternArray(reqNamespace, self.Namespaces)
 	} else {
 		// for cluster scope request, all RSPs are available
 		namespaceMatched = true
@@ -226,16 +215,40 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 		Name:       sProfile.GetName(),
 	}
 	table := NewRuleTable()
-	var targetNs *common.NamespaceSelector
+	var namespaces []string
 	if sProfile.Spec.TargetNamespaceSelector != nil {
-		targetNs = sProfile.Spec.TargetNamespaceSelector
+		targetNs := sProfile.Spec.TargetNamespaceSelector
+
+		listOptions := metav1.ListOptions{}
+		if targetNs.LabelSelector != nil {
+			listOptions.LabelSelector = metav1.FormatLabelSelector(targetNs.LabelSelector)
+		}
+
+		config, _ := kubeutil.GetKubeConfig()
+		coreV1Client, err := v1client.NewForConfig(config)
+		if err != nil {
+			logger.Error("Failed to NewForConfig(); ", err.Error())
+		}
+
+		namespaceList, err := coreV1Client.Namespaces().List(context.Background(), listOptions)
+		if err != nil {
+			logger.Error("Failed to get namespaces; ", err.Error())
+		}
+
+		matchedNamespaceList := []string{}
+		for _, ns := range namespaceList.Items {
+			if (len(targetNs.Include) == 0 && len(targetNs.Exclude) == 0) || targetNs.MatchNamespace(ns.GetName()) {
+				matchedNamespaceList = append(matchedNamespaceList, ns.GetName())
+			}
+		}
+		namespaces = matchedNamespaceList
 	}
 	if tableType == RuleTableTypeProtect {
-		table = table.Add(sProfile.Spec.ProtectRules, source, targetNs)
+		table = table.Add(sProfile.Spec.ProtectRules, source, namespaces)
 	} else if tableType == RuleTableTypeIgnore {
-		table = table.Add(sProfile.Spec.IgnoreRules, source, targetNs)
+		table = table.Add(sProfile.Spec.IgnoreRules, source, namespaces)
 	} else if tableType == RuleTableTypeForce {
-		table = table.Add(sProfile.Spec.ForceCheckRules, source, targetNs)
+		table = table.Add(sProfile.Spec.ForceCheckRules, source, namespaces)
 	}
 
 	return table
