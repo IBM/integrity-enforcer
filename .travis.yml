@@ -45,7 +45,7 @@ stages:
   - build
   - test-unit
   - test-e2e
-  - publish
+#  - publish
 
 jobs:
   include:
@@ -61,6 +61,7 @@ jobs:
          - |
             make init
             make component/build
+            build/build_bundle.sh
     - stage: test-unit
       name: "Run unit test"
       script:
@@ -75,12 +76,12 @@ jobs:
         - |
           make component/pull
           make component/test/e2e
-    - stage: publish
-      name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
-      if: env(ENABLE_PUBLISH) = true
-      script:
-        - |
-          make build-bundle
+ #   - stage: publish
+ #     name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
+ #     if: env(ENABLE_PUBLISH) = true
+ #     script:
+ #       - |
+ #         make build-bundle
 # --------------------------Enable later -----------------------------------
 #        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
 #        - make copyright-check TRAVIS_BRANCH=${TRAVIS_BRANCH}
