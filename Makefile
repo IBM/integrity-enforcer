@@ -167,12 +167,12 @@ TEST_IE_OPERATOR_IMAGE_NAME_AND_VERSION=localhost:5000/integrity-enforcer-operat
 TEST_IE_LOGGING_IMAGE_NAME_AND_VERSION=localhost:5000/ie-logging:0.0.4dev
 TEST_IE_ENFORCER_IMAGE_NAME_AND_VERSION=localhost:5000/ie-server:0.0.4dev
 
-test-e2e: kind-create-cluster install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
+test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
-	bash $(ENFORCER_DIR)/test/create-kind-cluster.sh
+	bash $(ENFORCER_DIR)test/create-kind-cluster.sh
 	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
 
 kind-delete-cluster:
