@@ -12,7 +12,8 @@ services:
 branches:
   only:
     - master
-    - fix/travis-test
+    - develop
+    - fix/travis-build
     - /^release-[0-9]+\..*$/
   
 env:
