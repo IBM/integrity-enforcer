@@ -136,7 +136,11 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 
 	if len(instance.Spec.ResourceSigningProfiles) > 0 {
 		for _, prof := range instance.Spec.ResourceSigningProfiles {
-			recResult, recErr = r.createOrUpdateResourceSigningProfileCR(instance, prof)
+			namespaces := r.getNamespacesBySelector(instance, prof)
+			if len(namespaces) == 0 {
+				continue
+			}
+			recResult, recErr = r.createOrUpdateResourceSigningProfileCR(instance, prof, namespaces)
 			if recErr != nil || recResult.Requeue {
 				return recResult, recErr
 			}

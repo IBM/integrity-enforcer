@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
@@ -40,9 +41,11 @@ import (
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -289,11 +292,10 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateSignPolicyCR(instance *apiv1
 
 }
 
-func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCR(instance *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig) (ctrl.Result, error) {
+func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCR(instance *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig, targetNs []string) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rsp.ResourceSigningProfile{}
-	expected := res.BuildResourceSigningProfileForIE(instance, prof)
-
+	expected := res.BuildResourceSigningProfileForIE(instance, prof, targetNs)
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"ResourceSigningProfile.Name", expected.Name)
@@ -1134,4 +1136,39 @@ func (r *IntegrityEnforcerReconciler) isDeploymentAvailable(instance *apiv1alpha
 	}
 
 	return false
+}
+
+// get list of namespaces that match selector
+func (r *IntegrityEnforcerReconciler) getNamespacesBySelector(instance *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig) []string {
+	ctx := context.Background()
+	foundList := &v1.NamespaceList{}
+
+	if prof.TargetNamespaceLabelSelector == nil {
+		return []string{instance.Namespace}
+	}
+
+	namespaces := []string{}
+	labelSelector, err := metav1.LabelSelectorAsSelector(prof.TargetNamespaceLabelSelector)
+	if err != nil {
+		r.Log.Error(err, "Failed to convert label selector for ResourceSigningProfile")
+		return []string{}
+	}
+	listOptions := &client.ListOptions{LabelSelector: labelSelector}
+
+	// If Deployment does not exist, return false
+	err = r.List(ctx, foundList, listOptions)
+	if err != nil {
+		r.Log.Error(err, "Failed to list namespaces that match label selector for ResourceSigningProfile")
+		return []string{}
+	}
+	if len(foundList.Items) == 0 {
+		labelSelB, _ := json.Marshal(labelSelector)
+		r.Log.Info(fmt.Sprintf("No namespaces that match this the label selector %s", string(labelSelB)))
+		return []string{}
+	}
+	for _, ns := range foundList.Items {
+		namespaces = append(namespaces, ns.GetName())
+	}
+
+	return namespaces
 }

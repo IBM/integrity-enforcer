@@ -163,7 +163,7 @@ func (self *RuleTable) Remove(subject *v1.ObjectReference) *RuleTable {
 func (self *RuleTable) TargetNamespaces(enforcerNamespace string) *common.NamespaceSelector {
 	selector := &common.NamespaceSelector{}
 	for _, item := range *self {
-		if item.Source.Namespace == enforcerNamespace {
+		if item.Source.Namespace == enforcerNamespace && item.TargetNamespaceSelector != nil {
 			selector = selector.Merge(item.TargetNamespaceSelector)
 		} else {
 			selector.Include = append(selector.Include, item.Source.Namespace)
@@ -201,7 +201,7 @@ func (self *RuleItem) Match(reqFields map[string]string, enforcerNS string) bool
 func (self *RuleItem) CheckNamespace(reqNamespace, enforcerNamespace string) bool {
 	namespaceMatched := false
 	if reqNamespace != "" {
-		if self.Source.Namespace == enforcerNamespace {
+		if self.Source.Namespace == enforcerNamespace && self.TargetNamespaceSelector != nil {
 			// if RSP is in IE NS, use `TargetNamespaces` for namespace matching
 			namespaceMatched = self.TargetNamespaceSelector.Match(reqNamespace)
 		} else {

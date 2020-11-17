@@ -64,6 +64,9 @@ func (self *NamespaceSelector) Match(namespace string) bool {
 }
 
 func (s1 *NamespaceSelector) Merge(s2 *NamespaceSelector) *NamespaceSelector {
+	if s2 == nil {
+		return s1
+	}
 	newSelector := &NamespaceSelector{}
 	newSelector.Include = GetUnionOfArrays(s1.Include, s2.Include)
 	newSelector.Exclude = GetUnionOfArrays(s1.Exclude, s2.Exclude)

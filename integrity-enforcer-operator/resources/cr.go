@@ -23,6 +23,7 @@ import (
 	ec "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/enforcerconfig/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
+	common "github.com/IBM/integrity-enforcer/enforcer/pkg/common/common"
 	policy "github.com/IBM/integrity-enforcer/enforcer/pkg/common/policy"
 	profile "github.com/IBM/integrity-enforcer/enforcer/pkg/common/profile"
 	econf "github.com/IBM/integrity-enforcer/enforcer/pkg/enforcer/config"
@@ -135,10 +136,16 @@ func BuildSignEnforcePolicyForIE(cr *apiv1alpha1.IntegrityEnforcer) *iespol.Sign
 	return epcr
 }
 
-func BuildResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig) *rsp.ResourceSigningProfile {
+func BuildResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig, targetNs []string) *rsp.ResourceSigningProfile {
 	rspfromcr := &rsp.ResourceSigningProfile{}
 
-	rspfromcr.Spec = *(prof.ResourceSigningProfileSpec)
+	rspfromcr.Spec = *(prof.Profile)
+	if rspfromcr.Spec.TargetNamespaceSelector == nil {
+		rspfromcr.Spec.TargetNamespaceSelector = &common.NamespaceSelector{}
+	}
+	if len(rspfromcr.Spec.TargetNamespaceSelector.Include) == 0 && len(rspfromcr.Spec.TargetNamespaceSelector.Exclude) == 0 {
+		rspfromcr.Spec.TargetNamespaceSelector.Include = targetNs
+	}
 
 	rspfromcr.ObjectMeta.Name = prof.Name
 	rspfromcr.ObjectMeta.Namespace = cr.Namespace
