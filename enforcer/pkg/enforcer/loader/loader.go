@@ -81,15 +81,15 @@ func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []pr
 
 }
 
-func (self *Loader) UpdateRuleTable(reqc *common.ReqContext) error {
-	err := self.RuleTable.Update(reqc)
+func (self *Loader) ResetCacheOfRuleTable() error {
+	err := self.RuleTable.ResetCache()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (self *Loader) ProfileTargetNamespaces() *common.NamespaceSelector {
+func (self *Loader) ProfileTargetNamespaces() []string {
 	return self.RuleTable.GetTargetNamespaces()
 }
 

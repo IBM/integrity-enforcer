@@ -137,9 +137,7 @@ func BuildSignEnforcePolicyForIE(cr *apiv1alpha1.IntegrityEnforcer) *iespol.Sign
 
 func BuildResourceSigningProfileForIE(cr *apiv1alpha1.IntegrityEnforcer, prof *apiv1alpha1.ProfileConfig) *rsp.ResourceSigningProfile {
 	rspfromcr := &rsp.ResourceSigningProfile{}
-
 	rspfromcr.Spec = *(prof.ResourceSigningProfileSpec)
-
 	rspfromcr.ObjectMeta.Name = prof.Name
 	rspfromcr.ObjectMeta.Namespace = cr.Namespace
 	return rspfromcr

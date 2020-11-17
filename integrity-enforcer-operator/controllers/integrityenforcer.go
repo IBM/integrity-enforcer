@@ -293,7 +293,6 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCR(ins
 	ctx := context.Background()
 	found := &rsp.ResourceSigningProfile{}
 	expected := res.BuildResourceSigningProfileForIE(instance, prof)
-
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
 		"ResourceSigningProfile.Name", expected.Name)
