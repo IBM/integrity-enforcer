@@ -126,14 +126,15 @@ build-images:
 
 
 push-images:
-	./develop/scripts/push_images.sh
+	- docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	- ./develop/scripts/push_images.sh
 
 ############################################################
 # bundle section
 ############################################################
 
 build-bundle:
-	-  docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	-  docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}
 	- ./develop/scripts/build_bundle.sh
 
 ############################################################
