@@ -133,6 +133,7 @@ push-images:
 ############################################################
 
 build-bundle:
+	-  docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
 	- ./develop/scripts/build_bundle.sh
 
 ############################################################
