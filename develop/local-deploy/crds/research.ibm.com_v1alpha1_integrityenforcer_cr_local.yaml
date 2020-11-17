@@ -96,7 +96,7 @@ spec:
     podSecurityPolicyName: ie-psp
     securityContext:
       runAsNonRoot: true
-      runAsUser: 1000580000
+      runAsUser: 1000610000
     securityContextConstraintsName:  ie-scc
     serviceAccountName: ie-sa
     ieAdminSubjects:
