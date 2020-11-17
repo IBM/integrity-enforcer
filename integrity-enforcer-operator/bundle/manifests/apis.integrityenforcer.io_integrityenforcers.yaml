@@ -374,7 +374,6 @@ spec:
             enforcerConfig:
               properties:
                 allow:
-                  description: Policy  *policy.IntegrityEnforcerPolicy `json:"policy,omitempty"`
                   items:
                     properties:
                       apiGroup:
@@ -645,11 +644,48 @@ spec:
                             type: array
                         type: object
                       type: array
-                    targetNamespaces:
-                      description: '`TargetNamespaces` is used only for profile in IE NS'
-                      items:
-                        type: string
-                      type: array
+                    targetNamespaceSelector:
+                      description: '`TargetNamespaceSelector` is used only for profile in IE NS'
+                      properties:
+                        exclude:
+                          items:
+                            type: string
+                          type: array
+                        include:
+                          items:
+                            type: string
+                          type: array
+                        labelSelector:
+                          description: A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                              items:
+                                description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector applies to.
+                                    type: string
+                                  operator:
+                                    description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                      type: object
                     unprotectAttrs:
                       items:
                         properties:
@@ -733,6 +769,47 @@ spec:
                         type: string
                     type: object
                   type: array
+                inScopeNamespaceSelector:
+                  properties:
+                    exclude:
+                      items:
+                        type: string
+                      type: array
+                    include:
+                      items:
+                        type: string
+                      type: array
+                    labelSelector:
+                      description: A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                          items:
+                            description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector applies to.
+                                type: string
+                              operator:
+                                description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                      type: object
+                  type: object
                 keyPathList:
                   items:
                     type: string
@@ -918,10 +995,6 @@ spec:
                     type: string
                 type: object
               type: array
-            labeledNamespaces:
-              items:
-                type: string
-              type: array
             labels:
               additionalProperties:
                 type: string
@@ -1093,290 +1166,323 @@ spec:
             resourceSigningProfiles:
               items:
                 properties:
+                  disabled:
+                    type: boolean
+                  forceCheckRules:
+                    items:
+                      properties:
+                        exclude:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  ignoreAttrs:
+                    items:
+                      properties:
+                        attrs:
+                          items:
+                            type: string
+                          type: array
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  ignoreRules:
+                    items:
+                      properties:
+                        exclude:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  kustomizePatterns:
+                    items:
+                      properties:
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                        namePrefix:
+                          type: string
+                        nameSuffix:
+                          type: string
+                      type: object
+                    type: array
                   name:
                     type: string
-                  resourceSigningProfileSpec:
-                    description: ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
+                  protectAttrs:
+                    items:
+                      properties:
+                        attrs:
+                          items:
+                            type: string
+                          type: array
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  protectRules:
+                    items:
+                      properties:
+                        exclude:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  targetNamespaceSelector:
+                    description: '`TargetNamespaceSelector` is used only for profile in IE NS'
                     properties:
-                      disabled:
-                        type: boolean
-                      forceCheckRules:
-                        items:
-                          properties:
-                            exclude:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                          type: object
-                        type: array
-                      ignoreAttrs:
-                        items:
-                          properties:
-                            attrs:
-                              items:
-                                type: string
-                              type: array
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                          type: object
-                        type: array
-                      ignoreRules:
-                        items:
-                          properties:
-                            exclude:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                          type: object
-                        type: array
-                      kustomizePatterns:
-                        items:
-                          properties:
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                            namePrefix:
-                              type: string
-                            nameSuffix:
-                              type: string
-                          type: object
-                        type: array
-                      protectAttrs:
-                        items:
-                          properties:
-                            attrs:
-                              items:
-                                type: string
-                              type: array
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                          type: object
-                        type: array
-                      protectRules:
-                        items:
-                          properties:
-                            exclude:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                          type: object
-                        type: array
-                      targetNamespaces:
-                        description: '`TargetNamespaces` is used only for profile in IE NS'
+                      exclude:
                         items:
                           type: string
                         type: array
-                      unprotectAttrs:
+                      include:
                         items:
-                          properties:
-                            attrs:
-                              items:
-                                type: string
-                              type: array
-                            match:
-                              items:
-                                properties:
-                                  apiGroup:
-                                    description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                    type: string
-                                  apiVersion:
-                                    type: string
-                                  kind:
-                                    type: string
-                                  name:
-                                    type: string
-                                  operation:
-                                    type: string
-                                  scope:
-                                    type: string
-                                  usergroup:
-                                    type: string
-                                  username:
-                                    type: string
-                                type: object
-                              type: array
-                          type: object
+                          type: string
                         type: array
+                      labelSelector:
+                        description: A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                            items:
+                              description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector applies to.
+                                  type: string
+                                operator:
+                                  description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
                     type: object
+                  unprotectAttrs:
+                    items:
+                      properties:
+                        attrs:
+                          items:
+                            type: string
+                          type: array
+                        match:
+                          items:
+                            properties:
+                              apiGroup:
+                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                type: string
+                              apiVersion:
+                                type: string
+                              kind:
+                                type: string
+                              name:
+                                type: string
+                              operation:
+                                type: string
+                              scope:
+                                type: string
+                              usergroup:
+                                type: string
+                              username:
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    type: array
                 type: object
               type: array
             security:
