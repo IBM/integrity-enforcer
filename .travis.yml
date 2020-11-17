@@ -52,6 +52,7 @@ jobs:
       script:
          - |
             make build-images
+            make push-images
     - stage: test-unit
       name: "Run unit test"
       script:
