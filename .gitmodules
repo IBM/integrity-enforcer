@@ -1,6 +1,0 @@
-[submodule "vbh/build-harness-extensions"]
-	path = vbh/build-harness-extensions
-	url = https://github.com/open-cluster-management/build-harness-extensions.git
-[submodule "vbh/build-harness"]
-	path = vbh/build-harness
-	url = https://github.com/open-cluster-management/build-harness.git
