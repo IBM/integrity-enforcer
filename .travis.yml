@@ -13,7 +13,7 @@ branches:
   only:
     - master
     - develop
-    - fix/travis-build
+    - fix/travis-bundle
     - /^release-[0-9]+\..*$/
   
 env:
