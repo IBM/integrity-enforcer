@@ -165,10 +165,9 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 
 TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
-TEST_SIGNER_SUBJECT_USER="TestSigner"
 TEST_SECRET=keyring_secret
 
-test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr sign-test-cm e2e-test delete-resources kind-delete-cluster
+test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
@@ -234,12 +233,6 @@ setup-cr:
 	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
 	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
-
-
-sign-test-cm:
-	@echo
-	@echo generate resource signature
-	bash $(IE_REPO_ROOT)/scripts/gpg-rs-sign.sh $(TEST_SIGNER_SUBJECT_USER) $(ENFORCER_DIR)test/deploy/test-configmap.yaml $(ENFORCER_DIR)test/deploy/test-configmap-rs.yaml
 
 
 e2e-test:

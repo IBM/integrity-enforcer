@@ -46,13 +46,7 @@ var _ = Describe("Test integrity enforcer handling", func() {
 				for _, pod := range pods.Items {
 					if strings.HasPrefix(pod.Name, expected) {
 						pod_exist = true
-						all_container_running := true
-						for _, c := range pod.Status.ContainerStatuses {
-							if !c.Ready {
-								all_container_running = false
-							}
-						}
-						if all_container_running {
+						if pod.Status.Phase == "Running" {
 							wantFound = true
 						}
 					}
@@ -92,23 +86,11 @@ var _ = Describe("Test integrity enforcer handling", func() {
 						for _, pod := range pods.Items {
 							if strings.HasPrefix(pod.Name, expected) {
 								pod_exist = true
-								// all_container_running := true
-								// for _, c := range pod.Status.ContainerStatuses {
-								// 	if !c.Ready {
-								// 		all_container_running = false
-								// 	}
-								// }
-								// if all_container_running {
-								// 	wantFound = true
-								// }
 								if pod.Status.Phase == "Running" {
 									wantFound = true
 								}
 							}
 						}
-						// if pod.Status.Phase == "Running" {
-						// 	wantFound = true
-						// }
 					}
 				}
 				if !pod_exist && err == nil {
@@ -170,7 +152,7 @@ var _ = Describe("Test integrity enforcer handling", func() {
 
 	var _ = Describe("Test integrity enforcer function", func() {
 		framework := initFrameWork()
-		It("Test rsp should be created properly", func() {
+		It("Test RSP should be created properly", func() {
 			time.Sleep(time.Second * 30)
 			var timeout int = 120
 			expected := "test-rsp"
@@ -213,7 +195,7 @@ var _ = Describe("Test integrity enforcer handling", func() {
 				return nil
 			}, timeout, 1).Should(BeNil())
 		})
-		It("Test signed resouce should be allowed", func() {
+		It("Test (ResourceSignature) signed resouce should be allowed", func() {
 			time.Sleep(time.Second * 15)
 			var timeout int = 60
 			expected := "test-configmap"
@@ -222,6 +204,21 @@ var _ = Describe("Test integrity enforcer handling", func() {
 			Expect(cmd_err).To(BeNil())
 			By("Creating test configmap in ns: " + test_namespace)
 			cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
+			Expect(cmd_err).To(BeNil())
+			Eventually(func() error {
+				_, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}, timeout, 1).Should(BeNil())
+		})
+		It("Test (Annotation) signed resouce should be allowed", func() {
+			time.Sleep(time.Second * 15)
+			var timeout int = 60
+			expected := "test-configmap2"
+			By("Creating test configmap in ns: " + test_namespace)
+			cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
 			Expect(cmd_err).To(BeNil())
 			Eventually(func() error {
 				_, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
