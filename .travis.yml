@@ -12,8 +12,8 @@ services:
 branches:
   only:
     - master
-    - fix/setup-travis
-    - fix/setup-e2e-travis
+    - develop
+    - fix/travis-build
     - /^release-[0-9]+\..*$/
   
 env:
@@ -28,42 +28,46 @@ env:
     - COMPONENT_UNIT_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-unit-tests.sh
     - COMPONENT_E2E_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-e2e-tests.sh
 
+before_install:
+  - ./build/install-dependencies.sh
+  - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+
 stages:
-  # - lint
+  - lint
   - build
-  #- unit-test
+  - test-unit
   - test-e2e
   - publish
 
 jobs:
   include:
-    # - stage: lint
-    #   name: "Run code lint"
+    - stage: lint
+      name: "Run code lint"
     #   if: type = pull_request
-    #   script: bash ${TRAVIS_BUILD_DIR}/build/run-code-lint.sh
+      script:
+         - |
+           make lint
     - stage: build
       name: "Build the image and push it"
       script:
-         - echo $TRAVIS_BUILD_DIR
-         - ./build/install-dependencies.sh
-         - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
-         - export IE_ENV=remote
          - |
             make build-images
+    - stage: test-unit
+      name: "Run unit test"
+      script:
+        - set -e
+        # Bootstrap the build harness, pull test image, and run unit tests.
+        - |
+          make test-unit
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
-        - ./build/install-dependencies.sh
-        - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
         - |
           make test-e2e
     - stage: publish
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
       if: env(ENABLE_PUBLISH) = true
       script:
-        - ./build/install-dependencies.sh
-        - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
-        - export IE_ENV=remote
         - |
           make build-bundle
 # --------------------------Enable later -----------------------------------

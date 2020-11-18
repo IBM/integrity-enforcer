@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/jinzhu/copier"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -32,6 +33,9 @@ const (
 
 	SignerPolicyCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
 	SignerPolicyCustomResourceKind       = "SignPolicy"
+
+	ProfileCustomResourceAPIVersion = "apis.integrityenforcer.io/v1alpha1"
+	ProfileCustomResourceKind       = "ResourceSigningProfile"
 )
 
 const (
@@ -53,17 +57,21 @@ const (
 ***********************************************/
 
 type NamespaceSelector struct {
-	Include []string `json:"include,omitempty"`
-	Exclude []string `json:"exclude,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	Include       []string              `json:"include,omitempty"`
+	Exclude       []string              `json:"exclude,omitempty"`
 }
 
-func (self *NamespaceSelector) Match(namespace string) bool {
+func (self *NamespaceSelector) MatchNamespace(namespace string) bool {
 	included := MatchWithPatternArray(namespace, self.Include)
 	excluded := MatchWithPatternArray(namespace, self.Exclude)
 	return included && !excluded
 }
 
 func (s1 *NamespaceSelector) Merge(s2 *NamespaceSelector) *NamespaceSelector {
+	if s2 == nil {
+		return s1
+	}
 	newSelector := &NamespaceSelector{}
 	newSelector.Include = GetUnionOfArrays(s1.Include, s2.Include)
 	newSelector.Exclude = GetUnionOfArrays(s1.Exclude, s2.Exclude)

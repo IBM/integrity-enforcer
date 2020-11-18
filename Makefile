@@ -69,6 +69,7 @@ export $(shell sed 's/=.*//' $(ENV_CONFIG))
 config:
 	@[ "${ENV_CONFIG}" ] && echo "Env config is all good" || ( echo "ENV_CONFIG is not set"; exit 1 )
 
+
 ############################################################
 # format section
 ############################################################
@@ -79,6 +80,15 @@ config:
 fmt: format-go
 
 
+format-go:
+	@set -e; \
+	GO_FMT=$$(git ls-files *.go | grep -v 'vendor/' | grep -v 'third_party/' | xargs gofmt -d); \
+	if [ -n "$${GO_FMT}" ] ; then \
+		echo "Please run go fmt"; \
+		echo "$$GO_FMT"; \
+		exit 1; \
+	fi
+
 ############################################################
 # check section
 ############################################################
@@ -88,29 +98,23 @@ check: lint
 # All available linters: lint-dockerfiles lint-scripts lint-yaml lint-copyright-banner lint-go lint-python lint-helm lint-markdown lint-sass lint-typescript lint-protos
 # Default value will run all linters, override these make target with your requirements:
 #    eg: lint: lint-go lint-yaml
-lint: lint-all
+lint: lint-init  lint-verify lint-op-init lint-op-verify
 
+lint-init:
+	cd $(ENFORCER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > lint_results.txt
 
-############################################################
-# test section
-############################################################
+lint-verify:
+	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(ENFORCER_DIR)lint_results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
-test:
-	@go test ${TESTARGS} `go list ./... | grep -v test/e2e`
+lint-op-init:
+	cd $(ENFORCER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > lint_results.txt
 
-############################################################
-# coverage section
-############################################################
-
-coverage:
-	@build/common/scripts/codecov.sh
-
-
-############################################################
-# build section
-############################################################
-
-build:
+lint-op-verify:
+	$(eval FAILURES=$(shell cat $(ENFORCER_OP_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(ENFORCER_OP_DIR)lint_results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 
 ############################################################
@@ -141,6 +145,19 @@ clean::
 ############################################################
 copyright-check:
 	./build/copyright-check.sh $(TRAVIS_BRANCH)
+
+############################################################
+# unit test section
+############################################################
+
+test-unit: test-init test-verify
+
+test-init:
+	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > results.txt
+test-verify:
+	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)results.txt | grep "FAIL:"))
+	cat $(ENFORCER_DIR)results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 
 ############################################################
@@ -181,18 +198,18 @@ kind-delete-cluster:
 
 install-crds:
 	@echo installing crds
-	kustomize build $(ENFORCER_DIR)config/crd | kubectl apply -f -
+	kustomize build $(ENFORCER_OP_DIR)config/crd | kubectl apply -f -
 
 delete-crds:
 	@echo deleting crds
-	kustomize build $(ENFORCER_DIR)config/crd | kubectl delete -f -
+	kustomize build $(ENFORCER_OP_DIR)config/crd | kubectl delete -f -
 
 install-resources:
 	@echo
 	@echo creating namespaces
 	kubectl create ns $(IE_OP_NS)
 	@echo creating keyring-secret
-	kubectl create -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
+	kubectl create -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
 	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
 	@echo installing operator
@@ -200,10 +217,11 @@ install-resources:
 	@echo creating test namespace
 	kubectl create ns $(TEST_NS)
 
+
 delete-resources:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(ENFORCER_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
+	kubectl delete -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
 	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
 	@echo deleting test namespace
@@ -218,6 +236,7 @@ setup-image:
 	docker push localhost:5000/$(IE_IMAGE):$(VERSION)
 	docker push localhost:5000/$(IE_LOGGING):$(VERSION)
 	docker push localhost:5000/$(IE_OPERATOR):$(VERSION)
+
 
 setup-cr:
 	@echo
@@ -238,7 +257,10 @@ setup-cr:
 e2e-test:
 	@echo
 	@echo run test
-	cd $(ENFORCER_DIR) && go test -v ./test/e2e -coverprofile cover.out
+	$(shell cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e -coverprofile cover.out > $(ENFORCER_OP_DIR)e2e_results.txt)
+	$(eval FAILURES=$(shell cat e2e_results.txt | grep "FAIL:"))
+	cat $(ENFORCER_OP_DIR)e2e_results.txt
+	@$(if $(strip $(FAILURES)), echo "One or more e2e tests failed. Failures: $(FAILURES)"; exit 1, echo "All e2e tests passed successfully."; exit 0)
 
 ############################################################
 # e2e test coverage

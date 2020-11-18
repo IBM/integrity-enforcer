@@ -76,4 +76,9 @@ if ! [ -x "$(command -v kind)" ]; then
         sudo mv ./kind /usr/local/bin/kind
 fi
 
+# Install golangci-lint
+if ! [ -x "$(command -v golangci-lint)" ]; then
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)"/bin v1.32.0
+fi
+
 echo "Finished setting up dependencies."

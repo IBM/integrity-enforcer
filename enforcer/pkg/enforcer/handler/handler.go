@@ -245,8 +245,8 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		}()
 	}
 
-	if self.ctx.Allow && self.checkIfProfileResource() {
-		err := self.loader.UpdateRuleTable(self.reqc)
+	if self.ctx.Allow && (self.checkIfProfileResource() || self.checkIfNamespaceRequest()) {
+		err := self.loader.ResetCacheOfRuleTable()
 		if err != nil {
 			logger.Error("Failed to update RuleTable; ", err)
 		}
@@ -412,6 +412,10 @@ func (self *RequestHandler) logEntry() {
 }
 
 func (self *RequestHandler) logContext() {
+	// avoid to log events for IE to update RuleTables
+	if self.checkIfIEResource() && self.checkIfIEServerRequest() {
+		return
+	}
 	if self.CheckIfContextLogEnabled() {
 		cLogger := logger.GetContextLogger()
 		logRecord := self.ctx.convertToLogRecord(self.reqc)
@@ -494,11 +498,11 @@ func (self *RequestHandler) checkIfDryRunAdmission() bool {
 }
 
 func (self *RequestHandler) checkIfProfileTargetNamespace(reqNamespace string) bool {
-	targetNSSelector := self.loader.ProfileTargetNamespaces()
-	if targetNSSelector == nil {
+	profileTargetNamespaces := self.loader.ProfileTargetNamespaces()
+	if len(profileTargetNamespaces) == 0 {
 		return false
 	}
-	return targetNSSelector.Match(reqNamespace)
+	return common.ExactMatchWithPatternArray(reqNamespace, profileTargetNamespaces)
 }
 
 func (self *RequestHandler) checkIfInScopeNamespace(reqNamespace string) bool {
@@ -506,7 +510,7 @@ func (self *RequestHandler) checkIfInScopeNamespace(reqNamespace string) bool {
 	if inScopeNSSelector == nil {
 		return false
 	}
-	return inScopeNSSelector.Match(reqNamespace)
+	return inScopeNSSelector.MatchNamespace(reqNamespace)
 }
 
 func (self *RequestHandler) checkIfUnprocessedInIE() bool {
@@ -526,7 +530,11 @@ func (self *RequestHandler) checkIfIEResource() bool {
 }
 
 func (self *RequestHandler) checkIfProfileResource() bool {
-	return self.reqc.Kind == "ResourceSigningProfile"
+	return self.reqc.Kind == common.ProfileCustomResourceKind
+}
+
+func (self *RequestHandler) checkIfNamespaceRequest() bool {
+	return self.reqc.Kind == "Namespace"
 }
 
 func (self *RequestHandler) checkIfIEAdminRequest() bool {
