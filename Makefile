@@ -164,7 +164,8 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 #	@echo installing config policy controller
 
 TEST_SIGNERS=TestSigner
-TEST_SIGNER_SUBJECT_EMAIL=rurikudo@ibm.com
+TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
+TEST_SIGNER_SUBJECT_USER="TestSigner"
 TEST_SECRET=keyring_secret
 
 test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr sign-test-cm e2e-test delete-resources kind-delete-cluster
@@ -238,7 +239,7 @@ setup-cr:
 sign-test-cm:
 	@echo
 	@echo generate resource signature
-	bash $(IE_REPO_ROOT)/scripts/gpg-rs-sign.sh "ruriko" $(ENFORCER_DIR)test/deploy/test-configmap.yaml $(ENFORCER_DIR)test/deploy/test-configmap-rs.yaml
+	bash $(IE_REPO_ROOT)/scripts/gpg-rs-sign.sh $(TEST_SIGNER_SUBJECT_USER) $(ENFORCER_DIR)test/deploy/test-configmap.yaml $(ENFORCER_DIR)test/deploy/test-configmap-rs.yaml
 
 
 e2e-test:
