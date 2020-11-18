@@ -180,12 +180,17 @@ kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
 #kind-deploy-controller: check-env
 #	@echo installing config policy controller
 
-test-e2e: kind-create-cluster install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
+TEST_SIGNERS=TestSigner
+TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
+TEST_SECRET=keyring_secret
+
+test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
 
 kind-create-cluster:
 	@echo "creating cluster"
-	kind create cluster --name test-managed
-	kind get kubeconfig --name test-managed > $(ENFORCER_OP_DIR)kubeconfig_managed
+	# kind create cluster --name test-managed
+	bash $(ENFORCER_DIR)test/create-kind-cluster.sh
+	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
 
 kind-delete-cluster:
 	@echo deleting cluster
@@ -206,25 +211,48 @@ install-resources:
 	@echo creating keyring-secret
 	kubectl create -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
-	cd $(ENFORCER_OP_DIR)config/manager && kustomize edit set image controller=$(IE_OPERATOR_IMAGE_NAME_AND_VERSION)
+	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
 	@echo installing operator
-	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl apply --validate=false -f -
+	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
+	@echo creating test namespace
+	kubectl create ns $(TEST_NS)
+
 
 delete-resources:
 	@echo
 	@echo deleting keyring-secret
 	kubectl delete -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
-	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl delete -f -
+	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
+	@echo deleting test namespace
+	kubectl delete ns $(TEST_NS)
+
+setup-image:
+	@echo
+	@echo push image into local registry
+	docker tag $(IE_ENFORCER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_IMAGE):$(VERSION)
+	docker tag $(IE_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_LOGGING):$(VERSION)
+	docker tag $(IE_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_OPERATOR):$(VERSION)
+	docker push localhost:5000/$(IE_IMAGE):$(VERSION)
+	docker push localhost:5000/$(IE_LOGGING):$(VERSION)
+	docker push localhost:5000/$(IE_OPERATOR):$(VERSION)
+
 
 setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(ENFORCER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer.yaml $(ENFORCER_OP_DIR)test/deploy
+	cp $(ENFORCER_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
 	@echo insert image
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image $(IE_LOGGING_IMAGE_NAME_AND_VERSION)
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image $(IE_ENFORCER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IE_LOGGING):$(VERSION)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IE_IMAGE):$(VERSION)
+	@echo setup signer policy
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+
 
 e2e-test:
 	@echo
