@@ -198,7 +198,6 @@ var _ = Describe("Test integrity enforcer handling", func() {
 			Expect(cmd_err).NotTo(BeNil())
 			Eventually(func() error {
 				events, err := framework.KubeClientSet.CoreV1().Events(test_namespace).List(goctx.TODO(), metav1.ListOptions{})
-				// _, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -217,12 +216,12 @@ var _ = Describe("Test integrity enforcer handling", func() {
 		It("Test signed resouce should be allowed", func() {
 			time.Sleep(time.Second * 15)
 			var timeout int = 60
-			expected := "test-configmap-signed"
+			expected := "test-configmap"
 			By("Creating resource signature in ns: " + test_namespace)
-			cmd_err := Kubectl("apply", "-f", test_configmap2_rs, "-n", test_namespace)
+			cmd_err := Kubectl("apply", "-f", test_configmap_rs, "-n", test_namespace)
 			Expect(cmd_err).To(BeNil())
 			By("Creating test configmap in ns: " + test_namespace)
-			cmd_err = Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
+			cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
 			Expect(cmd_err).To(BeNil())
 			Eventually(func() error {
 				_, err := framework.KubeClientSet.CoreV1().ConfigMaps(test_namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})

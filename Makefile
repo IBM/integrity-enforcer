@@ -238,8 +238,7 @@ setup-cr:
 sign-test-cm:
 	@echo
 	@echo generate resource signature
-	bash $(IE_REPO_ROOT)/scripts/gpg-rs-sign.sh "ruriko" $(ENFORCER_DIR)test/deploy/test-configmap2.yaml $(ENFORCER_DIR)test/deploy/test-configmap2-rs.yaml
-	# kubectl create -f $(ENFORCER_DIR)test/deploy/test-configmap2-rs.yaml -n $(TEST_NS)
+	bash $(IE_REPO_ROOT)/scripts/gpg-rs-sign.sh "ruriko" $(ENFORCER_DIR)test/deploy/test-configmap.yaml $(ENFORCER_DIR)test/deploy/test-configmap-rs.yaml
 
 
 e2e-test:

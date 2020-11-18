@@ -32,8 +32,7 @@ var (
 	integrityEnforcerOperatorCR = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
 	test_rsp                    = deploy_dir + "test-rsp.yaml"
 	test_configmap              = deploy_dir + "test-configmap.yaml"
-	test_configmap2             = deploy_dir + "test-configmap2.yaml"
-	test_configmap2_rs          = deploy_dir + "test-configmap2-rs.yaml"
+	test_configmap_rs           = deploy_dir + "test-configmap-rs.yaml"
 )
 
 type Framework struct {
