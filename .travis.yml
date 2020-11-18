@@ -52,7 +52,6 @@ jobs:
       script:
          - |
             make build-images
-            make push-images
     - stage: test-unit
       name: "Run unit test"
       script:
@@ -70,7 +69,9 @@ jobs:
       if: env(ENABLE_PUBLISH) = true
       script:
         - |
+          make push-images
           make build-bundle
+          
 # --------------------------Enable later -----------------------------------
 #        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;
 #        - make copyright-check TRAVIS_BRANCH=${TRAVIS_BRANCH}

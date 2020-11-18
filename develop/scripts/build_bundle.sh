@@ -42,9 +42,6 @@ echo [1/4] Building bundle
 make bundle IMG=${IE_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
 
-grep -r 0.0.18
-grep -r 0.0.19
-
 csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
 
