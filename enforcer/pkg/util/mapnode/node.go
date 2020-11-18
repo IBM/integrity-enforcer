@@ -161,7 +161,7 @@ func (n *Node) KeyExists(concatKey string) bool {
 }
 
 func (n *Node) DeepCopyInto(n2 *Node) {
-	copier.Copy(&n, &n2)
+	copier.Copy(&n2, &n)
 }
 
 func (n *Node) Copy() *Node {
