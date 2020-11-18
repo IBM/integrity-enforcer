@@ -229,7 +229,7 @@ setup-cr:
 e2e-test:
 	@echo
 	@echo run test
-	$(shell cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e -coverprofile cover.out > $(ENFORCER_OP_DIR)e2e_results.txt)
+	cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e -coverprofile cover.out > $(ENFORCER_OP_DIR)e2e_results.txt
 	$(eval FAILURES=$(shell cat e2e_results.txt | grep "FAIL:"))
 	cat $(ENFORCER_OP_DIR)e2e_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more e2e tests failed. Failures: $(FAILURES)"; exit 1, echo "All e2e tests passed successfully."; exit 0)
