@@ -1,12 +1,8 @@
 apiVersion: apis.integrityenforcer.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
-  name: sample-rsp
+  name: test-rsp
 spec:
   protectRules:
   - match:
     - kind: ConfigMap
-  kustomizePatterns:
-  - match:
-    - kind: ConfigMap
-    namePrefix: "aaaa-"
