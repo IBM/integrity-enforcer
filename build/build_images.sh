@@ -35,23 +35,23 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
-if [ -z "$IE_ENFORCER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IE_ENFORCER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+if [ -z "$IV_SERVER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
     exit 1
 fi
 
-if [ -z "$IE_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IE_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+if [ -z "$IV_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
     exit 1
 fi
 
-if [ -z "$IE_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IE_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+if [ -z "$IV_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
     exit 1
 fi
 
-if [ -z "$IE_OPERATOR" ]; then
-    echo "IE_OPERATOR is empty. Please set ie build env settings."
+if [ -z "$IV_OPERATOR" ]; then
+    echo "IV_OPERATOR is empty. Please set ie build env settings."
     exit 1
 fi
 
@@ -79,7 +79,7 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-docker build -f ${DOCKERFILE} -t ${IE_ENFORCER_IMAGE_NAME_AND_VERSION} image/
+docker build -f ${DOCKERFILE} -t ${IV_SERVER_IMAGE_NAME_AND_VERSION} image/
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -98,7 +98,7 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-docker build -t ${IE_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
+docker build -t ${IV_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -118,8 +118,8 @@ if [ $exit_status -ne 0 ]; then
     exit 1
 fi
 
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${IE_OPERATOR} main.go
-docker build . -t ${IE_OPERATOR_IMAGE_NAME_AND_VERSION}
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${IV_OPERATOR} main.go
+docker build . -t ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"

@@ -16,7 +16,7 @@ branches:
   only:
     - master
     - develop
-    - fix/travis-bundle
+    - fix/change-name
     - /^release-[0-9]+\..*$/
 
 #addons:

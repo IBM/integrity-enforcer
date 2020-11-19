@@ -39,8 +39,8 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
-IMG=integrityenforcer/integrity-enforcer-operator:0.0.4dev
-ENFORCER_OP_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
+IMG=integrityenforcer/integrity-verifier-operator:0.0.4dev
+VERIFIER_OP_DIR=${IE_REPO_ROOT}"/integrity-enforcer-operator/"
 
 echo ""
 echo "------------- Set integrity-enforcer operator watch namespace -------------"
@@ -54,16 +54,16 @@ echo ""
 echo ""
 echo "------------- Create crd -------------"
 echo ""
-cd ${ENFORCER_OP_DIR}
-kustomize build ${ENFORCER_OP_DIR}config/crd | kubectl apply -f -
+cd ${VERIFIER_OP_DIR}
+kustomize build ${VERIFIER_OP_DIR}config/crd | kubectl apply -f -
 
 echo ""
 echo "------------- Install operator -------------"
 echo ""
 
-cd ${ENFORCER_OP_DIR}config/manager
+cd ${VERIFIER_OP_DIR}config/manager
 kustomize edit set image controller=${IMG}
-kustomize build ${ENFORCER_OP_DIR}config/default | kubectl apply -f -
+kustomize build ${VERIFIER_OP_DIR}config/default | kubectl apply -f -
 
 echo ""
 echo "------------- Create CR -------------"
@@ -71,44 +71,7 @@ echo ""
 cd $IE_REPO_ROOT
 
 if [ $IE_ENV = "local" ]; then
-   kubectl apply -f ${ENFORCER_OP_DIR}config/samples/apis_v1alpha1_integrityenforcer_local.yaml -n $IE_NS
+   kubectl apply -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityenforcer_local.yaml -n $IE_NS
 else
-   kubectl apply -f ${ENFORCER_OP_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
+   kubectl apply -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityenforcer.yaml -n $IE_NS
 fi
-
-################################
-# previous script commands here
-################################
-
-# if [ $IE_ENV = "local" ]; then
-#     IE_OPERATOR_YAMl=${ENFORCER_LOCAL_DIR}"operator_local.yaml"
-#     IE_CR=${ENFORCER_LOCAL_DIR}"crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr_local.yaml"
-# fi
-
-# if [ $IE_ENV = "remote" ]; then
-#     IE_OPERATOR_YAMl=${ENFORCER_DIR}"deploy/operator.yaml"
-#     IE_CR=${ENFORCER_DIR}"deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml"
-# fi
-
-# if [ ! -d $ENFORCER_DIR ];then
-#   echo "directory not exists."
-# else
-#     echo ""
-#     echo "------------- Create crd -------------"
-#     echo ""
-#     kubectl create -f ${ENFORCER_DIR}deploy/crds/apis.integrityenforcer.io_integrityenforcers_crd.yaml
-
-#     echo ""
-#     echo "------------- Install operator -------------"
-#     echo ""
-#     kubectl create -f ${ENFORCER_DIR}deploy/service_account.yaml -n ${IE_NS}
-#     kubectl create -f ${ENFORCER_DIR}deploy/role.yaml -n ${IE_NS}
-#     kubectl create -f ${ENFORCER_DIR}deploy/role_binding.yaml -n ${IE_NS}
-#     kubectl create -f ${IE_OPERATOR_YAMl} -n ${IE_NS}
-
-#     echo ""
-#     echo "------------- Create CR -------------"
-#     echo ""
-#     kubectl create -f ${IE_CR} -n ${IE_NS}
-# fi
-

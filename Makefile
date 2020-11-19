@@ -14,7 +14,6 @@
 
 # LOAD ENVIRNOMENT SETTINGS (must be done at first)
 ###########################
-
 ifeq ($(IE_REPO_ROOT),)
 $(error IE_REPO_ROOT is not set)
 endif
@@ -29,12 +28,12 @@ endif
 include  $(ENV_CONFIG)
 export $(shell sed 's/=.*//' $(ENV_CONFIG))
 
-include $(ENFORCER_OP_DIR)Makefile
+include $(VERIFIER_OP_DIR)Makefile
 
 
 # CICD BUILD HARNESS
 ####################
-ifeq ($(IBM_ENV),true)
+ifeq ($(UPSTREAM_ENV),true)
   USE_VENDORIZED_BUILD_HARNESS = false
 else
   USE_VENDORIZED_BUILD_HARNESS ?=
@@ -132,19 +131,19 @@ check: lint
 lint: lint-init  lint-verify lint-op-init lint-op-verify
 
 lint-init:
-	cd $(ENFORCER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > lint_results.txt
+	cd $(VERIFIER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > lint_results.txt
 
 lint-verify:
-	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)lint_results.txt | grep "FAIL:"))
-	cat $(ENFORCER_DIR)lint_results.txt
+	$(eval FAILURES=$(shell cat $(VERIFIER_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(VERIFIER_DIR)lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 lint-op-init:
-	cd $(ENFORCER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > lint_results.txt
+	cd $(VERIFIER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > lint_results.txt
 
 lint-op-verify:
-	$(eval FAILURES=$(shell cat $(ENFORCER_OP_DIR)lint_results.txt | grep "FAIL:"))
-	cat $(ENFORCER_OP_DIR)lint_results.txt
+	$(eval FAILURES=$(shell cat $(VERIFIER_OP_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(VERIFIER_OP_DIR)lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 
@@ -155,18 +154,53 @@ lint-op-verify:
 build-images:
 	$(IE_REPO_ROOT)/build/build_images.sh
 
+.ONESHELL:
+docker-login:
+		if [ -z "${DOCKER_REGISTRY}" ]; then
+			echo "DOCKER_REGISTRY is empty."
+			exit 1;
+		fi
+		if [ -z "${DOCKER_USER}" ]; then
+			echo "DOCKER_USER is empty."
+			exit 1;
+		fi
+		if [ -z "${DOCKER_PASS}" ]; then
+			echo "DOCKER_PASS is empty."
+			exit 1;
+		fi
+		docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
 
-push-images:
-	- docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
-	- $(IE_REPO_ROOT)/build/push_images.sh
+.ONESHELL:
+push-images: docker-login
+		${IE_REPO_ROOT}/build/push_images.sh
+
+.ONESHELL:
+pull-images: docker-login
+		${IE_REPO_ROOT}/build/pull_images.sh
 
 ############################################################
 # bundle section
 ############################################################
-
+.ONESHELL:
 build-bundle:
-	-  docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}
-	- $(IE_REPO_ROOT)/build/build_bundle.sh
+		if [ ${UPSTREAM_ENV} = true ]; then
+			if [ -z "${QUAY_REGISTRY}" ]; then
+				echo "QUAY_REGISTRY is empty."
+				exit 1;
+			fi
+			if [ -z "${QUAY_USER}" ]; then
+				echo "QUAY_USER is empty."
+				exit 1;
+			fi
+			if [ -z "${QUAY_PASS}" ]; then
+				echo "QUAY_PASS is empty."
+				exit 1;
+			fi
+			docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}
+			$(IE_REPO_ROOT)/build/build_bundle.sh
+		else
+			$(IE_REPO_ROOT)/build/build_bundle_ocm.sh
+		fi
 
 ############################################################
 # clean section
@@ -186,10 +220,10 @@ copyright-check:
 test-unit: test-init test-verify
 
 test-init:
-	cd $(ENFORCER_DIR) &&  go test -v  $(shell cd $(ENFORCER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > results.txt
+	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > results.txt
 test-verify:
-	$(eval FAILURES=$(shell cat $(ENFORCER_DIR)results.txt | grep "FAIL:"))
-	cat $(ENFORCER_DIR)results.txt
+	$(eval FAILURES=$(shell cat $(VERIFIER_DIR)results.txt | grep "FAIL:"))
+	cat $(VERIFIER_DIR)results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 
@@ -222,8 +256,8 @@ test-e2e: kind-create-cluster setup-image install-crds install-resources setup-c
 kind-create-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
-	bash $(ENFORCER_OP_DIR)test/create-kind-cluster.sh
-	kind get kubeconfig --name test-managed > $(ENFORCER_OP_DIR)kubeconfig_managed
+	bash $(VERIFIER_OP_DIR)test/create-kind-cluster.sh
+	kind get kubeconfig --name test-managed > $(VERIFIER_OP_DIR)kubeconfig_managed
 
 kind-delete-cluster:
 	@echo deleting cluster
@@ -231,22 +265,22 @@ kind-delete-cluster:
 
 install-crds:
 	@echo installing crds
-	kustomize build $(ENFORCER_OP_DIR)config/crd | kubectl apply -f -
+	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl apply -f -
 
 delete-crds:
 	@echo deleting crds
-	kustomize build $(ENFORCER_OP_DIR)config/crd | kubectl delete -f -
+	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl delete -f -
 
 install-resources:
 	@echo
 	@echo creating namespaces
-	kubectl create ns $(IE_OP_NS)
+	kubectl create ns $(IV_OP_NS)
 	@echo creating keyring-secret
-	kubectl create -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
+	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
 	@echo setting image
-	cd $(ENFORCER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
+	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IV_OPERATOR):$(VERSION)
 	@echo installing operator
-	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl apply --validate=false -f -
+	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
 	@echo creating test namespace
 	kubectl create ns $(TEST_NS)
 
@@ -254,45 +288,45 @@ install-resources:
 delete-resources:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
+	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
 	@echo deleting operator
-	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl delete -f -
+	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl delete -f -
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
 
-setup-image:
+setup-image: pull-images
 	@echo
 	@echo push image into local registry
-	docker tag $(IE_ENFORCER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_IMAGE):$(VERSION)
-	docker tag $(IE_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_LOGGING):$(VERSION)
-	docker tag $(IE_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_OPERATOR):$(VERSION)
-	docker push localhost:5000/$(IE_IMAGE):$(VERSION)
-	docker push localhost:5000/$(IE_LOGGING):$(VERSION)
-	docker push localhost:5000/$(IE_OPERATOR):$(VERSION)
+	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_IMAGE):$(VERSION)
+	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_LOGGING):$(VERSION)
+	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_OPERATOR):$(VERSION)
+	docker push localhost:5000/$(IV_IMAGE):$(VERSION)
+	docker push localhost:5000/$(IV_LOGGING):$(VERSION)
+	docker push localhost:5000/$(IV_OPERATOR):$(VERSION)
 
 
 setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(ENFORCER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
+	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
 	@echo insert image
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IE_LOGGING):$(VERSION)
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IE_IMAGE):$(VERSION)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IV_LOGGING):$(VERSION)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IV_IMAGE):$(VERSION)
 	@echo setup signer policy
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
 
 e2e-test:
 	@echo
 	@echo run test
-	cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e > $(ENFORCER_OP_DIR)e2e_results.txt
-	$(eval FAILURES=$(shell cat $(ENFORCER_OP_DIR)e2e_results.txt | grep "FAIL:"))
-	cat $(ENFORCER_OP_DIR)e2e_results.txt
+	cd $(VERIFIER_OP_DIR) && go test -v ./test/e2e > $(VERIFIER_OP_DIR)e2e_results.txt
+	$(eval FAILURES=$(shell cat $(VERIFIER_OP_DIR)e2e_results.txt | grep "FAIL:"))
+	cat $(VERIFIER_OP_DIR)e2e_results.txt
 	echo Fail:$(strip $(FAILURES))
 	@$(if $(strip $(FAILURES)), echo "One or more e2e tests failed. Failures: $(FAILURES)"; exit 1, echo "All e2e tests passed successfully."; exit 0)
 
