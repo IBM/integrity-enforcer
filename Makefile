@@ -155,7 +155,7 @@ build-images:
 	$(IE_REPO_ROOT)/build/build_images.sh
 
 .ONESHELL:
-push-images:
+docker-login:
 		if [ -z "${DOCKER_REGISTRY}" ]; then
 			echo "DOCKER_REGISTRY is empty."
 			exit 1;
@@ -169,8 +169,14 @@ push-images:
 			exit 1;
 		fi
 		docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+
+.ONESHELL:
+push-images: docker-login
 		${IE_REPO_ROOT}/build/push_images.sh
 
+.ONESHELL:
+pull-images: docker-login
+		${IE_REPO_ROOT}/build/pull_images.sh
 
 ############################################################
 # bundle section
