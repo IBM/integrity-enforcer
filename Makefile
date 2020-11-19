@@ -294,7 +294,7 @@ delete-resources:
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
 
-setup-image:
+setup-image: pull-images
 	@echo
 	@echo push image into local registry
 	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_IMAGE):$(VERSION)
