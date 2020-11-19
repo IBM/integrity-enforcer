@@ -86,14 +86,6 @@ func (r *IntegrityEnforcerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if instance.Spec.GlobalConfig.OpenShift {
-		// SecurityContextConstraints (SCC)
-		recResult, recErr = r.createOrUpdateSCC(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
-	}
-
 	// Custom Resource Definition (CRD)
 	recResult, recErr = r.createOrUpdateEnforcerConfigCRD(instance)
 	if recErr != nil || recResult.Requeue {
