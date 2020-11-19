@@ -26,8 +26,6 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const defaultIEWebhookTimeout = 10
-
 //service
 func BuildServiceForCR(cr *apiv1alpha1.IntegrityEnforcer) *corev1.Service {
 	var targetport intstr.IntOrString
@@ -70,7 +68,7 @@ func BuildMutatingWebhookConfigurationForIE(cr *apiv1alpha1.IntegrityEnforcer) *
 	var empty []byte
 
 	sideEffect := admv1.SideEffectClassNone
-	timeoutSeconds := int32(defaultIEWebhookTimeout)
+	timeoutSeconds := int32(apiv1alpha1.DefaultIEWebhookTimeout)
 
 	wc := &admv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{

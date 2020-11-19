@@ -81,8 +81,8 @@ func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []pr
 
 }
 
-func (self *Loader) ResetCacheOfRuleTable() error {
-	err := self.RuleTable.ResetCache()
+func (self *Loader) ReloadRuleTable(reqc *common.ReqContext) error {
+	err := self.RuleTable.Reload(reqc)
 	if err != nil {
 		return err
 	}

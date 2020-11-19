@@ -75,10 +75,13 @@ func (self *RuleTable) Update(namespace, name string) error {
 	writer.Close()
 	zipData := gzipBuffer.Bytes()
 
-	cm.BinaryData["table"] = zipData
-	_, err = coreV1Client.ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{})
-	if err != nil {
-		return err
+	currentZipData := cm.BinaryData["table"]
+	if !bytes.Equal(currentZipData, zipData) {
+		cm.BinaryData["table"] = zipData
+		_, err = coreV1Client.ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -206,7 +209,7 @@ func (self *RuleItem) CheckNamespace(reqNamespace, enforcerNamespace string) boo
 	return namespaceMatched
 }
 
-func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType RuleTableType) *RuleTable {
+func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType RuleTableType, enforcerNamespace string) *RuleTable {
 	gvk := sProfile.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -216,7 +219,7 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 	}
 	table := NewRuleTable()
 	var namespaces []string
-	if sProfile.Spec.TargetNamespaceSelector != nil {
+	if source.Namespace == enforcerNamespace && sProfile.Spec.TargetNamespaceSelector != nil {
 		targetNs := sProfile.Spec.TargetNamespaceSelector
 
 		listOptions := metav1.ListOptions{}
@@ -242,6 +245,8 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 			}
 		}
 		namespaces = matchedNamespaceList
+	} else {
+		namespaces = append(namespaces, source.Namespace)
 	}
 	if tableType == RuleTableTypeProtect {
 		table = table.Add(sProfile.Spec.ProtectRules, source, namespaces)

@@ -21,13 +21,11 @@ USER root
 
 # RUN yum install -y tar
 
-RUN mkdir -p /ie-app
-RUN chown 1000200000 /ie-app
+RUN mkdir -p /ie-app && mkdir -p /ie-app/public
+COPY ./ie-server /ie-app
+
+RUN chgrp -R 0 /ie-app && chmod -R g=u /ie-app
 
 WORKDIR /ie-app
-
-RUN mkdir -p /ie-app/public
-
-COPY ./ie-server /ie-app
 
 ENTRYPOINT ["/ie-app/ie-server"]

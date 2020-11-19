@@ -33,9 +33,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const defaultResourceSigningProfileYamlPath = "/resources/default-rsp.yaml"
-const defaultKeyringFilename = "pubring.gpg"
-
 var log = logf.Log.WithName("controller_integrityenforcer")
 
 // enforcer config cr
@@ -64,7 +61,7 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer, scheme *runtime
 	if len(ecc.Spec.EnforcerConfig.KeyPathList) == 0 {
 		keyPathList := []string{}
 		for _, keyConf := range cr.Spec.KeyRings {
-			keyPathList = append(keyPathList, fmt.Sprintf("/%s/%s", keyConf.Name, defaultKeyringFilename))
+			keyPathList = append(keyPathList, fmt.Sprintf("/%s/%s", keyConf.Name, apiv1alpha1.DefaultKeyringFilename))
 		}
 		ecc.Spec.EnforcerConfig.KeyPathList = keyPathList
 	}
@@ -76,7 +73,7 @@ func BuildEnforcerConfigForIE(cr *apiv1alpha1.IntegrityEnforcer, scheme *runtime
 	}
 	if ecc.Spec.EnforcerConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile
-		deafultRspBytes, _ := ioutil.ReadFile(defaultResourceSigningProfileYamlPath)
+		deafultRspBytes, _ := ioutil.ReadFile(apiv1alpha1.DefaultResourceSigningProfileYamlPath)
 
 		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
 

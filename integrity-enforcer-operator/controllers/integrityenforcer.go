@@ -25,7 +25,6 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/resourcesigningprofile/v1alpha1"
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
 	res "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/resources"
-	scc "github.com/openshift/api/security/v1"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -40,7 +39,6 @@ import (
 	spol "github.com/IBM/integrity-enforcer/enforcer/pkg/apis/signpolicy/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -51,8 +49,6 @@ import (
 				Namespace
 
 ***********************************************/
-
-const ieTargetNamespaceLabelValue = "true"
 
 func (r *IntegrityEnforcerReconciler) attachLabelToNamespace(instance *apiv1alpha1.IntegrityEnforcer, expected *v1.Namespace) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -345,48 +341,6 @@ func (r *IntegrityEnforcerReconciler) createOrUpdateResourceSigningProfileCR(ins
 				Role
 
 ***********************************************/
-
-func (r *IntegrityEnforcerReconciler) createOrUpdateSCC(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
-	ctx := context.Background()
-	expected := res.BuildSecurityContextConstraints(instance)
-	found := &scc.SecurityContextConstraints{}
-
-	found.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "security.openshift.io",
-		Kind:    "SecurityContextConstraints",
-		Version: "v1",
-	})
-
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name,
-		"SecurityContextConstraints.Name", expected.Name)
-
-	// // Set CR instance as the owner and controller
-	// err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
-	// if err != nil {
-	// 	reqLogger.Error(err, "Failed to define expected resource")
-	// 	return ctrl.Result{}, err
-	// }
-
-	err := r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: ""}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new ClusterRole
-		reqLogger.Info("Creating a new SCC", "SCC.Name", expected)
-		err = r.Create(ctx, expected)
-		if err != nil {
-			reqLogger.Error(err, "Failed to create new SCC", "SCC.Name", expected)
-			return ctrl.Result{}, err
-		}
-		// ClusterRole created successfully - return and requeue
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		reqLogger.Error(err, "Failed to get SCC")
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
 
 func (r *IntegrityEnforcerReconciler) createOrUpdateServiceAccount(instance *apiv1alpha1.IntegrityEnforcer) (ctrl.Result, error) {
 	ctx := context.Background()

@@ -22,16 +22,12 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      securityContext:
-         readOnlyRootFilesystem: true
-         runAsNonRoot: true
-         runAsUser: 1000
       serviceAccountName: integrity-enforcer-operator-manager
       imagePullSecrets:
       - name: mappregkey
       containers:
       - command:
-        - /manager
+        - /ie-op-app/manager
         args:
         - --enable-leader-election
         env:

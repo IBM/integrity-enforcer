@@ -1,12 +1,14 @@
-# Build
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
-ADD /resources/default-rsp.yaml /resources/default-rsp.yaml
-ADD /resources/default-ie-cr.yaml /resources/default-ie-cr.yaml
 
-WORKDIR /
-COPY build/_output/bin/integrity-enforcer-operator manager
-USER nonroot:nonroot
+FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 
-ENTRYPOINT ["/manager"]
+RUN mkdir /ie-op-app && mkdir /ie-op-app/resources
+
+ADD /resources/default-rsp.yaml /ie-op-app/resources/default-rsp.yaml
+ADD /resources/default-ie-cr.yaml /ie-op-app/resources/default-ie-cr.yaml
+COPY build/_output/bin/integrity-enforcer-operator /ie-op-app/manager
+
+RUN chgrp -R 0 /ie-op-app && chmod -R g=u /ie-op-app
+
+WORKDIR /ie-op-app
+
+ENTRYPOINT ["/ie-op-app/manager"]

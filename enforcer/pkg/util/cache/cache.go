@@ -135,6 +135,14 @@ func (self *Cache) GetString(name string) string {
 	return objStr
 }
 
+func (self *Cache) KeyExists(name string) bool {
+	obj := self.Get(name)
+	if obj == nil {
+		return false
+	}
+	return true
+}
+
 func Set(name string, object interface{}, ttl *time.Duration) {
 	cache.Set(name, object, ttl)
 }
@@ -149,6 +157,10 @@ func SetString(name string, object string, ttl *time.Duration) {
 
 func Get(name string) interface{} {
 	return cache.Get(name)
+}
+
+func KeyExists(name string) bool {
+	return cache.KeyExists(name)
 }
 
 func GetString(name string) string {

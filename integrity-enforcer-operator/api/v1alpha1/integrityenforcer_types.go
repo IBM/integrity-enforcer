@@ -41,19 +41,24 @@ import (
 )
 
 const (
-	DefaultEnforcerConfigCRDName         = "enforcerconfigs.apis.integrityenforcer.io"
-	DefaultSignPolicyCRDName             = "signpolicies.apis.integrityenforcer.io"
-	DefaultResourceSignatureCRDName      = "resourcesignatures.apis.integrityenforcer.io"
-	DefaultResourceSigningProfileCRDName = "resourcesigningprofiles.apis.integrityenforcer.io"
-	DefaultHelmReleaseMetadataCRDName    = "helmreleasemetadatas.apis.integrityenforcer.io"
-	DefaultSignPolicyCRName              = "sign-policy"
-	DefaultIEAdminClusterRoleName        = "ie-admin-clusterrole"
-	DefaultIEAdminClusterRoleBindingName = "ie-admin-clusterrolebinding"
-	DefaultIEAdminRoleName               = "ie-admin-role"
-	DefaultIEAdminRoleBindingName        = "ie-admin-rolebinding"
-	DefaultRuleTableLockCMName           = "ie-rule-table-lock"
-	DefaultIgnoreTableLockCMName         = "ie-ignore-table-lock"
-	DefaultForceCheckTableLockCMName     = "ie-force-check-table-lock"
+	DefaultEnforcerConfigCRDName          = "enforcerconfigs.apis.integrityenforcer.io"
+	DefaultSignPolicyCRDName              = "signpolicies.apis.integrityenforcer.io"
+	DefaultResourceSignatureCRDName       = "resourcesignatures.apis.integrityenforcer.io"
+	DefaultResourceSigningProfileCRDName  = "resourcesigningprofiles.apis.integrityenforcer.io"
+	DefaultHelmReleaseMetadataCRDName     = "helmreleasemetadatas.apis.integrityenforcer.io"
+	DefaultSignPolicyCRName               = "sign-policy"
+	DefaultIEAdminClusterRoleName         = "ie-admin-clusterrole"
+	DefaultIEAdminClusterRoleBindingName  = "ie-admin-clusterrolebinding"
+	DefaultIEAdminRoleName                = "ie-admin-role"
+	DefaultIEAdminRoleBindingName         = "ie-admin-rolebinding"
+	DefaultRuleTableLockCMName            = "ie-rule-table-lock"
+	DefaultIgnoreTableLockCMName          = "ie-ignore-table-lock"
+	DefaultForceCheckTableLockCMName      = "ie-force-check-table-lock"
+	DefaultIECRYamlPath                   = "./resources/default-ie-cr.yaml"
+	DefaultResourceSigningProfileYamlPath = "./resources/default-rsp.yaml"
+	DefaultKeyringFilename                = "pubring.gpg"
+	DefaultIEWebhookTimeout               = 10
+	SATokenPath                           = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -80,7 +85,6 @@ type IntegrityEnforcerSpec struct {
 	Server            ServerContainer `json:"server,omitempty"`
 	Logger            LoggerContainer `json:"logger,omitempty"`
 	RegKeySecret      RegKeySecret    `json:"regKeySecret,omitempty"`
-	GlobalConfig      GlobalConfig    `json:"globalConfig,omitempty"`
 
 	EnforcerConfigCrName    string              `json:"enforcerConfigCrName,omitempty"`
 	EnforcerConfig          *iec.EnforcerConfig `json:"enforcerConfig,omitempty"`
@@ -103,13 +107,6 @@ type SecurityConfig struct {
 	PodSecurityContext             *v1.PodSecurityContext `json:"securityContext,omitempty"`
 	IEAdminSubjects                []rbacv1.Subject       `json:"ieAdminSubjects,omitempty"`
 	AutoIEAdminCreationDisabled    bool                   `json:"autoIEAdminRoleCreationDisabled,omitempty"`
-}
-
-type GlobalConfig struct {
-	Arch          []string `json:"arch,omitempty"`
-	NoCertManager bool     `json:"noCertManager,omitempty"`
-	OpenShift     bool     `json:"openShift,omitempty"`
-	Roks          bool     `json:"roks,omitempty"`
 }
 
 type RegKeySecret struct {
