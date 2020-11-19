@@ -189,8 +189,8 @@ test-e2e: kind-create-cluster setup-image install-crds install-resources setup-c
 kind-create-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
-	bash $(ENFORCER_DIR)test/create-kind-cluster.sh
-	kind get kubeconfig --name test-managed > $(ENFORCER_DIR)kubeconfig_managed
+	bash $(ENFORCER_OP_DIR)test/create-kind-cluster.sh
+	kind get kubeconfig --name test-managed > $(ENFORCER_OP_DIR)kubeconfig_managed
 
 kind-delete-cluster:
 	@echo deleting cluster
@@ -211,9 +211,9 @@ install-resources:
 	@echo creating keyring-secret
 	kubectl create -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo setting image
-	cd $(ENFORCER_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
+	cd $(ENFORCER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IE_OPERATOR):$(VERSION)
 	@echo installing operator
-	kustomize build $(ENFORCER_DIR)config/default | kubectl apply --validate=false -f -
+	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl apply --validate=false -f -
 	@echo creating test namespace
 	kubectl create ns $(TEST_NS)
 
@@ -223,7 +223,7 @@ delete-resources:
 	@echo deleting keyring-secret
 	kubectl delete -f $(ENFORCER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IE_OP_NS)
 	@echo deleting operator
-	kustomize build $(ENFORCER_DIR)config/default | kubectl delete -f -
+	kustomize build $(ENFORCER_OP_DIR)config/default | kubectl delete -f -
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
 
@@ -242,16 +242,16 @@ setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(ENFORCER_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
+	cp $(ENFORCER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
 	@echo insert image
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IE_LOGGING):$(VERSION)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IE_IMAGE):$(VERSION)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IE_LOGGING):$(VERSION)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IE_IMAGE):$(VERSION)
 	@echo setup signer policy
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(ENFORCER_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(ENFORCER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
 
 e2e-test:
