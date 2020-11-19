@@ -12,9 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# LOAD ENVIRNOMENT SETTINGS (must be done at first)
+###########################
+
+ifeq ($(IE_REPO_ROOT),)
+$(error IE_REPO_ROOT is not set)
+endif
+
+include  .env
+export $(shell sed 's/=.*//' .env)
+
+ifeq ($(ENV_CONFIG),)
+$(error ENV_CONFIG is not set)
+endif
+
+include  $(ENV_CONFIG)
+export $(shell sed 's/=.*//' $(ENV_CONFIG))
+
+include $(ENFORCER_OP_DIR)Makefile
+
+
 # CICD BUILD HARNESS
 ####################
-USE_VENDORIZED_BUILD_HARNESS ?=
+ifeq ($(IBM_ENV),true)
+  USE_VENDORIZED_BUILD_HARNESS = false
+else
+  USE_VENDORIZED_BUILD_HARNESS ?=
+endif
+
 
 ifndef USE_VENDORIZED_BUILD_HARNESS
 -include $(shell curl -s -H 'Authorization: token ${GITHUB_TOKEN}' -H 'Accept: application/vnd.github.v4.raw' -L https://api.github.com/repos/open-cluster-management/build-harness-extensions/contents/templates/Makefile.build-harness-bootstrap -o .build-harness-bootstrap; echo .build-harness-bootstrap)
@@ -68,21 +93,6 @@ else
     $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
 endif
 
-ifeq ($(IE_REPO_ROOT),)
-$(error IE_REPO_ROOT is not set)
-endif
-
-include  .env
-export $(shell sed 's/=.*//' .env)
-
-ifeq ($(ENV_CONFIG),)
-$(error ENV_CONFIG is not set)
-endif
-
-include  $(ENV_CONFIG)
-export $(shell sed 's/=.*//' $(ENV_CONFIG))
-
-include $(ENFORCER_OP_DIR)Makefile
 
 .PHONY: config int fmt lint test coverage build build-images
 
