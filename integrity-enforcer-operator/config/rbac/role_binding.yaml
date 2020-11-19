@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: integrity-enforcer-operator-manager
-  namespace: integrity-enforcer-ns
+  namespace: integrity-enforcer-operator-system
