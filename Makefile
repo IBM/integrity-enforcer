@@ -93,21 +93,6 @@ else
     $(error "This system's OS $(LOCAL_OS) isn't recognized/supported")
 endif
 
-ifeq ($(IE_REPO_ROOT),)
-$(error IE_REPO_ROOT is not set)
-endif
-
-include  .env
-export $(shell sed 's/=.*//' .env)
-
-ifeq ($(ENV_CONFIG),)
-$(error ENV_CONFIG is not set)
-endif
-
-include  $(ENV_CONFIG)
-export $(shell sed 's/=.*//' $(ENV_CONFIG))
-
-include $(ENFORCER_OP_DIR)Makefile
 
 .PHONY: config int fmt lint test coverage build build-images
 
