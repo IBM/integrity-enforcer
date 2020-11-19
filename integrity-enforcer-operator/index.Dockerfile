@@ -1,7 +1,9 @@
 FROM quay.io/operator-framework/upstream-opm-builder AS builder
 
-FROM centos
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
+RUN microdnf update && microdnf clean all &&\
+    microdnf install -y --nodocs shadow-utils hostname
 
 ARG USER_ID=1001
 ARG GROUP_ID=12009

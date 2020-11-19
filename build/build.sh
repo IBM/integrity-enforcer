@@ -9,7 +9,7 @@ echo "<repo>/<component>:<tag> : $1"
 
 make build-images
 
-if [ ! -z "$IBM_ENV" ] || [ "$IBM_ENV" = false ]
+if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = false ]
 
 	echo "Building integrity enforcer bundle starting : $(date)"
 

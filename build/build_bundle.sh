@@ -39,7 +39,7 @@ cd $IE_REPO_ROOT/integrity-enforcer-operator
 # Build ie-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle IMG=${IE_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
+make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
 
 csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
@@ -53,28 +53,28 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
-make bundle-build BUNDLE_IMG=${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+make bundle-build BUNDLE_IMG=${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Push ie-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
-docker push ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+docker push ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Prepare ie-operator bundle index
 echo -----------------------------
 echo [3/4] Adding bundle to index
 
 
-docker pull ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
+docker pull ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
-        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --tag ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+                      --tag ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 else
 	echo "Succesfulling pulled previous index"
-	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --from-index ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
-                      --tag ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+                      --from-index ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
+                      --tag ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 fi
 
 rm -f tmp.Dockerfile
@@ -82,11 +82,11 @@ rm -f tmp.Dockerfile
 # Build ie-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
-docker build -f index.Dockerfile -t ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
+docker build -f index.Dockerfile -t ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
 # Push ie-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
-docker push ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+docker push ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 
 echo "Completed building bundle and index"

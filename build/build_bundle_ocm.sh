@@ -26,13 +26,13 @@ if ! [ -x "$(command -v opm)" ]; then
 fi
 
 
-if [ -z "$ENFORCER_OP_DIR" ]; then
-    echo "ENFORCER_OP_DIR is empty. Please set env."
+if [ -z "$VERIFIER_OP_DIR" ]; then
+    echo "VERIFIER_OP_DIR is empty. Please set env."
     exit 1
 fi
 
 
-cd $ENFORCER_OP_DIR
+cd $VERIFIER_OP_DIR
 
 echo "Current directory: $(pwd)"
 
@@ -42,7 +42,7 @@ export COMPONENT_DOCKER_REPO=${REGISTRY}
 # Build ie-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle IMG=${IE_OPERATOR_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} VERSION=${VERSION}
+make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} VERSION=${VERSION}
 
 
 csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
@@ -56,13 +56,13 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
-make bundle-build BUNDLE_IMG=${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
+make bundle-build BUNDLE_IMG=${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
 
 # Push ie-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
-#docker push ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
-export COMPONENT_NAME=${IE_BUNDLE}
+#docker push ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
+export COMPONENT_NAME=${IV_BUNDLE}
 export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
 #if [ `go env GOOS` == "linux" ]; then
 #    make component/push
@@ -78,16 +78,16 @@ make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 echo -----------------------------
 echo [3/4] Adding bundle to index
 
-docker pull ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
+docker pull ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
-        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} \
-                      --tag ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --out-dockerfile tmp.Dockerfile
+        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} \
+                      --tag ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --out-dockerfile tmp.Dockerfile
 else
 	echo "Succesfulling pulled previous index"
-	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IE_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} \
-                      --from-index ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION} \
-                      --tag ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --out-dockerfile tmp.Dockerfile
+	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} \
+                      --from-index ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION} \
+                      --tag ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --out-dockerfile tmp.Dockerfile
 fi
 
 rm -f tmp.Dockerfile
@@ -95,14 +95,14 @@ rm -f tmp.Dockerfile
 # Build ie-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
-docker build -f index.Dockerfile -t ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
+docker build -f index.Dockerfile -t ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
 # Push ie-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
 
-#docker push ${IE_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
-export COMPONENT_NAME=${IE_INDEX}
+#docker push ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
+export COMPONENT_NAME=${IV_INDEX}
 export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
 #if [ `go env GOOS` == "linux" ]; then
 #    make component/push

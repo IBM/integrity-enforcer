@@ -24,9 +24,9 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
-	ie_namespace                = os.Getenv("IE_OP_NS")
+	ie_namespace                = os.Getenv("IV_OP_NS")
 	test_namespace              = os.Getenv("TEST_NS")
-	enforcer_dir                = os.Getenv("ENFORCER_OP_DIR")
+	enforcer_dir                = os.Getenv("VERIFIER_OP_DIR")
 	deploy_dir                  = enforcer_dir + "test/deploy/"
 	kubeconfigManaged           = enforcer_dir + "kubeconfig_managed"
 	integrityEnforcerOperatorCR = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"

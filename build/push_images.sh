@@ -21,18 +21,18 @@ if ! [ -x "$(command -v docker)" ]; then
 fi
 
 
-if [ -z "$IE_ENFORCER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IE_ENFORCER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+if [ -z "$IV_SERVER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
     exit 1
 fi
 
-if [ -z "$IE_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IE_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+if [ -z "$IV_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
     exit 1
 fi
 
-if [ -z "$IE_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IE_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+if [ -z "$IV_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
     exit 1
 fi
 
@@ -41,7 +41,7 @@ fi
 # Push ie-server image
 echo -----------------------------
 echo [1/3] Pushing ie-server image.
-docker push ${IE_ENFORCER_IMAGE_NAME_AND_VERSION}
+docker push ${IV_SERVER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
@@ -50,7 +50,7 @@ echo ""
 # Push ie-logging image
 echo -----------------------------
 echo [2/3] Pushing ie-logging image.
-docker push ${IE_LOGGING_IMAGE_NAME_AND_VERSION}
+docker push ${IV_LOGGING_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
@@ -58,7 +58,7 @@ echo ""
 # Push integrity-enforcer-operator image
 echo -----------------------------
 echo [3/3] Pushing integrity-enforcer-operator image.
-docker push ${IE_OPERATOR_IMAGE_NAME_AND_VERSION}
+docker push ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
