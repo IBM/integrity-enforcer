@@ -12,6 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# CICD BUILD HARNESS
+####################
+USE_VENDORIZED_BUILD_HARNESS ?=
+
+ifndef USE_VENDORIZED_BUILD_HARNESS
+-include $(shell curl -s -H 'Authorization: token ${GITHUB_TOKEN}' -H 'Accept: application/vnd.github.v4.raw' -L https://api.github.com/repos/open-cluster-management/build-harness-extensions/contents/templates/Makefile.build-harness-bootstrap -o .build-harness-bootstrap; echo .build-harness-bootstrap)
+else
+#-include vbh/.build-harness-bootstrap
+-include $(shell curl -sSL -o .build-harness "https://git.io/build-harness"; echo .build-harness)
+endif
+####################
+
+.PHONY: default
+default::
+	@echo "Build Harness Bootstrapped"
+
+# Docker build flags
+DOCKER_BUILD_FLAGS := --build-arg VCS_REF=$(GIT_COMMIT) $(DOCKER_BUILD_FLAGS)
+
 # This repo is build in Travis-ci by default;
 # Override this variable in local env.
 TRAVIS_BUILD ?= 1
@@ -62,6 +81,8 @@ endif
 
 include  $(ENV_CONFIG)
 export $(shell sed 's/=.*//' $(ENV_CONFIG))
+
+include $(ENFORCER_OP_DIR)Makefile
 
 .PHONY: config int fmt lint test coverage build build-images
 
@@ -122,18 +143,20 @@ lint-op-verify:
 ############################################################
 
 build-images:
-	./develop/scripts/build_images.sh
+	$(IE_REPO_ROOT)/build/build_images.sh
 
 
 push-images:
-	./develop/scripts/push_images.sh
+	- docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	- $(IE_REPO_ROOT)/build/push_images.sh
 
 ############################################################
 # bundle section
 ############################################################
 
 build-bundle:
-	- ./develop/scripts/build_bundle.sh
+	-  docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}
+	- $(IE_REPO_ROOT)/build/build_bundle.sh
 
 ############################################################
 # clean section
@@ -144,7 +167,7 @@ clean::
 # check copyright section
 ############################################################
 copyright-check:
-	./build/copyright-check.sh $(TRAVIS_BRANCH)
+	 - $(IE_REPO_ROOT)/build/copyright-check.sh $(TRAVIS_BRANCH)
 
 ############################################################
 # unit test section
@@ -257,9 +280,10 @@ setup-cr:
 e2e-test:
 	@echo
 	@echo run test
-	cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e -coverprofile cover.out > $(ENFORCER_OP_DIR)e2e_results.txt
-	$(eval FAILURES=$(shell cat e2e_results.txt | grep "FAIL:"))
+	cd $(ENFORCER_OP_DIR) && go test -v ./test/e2e > $(ENFORCER_OP_DIR)e2e_results.txt
+	$(eval FAILURES=$(shell cat $(ENFORCER_OP_DIR)e2e_results.txt | grep "FAIL:"))
 	cat $(ENFORCER_OP_DIR)e2e_results.txt
+	echo Fail:$(strip $(FAILURES))
 	@$(if $(strip $(FAILURES)), echo "One or more e2e tests failed. Failures: $(FAILURES)"; exit 1, echo "All e2e tests passed successfully."; exit 0)
 
 ############################################################

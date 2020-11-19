@@ -31,6 +31,7 @@ if [ -z "$IE_REPO_ROOT" ]; then
     exit 1
 fi
 
+#source $IE_REPO_ROOT/ie-build.conf
 
 cd $IE_REPO_ROOT/integrity-enforcer-operator
 

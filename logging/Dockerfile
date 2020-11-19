@@ -45,7 +45,7 @@ ENV PATH /opt/rh/rh-ruby25/root/usr/share/gems/gems/fluentd-1.6.3/bin/:$PATH
 
 ENV USER ac-app
 RUN groupadd -g 12009 ${USER} &&\
-    useradd -l -g ${USER} -u 1000190000 -m ${USER} &&\
+    useradd -l -g ${USER} -u 1000610000 -m ${USER} &&\
     mkdir /ac-app
 
 ADD src/ /ac-app/
