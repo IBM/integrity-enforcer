@@ -17,63 +17,12 @@
 package resources
 
 import (
-	"strings"
-
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-enforcer-operator/api/v1alpha1"
-	scc "github.com/openshift/api/security/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-//scc
-func BuildSecurityContextConstraints(cr *apiv1alpha1.IntegrityEnforcer) *scc.SecurityContextConstraints {
-	user := strings.Join([]string{"system:serviceaccount", cr.Namespace, cr.GetServiceAccountName()}, ":")
-	privilegeEscalation := false
-	allowPrivilegeEscalation := false
-	var priority int32 = 500001
-	metaLabels := map[string]string{
-		"app":                          cr.Name,
-		"app.kubernetes.io/name":       cr.Name,
-		"app.kubernetes.io/managed-by": "operator",
-		"role":                         "security",
-	}
-
-	return &scc.SecurityContextConstraints{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "SecurityContextConstraints",
-			APIVersion: scc.GroupVersion.Group + "/" + scc.GroupVersion.Version,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.GetSecurityContextConstraintsName(),
-			Labels: metaLabels,
-		},
-		Priority:                        &priority,
-		AllowPrivilegedContainer:        false,
-		DefaultAddCapabilities:          []corev1.Capability{},
-		RequiredDropCapabilities:        []corev1.Capability{},
-		AllowedCapabilities:             []corev1.Capability{},
-		AllowHostDirVolumePlugin:        false,
-		AllowedFlexVolumes:              []scc.AllowedFlexVolume{},
-		AllowHostNetwork:                false,
-		AllowHostPID:                    false,
-		AllowHostIPC:                    false,
-		DefaultAllowPrivilegeEscalation: &privilegeEscalation,
-		AllowPrivilegeEscalation:        &allowPrivilegeEscalation,
-		SELinuxContext:                  scc.SELinuxContextStrategyOptions{Type: scc.SELinuxStrategyRunAsAny, SELinuxOptions: &corev1.SELinuxOptions{}},
-		RunAsUser:                       scc.RunAsUserStrategyOptions{Type: scc.RunAsUserStrategyMustRunAsNonRoot},
-		SupplementalGroups:              scc.SupplementalGroupsStrategyOptions{},
-		FSGroup:                         scc.FSGroupStrategyOptions{},
-		ReadOnlyRootFilesystem:          false,
-		Users:                           []string{user},
-		Groups:                          []string{},
-		SeccompProfiles:                 []string{},
-		AllowedUnsafeSysctls:            []string{},
-		ForbiddenSysctls:                []string{},
-		Volumes:                         []scc.FSType{scc.FSTypeEmptyDir, scc.FSTypeSecret},
-	}
-}
 
 //sa
 func BuildServiceAccountForIE(cr *apiv1alpha1.IntegrityEnforcer) *corev1.ServiceAccount {

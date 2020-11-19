@@ -245,10 +245,12 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		}()
 	}
 
-	if self.ctx.Allow && (self.checkIfProfileResource() || self.checkIfNamespaceRequest()) {
-		err := self.loader.ResetCacheOfRuleTable()
+	// Reload RuleTable only when RSP/namespace request is allowed.
+	// however, RSP request by IE server is exception because it is just updating only `status` about denied request.
+	if self.ctx.Allow && (self.checkIfProfileResource() && !self.checkIfIEServerRequest() || self.checkIfNamespaceRequest()) {
+		err := self.loader.ReloadRuleTable(self.reqc)
 		if err != nil {
-			logger.Error("Failed to update RuleTable; ", err)
+			logger.Error("Failed to reload RuleTable; ", err)
 		}
 	}
 

@@ -32,9 +32,6 @@ import (
 
 var int420Var int32 = 420
 
-const saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-const defaultIECRYamlPath = "/resources/default-ie-cr.yaml"
-
 func SecretVolume(name, secretName string) v1.Volume {
 
 	return v1.Volume{
@@ -60,7 +57,7 @@ func EmptyDirVolume(name string) v1.Volume {
 }
 
 func getOperatorServiceAccount() string {
-	tokenBytes, err := ioutil.ReadFile(saTokenPath)
+	tokenBytes, err := ioutil.ReadFile(apiv1alpha1.SATokenPath)
 	if err != nil {
 		return ""
 	}
@@ -87,7 +84,7 @@ func getOperatorServiceAccount() string {
 
 func MergeDefaultIntegrityEnforcerCR(cr *apiv1alpha1.IntegrityEnforcer, srcYamlPath string) *apiv1alpha1.IntegrityEnforcer {
 	if srcYamlPath == "" {
-		srcYamlPath = defaultIECRYamlPath
+		srcYamlPath = apiv1alpha1.DefaultIECRYamlPath
 	}
 	deafultCRBytes, _ := ioutil.ReadFile(srcYamlPath)
 	defaultCRJsonBytes, err := yaml.YAMLToJSON(deafultCRBytes)
