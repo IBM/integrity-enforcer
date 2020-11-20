@@ -38,10 +38,10 @@ fi
 
 
 
-# Push integrity-verifier-server image
+# Pull integrity-verifier-server image
 echo -----------------------------
-echo [1/3] Pushing integrity-verifier-server image.
-docker push ${IV_SERVER_IMAGE_NAME_AND_VERSION}
+echo [1/3] Pulling integrity-verifier-server image.
+docker pull ${IV_SERVER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
@@ -49,16 +49,16 @@ echo ""
 
 # Push integrity-verifier-logging image
 echo -----------------------------
-echo [2/3] Pushing integrity-verifier-logging image.
-docker push ${IV_LOGGING_IMAGE_NAME_AND_VERSION}
+echo [2/3] Pulling integrity-verifier-logging image.
+docker pull ${IV_LOGGING_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
 
 # Push integrity-verifier-operator image
 echo -----------------------------
-echo [3/3] Pushing integrity-verifier-operator image.
-docker push ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
+echo [3/3] Pulling integrity-verifier-operator image.
+docker pull ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""

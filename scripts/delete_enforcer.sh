@@ -50,15 +50,14 @@ if [ ${IE_ENV} = "remote" ]; then
     IE_CR="operator/deploy/crds/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml"
 fi
 
-ENFORCER_OP_DIR="${IE_REPO_ROOT}/integrity-enforcer-operator/"
-ENFORCER_DEPLOY_DIR="${IE_REPO_ROOT}/integrity-enforcer-operator/deploy"
+VERIFIER_OP_DIR="${IE_REPO_ROOT}/integrity-enforcer-operator/"
 
 echo ""
 echo "------------- Delete integrity-enforcer -------------"
 echo ""
 
 kubectl delete mutatingwebhookconfiguration ie-webhook-config
-cd $ENFORCER_OP_DIR
+cd $VERIFIER_OP_DIR
 
 if [ $IE_ENV = "local" ]; then
    kubectl delete -n $IE_NS -f config/samples/apis_v1alpha1_integrityenforcer_local.yaml
@@ -69,20 +68,3 @@ fi
 
 kustomize build config/default | kubectl delete -f -
 cd ${IE_REPO_ROOT}
-
-################################
-# previous script commands here
-################################
-
-# if [ ! -d ${ENFORCER_DEPLOY_DIR} ];then
-#   echo "directory not exists."
-# else
-#     kubectl delete mutatingwebhookconfiguration ie-webhook-config
-#     kubectl delete -f ${IE_REPO_ROOT}/${IE_CR}  -n ${IE_NS}
-#     kubectl delete -f ${IE_REPO_ROOT}/${IE_OPERATOR_YAML} -n ${IE_NS}
-#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role_binding.yaml -n ${IE_NS}
-#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/role.yaml -n ${IE_NS}
-#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/service_account.yaml -n ${IE_NS}
-#     kubectl delete -f ${ENFORCER_DEPLOY_DIR}/crds/apis.integrityenforcer.io_integrityenforcers_crd.yaml
-# fi
-
