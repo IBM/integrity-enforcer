@@ -251,9 +251,9 @@ TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SECRET=keyring_secret
 
-test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
+test-e2e: kind-create-cluster setup-image install-crds setup-iv-env install-resources setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-resources kind-delete-cluster
 
-test-e2e-no-init: push-images-to-local install-crds install-resources setup-cr e2e-test
+test-e2e-no-init: push-images-to-local setup-iv-env install-crds install-resources setup-cr setup-test-env setup-test-resources e2e-test
 
 kind-create-cluster:
 	@echo "creating cluster"
@@ -273,29 +273,29 @@ delete-crds:
 	@echo deleting crds
 	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl delete -f -
 
-install-resources:
+setup-iv-env:
 	@echo
 	@echo creating namespaces
 	kubectl create ns $(IV_OP_NS)
 	@echo creating keyring-secret
 	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
+
+delete-keyring-secret:
+	@echo
+	@echo deleting keyring-secret
+	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
+
+install-resources:
+	@echo
 	@echo setting image
 	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IV_OPERATOR):$(VERSION)
 	@echo installing operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
-	@echo creating test namespace
-	kubectl create ns $(TEST_NS)
-
 
 delete-resources:
 	@echo
-	@echo deleting keyring-secret
-	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
 	@echo deleting operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl delete -f -
-	@echo deleting test namespace
-	kubectl delete ns $(TEST_NS)
-
 
 setup-image: pull-images push-images-to-local
 
@@ -323,6 +323,22 @@ setup-cr:
 	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
+
+setup-test-env:
+	@echo
+	@echo creating test namespace
+	kubectl create ns $(TEST_NS)
+
+delete-test-env:
+	@echo
+	@echo deleting test namespace
+	kubectl delete ns $(TEST_NS)
+
+setup-test-resources:
+	@echo
+	@echo prepare cr for updating test
+	cp $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer_update.yaml
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
 
 e2e-test:
 	@echo

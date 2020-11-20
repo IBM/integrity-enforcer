@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo" //nolint:golint
 
 	rspclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
+	spclient "github.com/IBM/integrity-enforcer/enforcer/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,16 +25,18 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
-	ie_namespace                = os.Getenv("IV_OP_NS")
-	test_namespace              = os.Getenv("TEST_NS")
-	enforcer_dir                = os.Getenv("VERIFIER_OP_DIR")
-	deploy_dir                  = enforcer_dir + "test/deploy/"
-	kubeconfigManaged           = enforcer_dir + "kubeconfig_managed"
-	integrityEnforcerOperatorCR = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
-	test_rsp                    = deploy_dir + "test-rsp.yaml"
-	test_configmap              = deploy_dir + "test-configmap.yaml"
-	test_configmap2             = deploy_dir + "test-configmap-annotation.yaml"
-	test_configmap_rs           = deploy_dir + "test-configmap-rs.yaml"
+	ie_namespace                        = os.Getenv("IV_OP_NS")
+	test_namespace                      = os.Getenv("TEST_NS")
+	test_namespace2                     = "new-test-namespace"
+	enforcer_dir                        = os.Getenv("VERIFIER_OP_DIR")
+	deploy_dir                          = enforcer_dir + "test/deploy/"
+	kubeconfigManaged                   = enforcer_dir + "kubeconfig_managed"
+	integrityEnforcerOperatorCR         = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
+	integrityEnforcerOperatorCR_updated = deploy_dir + "apis_v1alpha1_integrityenforcer_update.yaml"
+	test_rsp                            = deploy_dir + "test-rsp.yaml"
+	test_configmap                      = deploy_dir + "test-configmap.yaml"
+	test_configmap2                     = deploy_dir + "test-configmap-annotation.yaml"
+	test_configmap_rs                   = deploy_dir + "test-configmap-rs.yaml"
 )
 
 type Framework struct {
@@ -50,6 +53,7 @@ type Framework struct {
 	KubeClientSet          kubernetes.Interface
 	APIExtensionsClientSet apiextcs.Interface
 	RSPClient              rspclient.ApisV1alpha1Interface
+	SignPolicyClient       spclient.ApisV1alpha1Interface
 
 	// Namespace in which all test resources should reside
 	Namespace *v1.Namespace
@@ -77,6 +81,11 @@ func initFrameWork() *Framework {
 	framework.RSPClient, err = rspclient.NewForConfig(kubeConfig)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set RSPClient"))
+		// t.Errorf("fail to set RSPClient")
+	}
+	framework.SignPolicyClient, err = spclient.NewForConfig(kubeConfig)
+	if err != nil {
+		Fail(fmt.Sprintf("fail to set SingPolicyClient"))
 		// t.Errorf("fail to set RSPClient")
 	}
 	ns := &v1.Namespace{

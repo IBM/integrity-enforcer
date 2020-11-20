@@ -30,4 +30,4 @@ if [ -z "$IE_OPERATOR_POD" ]; then
     exit 1
 fi
 
-kubectl logs -f -n ${IE_NS} ${IE_OPERATOR_POD}
+kubectl logs -f -n ${IE_NS} ${IE_OPERATOR_POD} -c manager
