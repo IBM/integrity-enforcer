@@ -219,6 +219,8 @@ TEST_SECRET=keyring_secret
 
 test-e2e: kind-create-cluster setup-image install-crds install-resources setup-cr e2e-test delete-resources kind-delete-cluster
 
+test-e2e-no-init: push-images-to-local install-crds install-resources setup-cr e2e-test
+
 kind-create-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
@@ -260,16 +262,16 @@ delete-resources:
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
 
-setup-image:
-	@echo
-	@echo push image into local registry
-	docker tag $(IE_ENFORCER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_IMAGE):$(VERSION)
-	docker tag $(IE_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_LOGGING):$(VERSION)
-	docker tag $(IE_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IE_OPERATOR):$(VERSION)
-	docker push localhost:5000/$(IE_IMAGE):$(VERSION)
-	docker push localhost:5000/$(IE_LOGGING):$(VERSION)
-	docker push localhost:5000/$(IE_OPERATOR):$(VERSION)
+setup-image: pull-images push-images-to-local
 
+push-images-to-local:
+	@echo push image into local registry
+	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_IMAGE):$(VERSION)
+	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_LOGGING):$(VERSION)
+	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_OPERATOR):$(VERSION)
+	docker push localhost:5000/$(IV_IMAGE):$(VERSION)
+	docker push localhost:5000/$(IV_LOGGING):$(VERSION)
+	docker push localhost:5000/$(IV_OPERATOR):$(VERSION)
 
 setup-cr:
 	@echo
