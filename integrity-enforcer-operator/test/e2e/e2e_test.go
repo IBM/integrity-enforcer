@@ -16,6 +16,8 @@ package e2e
 
 import (
 	goctx "context"
+	"fmt"
+	"time"
 
 	// "testing"
 
@@ -90,6 +92,7 @@ var _ = Describe("Test integrity enforcer handling", func() {
 			}, timeout, 1).Should(BeNil())
 		})
 		It("Test unsigned resouce should be blocked", func() {
+			time.Sleep(time.Second * 30)
 			var timeout int = 60
 			expected := "test-configmap"
 			By("Creating test configmap in ns: " + test_namespace + " : " + test_configmap)
@@ -124,11 +127,70 @@ var _ = Describe("Test integrity enforcer handling", func() {
 		})
 	})
 	Describe("Test IE resources", func() {
+		framework := initFrameWork()
 		It("No changed on IE resources allowed", func() {
 		})
 		It("IE Resources are changed when IE CR is updated", func() {
+			var timeout int = 60
+			expected := "sign-policy"
+			var generation int64
+			sp, err := framework.SignPolicyClient.SignPolicies(ie_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			generation = sp.Generation
+			By("Applying updated CR: " + ie_namespace)
+			cmd_err := Kubectl("apply", "-f", integrityEnforcerOperatorCR_updated, "-n", ie_namespace)
+			Expect(cmd_err).To(BeNil())
+			time.Sleep(time.Second * 15)
+			Eventually(func() error {
+				sp, err := framework.SignPolicyClient.SignPolicies(ie_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				if sp.Generation == generation {
+					return fmt.Errorf("SignPolicy is not changed: %v", expected)
+				}
+				return nil
+			}, timeout, 1).Should(BeNil())
 		})
-		It("RSP in IE NS is effective for blocking unsigned admission on newly created NS", func() {
-		})
+		// Context("RSP in IE NS is effective for blocking unsigned admission on newly created NS", func() {
+		// 	It("Test RSP should be created properly", func() {
+		// 		var timeout int = 60
+		// 		expected := "test-rsp"
+		// 		By("Creating test rsp: " + test_rsp + " ns: " + ie_namespace)
+		// 		cmd_err := Kubectl("apply", "-f", test_rsp, "-n", ie_namespace)
+		// 		Expect(cmd_err).To(BeNil())
+		// 		Eventually(func() error {
+		// 			_, err := framework.RSPClient.ResourceSigningProfiles(ie_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		// 			if err != nil {
+		// 				return err
+		// 			}
+		// 			return nil
+		// 		}, timeout, 1).Should(BeNil())
+		// 	})
+		// 	It("Test unsigned resource should be blocked in new namespace", func() {
+		// 		time.Sleep(time.Second * 15)
+		// 		var timeout int = 60
+		// 		expected := "test-configmap"
+		// 		By("Creating new namespace: " + test_namespace2)
+		// 		cmd_err := Kubectl("create", "ns", test_namespace2)
+		// 		Expect(cmd_err).To(BeNil())
+		// 		By("Creating test configmap in ns: " + test_namespace2)
+		// 		cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace2)
+		// 		Expect(cmd_err).NotTo(BeNil())
+		// 		Eventually(func() error {
+		// 			return CheckEventNoSignature(framework, test_namespace, expected)
+		// 		}, timeout, 1).Should(BeNil())
+		// 	})
+		// 	It("Test signed resource should be allowed in new namespace", func() {
+		// 		var timeout int = 60
+		// 		expected := "test-configmap2"
+		// 		By("Creating test configmap in ns: " + test_namespace2)
+		// 		cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace2)
+		// 		Expect(cmd_err).To(BeNil())
+		// 		Eventually(func() error {
+		// 			return CheckConfigMap(framework, test_namespace2, expected)
+		// 		}, timeout, 1).Should(BeNil())
+		// 	})
+		// })
 	})
 })
