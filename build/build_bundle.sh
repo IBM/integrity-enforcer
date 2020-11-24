@@ -26,17 +26,17 @@ if ! [ -x "$(command -v opm)" ]; then
 fi
 
 
-if [ -z "$IE_REPO_ROOT" ]; then
-    echo "IE_REPO_ROOT is empty. Please set root directory for IE repository"
+if [ -z "$IV_REPO_ROOT" ]; then
+    echo "IV_REPO_ROOT is empty. Please set root directory for IV repository"
     exit 1
 fi
 
-#source $IE_REPO_ROOT/ie-build.conf
+#source $IV_REPO_ROOT/iv-build.conf
 
-cd $IE_REPO_ROOT/integrity-enforcer-operator
+cd $IV_REPO_ROOT/integrity-enforcer-operator
 
 
-# Build ie-operator bundle
+# Build iv-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
@@ -55,12 +55,12 @@ rm tmp.json
 
 make bundle-build BUNDLE_IMG=${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
-# Push ie-operator bundle
+# Push iv-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
 docker push ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
-# Prepare ie-operator bundle index
+# Prepare iv-operator bundle index
 echo -----------------------------
 echo [3/4] Adding bundle to index
 
@@ -79,12 +79,12 @@ fi
 
 rm -f tmp.Dockerfile
 
-# Build ie-operator bundle index
+# Build iv-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
 docker build -f index.Dockerfile -t ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
-# Push ie-operator bundle index
+# Push iv-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
 docker push ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}

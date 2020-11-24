@@ -11,9 +11,9 @@ make build-images
 
 if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = false ]
 
-	echo "Building integrity enforcer bundle starting : $(date)"
+	echo "Building integrity verifier bundle starting : $(date)"
 
-	${IE_REPO_ROOT}/build/build_bundle.sh
+	${IV_REPO_ROOT}/build/build_bundle.sh
 
-	echo "Building integrity enforcer bundle completed : $(date)"
+	echo "Building integrity verifier bundle completed : $(date)"
 fi
