@@ -291,6 +291,7 @@ install-resources:
 	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IV_OPERATOR):$(VERSION)
 	@echo installing operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
+	kustomize edit set image controller=$(REGISTRY)/$(IV_OPERATOR):$(VERSION) # reset image name back to original
 
 delete-resources:
 	@echo
