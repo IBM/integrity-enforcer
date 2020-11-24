@@ -348,8 +348,8 @@ e2e-test:
 	@echo
 	@echo run test
 	cd $(VERIFIER_OP_DIR) && go test -v ./test/e2e > /tmp/e2e_results.txt
-	$(eval FAILURES=$(shell cat /tmp/e2e_results.txt | grep "FAIL:" | wc -c))
-	if [ "${FAILURES}" -gt 0 ]; then
+	$(eval FAILURES=$(shell cat /tmp/e2e_results.txt | grep "FAIL:"))
+	if [ $(strip $(FAILURES)) ]; then
 		cat /tmp/e2e_results.txt
 		echo "One or more e2e tests failed. Failures: $(FAILURES)"
 		exit 1
