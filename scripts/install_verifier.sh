@@ -39,7 +39,7 @@ if [ -z "$IV_REPO_ROOT" ]; then
     exit 1
 fi
 
-IMG=integrityverifier/integrity-verifier-operator:0.0.4dev
+IMG=integrityverifier/integrity-verifier-operator:0.0.4dev2
 VERIFIER_OP_DIR=${IV_REPO_ROOT}"/integrity-verifier-operator/"
 
 echo ""
