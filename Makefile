@@ -341,8 +341,8 @@ setup-test-resources:
 	yq write -i /tmp/apis_v1alpha1_integrityverifier_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
 
 clean-test-resources:
-	rm /tmp/apis_v1alpha1_integrityenforcer_update.yaml
-	rm /tmp/apis_v1alpha1_integrityenforcer.yaml
+	rm /tmp/apis_v1alpha1_integrityverifier_update.yaml
+	rm /tmp/apis_v1alpha1_integrityverifier.yaml
 
 e2e-test:
 	@echo
