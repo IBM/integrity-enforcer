@@ -376,10 +376,26 @@ func (self *RequestHandler) validateIVCustomResource() (bool, string) {
 			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
 		return ok, ""
-	}
-
-	if self.reqc.Kind == common.SignatureCustomResourceKind {
+	} else if self.reqc.Kind == common.SignatureCustomResourceKind {
 		ok, err := handlerutil.ValidateResourceSignature(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if self.reqc.Kind == common.VerifierConfigCustomResourceAPIVersion {
+		ok, err := handlerutil.ValidateVerifierConfig(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if self.reqc.Kind == common.SignPolicyCustomResourceKind {
+		ok, err := handlerutil.ValidateSignPolicy(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if self.reqc.Kind == common.HelmReleaseMetadataCustomResourceAPIVersion {
+		ok, err := handlerutil.ValidateHelmReleaseMetadata(self.reqc)
 		if err != nil {
 			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
