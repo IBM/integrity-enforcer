@@ -156,19 +156,7 @@ build-images:
 
 .ONESHELL:
 docker-login:
-		if [ -z "${DOCKER_REGISTRY}" ]; then
-			echo "DOCKER_REGISTRY is empty."
-			exit 1;
-		fi
-		if [ -z "${DOCKER_USER}" ]; then
-			echo "DOCKER_USER is empty."
-			exit 1;
-		fi
-		if [ -z "${DOCKER_PASS}" ]; then
-			echo "DOCKER_PASS is empty."
-			exit 1;
-		fi
-		docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+	${IV_REPO_ROOT}/build/docker_login.sh 
 
 .ONESHELL:
 push-images: docker-login
