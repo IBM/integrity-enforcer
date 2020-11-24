@@ -31,8 +31,8 @@ var (
 	enforcer_dir                        = os.Getenv("VERIFIER_OP_DIR")
 	deploy_dir                          = enforcer_dir + "test/deploy/"
 	kubeconfigManaged                   = enforcer_dir + "kubeconfig_managed"
-	integrityEnforcerOperatorCR         = deploy_dir + "apis_v1alpha1_integrityenforcer.yaml"
-	integrityEnforcerOperatorCR_updated = deploy_dir + "apis_v1alpha1_integrityenforcer_update.yaml"
+	integrityEnforcerOperatorCR         = "/tmp/"+"apis_v1alpha1_integrityenforcer.yaml"
+	integrityEnforcerOperatorCR_updated = "/tmp/" + "apis_v1alpha1_integrityenforcer_update.yaml"
 	test_rsp                            = deploy_dir + "test-rsp.yaml"
 	test_configmap                      = deploy_dir + "test-configmap.yaml"
 	test_configmap2                     = deploy_dir + "test-configmap-annotation.yaml"

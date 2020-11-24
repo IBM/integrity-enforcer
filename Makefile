@@ -220,10 +220,10 @@ copyright-check:
 test-unit: test-init test-verify
 
 test-init:
-	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > results.txt
+	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > /tmp/results.txt
 test-verify:
-	$(eval FAILURES=$(shell cat $(VERIFIER_DIR)results.txt | grep "FAIL:"))
-	cat $(VERIFIER_DIR)results.txt
+	$(eval FAILURES=$(shell cat /tmp/results.txt | grep "FAIL:"))
+	cat /tmp/results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 
@@ -251,9 +251,9 @@ TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SECRET=keyring_secret
 
-test-e2e: kind-create-cluster setup-image install-crds setup-iv-env install-resources setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-resources kind-delete-cluster
+test-e2e: kind-create-cluster setup-image install-crds setup-iv-env install-resources setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-resources kind-delete-cluster clean-test-resources
 
-test-e2e-no-init: push-images-to-local setup-iv-env install-crds install-resources setup-cr setup-test-env setup-test-resources e2e-test
+test-e2e-no-init: push-images-to-local setup-iv-env install-crds install-resources setup-cr setup-test-env setup-test-resources e2e-test clean-test-resources
 
 kind-create-cluster:
 	@echo "creating cluster"
@@ -312,16 +312,16 @@ setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
+	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml /tmp/apis_v1alpha1_integrityenforcer.yaml
 	@echo insert image
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IV_LOGGING):$(VERSION)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IV_IMAGE):$(VERSION)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IV_LOGGING):$(VERSION)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IV_IMAGE):$(VERSION)
 	@echo setup signer policy
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
 
 setup-test-env:
@@ -337,17 +337,25 @@ delete-test-env:
 setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
-	cp $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer_update.yaml
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
+	cp /tmp/apis_v1alpha1_integrityenforcer.yaml /tmp/apis_v1alpha1_integrityenforcer_update.yaml
+	yq write -i /tmp/apis_v1alpha1_integrityenforcer_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
+
+clean-test-resources:
+	rm /tmp/apis_v1alpha1_integrityenforcer_update.yaml
+	rm /tmp/apis_v1alpha1_integrityenforcer.yaml
 
 e2e-test:
 	@echo
 	@echo run test
-	cd $(VERIFIER_OP_DIR) && go test -v ./test/e2e > $(VERIFIER_OP_DIR)e2e_results.txt
-	$(eval FAILURES=$(shell cat $(VERIFIER_OP_DIR)e2e_results.txt | grep "FAIL:"))
-	cat $(VERIFIER_OP_DIR)e2e_results.txt
-	echo Fail:$(strip $(FAILURES))
-	@$(if $(strip $(FAILURES)), echo "One or more e2e tests failed. Failures: $(FAILURES)"; exit 1, echo "All e2e tests passed successfully."; exit 0)
+	cd $(VERIFIER_OP_DIR) && go test -v ./test/e2e > /tmp/e2e_results.txt
+	$(eval FAILURES=$(shell cat /tmp/e2e_results.txt | grep "FAIL:" | wc -c))
+	if [ "${FAILURES}" -gt 0 ]; then
+		cat /tmp/e2e_results.txt
+		echo "One or more e2e tests failed. Failures: $(FAILURES)"
+		exit 1
+	else
+		echo "All e2e tests passed successfully."; exit 0
+	fi
 
 ############################################################
 # e2e test coverage
