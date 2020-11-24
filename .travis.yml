@@ -61,7 +61,7 @@ jobs:
          - |
            if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
                make build-images
-           else
+           elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
                make init
                make component/build
            fi
@@ -72,7 +72,7 @@ jobs:
         - |
           if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
               make test-unit
-          else
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
               make init
               make component/test/unit
           fi
@@ -82,7 +82,7 @@ jobs:
         - |
           if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
               make test-e2e
-          else
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
               make init
               make component/pull
               make component/test/e2e
