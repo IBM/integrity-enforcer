@@ -18,6 +18,18 @@ ifeq ($(IV_REPO_ROOT),)
 $(error IV_REPO_ROOT is not set)
 endif
 
+ifeq ($(DOCKER_REGISTRY),)
+$(error DOCKER_REGISTRY is not set)
+endif
+
+ifeq ($(DOCKER_USER),)
+$(error DOCKER_USER is not set)
+endif
+
+ifeq ($(DOCKER_PASS),)
+$(error DOCKER_PASS is not set)
+endif
+
 include  .env
 export $(shell sed 's/=.*//' .env)
 
@@ -156,14 +168,14 @@ build-images:
 
 .ONESHELL:
 docker-login:
-	${IV_REPO_ROOT}/build/docker_login.sh 
+	${IV_REPO_ROOT}/build/docker_login.sh
 
 .ONESHELL:
 push-images: docker-login
 		${IV_REPO_ROOT}/build/push_images.sh
 
 .ONESHELL:
-pull-images: docker-login
+pull-images:
 		${IV_REPO_ROOT}/build/pull_images.sh
 
 ############################################################
@@ -279,7 +291,7 @@ install-resources:
 	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IV_OPERATOR):$(VERSION)
 	@echo installing operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
-	kustomize edit set image controller=$(REGISTRY)/$(IV_OPERATOR):$(VERSION) # reset image name back to original
+	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(REGISTRY)/$(IV_OPERATOR):$(VERSION) # reset image name back to original
 
 delete-resources:
 	@echo
