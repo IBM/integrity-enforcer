@@ -39,13 +39,13 @@ echo "Current directory: $(pwd)"
 export COMPONENT_VERSION=${VERSION}
 export COMPONENT_DOCKER_REPO=${REGISTRY}
 
-# Build ie-operator bundle
+# Build iv-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} VERSION=${VERSION}
 
 
-csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
+csvfile="bundle/manifests/integrity-verifier-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
 
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "OwnNamespace").supported=true)') && echo "$change" >  tmp.json
@@ -58,7 +58,7 @@ rm tmp.json
 
 make bundle-build BUNDLE_IMG=${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
 
-# Push ie-operator bundle
+# Push iv-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
 #docker push ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
@@ -74,7 +74,7 @@ echo DOCKER_PASS: ${DOCKER_PASS}
 docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
 make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 
-# Prepare ie-operator bundle index
+# Prepare iv-operator bundle index
 echo -----------------------------
 echo [3/4] Adding bundle to index
 
@@ -92,12 +92,12 @@ fi
 
 rm -f tmp.Dockerfile
 
-# Build ie-operator bundle index
+# Build iv-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
 docker build -f index.Dockerfile -t ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
-# Push ie-operator bundle index
+# Push iv-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
 

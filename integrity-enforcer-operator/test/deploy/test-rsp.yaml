@@ -1,8 +1,0 @@
-apiVersion: apis.integrityenforcer.io/v1alpha1
-kind: ResourceSigningProfile
-metadata:
-  name: test-rsp
-spec:
-  protectRules:
-  - match:
-    - kind: ConfigMap

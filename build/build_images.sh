@@ -30,44 +30,44 @@ if ! [ -x "$(command -v operator-sdk)" ]; then
     exit 1
 fi
 
-if [ -z "$IE_REPO_ROOT" ]; then
-    echo "IE_REPO_ROOT is empty. Please set root directory for IE repository"
+if [ -z "$IV_REPO_ROOT" ]; then
+    echo "IV_REPO_ROOT is empty. Please set root directory for IV repository"
     exit 1
 fi
 
 if [ -z "$IV_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
     exit 1
 fi
 
 if [ -z "$IV_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
     exit 1
 fi
 
 if [ -z "$IV_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
     exit 1
 fi
 
 if [ -z "$IV_OPERATOR" ]; then
-    echo "IV_OPERATOR is empty. Please set ie build env settings."
+    echo "IV_OPERATOR is empty. Please set iv build env settings."
     exit 1
 fi
 
 
-SERVICE_NAME=ie-server
+SERVICE_NAME=iv-server
 
 
 BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
-LOGG_BASEDIR=${IE_REPO_ROOT}/logging/
-OPERATOR_BASEDIR=${IE_REPO_ROOT}/integrity-enforcer-operator/
+LOGG_BASEDIR=${IV_REPO_ROOT}/logging/
+OPERATOR_BASEDIR=${IV_REPO_ROOT}/integrity-verifier-operator/
 
-# Build ie-server image
+# Build iv-server image
 echo -----------------------------
-echo [1/3] Building ie-server image.
-cd ${IE_REPO_ROOT}/enforcer
+echo [1/3] Building iv-server image.
+cd ${IV_REPO_ROOT}/verifier
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -89,9 +89,9 @@ echo done.
 echo -----------------------------
 echo ""
 
-# Build ie-logging image
+# Build iv-logging image
 echo -----------------------------
-echo [2/3] Building ie-logging image.
+echo [2/3] Building iv-logging image.
 cd ${LOGG_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
@@ -108,9 +108,9 @@ echo done.
 echo -----------------------------
 echo ""
 
-# Build integrity-enforcer-operator image
+# Build integrity-verifier-operator image
 echo -----------------------------
-echo [3/3] Building integrity-enforcer-operator image.
+echo [3/3] Building integrity-verifier-operator image.
 cd ${OPERATOR_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then

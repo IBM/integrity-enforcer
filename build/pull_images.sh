@@ -22,17 +22,17 @@ fi
 
 
 if [ -z "$IV_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
     exit 1
 fi
 
 if [ -z "$IV_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
     exit 1
 fi
 
 if [ -z "$IV_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set ie build env settings."
+    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
     exit 1
 fi
 

@@ -39,7 +39,7 @@ env:
 
 before_install:
   - ./build/install-dependencies.sh
-  - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+  - export IV_REPO_ROOT=$TRAVIS_BUILD_DIR
 
 stages:
   - lint
@@ -52,7 +52,6 @@ jobs:
   include:
     - stage: lint
       name: "Run code lint"
-    #   if: type = pull_request
       script:
          - |
            make lint
@@ -60,26 +59,46 @@ jobs:
       name: "Build the image and push it"
       script:
          - |
-            make build-images
+           if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+               make build-images
+           elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+               make init
+               make component/build
+           fi
     - stage: test-unit
       name: "Run unit test"
       script:
         - set -e
-        # Bootstrap the build harness, pull test image, and run unit tests.
         - |
-          make test-unit
+          if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+              make test-unit
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+              make init
+              make component/test/unit
+          fi
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
         - |
-          make test-e2e
+          if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+              make test-e2e
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+              make init
+              make component/pull
+              make component/test/e2e
+          fi
     - stage: publish
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
-      if: env(ENABLE_PUBLISH) = true
+      if: env(ENABLE_PUBLISH) = true AND type = push AND branch =~ /^release-[0-9]+\..*$/
       script:
         - |
-          make push-images
-          make build-bundle
+          if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+              make push-images
+              make build-bundle
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+              make init
+              ${TRAVIS_BUILD_DIR}/build/pipeline.sh
+          fi
           
 # --------------------------Enable later -----------------------------------
 #        - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then export COMPONENT_TAG_EXTENSION="-PR${TRAVIS_PULL_REQUEST}-${TRAVIS_COMMIT}"; fi;

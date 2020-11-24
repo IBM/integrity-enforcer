@@ -9,11 +9,15 @@ echo "<repo>/<component>:<tag> : $1"
 
 make build-images
 
-if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = false ]
+if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = false ]; then
 
-	echo "Building integrity enforcer bundle starting : $(date)"
+	echo "Pushing images"
 
-	${IE_REPO_ROOT}/build/build_bundle.sh
+	${IV_REPO_ROOT}/build/push_images_ocm.sh
 
-	echo "Building integrity enforcer bundle completed : $(date)"
+	echo "Building integrity verifier bundle starting : $(date)"
+
+	${IV_REPO_ROOT}/build/build_bundle_ocm.sh
+
+	echo "Building integrity verifier bundle completed : $(date)"
 fi

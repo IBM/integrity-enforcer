@@ -26,7 +26,7 @@ OUTPUT_FILE=$4
 
 # compute signature (and encoded message and certificate)
 cat <<EOF > $OUTPUT_FILE
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSignature
 metadata:
    annotations:
@@ -79,6 +79,6 @@ rsigname="rsig-${reskind}-${resname}"
 yq w -i $OUTPUT_FILE metadata.annotations.signature $rsigsig
 yq w -i $OUTPUT_FILE metadata.annotations.certificate $crt
 yq w -i $OUTPUT_FILE metadata.name $rsigname
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigsubject-apiversion"' $resApiVer
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigsubject-kind"' $resKind
-yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityenforcer.io/sigtime"' $sigtime
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigsubject-apiversion"' $resApiVer
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigsubject-kind"' $resKind
+yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigtime"' $sigtime
