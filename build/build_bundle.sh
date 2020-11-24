@@ -33,7 +33,7 @@ fi
 
 #source $IV_REPO_ROOT/iv-build.conf
 
-cd $IV_REPO_ROOT/integrity-enforcer-operator
+cd $IV_REPO_ROOT/integrity-verifier-operator
 
 
 # Build iv-operator bundle
@@ -42,7 +42,7 @@ echo [1/4] Building bundle
 make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
 
-csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
+csvfile="bundle/manifests/integrity-verifier-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
 
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "OwnNamespace").supported=true)') && echo "$change" >  tmp.json

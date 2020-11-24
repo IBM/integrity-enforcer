@@ -2,10 +2,10 @@
 
 
 ## Create Resource Protection Profile
-You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceSigningProfile` (RSP) is created in the same namespace. The example below shows a definition to protect config map and service resource in `secure-ns` namespace. Only a single RSP can be defined in each namespace.
+You can define which resources should be protected with signature in IV. For resources in a namespace, custom resource `ResourceSigningProfile` (RSP) is created in the same namespace. The example below shows a definition to protect config map and service resource in `secure-ns` namespace. Only a single RSP can be defined in each namespace.
 
 ```yaml
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -23,7 +23,7 @@ If you are cluster-admin role, you can create these resource by
 oc apply -f sample-rsp.yaml -n secure-ns
 ```
 
-This profile become effective in IE instantly for evaluating any further incoming admission requests.
+This profile become effective in IV instantly for evaluating any further incoming admission requests.
 
 You can create these resource with valid signature even if you are not in cluster-admin role. It should be signed by a valid signer defined in the [Sign Policy](README_CONFIG_SIGNER_POLICY.md).
 
@@ -86,7 +86,7 @@ ignoreAttrs:
 For cluster-scope resources, cluster scope custom resource `ClusterResourceSigningProfile` (CRSP) are used. The example below shows definition to protect ClusterRoleBinding resource `sample-crb`.
 
 ```
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ClusterResourceSigningProfile
 metadata:
   name: sample-crsp
@@ -102,7 +102,7 @@ Rule syntax is same as RSP.
 
 ## Default RSP/CRSP
 
-Cluster default RSP and CRSP are predefined in IE namespace. They are automatically created by IE operator when installing IE to the cluster. It is managed only by IE admin.
+Cluster default RSP and CRSP are predefined in IV namespace. They are automatically created by IV operator when installing IV to the cluster. It is managed only by IV admin.
 
 Default RSP/CRSP includes
 - service accounts which are considered as platform operator.
@@ -115,10 +115,10 @@ RSP and CRSP have two lifecycle flags `disabled` and `delete`. Those fields are 
 
 If `disabled` is set to `true`, the RSP (CRSP) becomes invalid and ignored when checking signature (This implies no RSP is defined in the namespace). When you set it to `false` back, the RSP will become effective again.
 
-When you want to delete RSP, set `delete` to `true`, then IE will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
+When you want to delete RSP, set `delete` to `true`, then IV will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
 
 ```
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -132,7 +132,7 @@ spec:
 
 The whole RSP is represented like this.
 ```
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp

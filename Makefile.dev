@@ -14,8 +14,8 @@
 
 # LOAD ENVIRNOMENT SETTINGS (must be done at first)
 ###########################
-ifeq ($(IE_REPO_ROOT),)
-$(error IE_REPO_ROOT is not set)
+ifeq ($(IV_REPO_ROOT),)
+$(error IV_REPO_ROOT is not set)
 endif
 
 include  .env
@@ -34,12 +34,12 @@ include $(VERIFIER_OP_DIR)Makefile
 install-server:
 	@echo
 	@echo deploy cr
-	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml -n $(IE_NS)
+	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml -n $(IV_NS)
 
 delete-server:
 	@echo
 	@echo deploy cr
-	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml -n $(IE_NS)
+	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml -n $(IV_NS)
 
 # install operator
 install-operator:
@@ -54,11 +54,11 @@ delete-operator:
 
 # list resourcesigningprofiles
 list-rsp:
-	kubectl get resourcesigningprofiles.apis.integrityenforcer.io --all-namespaces
+	kubectl get resourcesigningprofiles.apis.integrityverifier.io --all-namespaces
 
 # show rule table
 show-rt:
-	kubectl get cm ie-rule-table-lock -n $(IE_NS) -o json | jq -r .binaryData.table | base64 -D | gzip -d
+	kubectl get cm iv-rule-table-lock -n $(IV_NS) -o json | jq -r .binaryData.table | base64 -D | gzip -d
 
 # show forwarder log
 log-f:

@@ -14,8 +14,8 @@
 
 # LOAD ENVIRNOMENT SETTINGS (must be done at first)
 ###########################
-ifeq ($(IE_REPO_ROOT),)
-$(error IE_REPO_ROOT is not set)
+ifeq ($(IV_REPO_ROOT),)
+$(error IV_REPO_ROOT is not set)
 endif
 
 include  .env
@@ -152,7 +152,7 @@ lint-op-verify:
 ############################################################
 
 build-images:
-	$(IE_REPO_ROOT)/build/build_images.sh
+	$(IV_REPO_ROOT)/build/build_images.sh
 
 .ONESHELL:
 docker-login:
@@ -172,11 +172,11 @@ docker-login:
 
 .ONESHELL:
 push-images: docker-login
-		${IE_REPO_ROOT}/build/push_images.sh
+		${IV_REPO_ROOT}/build/push_images.sh
 
 .ONESHELL:
 pull-images: docker-login
-		${IE_REPO_ROOT}/build/pull_images.sh
+		${IV_REPO_ROOT}/build/pull_images.sh
 
 ############################################################
 # bundle section
@@ -197,9 +197,9 @@ build-bundle:
 				exit 1;
 			fi
 			docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}
-			$(IE_REPO_ROOT)/build/build_bundle.sh
+			$(IV_REPO_ROOT)/build/build_bundle.sh
 		else
-			$(IE_REPO_ROOT)/build/build_bundle_ocm.sh
+			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh
 		fi
 
 ############################################################
@@ -211,7 +211,7 @@ clean::
 # check copyright section
 ############################################################
 copyright-check:
-	 - $(IE_REPO_ROOT)/build/copyright-check.sh $(TRAVIS_BRANCH)
+	 - $(IV_REPO_ROOT)/build/copyright-check.sh $(TRAVIS_BRANCH)
 
 ############################################################
 # unit test section
@@ -312,16 +312,16 @@ setup-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into test dir
-	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityenforcer_local.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml
+	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml
 	@echo insert image
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.logger.image localhost:5000/$(IV_LOGGING):$(VERSION)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.server.image localhost:5000/$(IV_IMAGE):$(VERSION)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.logger.image localhost:5000/$(IV_LOGGING):$(VERSION)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.server.image localhost:5000/$(IV_IMAGE):$(VERSION)
 	@echo setup signer policy
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
 
 setup-test-env:
@@ -337,8 +337,8 @@ delete-test-env:
 setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
-	cp $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer_update.yaml
-	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityenforcer_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
+	cp $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier.yaml $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier_update.yaml
+	yq write -i $(VERIFIER_OP_DIR)test/deploy/apis_v1alpha1_integrityverifier_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
 
 e2e-test:
 	@echo

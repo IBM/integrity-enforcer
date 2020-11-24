@@ -39,7 +39,7 @@ env:
 
 before_install:
   - ./build/install-dependencies.sh
-  - export IE_REPO_ROOT=$TRAVIS_BUILD_DIR
+  - export IV_REPO_ROOT=$TRAVIS_BUILD_DIR
 
 stages:
   - lint

@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1alpha1
 kind: Pipeline
 metadata:
-  name: pipeline-ie
+  name: pipeline-iv
 spec:
   params:
     - name: pipeline-pvc

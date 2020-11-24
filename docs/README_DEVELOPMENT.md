@@ -3,20 +3,20 @@
 ## Clone Repo
 ```
 $ git clone git@github.com:IBM/integrity-enforcer.git
-$ cd integrity-enforcer
+$ cd integrity-verifier
 ```
 
 ## Setup
 Before executing the script, setup local environment as follows:
-- `IE_ENV`: set `remote` for deploying IE on OpenShift or ROKS clusters. (use [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
-- `IE_NS`: set a namespace where IE to be deployed (use `integrity-enforcer-ns` in this doc)
-- `IE_REPO_ROOT`: set absolute path of the root directory of cloned integrity-enforcer source repository
+- `IV_ENV`: set `remote` for deploying IV on OpenShift or ROKS clusters. (use [guide](README_DEPLOY_IV_LOCAL.md) for deploying IV in minikube)
+- `IV_NS`: set a namespace where IV to be deployed (use `integrity-verifier-ns` in this doc)
+- `IV_REPO_ROOT`: set absolute path of the root directory of cloned integrity-verifier source repository
 
 For example
 ```
-$ export IE_ENV=remote
-$ export IE_NS=integrity-enforcer-ns
-$ export IE_REPO_ROOT=/repo/integrity-enforcer
+$ export IV_ENV=remote
+$ export IV_NS=integrity-verifier-ns
+$ export IV_REPO_ROOT=/repo/integrity-enforcer
 ```
 
 ## Scripts
@@ -28,9 +28,9 @@ $ ./develop/scripts/build_images.sh
 ```
 
 Three images are built.
-- `integrity-enforcer-operator` is image for operator which manages Integrity Enforcer
-- `ie-server` is image for IE server
-- `ie-logging` is image for IE logging side car
+- `integrity-verifier-operator` is image for operator which manages Integrity Verifier
+- `iv-server` is image for IV server
+- `iv-logging` is image for IV logging side car
 
 ### Push images
 ```
@@ -39,23 +39,23 @@ $ ./develop/scripts/push_images.sh
 
 You may need to setup image registry (e.g. dockerhub, quay.io etc.) and change the container images' name and tag as needed
 
-### Install IE to cluster
+### Install IV to cluster
 ```
-$ ./scripts/install_enforcer.sh
+$ ./scripts/install_verifier.sh
 ```
 
 This script includes the steps for
 - Create CRDs
-- Install Integrity Enforcer operator
-- Install Integrity Enforcer custom resource (operator installs IE server automatically)
+- Install Integrity Verifier operator
+- Install Integrity Verifier custom resource (operator installs IV server automatically)
 
-### Uninstall IE from cluster
+### Uninstall IV from cluster
 ```
-$ ./scripts/delete_enforcer.sh
+$ ./scripts/delete_verifier.sh
 ```
 
 This script includes the steps for
-- Delete Integrity Enforcer custom resource (operator installs IE server automatically)
-- Delete Integrity Enforcer operator
+- Delete Integrity Verifier custom resource (operator installs IV server automatically)
+- Delete Integrity Verifier operator
 - Delete CRDs
 

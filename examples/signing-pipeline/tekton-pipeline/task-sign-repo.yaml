@@ -15,7 +15,7 @@ spec:
   volumes:
     - name: kubeconfig-secret-volume
       secret:
-        secretName: ie-kubeconfig-secret     
+        secretName: iv-kubeconfig-secret     
     - name: task-volume
       persistentVolumeClaim: 
         claimName: $(params.task-pvc)
@@ -39,7 +39,7 @@ spec:
           # Get keyring secret
           export KUBECONFIG=/config/kubeconfig
 	
-          kubectl get secret keyring-secret -n integrity-enforcer-ns -o json | jq -r '.data["pubring.gpg"]' | base64 -d > /tmp/tmp-secring.gpg
+          kubectl get secret keyring-secret -n integrity-verifier-ns -o json | jq -r '.data["pubring.gpg"]' | base64 -d > /tmp/tmp-secring.gpg
 
           # import keys
           gpg --import /tmp/tmp-secring.gpg
@@ -48,7 +48,7 @@ spec:
           signer=$(params.signer-email)
           echo signer: $signer
           base='base64 -w 0'
-          cat .ie-sign-config.json | yq r - -j | jq -r '.resourcefile'| jq -c '.[]'| while read line;
+          cat .iv-sign-config.json | yq r - -j | jq -r '.resourcefile'| jq -c '.[]'| while read line;
           do
              if [ ! -z "$line" ]; then
                echo line: $line
@@ -66,7 +66,7 @@ spec:
                if [[ "$extension" == "yaml"  ||  "$extension" == "yml" ]]; then
 
                   rsigfile="rsig-$rsfilebasename"
-                  tmpring='{"apiVersion":"apis.integrityenforcer.io/v1alpha1","kind":"ResourceSignature","metadata":{"annotations":{"messageScope":"spec","signature":""},"name":""},"spec":{"data":[{"message":"","signature":"","type":"resource"}]}}'
+                  tmpring='{"apiVersion":"apis.integrityverifier.io/v1alpha1","kind":"ResourceSignature","metadata":{"annotations":{"messageScope":"spec","signature":""},"name":""},"spec":{"data":[{"message":"","signature":"","type":"resource"}]}}'
 
                   echo -e $tmprsig | yq r - --prettyPrint >> $rsigfile
                   msg=`cat $rsfile | $base`
@@ -80,7 +80,7 @@ spec:
 
                   cat $rsigfile
 
-                  yq w -i $rsigfile apiVersion apis.integrityenforcer.io/v1alpha1
+                  yq w -i $rsigfile apiVersion apis.integrityverifier.io/v1alpha1
                   yq w -i $rsigfile kind ResourceSignature
                   yq w -i $rsigfile spec.data.[0].message $msg
                   yq w -i $rsigfile spec.data.[0].signature $signature
@@ -133,7 +133,7 @@ spec:
           WS="/artifacts"
           cd $WS
           IFS=$'\n'
-          cat .ie-sign-config.json | yq r - -j | jq -r '.resourcefile'| jq -c '.[]'| while read line;
+          cat .iv-sign-config.json | yq r - -j | jq -r '.resourcefile'| jq -c '.[]'| while read line;
           do               
              rsfilename=$(echo $line | tr -d '"')
              echo "rsfilename: $rsfilename"
@@ -154,7 +154,7 @@ spec:
    
                 if [ -f $rsigfile ]; then
                    echo "Deploy signed artifacts: $file"
-                   kubectl apply -f $rsigfile -n integrity-enforcer-ns
+                   kubectl apply -f $rsigfile -n integrity-verifier-ns
 
                    echo "Deploy signed artifacts: $file"                                                                                                                        
                    kubectl apply -f $rsfile -n $namespace

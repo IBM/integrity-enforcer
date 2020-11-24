@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ie-sample-app
+  name: iv-sample-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: ie-sample-app
+      app: iv-sample-app
   template:
     metadata:
       labels:
-        app: ie-sample-app
+        app: iv-sample-app
     spec:
       containers:
-      - name: ie-sample-app
+      - name: iv-sample-app
         resources:
           requests:
             memory: "64Mi"
@@ -31,25 +31,25 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ie-sample-service
+  name: iv-sample-service
   labels:
-    app: ie-sample-service
+    app: iv-sample-service
 spec:
   type: NodePort
   ports:
     - port: 80
   selector:
-    app: ie-sample-app
+    app: iv-sample-app
     
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ie-sampple-app-config
+  name: iv-sampple-app-config
   labels:
-    app: ie-sampple-app-config
+    app: iv-sampple-app-config
 data:
-  ie-app.properties: |
+  iv-app.properties: |
     message= This application has been signed.
     
   

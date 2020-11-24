@@ -55,7 +55,7 @@ certs: check-iv-env
 
 deploy: check-iv-env
 	# kubectl  create -f $(BASEDIR)/sampleregkey.yaml  -n $(IV_NS)
-	kubectl create -f $(BASEDIR)/enforcePolicyCR.yaml -n $(IV_NS) --validate=false
+	kubectl create -f $(BASEDIR)/verifierPolicyCR.yaml -n $(IV_NS) --validate=false
 	kubectl create -f $(BASEDIR)/verifierConfigCR.yaml -n $(IV_NS) --validate=false
 	kubectl  create -f $(BASEDIR)/rbac.yaml -n $(IV_NS)
 	kubectl -n $(IV_NS) create secret tls $(SERVICE_NAME)-tls \
@@ -76,18 +76,18 @@ delete: check-iv-env
 	kubectl delete -f $(BASEDIR)/role-binding.yaml -n $(IV_NS)
 	kubectl delete secret $(SERVICE_NAME)-tls -n $(IV_NS)
 	kubectl delete -f $(BASEDIR)/rbac.yaml -n $(IV_NS)
-	kubectl delete -f $(BASEDIR)/enforcePolicyCR.yaml -n $(IV_NS) --validate=false
+	kubectl delete -f $(BASEDIR)/verifierPolicyCR.yaml -n $(IV_NS) --validate=false
 	kubectl delete -f $(BASEDIR)/verifierConfigCR.yaml -n $(IV_NS) --validate=false
 	# kubectl delete -f $(BASEDIR)/sampleregkey.yaml  -n $(IV_NS)
 
 init:
-	kubectl create -f $(BASEDIR)/enforcePolicyCRD.yaml --validate=false
+	kubectl create -f $(BASEDIR)/verifierPolicyCRD.yaml --validate=false
 	kubectl create -f $(BASEDIR)/verifierConfigCRD.yaml --validate=false
 	kubectl create -f $(BASEDIR)/ResourceSignature.yaml --validate=false
 
 init-delete:
 	kubectl delete -f $(BASEDIR)/ResourceSignature.yaml
-	kubectl delete -f $(BASEDIR)/enforcePolicyCRD.yaml
+	kubectl delete -f $(BASEDIR)/verifierPolicyCRD.yaml
 	kubectl delete -f $(BASEDIR)/verifierConfigCRD.yaml
 
 
@@ -132,7 +132,7 @@ create: build push build-logging push-logging deploy sleep get-all
 
 
 dev-config:
-	kubectl create cm enforce-config --from-file cmd/$(SERVICE_NAME)/config.json -n $(IV_NS)
+	kubectl create cm verifier-config --from-file cmd/$(SERVICE_NAME)/config.json -n $(IV_NS)
 
 make copy-log: check-iv-env check-iv-server
 	kubectl cp $(IV_NS)/$(IV_SERVER_POD):/iv-app/public/inout.log ./inout.log

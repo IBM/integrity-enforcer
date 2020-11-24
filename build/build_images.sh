@@ -62,7 +62,7 @@ SERVICE_NAME=iv-server
 BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
 LOGG_BASEDIR=${IV_REPO_ROOT}/logging/
-OPERATOR_BASEDIR=${IV_REPO_ROOT}/integrity-enforcer-operator/
+OPERATOR_BASEDIR=${IV_REPO_ROOT}/integrity-verifier-operator/
 
 # Build iv-server image
 echo -----------------------------
@@ -108,9 +108,9 @@ echo done.
 echo -----------------------------
 echo ""
 
-# Build integrity-enforcer-operator image
+# Build integrity-verifier-operator image
 echo -----------------------------
-echo [3/3] Building integrity-enforcer-operator image.
+echo [3/3] Building integrity-verifier-operator image.
 cd ${OPERATOR_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then

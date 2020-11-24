@@ -2,10 +2,10 @@
 
 ## Prerequisites
 ​
-The following prerequisites must be satisfied to deploy IE on a cluster.
+The following prerequisites must be satisfied to deploy IV on a cluster.
 - A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
-- Prepare a namespace to deploy IE. (We will use `integrity-enforcer-ns` namespace in this document.)
-- All requests to namespaces with label integrity-enforced=true are passed to IE. You can set label to a namespace `secure-ns` by
+- Prepare a namespace to deploy IV. (We will use `integrity-verifier-ns` namespace in this document.)
+- All requests to namespaces with label integrity-enforced=true are passed to IV. You can set label to a namespace `secure-ns` by
   ```
   kubectl label namespace secure-ns integrity-enforced=true
   ```
@@ -13,13 +13,13 @@ The following prerequisites must be satisfied to deploy IE on a cluster.
   ```
   kubectl label namespace secure-ns integrity-enforced-
   ```
-- A secret resource (ie-certpool-secret / keyring-secret) which contains public key and certificates should be setup for enabling signature verification by IE.
+- A secret resource (iv-certpool-secret / keyring-secret) which contains public key and certificates should be setup for enabling signature verification by IV.
 
 ---
 
-## Install Integrity Enforcer
+## Install Integrity Verifier
 ​
-This section describe the steps for deploying Integrity Enforcer (IE) on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
+This section describe the steps for deploying Integrity Verifier (IV) on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
 
 ### Retrive the source from `integrity-enforcer` Git repository.
 
@@ -27,23 +27,23 @@ git clone this repository and moved to `integrity-enforcer` directory
 
 ```
 $ git clone https://github.com/IBM/integrity-enforcer.git
-$ cd integrity-enforcer
+$ cd integrity-verifier
 $ pwd /home/repo/integrity-enforcer
 ```
 In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-### Prepape namespace for installing IE
+### Prepape namespace for installing IV
 
-You can deploy IE to any namespace. In this document, we will use `integrity-enforcer-ns` to deploy IE.
+You can deploy IV to any namespace. In this document, we will use `integrity-verifier-ns` to deploy IV.
 ```
-oc create ns integrity-enforcer-ns
-oc project integrity-enforcer-ns
+oc create ns integrity-verifier-ns
+oc project integrity-verifier-ns
 ```
-All the commands are executed on the `integrity-enforcer-ns` namespace unless mentioned explicitly.
+All the commands are executed on the `integrity-verifier-ns` namespace unless mentioned explicitly.
 
-### Define public key secret in IE
+### Define public key secret in IV
 
-IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to IE.
+IV requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IV supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to IV.
 
 First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
 
@@ -56,24 +56,24 @@ If you do not have any PGP key or you want to use new key, generate new one and 
 Then, create a secret that includes a pubkey ring for verifying signatures of resources
 
 ```
-oc create secret generic --save-config keyring-secret  -n integrity-enforcer-ns --from-file=/tmp/pubring.gpg
+oc create secret generic --save-config keyring-secret  -n integrity-verifier-ns --from-file=/tmp/pubring.gpg
 ```
 
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Enforcer. For that, configure signPolicy in the following Integrity Enforcer Custom Resource [file](../operator/config/samples/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Verifier. For that, configure signPolicy in the following Integrity Verifier Custom Resource [file](../operator/config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
 
 ```yaml
-# Edit operator/config/samples/apis.integrityenforcer.io_v1alpha1_integrityenforcer_cr.yaml
+# Edit operator/config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml
 
-apiVersion: apis.integrityenforcer.io/v1alpha1
-kind: IntegrityEnforcer
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: IntegrityVerifier
 metadata:
-  name: integrity-enforcer-server
+  name: integrity-verifier-server
 spec:
   ...
-  enforcerConfig:
+  verifierConfig:
     verifyType: pgp # x509
     ...
     signPolicy:
@@ -102,40 +102,40 @@ spec:
         - email: signer@enterprise.com
 ```
 
-### Install IE to a cluster
+### Install IV to a cluster
 
-IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../scripts/install_enforcer.sh). Before executing the script `install_enforcer.sh`, setup local environment as follows:
-- `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
-- `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
-- `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository`
+IV can be installed to a cluster using a series of steps which are bundled in a script called [`install_verifier.sh`](../scripts/install_verifier.sh). Before executing the script `install_verifier.sh`, setup local environment as follows:
+- `IV_ENV=remote`  (for deploying IV on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IV_LOCAL.md) for deploying IV in minikube)
+- `IV_NS=integrity-verifier-ns` (a namespace where IV to be deployed)
+- `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
 
 Example:
 ```
-$ export IE_ENV=remote
-$ export IE_NS=integrity-enforcer-ns
-$ export IE_REPO_ROOT=/home/repo/integrity-enforcer
+$ export IV_ENV=remote
+$ export IV_NS=integrity-verifier-ns
+$ export IV_REPO_ROOT=/home/repo/integrity-enforcer
 ```
 
-Then, execute the following script to deploy IE in a cluster.
+Then, execute the following script to deploy IV in a cluster.
 
 ```
-$ cd integrity-enforcer
-$ ./scripts/install_enforcer.sh
+$ cd integrity-verifier
+$ ./scripts/install_verifier.sh
 ```
 
-After successful installation, you should see two pods are running in the namespace `integrity-enforcer-ns`.
+After successful installation, you should see two pods are running in the namespace `integrity-verifier-ns`.
 
 ```
-$ oc get pod -n integrity-enforcer-ns
-integrity-enforcer-operator-c4699c95c-4p8wp   1/1     Running   0          5m
-integrity-enforcer-server-85c787bf8c-h5bnj    2/2     Running   0          82m
+$ oc get pod -n integrity-verifier-ns
+integrity-verifier-operator-c4699c95c-4p8wp   1/1     Running   0          5m
+integrity-verifier-server-85c787bf8c-h5bnj    2/2     Running   0          82m
 ```
 
 ---
 
-## Protect Resources with Integrity Enforcer
+## Protect Resources with Integrity Verifier
 ​
-Once IE is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
+Once IV is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
 
 The steps for protecting resources include:
 - Define which reource(s) should be protected.
@@ -143,11 +143,11 @@ The steps for protecting resources include:
 
 ### Define which reource(s) should be protected
 
-You can define which resources should be protected with signature in a cluster by IE. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
+You can define which resources should be protected with signature in a cluster by IV. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -159,7 +159,7 @@ spec:
     - kind: Service
 EOF
 
-resourcesigningprofile.apis.integrityenforcer.io/sample-rsp created
+resourcesigningprofile.apis.integrityverifier.io/sample-rsp created
 ```
 
 See [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail specs.
@@ -186,7 +186,7 @@ run the command below for trying to create the configmap in `secure-ns` namespac
 
 ```
 $ oc apply -f /tmp/test-cm.yaml -n secure-ns
-Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
+Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-verifier-ns.svc" denied the request: No signature found
 ```
 
 
@@ -203,7 +203,7 @@ Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature
 
 
 ```yaml
-apiVersion: apis.integrityenforcer.io/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSignature
 metadata:
   annotations:
@@ -221,7 +221,7 @@ spec:
 Create this resource.
 ```
 $ oc create -f /tmp/test-cm-rs.yaml -n secure-ns
-resourcesignature.apis.integrityenforcer.io/rsig-test-cm created
+resourcesignature.apis.integrityverifier.io/rsig-test-cm created
 ```
 
 
@@ -233,7 +233,7 @@ configmap/test-cm created
 ```
 
 
-IE generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IE server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
+IV generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IV server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
 
 If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
 ```json
@@ -250,7 +250,7 @@ If you want to see the result of admission check, you can see the detail by usin
   "claim.ownerNamespace": "secure-ns",
   "creator": "",
   "detectOnly": false,
-  "ieresource": false,
+  "ivresource": false,
   "ignoreSA": false,
   "kind": "ConfigMap",
   "ma.checked": "false",
@@ -280,25 +280,25 @@ If you want to see the result of admission check, you can see the detail by usin
   "request.objectHashType": "",
   "request.uid": "bdb62f22-22f8-4a4d-9ead-cc034e4ce07b",
   "requestScope": "Namespaced",
-  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=apis.integrityenforcer.io/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
+  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=apis.integrityverifier.io/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
   "sig.allow": false,
   "sig.errMsg": "",
   "sig.errOccured": true,
   "sig.errReason": "Failed to verify signature; Signature is invalid",
   "timestamp": "2020-09-23T02:45:19.728Z",
   "type": "",
-  "userInfo": "{\"username\":\"IAM#gajan@jp.ibm.com\",\"groups\":[\"admin\",\"ie-group\",\"system:authenticated\"]}",
+  "userInfo": "{\"username\":\"IAM#gajan@jp.ibm.com\",\"groups\":[\"admin\",\"iv-group\",\"system:authenticated\"]}",
   "userName": "IAM#gajan@jp.ibm.com",
   "verified": false
 }
 ```
 
-### Clean up IE from the cluster
+### Clean up IV from the cluster
 
-When you want to remove IE from a cluster, run the uninstaller script [`delete_enforcer.sh`](../scripts/delete_enforcer.sh).
+When you want to remove IV from a cluster, run the uninstaller script [`delete_verifier.sh`](../scripts/delete_verifier.sh).
 ```
-$ cd integrity-enforcer
-$ ./scripts/delete_enforcer.sh
+$ cd integrity-verifier
+$ ./scripts/delete_verifier.sh
 ```
 
 

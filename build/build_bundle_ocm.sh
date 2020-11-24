@@ -45,7 +45,7 @@ echo [1/4] Building bundle
 make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} VERSION=${VERSION}
 
 
-csvfile="bundle/manifests/integrity-enforcer-operator.clusterserviceversion.yaml"
+csvfile="bundle/manifests/integrity-verifier-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
 
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "OwnNamespace").supported=true)') && echo "$change" >  tmp.json
