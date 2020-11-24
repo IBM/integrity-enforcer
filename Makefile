@@ -18,18 +18,6 @@ ifeq ($(IV_REPO_ROOT),)
 $(error IV_REPO_ROOT is not set)
 endif
 
-ifeq ($(DOCKER_REGISTRY),)
-$(error DOCKER_REGISTRY is not set)
-endif
-
-ifeq ($(DOCKER_USER),)
-$(error DOCKER_USER is not set)
-endif
-
-ifeq ($(DOCKER_PASS),)
-$(error DOCKER_PASS is not set)
-endif
-
 include  .env
 export $(shell sed 's/=.*//' .env)
 
