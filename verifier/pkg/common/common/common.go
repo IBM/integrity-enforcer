@@ -31,11 +31,17 @@ const (
 	SignatureCustomResourceAPIVersion = "apis.integrityverifier.io/v1alpha1"
 	SignatureCustomResourceKind       = "ResourceSignature"
 
-	SignerPolicyCustomResourceAPIVersion = "apis.integrityverifier.io/v1alpha1"
-	SignerPolicyCustomResourceKind       = "SignPolicy"
+	VerifierConfigCustomResourceAPIVersion = "apis.integrityverifier.io/v1alpha1"
+	VerifierConfigCustomResourceKind       = "VerifierConfig"
+
+	SignPolicyCustomResourceAPIVersion = "apis.integrityverifier.io/v1alpha1"
+	SignPolicyCustomResourceKind       = "SignPolicy"
 
 	ProfileCustomResourceAPIVersion = "apis.integrityverifier.io/v1alpha1"
 	ProfileCustomResourceKind       = "ResourceSigningProfile"
+
+	HelmReleaseMetadataCustomResourceAPIVersion = "apis.integrityverifier.io/v1alpha1"
+	HelmReleaseMetadataCustomResourceKind       = "HelmReleasemetadata"
 )
 
 const (

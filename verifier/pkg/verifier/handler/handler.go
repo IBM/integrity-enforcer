@@ -23,10 +23,6 @@ import (
 	"strings"
 	"time"
 
-	hrm "github.com/IBM/integrity-enforcer/verifier/pkg/apis/helmreleasemetadata/v1alpha1"
-	rsig "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesignature/v1alpha1"
-	rsp "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/verifier/pkg/apis/signpolicy/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	policy "github.com/IBM/integrity-enforcer/verifier/pkg/common/policy"
 	profile "github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
@@ -99,11 +95,12 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	profileReferences := []*v1.ObjectReference{}
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
-	if self.checkIfIVResource() {
-		if ok, msg := self.validateIVResource(); !ok {
-			return createAdmissionResponse(false, msg)
-		}
 
+	if ok, msg := self.validateIVCustomResource(); !ok {
+		return createAdmissionResponse(false, msg)
+	}
+
+	if self.checkIfIVResource() {
 		self.ctx.IVResource = true
 		if self.checkIfIVAdminRequest() || self.checkIfIVServerRequest() || self.checkIfIVOperatorRequest() {
 			allowed = true
@@ -368,33 +365,43 @@ func (self *RequestHandler) evalFinalDecisionForIVResource(allowed bool, evalRea
 	return dr
 }
 
-func (self *RequestHandler) validateIVResource() (bool, string) {
+func (self *RequestHandler) validateIVCustomResource() (bool, string) {
 	if self.reqc.IsDeleteRequest() {
 		return true, ""
 	}
-	rawObj := self.reqc.RawObject
-	kind := self.reqc.Kind
-	if kind == "SignPolicy" {
-		var obj *spol.SignPolicy
-		if err := json.Unmarshal(rawObj, &obj); err != nil {
-			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+
+	if self.reqc.Kind == common.ProfileCustomResourceKind {
+		ok, err := handlerutil.ValidateResourceSigningProfile(self.reqc, self.config.Namespace)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
-	} else if kind == "ResourceSigningProfile" {
-		var obj *rsp.ResourceSigningProfile
-		if err := json.Unmarshal(rawObj, &obj); err != nil {
-			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		return ok, ""
+	} else if self.reqc.Kind == common.SignatureCustomResourceKind {
+		ok, err := handlerutil.ValidateResourceSignature(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
-	} else if kind == "ResourceSignature" {
-		var obj *rsig.ResourceSignature
-		if err := json.Unmarshal(rawObj, &obj); err != nil {
-			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		return ok, ""
+	} else if self.reqc.Kind == common.VerifierConfigCustomResourceAPIVersion {
+		ok, err := handlerutil.ValidateVerifierConfig(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
-	} else if kind == "HelmReleaseMetadata" {
-		var obj *hrm.HelmReleaseMetadata
-		if err := json.Unmarshal(rawObj, &obj); err != nil {
-			return false, fmt.Sprintf("Invalid %s; %s", kind, err.Error())
+		return ok, ""
+	} else if self.reqc.Kind == common.SignPolicyCustomResourceKind {
+		ok, err := handlerutil.ValidateSignPolicy(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
+		return ok, ""
+	} else if self.reqc.Kind == common.HelmReleaseMetadataCustomResourceAPIVersion {
+		ok, err := handlerutil.ValidateHelmReleaseMetadata(self.reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
 	}
+
 	return true, ""
 }
 
@@ -540,6 +547,9 @@ func (self *RequestHandler) checkIfNamespaceRequest() bool {
 }
 
 func (self *RequestHandler) checkIfIVAdminRequest() bool {
+	if self.config.IVAdminUserGroup == "" {
+		return false
+	}
 	return common.MatchPatternWithArray(self.config.IVAdminUserGroup, self.reqc.UserGroups) //"system:masters"
 }
 
