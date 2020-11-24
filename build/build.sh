@@ -13,11 +13,11 @@ if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = false ]; then
 
 	echo "Pushing images"
 
-	${IE_REPO_ROOT}/build/push_images_ocm.sh
+	${IV_REPO_ROOT}/build/push_images_ocm.sh
 
 	echo "Building integrity verifier bundle starting : $(date)"
 
-	${IE_REPO_ROOT}/build/build_bundle_ocm.sh
+	${IV_REPO_ROOT}/build/build_bundle_ocm.sh
 
 	echo "Building integrity verifier bundle completed : $(date)"
 fi
