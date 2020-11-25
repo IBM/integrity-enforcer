@@ -44,7 +44,7 @@ delete-server:
 # install operator
 install-operator:
 	@echo setting image
-	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
+	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
 

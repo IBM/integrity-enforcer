@@ -211,93 +211,66 @@ test-verify:
 ############################################################
 # e2e test section
 ############################################################
-.PHONY: kind-bootstrap-cluster
-kind-bootstrap-cluster: kind-create-cluster install-crds install-resources
 
-.PHONY: kind-bootstrap-cluster-dev
-kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
+.PHONY: test-e2e test-e2e-no-init test-e2e-remote test-e2e-common test-e2e-clean-common
+.PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
+.PHONY: install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-crds delete-operator
 
+
+#.PHONY: kind-bootstrap-cluster-dev
+#kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-operator
+
+.EXPORT_ALL_VARIABLES:
 TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SECRET=keyring_secret
+TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
+TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
+KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 
-test-e2e: create-kind-cluster setup-image install-crds setup-iv-env install-resources setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-resources delete-kind-cluster clean-test-resources
+# perform test in a kind cluster after creating the cluster
+test-e2e: create-kind-cluster setup-image test-e2e-common test-e2e-clean-common delete-kind-cluster
 
-test-e2e-no-init: push-images-to-local setup-iv-env install-crds install-resources setup-cr setup-test-env setup-test-resources e2e-test clean-test-resources
+# perform test in an existing kind cluster and do not clean
+test-e2e-no-init: push-images-to-local test-e2e-common
+
+# perform test in an existing cluster (e.g. ROKS, OCP etc.)
+test-e2e-remote: test-e2e-common test-e2e-clean-common
+
+# common steps to do e2e test in an existing cluster
+test-e2e-common: check-kubeconfig install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test
+
+# common steps to clean e2e test resources in an existing cluster
+test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator clean-tmp
+
+check-kubeconfig:
+		@if [ -z "$(KUBECONFIG)" ]; then\
+			echo "KUBECONFIG is empty. Please set env.";\
+			exit 1;\
+		fi
 
 create-kind-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
 	bash $(VERIFIER_OP_DIR)test/create-kind-cluster.sh
+	kind get kubeconfig --name test-managed
 	kind get kubeconfig --name test-managed > $(VERIFIER_OP_DIR)kubeconfig_managed
+	cat $(VERIFIER_OP_DIR)kubeconfig_managed
 
 delete-kind-cluster:
 	@echo deleting cluster
 	kind delete cluster --name test-managed
 
-install-crds:
-	@echo installing crds
-	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl apply -f -
-
-delete-crds:
-	@echo deleting crds
-	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl delete -f -
-
-setup-iv-env:
-	@echo
-	@echo creating namespaces
-	kubectl create ns $(IV_OP_NS)
-	@echo creating keyring-secret
-	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
-
-delete-keyring-secret:
-	@echo
-	@echo deleting keyring-secret
-	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
-
-install-resources:
-	@echo
-	@echo setting image
-	cp $(VERIFIER_OP_DIR)config/manager/kustomization.yaml /tmp/kustomization.yaml  #copy original file to tmp dir.
-	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
-	@echo installing operator
-	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
-	cp /tmp/kustomization.yaml $(VERIFIER_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
-
-delete-resources:
-	@echo
-	@echo deleting operator
-	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl delete -f -
-
 setup-image: pull-images push-images-to-local
 
 push-images-to-local:
 	@echo push image into local registry
-	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) $(IV_LOCAL_SERVER_IMAGE_NAME_AND_VERSION)
-	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) $(IV_LOCAL_LOGGING_IMAGE_NAME_AND_VERSION)
-	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) $(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
-	docker push $(IV_LOCAL_SERVER_IMAGE_NAME_AND_VERSION)
-	docker push $(IV_LOCAL_LOGGING_IMAGE_NAME_AND_VERSION)
-	docker push $(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
-
-TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
-TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
-
-setup-cr:
-	@echo
-	@echo prepare cr
-	@echo copy cr into tmp dir
-	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml $(TMP_CR_FILE)
-	@echo insert image
-	yq write -i $(TMP_CR_FILE) spec.logger.image $(IV_LOCAL_LOGGING_IMAGE_NAME_AND_VERSION)
-	yq write -i $(TMP_CR_FILE) spec.server.image $(IV_LOCAL_SERVER_IMAGE_NAME_AND_VERSION)
-	@echo setup signer policy
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
-
+	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
+	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
+	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 setup-test-env:
 	@echo
@@ -315,15 +288,89 @@ setup-test-resources:
 	cp $(TMP_CR_FILE) $(TMP_CR_UPDATED_FILE)
 	yq write -i $(TMP_CR_UPDATED_FILE) spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
 
-clean-test-resources:
-	rm $(TMP_CR_FILE)
-	rm $(TMP_CR_UPDATED_FILE)
-
 e2e-test:
 	@echo
 	@echo run test
 	$(IV_REPO_ROOT)/build/check_test_results.sh
 
+
+############################################################
+# setup iv
+############################################################
+
+setup-iv-env:
+	@echo
+	@echo creating namespaces
+	kubectl create ns $(IV_OP_NS)
+	@echo creating keyring-secret
+	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
+
+install-crds:
+	@echo installing crds
+	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl apply -f -
+
+delete-crds:
+	@echo deleting crds
+	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl delete -f -
+
+delete-keyring-secret:
+	@echo
+	@echo deleting keyring-secret
+	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
+
+install-operator:
+	@echo
+	@echo setting image
+	cp $(VERIFIER_OP_DIR)config/manager/kustomization.yaml /tmp/kustomization.yaml  #copy original file to tmp dir.
+	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
+	@echo installing operator
+	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
+	cp /tmp/kustomization.yaml $(VERIFIER_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
+
+delete-operator:
+	@echo
+	@echo deleting operator
+	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl delete -f -
+
+# create a temporary cr with update image names as well as signers
+setup-cr:
+	@echo
+	@echo prepare cr
+	@echo copy cr into tmp dir
+	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml $(TMP_CR_FILE)
+	@echo insert image
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
+	@echo setup signer policy
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+
+
+
+# list resourcesigningprofiles
+list-rsp:
+	kubectl get resourcesigningprofiles.apis.integrityverifier.io --all-namespaces
+
+# show rule table
+show-rt:
+	kubectl get cm iv-rule-table-lock -n $(IV_NS) -o json | jq -r .binaryData.table | base64 -D | gzip -d
+
+# show forwarder log
+log-f:
+	bash $(IV_REPO_ROOT)/scripts/watch_events.sh
+
+log-s:
+	bash $(IV_REPO_ROOT)/scripts/log_server.sh
+
+log-o:
+	bash $(IV_REPO_ROOT)/scripts/log_operator.sh
+
+clean-tmp:
+	rm $(TMP_CR_FILE)
+	rm $(TMP_CR_UPDATED_FILE)
 
 
 ############################################################
