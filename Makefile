@@ -319,7 +319,6 @@ clean-test-resources:
 	rm $(TMP_CR_FILE)
 	rm $(TMP_CR_UPDATED_FILE)
 
-.ONESHELL:
 e2e-test:
 	@echo
 	@echo run test
