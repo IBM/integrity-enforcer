@@ -59,11 +59,6 @@ DOCKER_BUILD_FLAGS := --build-arg VCS_REF=$(GIT_COMMIT) $(DOCKER_BUILD_FLAGS)
 # Override this variable in local env.
 TRAVIS_BUILD ?= 1
 
-# Image URL to use all building/pushing image targets;
-# Use your own docker registry and image name for dev/test by overridding the IMG and REGISTRY environment variable.
-#IMG ?= $(shell cat COMPONENT_NAME 2> /dev/null)
-#VERSION ?= $(shell cat COMPONENT_VERSION 2> /dev/null)
-
 # Github host to use for checking the source tree;
 # Override this variable ue with your own value if you're working on forked repo.
 GIT_HOST ?= github.com/IBM
@@ -131,11 +126,11 @@ check: lint
 lint: lint-init  lint-verify lint-op-init lint-op-verify
 
 lint-init:
-	cd $(VERIFIER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > lint_results.txt
+	cd $(VERIFIER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > /tmp/lint_results.txt
 
 lint-verify:
-	$(eval FAILURES=$(shell cat $(VERIFIER_DIR)lint_results.txt | grep "FAIL:"))
-	cat $(VERIFIER_DIR)lint_results.txt
+	$(eval FAILURES=$(shell cat /tmp/lint_results.txt | grep "FAIL:"))
+	/tmp/lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 lint-op-init:
@@ -152,11 +147,11 @@ lint-op-verify:
 ############################################################
 
 build-images:
-	$(IV_REPO_ROOT)/build/build_images.sh
+		$(IV_REPO_ROOT)/build/build_images.sh
 
 .ONESHELL:
 docker-login:
-	${IV_REPO_ROOT}/build/docker_login.sh
+		${IV_REPO_ROOT}/build/docker_login.sh
 
 .ONESHELL:
 push-images: docker-login
@@ -209,6 +204,7 @@ test-unit: test-init test-verify
 
 test-init:
 	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > /tmp/results.txt
+
 test-verify:
 	$(eval FAILURES=$(shell cat /tmp/results.txt | grep "FAIL:"))
 	cat /tmp/results.txt
@@ -223,17 +219,6 @@ kind-bootstrap-cluster: kind-create-cluster install-crds install-resources
 
 .PHONY: kind-bootstrap-cluster-dev
 kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-resources
-
-#check-env:
-#ifndef DOCKER_USER
-#	$(error DOCKER_USER is undefined)
-#endif
-#ifndef DOCKER_PASS
-#	$(error DOCKER_PASS is undefined)
-#endif
-
-#kind-deploy-controller: check-env
-#	@echo installing config policy controller
 
 TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
@@ -276,10 +261,11 @@ delete-keyring-secret:
 install-resources:
 	@echo
 	@echo setting image
-	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=localhost:5000/$(IV_OPERATOR):$(VERSION)
+	cp $(VERIFIER_OP_DIR)config/manager/kustomization.yaml /tmp/kustomization.yaml  #copy original file to tmp dir.
+	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
-	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(REGISTRY)/$(IV_OPERATOR):$(VERSION) # reset image name back to original
+	cp /tmp/kustomization.yaml $(VERIFIER_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
 
 delete-resources:
 	@echo
@@ -290,27 +276,30 @@ setup-image: pull-images push-images-to-local
 
 push-images-to-local:
 	@echo push image into local registry
-	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_IMAGE):$(VERSION)
-	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_LOGGING):$(VERSION)
-	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) localhost:5000/$(IV_OPERATOR):$(VERSION)
-	docker push localhost:5000/$(IV_IMAGE):$(VERSION)
-	docker push localhost:5000/$(IV_LOGGING):$(VERSION)
-	docker push localhost:5000/$(IV_OPERATOR):$(VERSION)
+	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) $(IV_LOCAL_SERVER_IMAGE_NAME_AND_VERSION)
+	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) $(IV_LOCAL_LOGGING_IMAGE_NAME_AND_VERSION)
+	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) $(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
+	docker push $(IV_LOCAL_SERVER_IMAGE_NAME_AND_VERSION)
+	docker push $(IV_LOCAL_LOGGING_IMAGE_NAME_AND_VERSION)
+	docker push $(IV_LOCAL_OPERATOR_IMAGE_NAME_AND_VERSION)
+
+TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
+TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
 
 setup-cr:
 	@echo
 	@echo prepare cr
-	@echo copy cr into test dir
-	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml /tmp/apis_v1alpha1_integrityverifier.yaml
+	@echo copy cr into tmp dir
+	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml $(TMP_CR_FILE)
 	@echo insert image
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.logger.image localhost:5000/$(IV_LOGGING):$(VERSION)
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.server.image localhost:5000/$(IV_IMAGE):$(VERSION)
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(IV_LOCAL_LOGGING_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.server.image $(IV_LOCAL_SERVER_IMAGE_NAME_AND_VERSION)
 	@echo setup signer policy
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i /tmp/apis_v1alpha1_integrityverifier.yaml spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
 
 setup-test-env:
@@ -326,21 +315,22 @@ delete-test-env:
 setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
-	cp /tmp/apis_v1alpha1_integrityverifier.yaml /tmp/apis_v1alpha1_integrityverifier_update.yaml
-	yq write -i /tmp/apis_v1alpha1_integrityverifier_update.yaml spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
+	cp $(TMP_CR_FILE) $(TMP_CR_UPDATED_FILE)
+	yq write -i $(TMP_CR_UPDATED_FILE) spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
 
 clean-test-resources:
-	rm /tmp/apis_v1alpha1_integrityverifier_update.yaml
-	rm /tmp/apis_v1alpha1_integrityverifier.yaml
+	rm $(TMP_CR_FILE)
+	rm $(TMP_CR_UPDATED_FILE)
 
+.ONESHELL:
 e2e-test:
-	@echo
-	@echo run test
-	cd $(VERIFIER_OP_DIR) && go test -v ./test/e2e > /tmp/e2e_results.txt
-	$(eval FAILURES=$(shell cat /tmp/e2e_results.txt | grep "FAIL:"))
-	if [ $(strip $(FAILURES)) ]; then
+	echo
+	echo run test
+	cd ${VERIFIER_OP_DIR} && go test -v ./test/e2e > /tmp/e2e_results.txt
+	$(eval FAILURES=$(shell cat /tmp/e2e_results.txt | grep "FAIL:" | wc -c))
+	if [ ${FAILURES} -gt 0 ]; then
 		cat /tmp/e2e_results.txt
-		echo "One or more e2e tests failed. Failures: $(FAILURES)"
+		echo "One or more e2e tests failed. Failures: ${FAILURES}"
 		exit 1
 	else
 		echo "All e2e tests passed successfully."
