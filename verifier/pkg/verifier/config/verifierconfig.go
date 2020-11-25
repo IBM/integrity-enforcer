@@ -68,6 +68,7 @@ type VerifierConfig struct {
 
 type LoggingScopeConfig struct {
 	LogLevel             string          `json:"logLevel,omitempty"`
+	LogAllResponse       bool            `json:"logAllResponse,omitempty"`
 	IncludeRequest       bool            `json:"includeRequest,omitempty"`
 	IncludeRelease       bool            `json:"includeRelease,omitempty"`
 	ConsoleLog           *LogScopeConfig `json:"consoleLog,omitempty"`

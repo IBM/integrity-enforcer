@@ -66,7 +66,11 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	// check if reqNamespace matches VerifierConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
 	if reqNamespace != "" && !self.checkIfInScopeNamespace(reqNamespace) && !self.checkIfProfileTargetNamespace(reqNamespace) {
-		return createAdmissionResponse(true, "this namespace is not monitored")
+		resp := createAdmissionResponse(true, "this namespace is not monitored")
+		if self.config.Log.LogAllResponse {
+			self.logResponse(req, resp)
+		}
+		return resp
 	}
 
 	// init ReqContext
@@ -74,11 +78,19 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	self.reqc = reqc
 
 	if self.checkIfDryRunAdmission() {
-		return createAdmissionResponse(true, "request is dry run")
+		resp := createAdmissionResponse(true, "request is dry run")
+		if self.config.Log.LogAllResponse {
+			self.logResponse(req, resp)
+		}
+		return resp
 	}
 
 	if self.checkIfUnprocessedInIV() {
-		return createAdmissionResponse(true, "request is not processed by IV")
+		resp := createAdmissionResponse(true, "request is not processed by IV")
+		if self.config.Log.LogAllResponse {
+			self.logResponse(req, resp)
+		}
+		return resp
 	}
 
 	// Start IV world from here ...
@@ -231,6 +243,9 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	//create admission response
 	admissionResponse := createAdmissionResponse(self.ctx.Allow, self.ctx.Message)
+	if self.config.Log.LogAllResponse {
+		self.logResponse(req, admissionResponse)
+	}
 
 	patch := self.createPatch()
 
@@ -450,6 +465,23 @@ func (self *RequestHandler) logExit() {
 			"aborted": self.ctx.Aborted,
 		}).Trace("New Admission Request Sent")
 	}
+}
+
+func (self *RequestHandler) logResponse(req *v1beta1.AdmissionRequest, resp *v1beta1.AdmissionResponse) {
+	respData := map[string]interface{}{}
+	respData["allowed"] = resp.Allowed
+	respData["operation"] = req.Operation
+	respData["kind"] = req.Kind
+	respData["namespace"] = req.Namespace
+	respData["name"] = req.Name
+	respData["message"] = resp.Result.Message
+	respDataBytes, err := json.Marshal(respData)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+	logger.Trace(fmt.Sprintf("[AdmissionResponse] %s", string(respDataBytes)))
+	return
 }
 
 func (self *RequestHandler) createPatch() []byte {
