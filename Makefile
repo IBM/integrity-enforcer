@@ -149,15 +149,12 @@ lint-op-verify:
 build-images:
 		$(IV_REPO_ROOT)/build/build_images.sh
 
-.ONESHELL:
 docker-login:
 		${IV_REPO_ROOT}/build/docker_login.sh
 
-.ONESHELL:
 push-images: docker-login
 		${IV_REPO_ROOT}/build/push_images.sh
 
-.ONESHELL:
 pull-images:
 		${IV_REPO_ROOT}/build/pull_images.sh
 
@@ -224,17 +221,17 @@ TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SECRET=keyring_secret
 
-test-e2e: kind-create-cluster setup-image install-crds setup-iv-env install-resources setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-resources kind-delete-cluster clean-test-resources
+test-e2e: create-kind-cluster setup-image install-crds setup-iv-env install-resources setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-resources delete-kind-cluster clean-test-resources
 
 test-e2e-no-init: push-images-to-local setup-iv-env install-crds install-resources setup-cr setup-test-env setup-test-resources e2e-test clean-test-resources
 
-kind-create-cluster:
+create-kind-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
 	bash $(VERIFIER_OP_DIR)test/create-kind-cluster.sh
 	kind get kubeconfig --name test-managed > $(VERIFIER_OP_DIR)kubeconfig_managed
 
-kind-delete-cluster:
+delete-kind-cluster:
 	@echo deleting cluster
 	kind delete cluster --name test-managed
 
@@ -322,20 +319,12 @@ clean-test-resources:
 	rm $(TMP_CR_FILE)
 	rm $(TMP_CR_UPDATED_FILE)
 
-.ONESHELL:
 e2e-test:
-	echo
-	echo run test
-	cd ${VERIFIER_OP_DIR} && go test -v ./test/e2e > /tmp/e2e_results.txt
-	$(eval FAILURES=$(shell cat /tmp/e2e_results.txt | grep "FAIL:" | wc -c))
-	if [ ${FAILURES} -gt 0 ]; then
-		cat /tmp/e2e_results.txt
-		echo "One or more e2e tests failed. Failures: ${FAILURES}"
-		exit 1
-	else
-		echo "All e2e tests passed successfully."
-		exit 0
-	fi
+	@echo
+	@echo run test
+	$(IV_REPO_ROOT)/build/check_test_results.sh
+
+
 
 ############################################################
 # e2e test coverage
