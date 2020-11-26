@@ -115,6 +115,13 @@ func (self *ResourceRef) Equals(ref *ResourceRef) bool {
 		self.ApiVersion == ref.ApiVersion)
 }
 
+func (self *ResourceRef) EqualsWithoutVersionCheck(ref *ResourceRef) bool {
+	return (ref != nil &&
+		self.Name == ref.Name &&
+		self.Namespace == ref.Namespace &&
+		self.Kind == ref.Kind)
+}
+
 /**********************************************
 
 				CheckError
