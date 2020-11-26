@@ -352,6 +352,12 @@ setup-cr:
 list-rsp:
 	kubectl get resourcesigningprofiles.apis.integrityverifier.io --all-namespaces
 
+delete-test-env:
+	@echo
+	@echo deleting test namespace
+	kubectl delete ns $(TEST_NS)
+	kubectl delete ns new-test-namespace
+
 # show rule table
 show-rt:
 	kubectl get cm iv-rule-table-lock -n $(IV_NS) -o json | jq -r .binaryData.table | base64 -D | gzip -d

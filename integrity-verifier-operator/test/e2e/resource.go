@@ -70,10 +70,75 @@ func CheckPodStatus(framework *Framework, namespace, expected string) error {
 	return nil
 }
 
+func GetPodName(framework *Framework, namespace, expected string) string {
+	pods, err := framework.KubeClientSet.CoreV1().Pods(namespace).List(goctx.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return ""
+	}
+	for _, pod := range pods.Items {
+		if strings.HasPrefix(pod.Name, expected) {
+			return pod.Name
+		}
+	}
+	return ""
+}
+
 func CheckConfigMap(framework *Framework, namespace, expected string) error {
 	_, err := framework.KubeClientSet.CoreV1().ConfigMaps(namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func CheckIVResources(framework *Framework, kind, namespace, expected string) error {
+	if kind == "Deployment" {
+		_, err := framework.KubeClientSet.AppsV1().Deployments(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "PodSecurityPolicy" {
+		_, err := framework.KubeClientSet.ExtensionsV1beta1().PodSecurityPolicies().Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "CustomResourceDefinition" {
+		_, err := framework.APIExtensionsClientSet.ApiextensionsV1().CustomResourceDefinitions().Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "VerifierConfig" {
+		_, err := framework.VerifierConfigClient.VerifierConfigs(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "SignPolicy" {
+		_, err := framework.SignPolicyClient.SignPolicies(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "Secret" {
+		_, err := framework.KubeClientSet.CoreV1().Secrets(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "ServiceAccount" {
+		_, err := framework.KubeClientSet.CoreV1().ServiceAccounts(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "ClusterRole" {
+		_, err := framework.KubeClientSet.RbacV1().ClusterRoles().Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "ClusterRoleBinding" {
+		_, err := framework.KubeClientSet.RbacV1().ClusterRoleBindings().Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "Role" {
+		_, err := framework.KubeClientSet.RbacV1().Roles(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "RoleBinding" {
+		_, err := framework.KubeClientSet.RbacV1().RoleBindings(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "ConfigMap" {
+		_, err := framework.KubeClientSet.CoreV1().ConfigMaps(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	return fmt.Errorf("Fail to call resource type: %v", kind)
 }
