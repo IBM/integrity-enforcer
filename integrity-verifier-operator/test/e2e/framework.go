@@ -9,6 +9,7 @@ import (
 
 	rspclient "github.com/IBM/integrity-enforcer/verifier/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	spclient "github.com/IBM/integrity-enforcer/verifier/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
+	vcclient "github.com/IBM/integrity-enforcer/verifier/pkg/client/verifierconfig/clientset/versioned/typed/verifierconfig/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,7 @@ var (
 	test_configmap                      = deploy_dir + "test-configmap.yaml"
 	test_configmap2                     = deploy_dir + "test-configmap-annotation.yaml"
 	test_configmap_rs                   = deploy_dir + "test-configmap-rs.yaml"
+	DefaultSignPolicyCRName             = "sign-policy"
 )
 
 type Framework struct {
@@ -54,6 +56,7 @@ type Framework struct {
 	APIExtensionsClientSet apiextcs.Interface
 	RSPClient              rspclient.ApisV1alpha1Interface
 	SignPolicyClient       spclient.ApisV1alpha1Interface
+	VerifierConfigClient   vcclient.ApisV1alpha1Interface
 
 	// Namespace in which all test resources should reside
 	Namespace *v1.Namespace
@@ -66,27 +69,28 @@ func initFrameWork() *Framework {
 	kubeConfig, err := LoadConfig(framework.KubeConfig, framework.KubeContext)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set kubeconfig"))
-		// t.Errorf("fail to set kubeconfig")
 	}
 	framework.KubeClientSet, err = kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set KubeClientSet"))
-		// t.Errorf("fail to set KubeClientSet")
+
 	}
 	framework.APIExtensionsClientSet, err = apiextcs.NewForConfig(kubeConfig)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set APIExtensionsClientSet"))
-		// t.Errorf("fail to set APIExtensionsClientSet")
 	}
 	framework.RSPClient, err = rspclient.NewForConfig(kubeConfig)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set RSPClient"))
-		// t.Errorf("fail to set RSPClient")
 	}
 	framework.SignPolicyClient, err = spclient.NewForConfig(kubeConfig)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set SingPolicyClient"))
-		// t.Errorf("fail to set RSPClient")
+	}
+
+	framework.VerifierConfigClient, err = vcclient.NewForConfig(kubeConfig)
+	if err != nil {
+		Fail(fmt.Sprintf("fail to set VerifierConfigClient"))
 	}
 	ns := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
