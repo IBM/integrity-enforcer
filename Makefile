@@ -223,6 +223,7 @@ test-verify:
 .EXPORT_ALL_VARIABLES:
 TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
+TEST_SAMPLE_SIGNER_SUBJECT_EMAIL=test@enterprise.com
 TEST_SECRET=keyring_secret
 TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
 TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
@@ -287,7 +288,7 @@ setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
 	cp $(TMP_CR_FILE) $(TMP_CR_UPDATED_FILE)
-	yq write -i $(TMP_CR_UPDATED_FILE) spec.signPolicy.signers[1].subjects[1].email test@enterprise.com
+	yq write -i $(TMP_CR_UPDATED_FILE) spec.signPolicy.signers[1].subjects[1].email $(TEST_SAMPLE_SIGNER_SUBJECT_EMAIL)
 
 e2e-test:
 	@echo
