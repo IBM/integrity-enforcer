@@ -226,8 +226,8 @@ TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SECRET=keyring_secret
 TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
 TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
-KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 
+test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 # perform test in a kind cluster after creating the cluster
 test-e2e: create-kind-cluster setup-image test-e2e-common test-e2e-clean-common delete-kind-cluster
 
@@ -247,6 +247,9 @@ check-kubeconfig:
 		@if [ -z "$(KUBECONFIG)" ]; then\
 			echo "KUBECONFIG is empty. Please set env.";\
 			exit 1;\
+		else\
+			echo $(KUBECONFIG);\
+			#kubectl config view;\
 		fi
 
 create-kind-cluster:

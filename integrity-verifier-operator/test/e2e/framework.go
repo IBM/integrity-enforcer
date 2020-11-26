@@ -30,7 +30,7 @@ var (
 	test_namespace2                     = "new-test-namespace"
 	verifier_dir                        = os.Getenv("VERIFIER_OP_DIR")
 	deploy_dir                          = verifier_dir + "test/deploy/"
-	kubeconfigManaged                   = verifier_dir + "kubeconfig_managed"
+	kubeconfigManaged                   = os.Getenv("KUBECONFIG")
 	integrityVerifierOperatorCR         = "/tmp/" + "apis_v1alpha1_integrityverifier.yaml"
 	integrityVerifierOperatorCR_updated = "/tmp/" + "apis_v1alpha1_integrityverifier_update.yaml"
 	test_rsp                            = deploy_dir + "test-rsp.yaml"
