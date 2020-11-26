@@ -259,7 +259,7 @@ delete-kind-cluster:
 	@echo deleting cluster
 	kind delete cluster --name test-managed
 
-setup-image: pull-images push-images-to-local
+setup-image: build-images push-images-to-local
 
 push-images-to-local:
 	@echo push image into local registry
@@ -280,7 +280,7 @@ delete-test-env:
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
 	kubectl delete ns new-test-namespace
-	
+
 setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
@@ -347,6 +347,11 @@ setup-cr:
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 
+create-cr:
+	kubectl apply -f $(TMP_CR_FILE) -n $(IV_OP_NS)
+
+delete-cr:
+	kubectl delete -f $(TMP_CR_FILE) -n $(IV_OP_NS)
 
 
 # list resourcesigningprofiles
