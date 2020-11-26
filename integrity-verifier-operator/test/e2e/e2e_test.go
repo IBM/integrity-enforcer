@@ -35,6 +35,21 @@ var _ = Describe("Test integrity verifier", func() {
 				return CheckPodStatus(framework, iv_namespace, expected)
 			}, timeout, 1).Should(BeNil())
 		})
+		It("Operator sa should be created", func() {
+			expected := iv_op_sa
+			err := CheckIVResources(framework, "ServiceAccount", iv_namespace, expected)
+			Expect(err).To(BeNil())
+		})
+		It("Operator role should be created", func() {
+			expected := iv_op_role
+			err := CheckIVResources(framework, "Role", iv_namespace, expected)
+			Expect(err).To(BeNil())
+		})
+		It("Operator rb should be created", func() {
+			expected := iv_op_rb
+			err := CheckIVResources(framework, "RoleBinding", iv_namespace, expected)
+			Expect(err).To(BeNil())
+		})
 	})
 
 	Describe("Check iv server in ns:"+iv_namespace, func() {

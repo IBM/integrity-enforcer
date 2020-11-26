@@ -39,6 +39,9 @@ var (
 	test_configmap2                     = deploy_dir + "test-configmap-annotation.yaml"
 	test_configmap_rs                   = deploy_dir + "test-configmap-rs.yaml"
 	DefaultSignPolicyCRName             = "sign-policy"
+	iv_op_sa                            = "integrity-verifier-operator-manager"
+	iv_op_role                          = "integrity-verifier-operator-leader-election-role"
+	iv_op_rb                            = "integrity-verifier-operator-leader-election-rolebinding"
 )
 
 type Framework struct {
