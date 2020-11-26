@@ -15,7 +15,7 @@
 # limitations under the License.
 
 cd ${VERIFIER_OP_DIR}
-go test -v ./test/e2e > /tmp/e2e_results.txt
+go test -v ./test/e2e | tee /tmp/e2e_results.txt
 
 FAILURES=$(cat /tmp/e2e_results.txt | grep "FAIL:" | wc -c)
 
