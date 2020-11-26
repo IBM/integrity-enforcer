@@ -256,9 +256,7 @@ create-kind-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
 	bash $(VERIFIER_OP_DIR)test/create-kind-cluster.sh
-	kind get kubeconfig --name test-managed
 	kind get kubeconfig --name test-managed > $(VERIFIER_OP_DIR)kubeconfig_managed
-	cat $(VERIFIER_OP_DIR)kubeconfig_managed
 
 delete-kind-cluster:
 	@echo deleting cluster
