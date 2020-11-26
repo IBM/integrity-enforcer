@@ -371,8 +371,12 @@ log-o:
 	bash $(IV_REPO_ROOT)/scripts/log_operator.sh
 
 clean-tmp:
-	rm $(TMP_CR_FILE)
-	rm $(TMP_CR_UPDATED_FILE)
+	@if [ -f "$(TMP_CR_FILE)" ]; then\
+		rm $(TMP_CR_FILE);\
+	fi
+	@if [ -f "$(TMP_CR_UPDATED_FILE)" ]; then\
+		rm $(TMP_CR_UPDATED_FILE);\
+	fi
 
 
 ############################################################
