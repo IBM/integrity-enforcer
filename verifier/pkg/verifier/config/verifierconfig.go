@@ -87,7 +87,7 @@ type PluginConfig struct {
 func (self *IVResourceCondition) Match(reqc *common.ReqContext) bool {
 	ref := reqc.ResourceRef()
 	for _, refi := range self.References {
-		if refi.Equals(ref) {
+		if refi.EqualsWithoutVersionCheck(ref) {
 			return true
 		}
 	}

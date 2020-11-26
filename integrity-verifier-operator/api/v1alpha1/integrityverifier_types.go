@@ -29,7 +29,6 @@ import (
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	policy "github.com/IBM/integrity-enforcer/verifier/pkg/common/policy"
 	iec "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/config"
-	scc "github.com/openshift/api/security/v1"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
@@ -41,6 +40,7 @@ import (
 )
 
 const (
+	DefaultIntegrityVerifierCRDName       = "integrityverifiers.apis.integrityverifier.io"
 	DefaultVerifierConfigCRDName          = "verifierconfigs.apis.integrityverifier.io"
 	DefaultSignPolicyCRDName              = "signpolicies.apis.integrityverifier.io"
 	DefaultResourceSignatureCRDName       = "resourcesignatures.apis.integrityverifier.io"
@@ -217,6 +217,10 @@ func (self *IntegrityVerifier) GetSecurityContextConstraintsName() string {
 	return self.Spec.Security.SecurityContextConstraintsName
 }
 
+func (self *IntegrityVerifier) GetIntegrityVerifierCRDName() string {
+	return DefaultIntegrityVerifierCRDName
+}
+
 func (self *IntegrityVerifier) GetVerifierConfigCRDName() string {
 	return DefaultVerifierConfigCRDName
 }
@@ -330,7 +334,6 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) []*comm
 	// (&Object{}).TypeMeta.APIVersion is not correct but empty string "", unless it is resolved by scheme.
 	// getTypeFromObj() resolves it.
 	_deployType := getTypeFromObj(&appsv1.Deployment{}, scheme)
-	_sccType := getTypeFromObj(&scc.SecurityContextConstraints{}, scheme)
 	_crdType := getTypeFromObj(&extv1.CustomResourceDefinition{}, scheme)
 	_ecType := getTypeFromObj(&ec.VerifierConfig{}, scheme)
 	_spolType := getTypeFromObj(&spol.SignPolicy{}, scheme)
@@ -346,159 +349,132 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) []*comm
 
 	ieResourceList := []*common.ResourceRef{
 		{
-			ApiVersion: _deployType.APIVersion,
-			Kind:       _deployType.Kind,
-			Name:       opDeployName,
-			Namespace:  opPodNamespace,
+			Kind:      _deployType.Kind,
+			Name:      opDeployName,
+			Namespace: opPodNamespace,
 		},
 		{
-			ApiVersion: self.APIVersion,
-			Kind:       self.Kind,
-			Name:       self.Name,
-			Namespace:  self.Namespace,
+			Kind:      self.Kind,
+			Name:      self.Name,
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _sccType.APIVersion,
-			Kind:       _sccType.Kind,
-			Name:       self.GetSecurityContextConstraintsName(),
+			Kind: _crdType.Kind,
+			Name: self.GetIntegrityVerifierCRDName(),
 		},
 		{
-			ApiVersion: _crdType.APIVersion,
-			Kind:       _crdType.Kind,
-			Name:       self.GetVerifierConfigCRDName(),
+			Kind: _crdType.Kind,
+			Name: self.GetVerifierConfigCRDName(),
 		},
 		{
-			ApiVersion: _crdType.APIVersion,
-			Kind:       _crdType.Kind,
-			Name:       self.GetSignPolicyCRDName(),
+			Kind: _crdType.Kind,
+			Name: self.GetSignPolicyCRDName(),
 		},
 		{
-			ApiVersion: _crdType.APIVersion,
-			Kind:       _crdType.Kind,
-			Name:       self.GetResourceSignatureCRDName(),
+			Kind: _crdType.Kind,
+			Name: self.GetResourceSignatureCRDName(),
 		},
 		{
-			ApiVersion: _crdType.APIVersion,
-			Kind:       _crdType.Kind,
-			Name:       self.GetResourceSigningProfileCRDName(),
+			Kind: _crdType.Kind,
+			Name: self.GetResourceSigningProfileCRDName(),
 		},
 		{
-			ApiVersion: _crdType.APIVersion,
-			Kind:       _crdType.Kind,
-			Name:       self.GetHelmReleaseMetadataCRDName(),
+			Kind: _crdType.Kind,
+			Name: self.GetHelmReleaseMetadataCRDName(),
 		},
 		{
-			ApiVersion: _ecType.APIVersion,
-			Kind:       _ecType.Kind,
-			Name:       self.GetVerifierConfigCRName(),
-			Namespace:  self.Namespace,
+			Kind:      _ecType.Kind,
+			Name:      self.GetVerifierConfigCRName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _spolType.APIVersion,
-			Kind:       _spolType.Kind,
-			Name:       self.GetSignPolicyCRName(),
-			Namespace:  self.Namespace,
+			Kind:      _spolType.Kind,
+			Name:      self.GetSignPolicyCRName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _secretType.APIVersion,
-			Kind:       _secretType.Kind,
-			Name:       self.GetRegKeySecretName(),
-			Namespace:  self.Namespace,
+			Kind:      _secretType.Kind,
+			Name:      self.GetRegKeySecretName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _secretType.APIVersion,
-			Kind:       _secretType.Kind,
-			Name:       self.GetWebhookServerTlsSecretName(),
-			Namespace:  self.Namespace,
+			Kind:      _secretType.Kind,
+			Name:      self.GetWebhookServerTlsSecretName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _saType.APIVersion,
-			Kind:       _saType.Kind,
-			Name:       self.GetServiceAccountName(),
-			Namespace:  self.Namespace,
+			Kind:      _saType.Kind,
+			Name:      self.GetServiceAccountName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _clusterroleType.APIVersion,
-			Kind:       _clusterroleType.Kind,
-			Name:       self.GetClusterRoleName(),
+			Kind: _clusterroleType.Kind,
+			Name: self.GetClusterRoleName(),
 		},
 		{
-			ApiVersion: _clusterrolebindingType.APIVersion,
-			Kind:       _clusterrolebindingType.Kind,
-			Name:       self.GetClusterRoleBindingName(),
+			Kind: _clusterrolebindingType.Kind,
+			Name: self.GetClusterRoleBindingName(),
 		},
 		{
-			ApiVersion: _roleType.APIVersion,
-			Kind:       _roleType.Kind,
-			Name:       self.GetDryRunRoleName(),
-			Namespace:  self.Namespace,
+			Kind:      _roleType.Kind,
+			Name:      self.GetDryRunRoleName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _rolebindingType.APIVersion,
-			Kind:       _rolebindingType.Kind,
-			Name:       self.GetDryRunRoleBindingName(),
-			Namespace:  self.Namespace,
+			Kind:      _rolebindingType.Kind,
+			Name:      self.GetDryRunRoleBindingName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _clusterroleType.APIVersion,
-			Kind:       _clusterroleType.Kind,
-			Name:       self.GetIVAdminClusterRoleName(),
+			Kind: _clusterroleType.Kind,
+			Name: self.GetIVAdminClusterRoleName(),
 		},
 		{
-			ApiVersion: _clusterrolebindingType.APIVersion,
-			Kind:       _clusterrolebindingType.Kind,
-			Name:       self.GetIVAdminClusterRoleBindingName(),
+			Kind: _clusterrolebindingType.Kind,
+			Name: self.GetIVAdminClusterRoleBindingName(),
 		},
 		{
-			ApiVersion: _roleType.APIVersion,
-			Kind:       _roleType.Kind,
-			Name:       self.GetIVAdminRoleName(),
-			Namespace:  self.Namespace,
+			Kind:      _roleType.Kind,
+			Name:      self.GetIVAdminRoleName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _rolebindingType.APIVersion,
-			Kind:       _rolebindingType.Kind,
-			Name:       self.GetIVAdminRoleBindingName(),
-			Namespace:  self.Namespace,
+			Kind:      _rolebindingType.Kind,
+			Name:      self.GetIVAdminRoleBindingName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _pspType.APIVersion,
-			Kind:       _pspType.Kind,
-			Name:       self.GetPodSecurityPolicyName(),
-			Namespace:  self.Namespace,
+			Kind:      _pspType.Kind,
+			Name:      self.GetPodSecurityPolicyName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _cmType.APIVersion,
-			Kind:       _cmType.Kind,
-			Name:       self.GetRuleTableLockCMName(),
-			Namespace:  self.Namespace,
+			Kind:      _cmType.Kind,
+			Name:      self.GetRuleTableLockCMName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _cmType.APIVersion,
-			Kind:       _cmType.Kind,
-			Name:       self.GetIgnoreTableLockCMName(),
-			Namespace:  self.Namespace,
+			Kind:      _cmType.Kind,
+			Name:      self.GetIgnoreTableLockCMName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _cmType.APIVersion,
-			Kind:       _cmType.Kind,
-			Name:       self.GetForceCheckTableLockCMName(),
-			Namespace:  self.Namespace,
+			Kind:      _cmType.Kind,
+			Name:      self.GetForceCheckTableLockCMName(),
+			Namespace: self.Namespace,
 		},
 		{
-			ApiVersion: _deployType.APIVersion,
-			Kind:       _deployType.Kind,
-			Name:       self.GetIVServerDeploymentName(),
-			Namespace:  self.Namespace,
+			Kind:      _deployType.Kind,
+			Name:      self.GetIVServerDeploymentName(),
+			Namespace: self.Namespace,
 		},
 	}
 	if len(self.Spec.ResourceSigningProfiles) > 0 {
 		for _, prof := range self.Spec.ResourceSigningProfiles {
 			tmpRef := &common.ResourceRef{
-				ApiVersion: _rspType.APIVersion,
-				Kind:       _rspType.Kind,
-				Name:       prof.Name,
-				Namespace:  self.Namespace,
+				Kind:      _rspType.Kind,
+				Name:      prof.Name,
+				Namespace: self.Namespace,
 			}
 			ieResourceList = append(ieResourceList, tmpRef)
 		}
