@@ -13,6 +13,7 @@ require (
 	github.com/jonboulle/clockwork v0.1.0
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
 	github.com/onsi/gomega v1.10.1 // indirect
 	github.com/pkg/errors v0.9.1

@@ -85,6 +85,10 @@ func (self *RequestPattern) Match(reqFields map[string]string) bool {
 		scope = reqScope
 	}
 
+	if scope == "Cluster" && self.Name == nil {
+		return false
+	}
+
 	p := reflect.ValueOf(self)
 	if p.IsNil() {
 		return false
