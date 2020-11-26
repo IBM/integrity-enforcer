@@ -279,7 +279,8 @@ delete-test-env:
 	@echo
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
-
+	kubectl delete ns new-test-namespace
+	
 setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
@@ -352,11 +353,6 @@ setup-cr:
 list-rsp:
 	kubectl get resourcesigningprofiles.apis.integrityverifier.io --all-namespaces
 
-delete-test-env:
-	@echo
-	@echo deleting test namespace
-	kubectl delete ns $(TEST_NS)
-	kubectl delete ns new-test-namespace
 
 # show rule table
 show-rt:
