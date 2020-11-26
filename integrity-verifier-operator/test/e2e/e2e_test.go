@@ -73,6 +73,7 @@ var _ = Describe("Test integrity verifier", func() {
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+			fmt.Print("Check created iv resources... \n")
 			for _, ivr := range iv_resource_list {
 				fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
 				if ivr.Name == "" || ivr.Kind == "IntegrityVerifier" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
@@ -87,9 +88,10 @@ var _ = Describe("Test integrity verifier", func() {
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+			fmt.Print("Try to Delete iv resources... \n")
 			for _, ivr := range iv_resource_list {
 				fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
-				if ivr.Name == "" || ivr.Kind == "IntegrityVerifier" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "integrity-verifier-operator-controller-manager" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
+				if ivr.Name == "" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
 					continue
 				}
 				if ivr.Namespace != "" {
