@@ -245,7 +245,9 @@ test-e2e-common: check-kubeconfig install-crds setup-iv-env install-operator set
 test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator clean-tmp
 
 check-kubeconfig:
-					$(IV_REPO_ROOT)/build/check_kube_config.sh
+	@if [ -z "$(KUBECONFIG)" ]; then \
+		echo KUBECONFIG is empty.; \
+	fi
 
 create-kind-cluster:
 	@echo "creating cluster"
