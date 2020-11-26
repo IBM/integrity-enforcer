@@ -82,25 +82,25 @@ var _ = Describe("Test integrity verifier", func() {
 				Expect(err).To(BeNil())
 			}
 		})
-		// It("Deleting iv resources is blocked", func() {
-		// 	vc_name := "iv-config"
-		// 	vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
-		// 	Expect(err).To(BeNil())
-		// 	iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
-		// 	for _, ivr := range iv_resource_list {
-		// 		fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
-		// 		if ivr.Name == "" || ivr.Kind == "IntegrityVerifier" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
-		// 			continue
-		// 		}
-		// 		if ivr.Namespace != "" {
-		// 			cmd_err := Kubectl("delete", ivr.Kind, ivr.Name, "-n", ivr.Namespace)
-		// 			Expect(cmd_err).NotTo(BeNil())
-		// 		} else {
-		// 			cmd_err := Kubectl("delete", ivr.Kind, ivr.Name)
-		// 			Expect(cmd_err).NotTo(BeNil())
-		// 		}
-		// 	}
-		// })
+		It("Deleting iv resources should be blocked", func() {
+			vc_name := "iv-config"
+			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+			for _, ivr := range iv_resource_list {
+				fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
+				if ivr.Name == "" || ivr.Kind == "IntegrityVerifier" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "integrity-verifier-operator-controller-manager" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
+					continue
+				}
+				if ivr.Namespace != "" {
+					cmd_err := Kubectl("delete", ivr.Kind, ivr.Name, "-n", ivr.Namespace)
+					Expect(cmd_err).NotTo(BeNil())
+				} else {
+					cmd_err := Kubectl("delete", ivr.Kind, ivr.Name)
+					Expect(cmd_err).NotTo(BeNil())
+				}
+			}
+		})
 		It("IV Resources are changed when IV CR is updated", func() {
 			var timeout int = 60
 			expected := DefaultSignPolicyCRName
