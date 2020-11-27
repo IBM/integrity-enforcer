@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	. "github.com/onsi/ginkgo" //nolint:golint
 
@@ -26,12 +27,11 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
-	skip_delete_cr_test                 = false
+	local_test, _                       = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
 	skip_default_user_test              = true
 	kubeconfig_user                     = os.Getenv("KUBE_CONTEXT_USERNAME")
 	iv_namespace                        = os.Getenv("IV_OP_NS")
 	test_namespace                      = os.Getenv("TEST_NS")
-	test_namespace2                     = "test-ns2"
 	verifier_dir                        = os.Getenv("VERIFIER_OP_DIR")
 	deploy_dir                          = verifier_dir + "test/deploy/"
 	kubeconfigManaged                   = os.Getenv("KUBECONFIG")

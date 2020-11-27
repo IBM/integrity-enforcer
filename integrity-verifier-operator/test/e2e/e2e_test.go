@@ -119,6 +119,9 @@ var _ = Describe("Test integrity verifier", func() {
 			Expect(err).To(BeNil())
 		})
 		It("IV Resources are changed when IV CR is updated", func() {
+			if !local_test {
+				Skip("this test is executed only in the local env.")
+			}
 			framework := initFrameWork()
 			var timeout int = 120
 			expected := DefaultSignPolicyCRName
@@ -262,6 +265,9 @@ var _ = Describe("Test integrity verifier", func() {
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Test RSP should be deleted properly", func() {
+				if !local_test {
+					Skip("this test is executed only in the local env.")
+				}
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-rsp"
@@ -273,6 +279,9 @@ var _ = Describe("Test integrity verifier", func() {
 				}, timeout, 1).ShouldNot(BeNil())
 			})
 			It("Test unsigned resouce should not blocked", func() {
+				if !local_test {
+					Skip("this test is executed only in the local env.")
+				}
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap4"
@@ -282,8 +291,16 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
+
 		})
 		Context("RSP in IV NS is effective for blocking unsigned admission on newly created NS", func() {
+			BeforeEach(func() {
+				cmd_err := Kubectl("get", "ns", test_namespace)
+				if cmd_err != nil {
+					Kubectl("delete", "ns", test_namespace)
+				}
+				Kubectl("create", "ns", test_namespace)
+			})
 			It("Test RSP should be created properly", func() {
 				framework := initFrameWork()
 				var timeout int = 120
@@ -304,11 +321,11 @@ var _ = Describe("Test integrity verifier", func() {
 				time.Sleep(time.Second * 15)
 				var timeout int = 120
 				expected := "test-configmap"
-				By("Creating new namespace: " + test_namespace2)
-				cmd_err := Kubectl("create", "ns", test_namespace2)
+				By("Creating new namespace: " + test_namespace)
+				cmd_err := Kubectl("create", "ns", test_namespace)
 				Expect(cmd_err).To(BeNil())
-				By("Creating test configmap in ns: " + test_namespace2)
-				cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace2)
+				By("Creating test configmap in ns: " + test_namespace)
+				cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
 				Expect(cmd_err).NotTo(BeNil())
 				Eventually(func() error {
 					return CheckEventNoSignature(framework, test_namespace, expected)
@@ -318,11 +335,11 @@ var _ = Describe("Test integrity verifier", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap2"
-				By("Creating test configmap in ns: " + test_namespace2)
-				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace2)
+				By("Creating test configmap in ns: " + test_namespace)
+				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
-					return CheckConfigMap(framework, test_namespace2, expected)
+					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 		})
@@ -330,8 +347,8 @@ var _ = Describe("Test integrity verifier", func() {
 
 	Describe("Test integrity verifier resources: delete", func() {
 		It("Server and iv resources should be deleted properly", func() {
-			if skip_delete_cr_test {
-				Skip("skip deleting cr")
+			if !local_test {
+				Skip("this test is executed only in the local env.")
 			}
 			framework := initFrameWork()
 			vc_name := "iv-config"

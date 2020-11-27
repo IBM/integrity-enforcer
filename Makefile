@@ -227,7 +227,7 @@ TEST_SAMPLE_SIGNER_SUBJECT_EMAIL=test@enterprise.com
 TEST_SECRET=keyring_secret
 TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
 TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
-export KUBE_CONTEXT_USERNAME=kind-test-managed
+# export KUBE_CONTEXT_USERNAME=kind-test-managed
 
 test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 # perform test in a kind cluster after creating the cluster
@@ -240,7 +240,7 @@ test-e2e-no-init: push-images-to-local test-e2e-common
 test-e2e-remote: test-e2e-common test-e2e-clean-common
 
 # common steps to do e2e test in an existing cluster
-test-e2e-common: check-test-env check-kubeconfig install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test
+test-e2e-common: check-local-test check-kubeconfig install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test
 
 # common steps to clean e2e test resources in an existing cluster
 test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator clean-tmp
@@ -251,9 +251,9 @@ check-kubeconfig:
 		exit 1;\
 	fi
 
-check-test-env:
-	@if [ -z "$(TEST_ENV)" ]; then \
-		echo TEST_ENV is empty.; \
+check-local-test:
+	@if [ -z "$(TEST_LOCAL)" ]; then \
+		echo TEST_LOCAL is empty. Please set true for local test.; \
 		exit 1;\
 	fi
 
@@ -287,7 +287,6 @@ delete-test-env:
 	@echo
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
-	kubectl delete ns test-ns2
 
 setup-test-resources:
 	@echo
@@ -354,11 +353,11 @@ setup-cr:
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
-	yq write -i $(TMP_CR_FILE) spec.verifierConfig.ivAdminUserGroup "system:masters,system:cluster-admins"
-	@if [ "$(TEST_ENV)" = "local" ]; then \
+	@if [ "$(TEST_LOCAL)" ]; then \
 		echo enable logAllResponse ; \
 		yq write -i $(TMP_CR_FILE) spec.verifierConfig.log.logLevel trace ;\
 		yq write -i $(TMP_CR_FILE) spec.verifierConfig.log.logAllResponse true ;\
+		yq write -i $(TMP_CR_FILE) spec.verifierConfig.ivAdminUserGroup "system:masters,system:cluster-admins" ;\
 	fi
 
 create-cr:
