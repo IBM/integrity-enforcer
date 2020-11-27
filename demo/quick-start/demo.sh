@@ -3,7 +3,6 @@
 curl -o demo-magic.sh https://raw.githubusercontent.com/paxtonhare/demo-magic/master/demo-magic.sh
 
 if [ -f demo-magic.sh ]; then
-   echo found
    . ./demo-magic.sh
    rm ./demo-magic.sh
 else
