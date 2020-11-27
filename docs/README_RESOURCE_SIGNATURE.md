@@ -23,7 +23,7 @@ IV requires a secret that includes a pubkey ring for verifying signatures of res
 
 ### PGP mode
 
-First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
+First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `sample_signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
 
 ```
 $ gpg --export signer@enterprise.com > /tmp/pubring.gpg
