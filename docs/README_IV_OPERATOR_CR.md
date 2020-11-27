@@ -2,11 +2,11 @@
 
 # Custom Resource: IntegrityVerifier
 
-IV can be deployed with operator. You can configure IntegrityVerifier custom resource to define the configuration of IV.
+Integrity Verifier can be deployed with operator. You can configure IntegrityVerifier custom resource to define the configuration of IV.
 
 ## Type of Signature Verification
 
-IV supports two modes of signature verification.
+Integrity Verifier supports two modes of signature verification.
 - `pgp`: use [gpg key](https://www.gnupg.org/index.html) for signing. certificate is not used.
 - `x509`: use signing key with X509 public key certificate.
 
@@ -22,7 +22,7 @@ spec:
     verifyType: pgp
 ```
 
-## Enable Helm plugin
+<!-- ## Enable Helm plugin
 
 You can enable Helm plugin to support verification of Helm provenance and integrity (https://helm.sh/docs/topics/provenance/). By enabling this, Helm package installation is verified with its provenance file.
 
@@ -33,36 +33,72 @@ spec:
       plugin:
       - name: helm
         enabled: false
-```
+``` -->
 
-## Cluster signer
+## Verification Key and Sign Policy Configuration
 
-You can define cluster-wide signer for signing any resources on cluster.
+The list of verification key names should be set as `keyRingConfigs` in this CR.
+The operator will start installing Integrity Verifier when all key secrets listed here are ready.
+
+Also, you can set SignPolicy here.
+This policy defines signers that are allowed to create/update resources with their signature in some namespaces.
+(see [How to configure SignPolicy](README_CONFIG_SIGNER_POLICY.md) for detail.)
 
 ```yaml
 spec:
-  verifierConfig:
-    signPolicy:
-      - namespaces:
-        - "*"
-        signers:
-        - "ClusterSigner"
-        - "HelmClusterSigner"
-      - scope: Cluster
-        signers:
-        - "ClusterSigner"
-        - "HelmClusterSigner"
+  keyRingConfigs:
+  - name: keyring-secret
+  signPolicy:
+    policies:
+    - namespaces:
+      - "*"
       signers:
-      - name: "ClusterSigner"
-        subjects:
-        - commonName: "ClusterAdmin"
-      - name: "HelmClusterSigner"
-        subjects:
-        - email: cluster_signer@signer.com
+      - "SampleSigner"
+    - scope: "Cluster"
+      signers:
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      secret: keyring-secret
+      subjects:
+      - email: "sample_signer@signer.com"
+```
+
+## Resource Signing Profile Configuration
+You can define one or more ResourceSigningProfiles that are installed by this operator.
+This configuration is not set by default.
+(see [How to configure ResourceSigningProfile](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail.)
+
+```yaml
+spec:
+  resourceSigningProfiles:
+  - name: sample-rsp
+    targetNamespaceSelector:
+      include:
+      - "secure-ns"
+    protectRules:
+    - match:
+      - kind: "ConfigMap"
+        name: "*"
+```
+
+## Define In-scope Namespaces
+You can define which namespace is not checked by Integrity Verifier even if ResourceSigningProfile is there.
+Wildcard "*" can be used for this config. By default, Integrity Verifier checks RSPs in all namespaces except ones in `kube-*` and `openshift-*` namespaces.
+
+```yaml
+spec:
+  inScopeNamespaceSelector:
+    include:
+    - "*"
+    exclude:
+    - "kube-*"
+    - "openshift-*"
 ```
 
 ## Unprocessed Requests
-Some resources are not relevant to the signature-based protection by IV. The resources defined here are not processed in IV admission controller (always returns `allowed`).
+Some resources are not relevant to the signature-based protection by Integrity Verifier.
+The resources defined here are not processed in IV admission controller (always returns `allowed`).
 
 ```yaml
 spec:
@@ -85,7 +121,7 @@ spec:
     mode: "detect"
 ```
 
-## Install on OpenShift
+<!-- ## Install on OpenShift
 
 When deploying OpenShift cluster, this should be set `true` (default). Then, SecurityContextConstratint (SCC) will be deployed automatically during installation. For IKS or Minikube, this should be set to `false`.
 
@@ -93,11 +129,11 @@ When deploying OpenShift cluster, this should be set `true` (default). Then, Sec
 spec:
   globalConfig:
     openShift: true
-```
+``` -->
 
 ## IV admin
 
-Specify user group for IV admin. The following values are default.
+Specify user group for IV admin with comma separated strings like the following. This value is empty by default.
 
 ```yaml
 spec:
@@ -117,7 +153,7 @@ spec
     autoIVAdminRoleCreationDisabled: false
 ```
 
-
+<!-- 
 ## Webhook configuration
 
 You can specify webhook filter configuration for processing requests in IV. As default, all requests for namespaced resources and selected cluster-scope resources are forwarded to IV. If you want to protect a resource by IV, it must be covered with this filter condition.
@@ -135,7 +171,7 @@ spec:
     - podsecuritypolicies
     - clusterrolebindings
     - clusterroles
-```
+``` -->
 
 ## Logging
 

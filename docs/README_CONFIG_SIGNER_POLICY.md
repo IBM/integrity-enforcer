@@ -1,22 +1,26 @@
 ## Sign Policy
 
+### This CR should not be edited directly.
+Usually, SignPolicy CR is automatically created/updated using `signPolicy` config in IntegrityVerifier CR.
+Please note that operator would reconcile the resource with the original one and it might remove your direct changes.
+
 ### Define signer for each namespaces
 
 SignPolicy is a custom resource to define who can be a valid signer for resources in a namespace or for cluster scope resources.
-Only a SignPolicy resource is defined in IV namespace (`integrity-verifier-ns` in this documentation)and initial SignPolicy resource is created during IV installation. You can access it by
-```
-$ oc get signpolicies.apis.integrityverifier.io signer-policy -n integrity-verifier-ns -o yaml > /tmp/sign-policy.yaml
-```
+Only a SignPolicy which is created in IV namespace (`integrity-verifier-operator-system` in this doc) by operator is valid and all other instances are not used by IV.
 
-You can configure the policy by adding the following snipet to `/tmp/sign-policy.yaml`
+To update SignPolicy after IV deployment, please update the `signPolicy` in IntegrityVerifier CR.
 
 Example below is to define
-- signer `signer-a` is identified when email of subject of signature is `signer@enterprise.com`
+- signer `signer-a` is identified when email of subject of signature is `signer@enterprise.com` and the verification key for this subject is included in `sample-keyring` secret
 - signer `signer-a` is approved signer for the resources to be created in namespace `secure-ns`.
+
+For matching signer, you can use the following attributes: `email`, `uid`, `country`, `organization`, `organizationalUnit`, `locality`, `province`, `streetAddress`, `postalCode`, `commonName` and `serialNumber`.
+
 
 ```yaml
 spec:
-  policy:
+  signPolicy:
     policies:
     - namespaces:
       - secure-ns
@@ -24,75 +28,19 @@ spec:
       - signer-a
     signers:
     - name: signer-a
+      secret: sample-keyring
       subjects:
       - email: signer@enterprise.com
 ```
 
-For matching signer, you can use the following attributes: `email`, `uid`, `country`, `organization`, `organizationalUnit`, `locality`, `province`, `streetAddress`, `postalCode`, `commonName` and `serialNumber`.
+Updating IV CR with the above block, the operator will update the SignPolicy resource.
 
-Then, this policy is applied back to a cluster by:
-
-```
-$ oc apply -f /tmp/sign-policy.yaml -n integrity-verifier-ns signpolicy.apis.integrityverifier.io/signer-policy configured
-```
-
-You can define namespace matcher by using `excludeNamespaces`. For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`.
-
-```yaml
-policies:
-- namespaces:
-  - secure-ns
-  signers:
-  - signer-a
-- namespaces:
-  - '*'
-  excludeNamespaces
-  - secure-ns
-  signers:
-  - signer-b
-- scope: Cluster
-  signers:
-  - signer-a
-  - signer-b
-```
-
-### Define Signer for cluster-scope resources
-You can define a signer for cluster-scope resources similarily. Signer `signer-a` and `signer-b` can sign cluster-scope resources in the example below.
-
-```yaml
-policies:
-- scope: Cluster
-  signers:
-  - signer-a
-  - signer-b
-```
-
-### Break Glass
-When you need to disable blocking by signature verification in a certain namespace, you can enable break glass mode, which means the request to the namespace without valid signature is allowed during the break glass on. For example, break glass on `secure-ns` namespace can be set on by
-
-```
-spec:
-  policy:
-    breakGlass:
-      - namespaces:
-        - secure-ns
-```
-Break glass on cluster-scope resources can be set on by
-```
-spec:
-  policy:
-    breakGlass:
-      - scope: Cluster
-```
-
-During break glass mode on, the request without signature is allowed but it is marked by `integrityUnverified` label.
-
-
-### Example of Sign Policy
+You can define namespace matcher by using `excludeNamespaces`.
+For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`.
 
 ```yaml
 spec:
-  policy:
+  singPolicy:
     policies:
     - namespaces:
       - secure-ns
@@ -100,7 +48,96 @@ spec:
       - signer-a
     - namespaces:
       - '*'
-      excludeNamespaces
+      excludeNamespaces:
+      - secure-ns
+      signers:
+      - signer-b
+    - scope: Cluster
+      signers:
+      - signer-a
+      - signer-b
+    signers: ...
+```
+
+### Configure Verification Key
+`secret` name must be specified for very signer subject configuration. This secret is also needed to be set in `keyRingConfigs` in IV CR. Here is the example to define multiple verification keys and multiple signers.
+
+```yaml
+spec:
+  keyRingConfigs:
+  - sample-verification-key-a
+  - sample-verification-key-b
+  singPolicy:
+    policies:
+    - namespaces:
+      - ns-a
+      signers:
+      - signer-a
+    - namespaces:
+      - 'ns-b'
+      signers:
+      - signer-b
+    signers:
+    - name: signer-a
+      secret: sample-verification-key-a
+      subjects:
+        email: signer-a@enterprise.com
+    - name: signer-b
+      secret: sample-verification-key-b
+      subjects:
+        email: signer-b@enterprise.com
+```
+
+
+### Define Signer for cluster-scope resources
+You can define a signer for cluster-scope resources similarily. Signer `signer-a` and `signer-b` can sign cluster-scope resources in the example below.
+
+```yaml
+spec:
+  singPolicy:
+    policies:
+    - scope: Cluster
+      signers:
+      - signer-a
+      - signer-b
+```
+
+### Break Glass
+When you need to disable blocking by signature verification in a certain namespace, you can enable break glass mode, which means the request to the namespace without valid signature is allowed during the break glass on. For example, break glass on `secure-ns` namespace can be set on by
+
+```yaml
+spec:
+  signPolicy:
+    breakGlass:
+      - namespaces:
+        - secure-ns
+```
+Break glass on cluster-scope resources can be set on by
+```yaml
+spec:
+  signPolicy:
+    breakGlass:
+      - scope: Cluster
+```
+
+During break glass mode on, the request without signature will be allowed even if protected by RSP, and the label `integrityverifier.io/resourceIntegrity: unverified` will be attached to the resource.
+
+
+### Example of Sign Policy
+
+```yaml
+spec:
+  keyRingConfigs:
+  - sample-keyring
+  signPolicy:
+    policies:
+    - namespaces:
+      - secure-ns
+      signers:
+      - signer-a
+    - namespaces:
+      - '*'
+      excludeNamespaces:
       - secure-ns
       signers:
       - signer-b
@@ -110,9 +147,11 @@ spec:
       - signer-b
     signers:
     - name: signer-a
+      secret: sample-keyring
       subjects:
       - email: secure-ns-signer@enterprise.com
     - name: signer-b
+      secret: sample-keyring
       subjects:
       - email: default-signer@enterprise.com
 ```

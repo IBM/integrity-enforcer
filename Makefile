@@ -214,8 +214,8 @@ test-verify:
 
 .PHONY: test-e2e test-e2e-no-init test-e2e-remote test-e2e-common test-e2e-clean-common
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
-.PHONY: install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-crds delete-operator
-.PHONY: create-ns create-key-ring
+.PHONY: install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-crds delete-operator
+.PHONY: create-ns create-key-ring tag-images-to-local
 
 
 #.PHONY: kind-bootstrap-cluster-dev
@@ -241,7 +241,8 @@ test-e2e-no-init: push-images-to-local test-e2e-common
 test-e2e-remote: test-e2e-common test-e2e-clean-common
 
 # common steps to do e2e test in an existing cluster
-test-e2e-common: check-local-test check-kubeconfig install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test
+test-e2e-common:  check-local-test check-kubeconfig install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test
+
 
 # common steps to clean e2e test resources in an existing cluster
 test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator delete-crds clean-tmp
@@ -270,11 +271,14 @@ delete-kind-cluster:
 
 setup-image: build-images push-images-to-local
 
-push-images-to-local:
-	@echo push image into local registry
+tag-images-to-local:
+	@echo tag image for local registry
 	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
 	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
 	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
+
+push-images-to-local: tag-images-to-local
+	@echo push image into local registry
 	docker push $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
@@ -309,7 +313,7 @@ setup-iv-env: create-ns create-key-ring
 
 create-ns:
 	@echo
-	@echo creating namespaces
+	@echo creating namespace
 	kubectl create ns $(IV_OP_NS)
 
 create-key-ring:
@@ -343,8 +347,14 @@ delete-operator:
 	@echo deleting operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl delete -f -
 
+create-cr:
+	kubectl apply -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityverifier.yaml -n $(IV_OP_NS)
+
+delete-cr:
+	kubectl delete -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityverifier.yaml -n $(IV_OP_NS)
+
 # create a temporary cr with update image names as well as signers
-setup-cr:
+setup-tmp-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into tmp dir
@@ -365,10 +375,10 @@ setup-cr:
 		yq write -i $(TMP_CR_FILE) spec.verifierConfig.ivAdminUserGroup "system:masters,system:cluster-admins" ;\
 	fi
 
-create-cr:
+create-tmp-cr:
 	kubectl apply -f $(TMP_CR_FILE) -n $(IV_OP_NS)
 
-delete-cr:
+delete-tmp-cr:
 	kubectl delete -f $(TMP_CR_FILE) -n $(IV_OP_NS)
 
 
