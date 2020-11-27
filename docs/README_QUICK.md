@@ -295,7 +295,9 @@ If you want to see the result of admission check, you can see the detail by usin
 When you want to remove Integrity Verifier from a cluster, run the uninstaller script [`delete_verifier.sh`](../scripts/delete_verifier.sh).
 ```
 $ cd integrity-verifier
-$ 
+$ make delete-tmp-cr
+$ make delete-operator
+$ make delete-crds
 ```
 
 

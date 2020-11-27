@@ -26,7 +26,12 @@ $ export IV_REPO_ROOT=/repo/integrity-enforcer
 ### Build
 ```
 $ make build-images
+$ make tag-images-to-local
 ```
+
+The make commands refer the steps for
+- Building Integrity Verifier container images
+- Tagging Integrity Verifier container images to be used locally.
 
 Three images are built.
 - `integrity-verifier-operator` is image for operator which manages Integrity Verifier
@@ -49,14 +54,13 @@ $ export DOCKER_PASS=<password>
 
 ### Install IV to cluster
 ```
-$ cd integrity-verifier
 $ make install-crds
 $ make install-operator
 $ make setup-tmp-cr
 $ make create-tmp-cr
 ```
 
-This script includes the steps for
+The make commands refer the steps for
 - Create CRDs
 - Install Integrity Verifier operator
 - Prepare Integrity Verifier custom resource (operator installs IV server automatically)
@@ -66,10 +70,9 @@ This script includes the steps for
 ```
 $ make delete-tmp-cr
 $ make delete-operator
-$ make delete-crds
 ```
 
-This script includes the steps for
+The make command refers to the steps for
 - Delete Integrity Verifier custom resource (operator installs IV server automatically)
 - Delete Integrity Verifier operator
 - Delete CRDs

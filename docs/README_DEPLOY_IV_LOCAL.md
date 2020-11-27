@@ -135,13 +135,15 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
 
     ```
     $ export KUBECONFIG=~/kube/config/minikube
-    $ export IV_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
+    $ export IV_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer      
     ``` 
 
     Execute the following make commands to deploy Integrity Verifier in a cluster.
 
     ```
     $ cd integrity-verifier
+    $ make build-images
+    $ make tag-images-to-local
     $ make install-crds
     $ make install-operator
     ```
@@ -171,5 +173,6 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
     Execute the following script to remove all resources related to IV deployment from cluster.
     ```
     $ cd integrity-verifier
-    $ 
+    $ make delete-tmp-cr
+    $ make delete-operator
     ```

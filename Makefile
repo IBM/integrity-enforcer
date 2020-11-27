@@ -264,12 +264,13 @@ delete-kind-cluster:
 setup-image: build-images push-images-to-local
 
 tag-images-to-local:
-	@echo push image into local registry
+	@echo tag image for local registry
 	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
 	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
 	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 push-images-to-local: tag-images-to-local
+	@echo push image into local registry
 	docker push $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
