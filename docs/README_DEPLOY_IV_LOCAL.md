@@ -101,7 +101,7 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
 
     Edit [`config/samples/apis_v1alpha1_integrityverifier.yaml`](../integrity-verifier-operator/config/samples/apis_v1alpha1_integrityverifier.yaml) to specify a signer for a namespace `secure-ns`.
 
-    Example below shows a signer `SampleSigner` identified by email `sample_signer@signer.com` is configured to sign rosources to be protected in any namespace.
+    Example below shows a signer `SampleSigner` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
     ```yaml
     signPolicy:
@@ -117,7 +117,7 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
       - name: "SampleSigner"
         secret: keyring-secret
         subjects:
-        - email: "sample_signer@signer.com"
+        - email: "signer@enterprise.com"
     ```
 
 

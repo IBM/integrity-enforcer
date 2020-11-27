@@ -89,7 +89,7 @@ spec:
     - name: "SampleSigner"
       secret: keyring-secret
       subjects:
-      - email: "sample_signer@signer.com"
+      - email: "signer@enterprise.com"
   keyRingConfigs:
   - name: keyring-secret
 
