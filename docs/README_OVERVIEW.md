@@ -15,19 +15,16 @@ Integrity Verifier (IV) provides signature-based assurance of integrity for Kube
 - Perform all integrity verification on cluster (admission controller, not in client side)
 - Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 
-​
 ![Scenario](iv-scenario.png)
 
 ## Supported Platforms
-​
 Integrity Verifier works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design.
 Integrity Verifier can be deployed with operator. We have verified the feasibility on the following platforms:
-​
+
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
-- [RedHat OpenShift 4.5 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
-- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.12
+- [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
+- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.14
 - [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
-​
 
 ## How Integrity Verifier works
 - Resources to be protected in each namespace can be defined in the custom resource called `ResourceSigningProfile`. For example, the following snippet shows an example definition of protected resources in a namespace. This `ResourceSigningProfile` resource includes the matching rule for specifiying resources to such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by Integrity Verifier, so any matched request to create/update those resources are verified with signature.  (see [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
@@ -38,16 +35,18 @@ Integrity Verifier can be deployed with operator. We have verified the feasibili
   metadata:
     name: sample-rsp
   spec:
-    rules:
+    targetNamespaceSelector:
+      include:
+      - "secure-ns"
+      exclude:
+      - "kube-*"
+    protectRules:
     - match:
-      - namespace: secure-ns
-        kind: ConfigMap
-      - namespace: secure-ns
-        kind: Deployment
-      - namespace: secure-ns
-        kind: Service
+      - kind: ConfigMap
+      - kind: Deployment
+      - kind: Service
   ```
-​
+  
 - Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
 - Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [Sign Policy](README_CONFIG_SIGNER_POLICY.md).)
 - Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [How to Sign Resources](README_RESOURCE_SIGNATURE.md))
