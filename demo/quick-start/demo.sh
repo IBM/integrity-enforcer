@@ -4,12 +4,13 @@ curl -o demo-magic.sh https://raw.githubusercontent.com/paxtonhare/demo-magic/ma
 
 if [ -f demo-magic.sh ]; then
    . ./demo-magic.sh
+   rm ./demo-magic.sh
 else
    echo "Failed to download demo-magic"
    exit 1
 fi
 
-clear
+#clear
 
 if [ -z "$IV_REPO_ROOT" ]; then
     echo "IV_REPO_ROOT is empty. Please set root directory for IE repository"
@@ -56,31 +57,21 @@ NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "Now, we start to install IntegrityVerifier operator. Please enter."
+p "Now, we are ready to install IntegrityVerifier. Please enter."
 read
 pe "make install-operator"
 echo
-p "===== Integrtity Verifier operator is being deployed in cluster. ====="
+echo "===== Integrtity Verifier operator is being deployed in cluster. ====="
 echo
-NO_WAIT=false
-
+echo "Then, we set up IntegrityVerifier custome resource (CR)."
+make setup-cr
 echo
-NO_WAIT=true
-p "Then, we set up IntegrityVerifier custome resource (CR). Please enter."
-read
-pe "make setup-cr"
+echo "===== Integrity Verifier CR is set up. ====="
 echo
-p "===== Integrity Verifier CR is set up. ====="
+echo "After setting up Integrity Verifier CR,  Let's now deploy Integrity Verfier CR in the cluster."
+make create-cr
 echo
-NO_WAIT=false
-
-echo
-NO_WAIT=true
-p "After setting up Integrity Verifier CR,  Let's now deploy Integrity Verfier CR in the cluster. Please enter."
-read
-pe "make create-cr"
-echo
-p "===== Integrity Verifier CR is created in cluster. ====="
+echo "===== Integrity Verifier CR is created in cluster. ====="
 echo
 NO_WAIT=false
 
@@ -133,7 +124,7 @@ NO_WAIT=false
 echo
 cp ${VERIFIER_OP_DIR}test/deploy/test-configmap.yaml test-configmap.yaml
 NO_WAIT=true
-p "Now, we create a resource with signature. Please enter to see a sample ConfigMap resource."
+p "Now, Please enter to see a sample ConfigMap resource that we would create in cluster."
 read
 pe "cat test-configmap.yaml"
 echo
@@ -145,7 +136,7 @@ p "Try creating the configmap in $NS namespace without signature. Please enter."
 read
 pe "kubectl apply -f test-configmap.yaml -n ${TEST_NS}"
 echo
-p "===== Resource creation request was blocked because no signature for this resource is stored in the cluster. ====="
+p "===== Resource creation request was blocked by Integrity Verifier because no signature for this resource is stored in the cluster. ====="
 read
 NO_WAIT=false
 
@@ -164,18 +155,11 @@ p "Create the ConfigMap resource with signature annotation. Please enter."
 read
 pe "kubectl  apply -f test-configmap-annotation.yaml -n ${TEST_NS}"
 echo
-p "===== It should be successful this time because a corresponding signature is available as annotation in the resource. ====="
+p "===== It should be successful this time because Integrity Verifier successfully verified corresponding signature, available as annotation in the resource. ====="
 read
 NO_WAIT=false.
 
 p "THE END"
-echo
-echo "Deleting deployed resources and temp files..."
-make test-e2e-clean-common --ignore-errors
-
-if [ -f demo-magic.sh ]; then
-   rm demo-magic.sh
-fi
 
 if [ -f test-rsp.yaml ]; then
    rm test-rsp.yaml
@@ -189,4 +173,6 @@ if [ -f test-configmap-annotation.yaml ]; then
    rm test-configmap-annotation.yaml
 fi
 
-
+echo
+echo "Deleting deployed resources and temp files..."
+make test-e2e-clean-common --ignore-errors
