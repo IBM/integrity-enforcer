@@ -212,7 +212,7 @@ test-verify:
 # e2e test section
 ############################################################
 
-.PHONY: test-e2e test-e2e-no-init test-e2e-remote test-e2e-common test-e2e-clean-common
+.PHONY: test-e2e test-e2e-kind test-e2e-remote test-e2e-common test-e2e-clean-common
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
 .PHONY: install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-crds delete-operator
 .PHONY: create-ns create-key-ring tag-images-to-local
@@ -235,7 +235,7 @@ test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 test-e2e: create-kind-cluster setup-image test-e2e-common test-e2e-clean-common delete-kind-cluster
 
 # perform test in an existing kind cluster and do not clean
-test-e2e-no-init: push-images-to-local test-e2e-common
+test-e2e-kind: push-images-to-local test-e2e-common
 
 # perform test in an existing cluster (e.g. ROKS, OCP etc.)
 test-e2e-remote: test-e2e-common test-e2e-clean-common
