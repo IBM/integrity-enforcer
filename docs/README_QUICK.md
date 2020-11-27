@@ -4,16 +4,8 @@
 ​
 The following prerequisites must be satisfied to deploy Integrity Verifier on a cluster.
 - A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
-- Prepare a namespace to deploy Integrity Verifier. (We will use `integrity-verifier-ns` namespace in this document.)
-- All requests to namespaces with label integrity-enforced=true are passed to Integrity Verifier. You can set label to a namespace `secure-ns` by
-  ```
-  kubectl label namespace secure-ns integrity-enforced=true
-  ```
-  or unset it by
-  ```
-  kubectl label namespace secure-ns integrity-enforced-
-  ```
-- A secret resource (iv-certpool-secret / keyring-secret) which contains public key and certificates should be setup for enabling signature verification by Integrity Verifier.
+- Prepare a namespace to deploy Integrity Verifier. (We will use `integrity-verifier-operator-system` namespace in this document.)
+- A secret resource (keyring-secret) which contains public key and certificates should be setup for enabling signature verification by Integrity Verifier.
 
 ---
 
@@ -36,19 +28,23 @@ In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
 You can deploy Integrity Verifier to any namespace. In this document, we will use `integrity-verifier-operator-system` to deploy Integrity Verifier.
 ```
-oc create ns integrity-verifier-ns
-oc project integrity-verifier-ns
+make create-ns
+
 ```
-All the commands are executed on the `integrity-verifier-ns` namespace unless mentioned explicitly.
+We switch to `integrity-verifier-operator-system` namespace.
+```
+oc project integrity-verifier-operator-system
+```
+All the commands are executed on the `integrity-verifier-operator-system` namespace unless mentioned explicitly.
 
 ### Define public key secret in Integrity Verifier
 
 Integrity Verifier requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  Integrity Verifier supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to Integrity Verifier.
 
-First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
+First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `sample_signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
 
 ```
-$ gpg --export signer@enterprise.com > /tmp/pubring.gpg
+$ gpg --export sample_signer@enterprise.com > /tmp/pubring.gpg
 ```
 
 If you do not have any PGP key or you want to use new key, generate new one and export it to a file. See [this GitHub document](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/generating-a-new-gpg-key).
@@ -56,74 +52,84 @@ If you do not have any PGP key or you want to use new key, generate new one and 
 Then, create a secret that includes a pubkey ring for verifying signatures of resources
 
 ```
-oc create secret generic --save-config keyring-secret  -n integrity-verifier-ns --from-file=/tmp/pubring.gpg
+oc create secret generic --save-config keyring-secret  -n integrity-verifier-operator-system --from-file=/tmp/pubring.gpg
 ```
 
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Verifier. For that, configure signPolicy in the following Integrity Verifier Custom Resource [file](../operator/config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Verifier. For that, configure signPolicy in the following Integrity Verifier Custom Resource [file](../operator/config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
 ```yaml
-# Edit operator/config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml
-
+# Edit integrity-verifier-operator/config/samples/apis_v1alpha1_integrityverifier.yaml
 apiVersion: apis.integrityverifier.io/v1alpha1
 kind: IntegrityVerifier
 metadata:
   name: integrity-verifier-server
 spec:
-  ...
+  namespace: integrity-verifier-ns
   verifierConfig:
     verifyType: pgp # x509
-    ...
-    signPolicy:
-      policies:
-      - namespaces:
-        - "*"
-        signers:
-        - "ClusterSigner"
-        - "HelmClusterSigner"
-      # bind signer with a namespace
-      - namespaces:
-        - "secure-ns"
-        signers:
-        - "signer-a"
+    inScopeNamespaceSelector:
+      include:
+      - "*"
+      exclude:
+      - "kube-*"
+      - "openshift-*"
+  signPolicy:
+    policies:
+    - namespaces:
+      - "*"
       signers:
-      - name: "ClusterSigner"
-        subjects:
-        - commonName: "ClusterAdmin"
-      - name: "HelmClusterSigner"
-        subjects:
-        # define cluster-wide signer here
-        - email: signer@enterprise.com
-      ### define per-namespace signer ###
-      - name: "signer-a"
-        subjects:
-        - email: signer@enterprise.com
+      - "SampleSigner"
+    - scope: "Cluster"
+      signers:
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      secret: keyring-secret
+      subjects:
+      - email: "sample_signer@signer.com"
+  keyRingConfigs:
+  - name: keyring-secret
+
+
 ```
+
+
 
 ### Install Integrity Verifier to a cluster
 
 Integrity Verifier can be installed to a cluster using a series of steps which are bundled in a script called [`install_verifier.sh`](../scripts/install_verifier.sh). Before executing the script `install_verifier.sh`, setup local environment as follows:
 - `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
+- `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
+
+`~/kube/config/minikube` is the Kuebernetes config file with credentials for accessing a cluster via `kubectl`.
 
 Example:
 ```
-$ export IV_ENV=remote
+$ export KUBECONFIG=~/kube/config/minikube
 $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
+```
+
+Execute the following make commands to build Integrity Verifier images.
+```
+$ cd integrity-verifier
+$ make build-images
+$ make tag-images-to-local
 ```
 
 Then, execute the following script to deploy Integrity Verifier in a cluster.
 
 ```
-$ cd integrity-verifier
-$ ./scripts/install_verifier.sh
+$ make install-crds
+$ make install-operator
 ```
 
-After successful installation, you should see two pods are running in the namespace `integrity-verifier-ns`.
+After successful installation, you should see two pods are running in the namespace `integrity-verifier-operator-system`.
 
 ```
-$ oc get pod -n integrity-verifier-ns
+$ oc get pod -n integrity-verifier-operator-system
 integrity-verifier-operator-c4699c95c-4p8wp   1/1     Running   0          5m
 integrity-verifier-server-85c787bf8c-h5bnj    2/2     Running   0          82m
 ```
@@ -183,7 +189,7 @@ run the command below for trying to create the configmap in `secure-ns` namespac
 
 ```
 $ oc apply -f /tmp/test-cm.yaml -n secure-ns
-Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-verifier-ns.svc" denied the request: No signature found
+Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-verifier-operator-system.svc" denied the request: No signature found
 ```
 
 
@@ -297,7 +303,6 @@ When you want to remove Integrity Verifier from a cluster, run the uninstaller s
 $ cd integrity-verifier
 $ make delete-tmp-cr
 $ make delete-operator
-$ make delete-crds
 ```
 
 

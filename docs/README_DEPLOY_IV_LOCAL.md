@@ -138,12 +138,16 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
     $ export IV_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer      
     ``` 
 
-    Execute the following make commands to deploy Integrity Verifier in a cluster.
-
+    Execute the following make commands to build Integrity Verifier images.
     ```
     $ cd integrity-verifier
     $ make build-images
     $ make tag-images-to-local
+    ```
+
+    Execute the following make commands to deploy Integrity Verifier in a cluster.
+
+    ```
     $ make install-crds
     $ make install-operator
     ```
