@@ -59,7 +59,11 @@ func NewRequestHandler(config *config.VerifierConfig) *RequestHandler {
 
 func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 
-	reqNamespace := req.Namespace
+	reqNamespace := ""
+	if req.Kind.Kind != "Namespace" && req.Namespace != "" {
+		reqNamespace = req.Namespace
+	}
+
 	//init loader
 	self.loader = loader.NewLoader(self.config, reqNamespace)
 

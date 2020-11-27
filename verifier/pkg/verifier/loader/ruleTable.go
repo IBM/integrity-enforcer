@@ -209,7 +209,7 @@ func (self *RuleItem) CheckNamespace(reqNamespace, verifierNamespace string) boo
 	return namespaceMatched
 }
 
-func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType RuleTableType, verifierNamespace string) *RuleTable {
+func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType RuleTableType, verifierNamespace string, reqc *common.ReqContext) *RuleTable {
 	gvk := sProfile.GroupVersionKind()
 	source := &v1.ObjectReference{
 		APIVersion: gvk.GroupVersion().String(),
@@ -236,6 +236,27 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 		namespaceList, err := coreV1Client.Namespaces().List(context.Background(), listOptions)
 		if err != nil {
 			logger.Error("Failed to get namespaces; ", err.Error())
+		}
+		if reqc != nil && reqc.Kind == "Namespace" {
+			// remove current ns from list
+			if reqc.IsDeleteRequest() || reqc.IsUpdateRequest() {
+				tmpList := []v1.Namespace{}
+				for _, ns := range namespaceList.Items {
+					if ns.GetName() == reqc.Name {
+						continue
+					}
+					tmpList = append(tmpList, ns)
+				}
+				namespaceList.Items = tmpList
+			}
+			// add new ns with reqc.RawObject
+			if reqc.IsUpdateRequest() || reqc.IsCreateRequest() {
+				var newNs *v1.Namespace
+				_ = json.Unmarshal(reqc.RawObject, &newNs)
+				if newNs != nil {
+					namespaceList.Items = append(namespaceList.Items, *newNs)
+				}
+			}
 		}
 
 		matchedNamespaceList := []string{}
