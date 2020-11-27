@@ -64,7 +64,7 @@ echo
 echo "===== Integrtity Verifier operator is being deployed in cluster. ====="
 echo
 echo "Then, we set up IntegrityVerifier custome resource (CR)."
-make setup-cr
+make setup-tmp-cr
 echo
 echo "===== Integrity Verifier CR is set up. ====="
 echo

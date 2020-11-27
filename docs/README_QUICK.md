@@ -2,10 +2,10 @@
 
 ## Prerequisites
 ​
-The following prerequisites must be satisfied to deploy IV on a cluster.
+The following prerequisites must be satisfied to deploy Integrity Verifier on a cluster.
 - A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
-- Prepare a namespace to deploy IV. (We will use `integrity-verifier-ns` namespace in this document.)
-- All requests to namespaces with label integrity-enforced=true are passed to IV. You can set label to a namespace `secure-ns` by
+- Prepare a namespace to deploy Integrity Verifier. (We will use `integrity-verifier-ns` namespace in this document.)
+- All requests to namespaces with label integrity-enforced=true are passed to Integrity Verifier. You can set label to a namespace `secure-ns` by
   ```
   kubectl label namespace secure-ns integrity-enforced=true
   ```
@@ -13,7 +13,7 @@ The following prerequisites must be satisfied to deploy IV on a cluster.
   ```
   kubectl label namespace secure-ns integrity-enforced-
   ```
-- A secret resource (iv-certpool-secret / keyring-secret) which contains public key and certificates should be setup for enabling signature verification by IV.
+- A secret resource (iv-certpool-secret / keyring-secret) which contains public key and certificates should be setup for enabling signature verification by Integrity Verifier.
 
 ---
 
@@ -32,18 +32,18 @@ $ pwd /home/repo/integrity-enforcer
 ```
 In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-### Prepape namespace for installing IV
+### Prepape namespace for installing Integrity Verifier
 
-You can deploy IV to any namespace. In this document, we will use `integrity-verifier-ns` to deploy IV.
+You can deploy Integrity Verifier to any namespace. In this document, we will use `integrity-verifier-operator-system` to deploy Integrity Verifier.
 ```
 oc create ns integrity-verifier-ns
 oc project integrity-verifier-ns
 ```
 All the commands are executed on the `integrity-verifier-ns` namespace unless mentioned explicitly.
 
-### Define public key secret in IV
+### Define public key secret in Integrity Verifier
 
-IV requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IV supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to IV.
+Integrity Verifier requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  Integrity Verifier supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to Integrity Verifier.
 
 First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
 
@@ -102,21 +102,18 @@ spec:
         - email: signer@enterprise.com
 ```
 
-### Install IV to a cluster
+### Install Integrity Verifier to a cluster
 
-IV can be installed to a cluster using a series of steps which are bundled in a script called [`install_verifier.sh`](../scripts/install_verifier.sh). Before executing the script `install_verifier.sh`, setup local environment as follows:
-- `IV_ENV=remote`  (for deploying IV on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IV_LOCAL.md) for deploying IV in minikube)
-- `IV_NS=integrity-verifier-ns` (a namespace where IV to be deployed)
+Integrity Verifier can be installed to a cluster using a series of steps which are bundled in a script called [`install_verifier.sh`](../scripts/install_verifier.sh). Before executing the script `install_verifier.sh`, setup local environment as follows:
 - `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
 
 Example:
 ```
 $ export IV_ENV=remote
-$ export IV_NS=integrity-verifier-ns
 $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
 ```
 
-Then, execute the following script to deploy IV in a cluster.
+Then, execute the following script to deploy Integrity Verifier in a cluster.
 
 ```
 $ cd integrity-verifier
@@ -135,7 +132,7 @@ integrity-verifier-server-85c787bf8c-h5bnj    2/2     Running   0          82m
 
 ## Protect Resources with Integrity Verifier
 ​
-Once IV is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
+Once Integrity Verifier is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
 
 The steps for protecting resources include:
 - Define which reource(s) should be protected.
@@ -143,7 +140,7 @@ The steps for protecting resources include:
 
 ### Define which reource(s) should be protected
 
-You can define which resources should be protected with signature in a cluster by IV. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
+You can define which resources should be protected with signature in a cluster by Integrity Verifier. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
@@ -233,7 +230,7 @@ configmap/test-cm created
 ```
 
 
-IV generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IV server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
+Integrity Verifier generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Verifier server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
 
 If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
 ```json
@@ -293,12 +290,12 @@ If you want to see the result of admission check, you can see the detail by usin
 }
 ```
 
-### Clean up IV from the cluster
+### Clean up Integrity Verifier from the cluster
 
-When you want to remove IV from a cluster, run the uninstaller script [`delete_verifier.sh`](../scripts/delete_verifier.sh).
+When you want to remove Integrity Verifier from a cluster, run the uninstaller script [`delete_verifier.sh`](../scripts/delete_verifier.sh).
 ```
 $ cd integrity-verifier
-$ ./scripts/delete_verifier.sh
+$ 
 ```
 
 

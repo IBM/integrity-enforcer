@@ -9,27 +9,33 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
     ```
     $ git clone https://github.com/IBM/integrity-enforcer.git
     $ cd integrity-verifier
-    $ pwd
-    /home/gajan/go/src/github.com/IBM/integrity-enforcer
+    $ pwd /home/repo/integrity-enforcer
     ```
-
-    Note the absolute path of cloned `integrity-enforcer` source directory.
+    In this document, we clone the code in `/home/repo/integrity-enforcer`.
     
-2.  Prepare a namespace to deploy IV. 
+2.  Prepare a namespace to deploy Integrity Verifier. 
 
-    The following example show that we use `integrity-verifier-ns` as default namespace for IV. 
+    The following command uses `integrity-verifier-operator-system` as default namespace for Integrity Verifier. 
     ```
-    oc create ns integrity-verifier-ns
+    make create-ns
     ```
-    We swtich to  `integrity-verifier-ns` namespace.
+    We swtich to `integrity-verifier-operator-system` namespace.
+    ```
+    oc project integrity-verifier-operator-system
+    ```
+    
+3. Define a public key secret for verifying signature by Integrity Verifier.
 
+    Integrity Verifier requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  Integrity Verifier supports X509 or PGP key for signing resources.
+
+    By default, Integrity Verifier provides a key setup. 
+    
+    If you would like to use default key setup, the following command creates a public key secret for verifying signature
     ```
-    oc project integrity-verifier-ns
+    make create-key-ring
     ```
 
-3. Define a public key secret for verifying signature by IV.
-
-    IV requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IV supports X509 or PGP key for signing resources.
+    If you would like to use your own key, please follow the steps:
 
     1. If you do not have a PGP key, generate PGP key as follows.
    
@@ -78,19 +84,24 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
               pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
             ```
 
-    4.  Create `keyring-secret` in a namespace `integrity-verifier-ns` in the cluster.
+    4.  Create `keyring-secret` in a namespace ``integrity-verifier-operator-system`` in the cluster.
 
         ```
-        $ oc create -f  /tmp/keyring-secret.yaml -n integrity-verifier-ns
+        $ oc create -f  /tmp/keyring-secret.yaml -n `integrity-verifier-operator-system`
         ```
 
 4. Define which signers (identified by email) should sign the resources in a specific namespace.
 
-    Configure signPolicy in the following `integrity-verifier` Custom Resource file:
+    If you use default key setup, the following command setup signers. 
+    ```
+    make setup-tmp-cr
+    ```
 
-    Edit [`config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml`](../operator/deploy/crds/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml) to specify a signer for a namespace `secure-ns`.
+    If you use your own key setup, configure signPolicy in the following `integrity-verifier` Custom Resource file:
 
-    Example below shows a signer `service-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
+    Edit [`config/samples/apis_v1alpha1_integrityverifier.yaml`](../integrity-verifier-operator/config/samples/apis_v1alpha1_integrityverifier.yaml) to specify a signer for a namespace `secure-ns`.
+
+    Example below shows a signer `SampleSigner` identified by email `sample_signer@signer.com` is configured to sign rosources to be protected in any namespace.
 
     ```yaml
     signPolicy:
@@ -98,53 +109,59 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
       - namespaces:
         - "*"
         signers:
-          - "ClusterSigner"
-          - "HelmClusterSigner"
-      - namespaces:
-        - secure-ns
+        - "SampleSigner"
+      - scope: "Cluster"
         signers:
-        - service-a
+        - "SampleSigner"
       signers:
-      - name: "ClusterSigner"
+      - name: "SampleSigner"
+        secret: keyring-secret
         subjects:
-        - commonName: "ClusterAdmin"
-      - name: "HelmClusterSigner"
-        subjects:
-        - email: cluster_signer@signer.com
-      - name: service-a
-        subjects:
-        - email: signer@enterprise.com
+        - email: "sample_signer@signer.com"
     ```
 
-5. Install IV to a cluster
 
-    IV can be installed to cluster using a series of steps which are bundled in a script `./scripts/install_verifier.sh`.
+5. Install Integrit Verifier to a cluster
+
+    Integrity Verifier can be installed to cluster using a series of steps which are bundled in make commands.
     
-    Before execute the script `./scripts/install_verifier.sh`, setup local environment as follows:
-    - `IV_ENV=local`  (for deploying IV on minikube cluster)
-    - `IV_NS=integrity-verifier-ns` (a namespace where IV to be deployed)
+    Before execute the make command, setup local environment as follows:
     - `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository>`
+    - `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
 
-    The following example shows how to set up a local envionement.
+    `~/kube/config/minikube` is the Kuebernetes config file with credentials for accessing a cluster via `kubectl`.
+
+    The following example shows how to set up a local envionement.  
 
     ```
-    $ export IV_ENV=local 
-    $ export IV_NS=integrity-verifier-ns
+    $ export KUBECONFIG=~/kube/config/minikube
     $ export IV_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer
     ``` 
 
-    Execute the following script to deploy IV in a cluster.
+    Execute the following make commands to deploy Integrity Verifier in a cluster.
+
     ```
     $ cd integrity-verifier
-    $ ./scripts/install_verifier.sh
+    $ make install-crds
+    $ make install-operator
+    ```
+
+    If you use default key setup, the following command create Integrity Verifier CR in cluster. 
+    ```
+    $ make create-tmp-cr
+    ```
+
+    If you use your own key setup, the following command create Integrity Verifier CR in cluster. 
+    ```
+    $ make create-cr
     ```
 
 6. Confirm if `integrity-verifier` is running successfully in a cluster.
     
-    Check if there are two pods running in the namespace `integrity-verifier-ns`: 
+    Check if there are two pods running in the namespace `integrity-verifier-operator-system`: 
         
     ```
-    $ oc get pod -n integrity-verifier-ns
+    $ oc get pod -n integrity-verifier-operator-system
     integrity-verifier-operator-c4699c95c-4p8wp   1/1     Running   0          5m
     integrity-verifier-server-85c787bf8c-h5bnj    2/2     Running   0          82m
     ```
@@ -154,5 +171,5 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
     Execute the following script to remove all resources related to IV deployment from cluster.
     ```
     $ cd integrity-verifier
-    $ ./scripts/delete_verifier.sh
+    $ 
     ```
