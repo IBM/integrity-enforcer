@@ -17,3 +17,12 @@ func Kubectl(args ...string) error {
 	err_w := cmd.Wait()
 	return err_w
 }
+
+func KubectlOut(args ...string) (error, string) {
+	cmd := exec.Command("kubectl", args...)
+	out, err := cmd.Output()
+	if err != nil {
+		return err, ""
+	}
+	return nil, string(out)
+}
