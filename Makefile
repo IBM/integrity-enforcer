@@ -215,6 +215,7 @@ test-verify:
 .PHONY: test-e2e test-e2e-no-init test-e2e-remote test-e2e-common test-e2e-clean-common
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
 .PHONY: install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-crds delete-operator
+.PHONY: create-ns create-key-ring
 
 
 #.PHONY: kind-bootstrap-cluster-dev
@@ -242,7 +243,7 @@ test-e2e-remote: test-e2e-common test-e2e-clean-common
 test-e2e-common: check-kubeconfig install-crds setup-iv-env install-operator setup-cr setup-test-resources setup-test-env e2e-test
 
 # common steps to clean e2e test resources in an existing cluster
-test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator clean-tmp
+test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator delete-crds clean-tmp
 
 check-kubeconfig:
 	@if [ -z "$(KUBECONFIG)" ]; then \
@@ -297,10 +298,14 @@ e2e-test:
 # setup iv
 ############################################################
 
-setup-iv-env:
+setup-iv-env: create-ns create-key-ring
+
+create-ns:
 	@echo
 	@echo creating namespaces
 	kubectl create ns $(IV_OP_NS)
+
+create-key-ring:
 	@echo creating keyring-secret
 	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
 
