@@ -26,15 +26,19 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
+	skip_delete_cr_test                 = false
+	skip_default_user_test              = true
+	kubeconfig_user                     = os.Getenv("KUBE_CONTEXT_USERNAME")
 	iv_namespace                        = os.Getenv("IV_OP_NS")
 	test_namespace                      = os.Getenv("TEST_NS")
-	test_namespace2                     = "new-test-namespace"
+	test_namespace2                     = "test-ns2"
 	verifier_dir                        = os.Getenv("VERIFIER_OP_DIR")
 	deploy_dir                          = verifier_dir + "test/deploy/"
 	kubeconfigManaged                   = os.Getenv("KUBECONFIG")
 	integrityVerifierOperatorCR         = "/tmp/" + "apis_v1alpha1_integrityverifier.yaml"
 	integrityVerifierOperatorCR_updated = "/tmp/" + "apis_v1alpha1_integrityverifier_update.yaml"
 	test_rsp                            = deploy_dir + "test-rsp.yaml"
+	test_rsp_iv                         = deploy_dir + "test-rsp-iv-ns.yaml"
 	test_configmap                      = deploy_dir + "test-configmap.yaml"
 	test_configmap_updated              = deploy_dir + "test-configmap-updated.yaml"
 	test_configmap2                     = deploy_dir + "test-configmap-annotation.yaml"

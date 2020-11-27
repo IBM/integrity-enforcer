@@ -26,3 +26,36 @@ func KubectlOut(args ...string) (error, string) {
 	}
 	return nil, string(out)
 }
+
+func ChangeKubeContextToDefaultUser(framework *Framework, namespace, expected string) error {
+	var default_user = "test-ns-user"
+	secret, err := GetSecretName(framework, namespace, expected)
+	if err != nil {
+		return err
+	}
+	cmdstr := "kubectl get secret " + secret + " -o json | jq -r .data.token | base64 -D"
+	out, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+	if cmd_err != nil {
+		return cmd_err
+	}
+	cmdstr = "kubectl config set-credentials " + default_user + " --token=" + string(out)
+	_, cmd_err = exec.Command("sh", "-c", cmdstr).Output()
+	if cmd_err != nil {
+		return cmd_err
+	}
+	cmdstr = "kubectl config set-context --current --user=" + default_user
+	_, cmd_err = exec.Command("sh", "-c", cmdstr).Output()
+	if cmd_err != nil {
+		return cmd_err
+	}
+	return nil
+}
+
+func ChangeKubeContextToKubeAdmin() error {
+	cmdstr := "kubectl config set-context --current --user=" + kubeconfig_user
+	_, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+	if cmd_err != nil {
+		return cmd_err
+	}
+	return nil
+}

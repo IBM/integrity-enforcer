@@ -99,6 +99,19 @@ func LoadConfigMap(framework *Framework, namespace, expected string) (error, *co
 	return nil, cm
 }
 
+func GetSecretName(framework *Framework, namespace, expected string) (string, error) {
+	secrets, err := framework.KubeClientSet.CoreV1().Secrets(namespace).List(goctx.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, secret := range secrets.Items {
+		if strings.HasPrefix(secret.Name, expected) {
+			return secret.Name, nil
+		}
+	}
+	return "", fmt.Errorf("Fail to get secret: %v", expected)
+}
+
 func CheckIVResources(framework *Framework, kind, namespace, expected string) error {
 	if kind == "Deployment" {
 		_, err := framework.KubeClientSet.AppsV1().Deployments(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
