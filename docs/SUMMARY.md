@@ -9,6 +9,4 @@
 * [Development](README_DEVELOPMENT.md)
 * [Integrity Verifier Custom Resource](README_IV_OPERATOR_CR.md)
 * [Example: Tekton Signing Pipeline](README_SAMPLE_TEKTON_SIGNING_PIPELINE.md)
-
-
-
+* [Demo](README_DEMO.md)
