@@ -4,4 +4,4 @@ metadata:
   name: test-configmap
 data:
   color: purple
-  comment: whitelisted part.
+  comment: changed successfully!
