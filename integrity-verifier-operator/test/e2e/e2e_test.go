@@ -17,6 +17,7 @@ package e2e
 import (
 	goctx "context"
 	"fmt"
+	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo" //nolint:golint
@@ -27,8 +28,8 @@ import (
 
 var _ = Describe("Test integrity verifier", func() {
 	Describe("Check operator status in ns:"+iv_namespace, func() {
-		framework := initFrameWork()
 		It("Operator Pod should be Running Status", func() {
+			framework := initFrameWork()
 			var timeout int = 120
 			expected := "integrity-verifier-operator-controller-manager"
 			Eventually(func() error {
@@ -36,16 +37,19 @@ var _ = Describe("Test integrity verifier", func() {
 			}, timeout, 1).Should(BeNil())
 		})
 		It("Operator sa should be created", func() {
+			framework := initFrameWork()
 			expected := iv_op_sa
 			err := CheckIVResources(framework, "ServiceAccount", iv_namespace, expected)
 			Expect(err).To(BeNil())
 		})
 		It("Operator role should be created", func() {
+			framework := initFrameWork()
 			expected := iv_op_role
 			err := CheckIVResources(framework, "Role", iv_namespace, expected)
 			Expect(err).To(BeNil())
 		})
 		It("Operator rb should be created", func() {
+			framework := initFrameWork()
 			expected := iv_op_rb
 			err := CheckIVResources(framework, "RoleBinding", iv_namespace, expected)
 			Expect(err).To(BeNil())
@@ -53,8 +57,8 @@ var _ = Describe("Test integrity verifier", func() {
 	})
 
 	Describe("Check iv server in ns:"+iv_namespace, func() {
-		framework := initFrameWork()
 		It("Server should be created properly", func() {
+			framework := initFrameWork()
 			var timeout int = 300
 			expected := "integrity-verifier-server"
 			cmd_err := Kubectl("apply", "-f", integrityVerifierOperatorCR, "-n", iv_namespace)
@@ -66,9 +70,8 @@ var _ = Describe("Test integrity verifier", func() {
 	})
 
 	Describe("Test iv resources", func() {
-		// defer GinkgoRecover()
-		framework := initFrameWork()
 		It("Iv resources should be created properly", func() {
+			framework := initFrameWork()
 			vc_name := "iv-config"
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
@@ -84,6 +87,8 @@ var _ = Describe("Test integrity verifier", func() {
 			}
 		})
 		It("Deleting iv resources should be blocked", func() {
+			time.Sleep(time.Second * 15)
+			framework := initFrameWork()
 			vc_name := "iv-config"
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
@@ -103,33 +108,66 @@ var _ = Describe("Test integrity verifier", func() {
 				}
 			}
 		})
-		It("IV Resources are changed when IV CR is updated", func() {
-			var timeout int = 60
-			expected := DefaultSignPolicyCRName
-			var generation int64
-			sp, err := framework.SignPolicyClient.SignPolicies(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			generation = sp.Generation
-			cmd_err := Kubectl("apply", "-f", integrityVerifierOperatorCR_updated, "-n", iv_namespace)
-			Expect(cmd_err).To(BeNil())
-			time.Sleep(time.Second * 15)
-			Eventually(func() error {
-				sp, err := framework.SignPolicyClient.SignPolicies(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
-				if sp.Generation == generation {
-					return fmt.Errorf("SignPolicy is not changed: %v", expected)
-				}
-				return nil
-			}, timeout, 1).Should(BeNil())
-		})
+		// It("IV Resources are changed when IV CR is updated", func() {
+		// 	framework := initFrameWork()
+		// 	var timeout int = 120
+		// 	expected := DefaultSignPolicyCRName
+		// 	var generation int64
+		// 	sp, err := framework.SignPolicyClient.SignPolicies(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		// 	Expect(err).To(BeNil())
+		// 	generation = sp.Generation
+		// 	cmd_err := Kubectl("apply", "-f", integrityVerifierOperatorCR_updated, "-n", iv_namespace)
+		// 	Expect(cmd_err).To(BeNil())
+		// 	time.Sleep(time.Second * 15)
+		// 	Eventually(func() error {
+		// 		sp, err := framework.SignPolicyClient.SignPolicies(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		if sp.Generation == generation {
+		// 			return fmt.Errorf("SignPolicy is not changed: %v", expected)
+		// 		}
+		// 		return nil
+		// 	}, timeout, 1).Should(BeNil())
+		// })
 	})
 
 	Describe("Test integrity verifier server", func() {
-		framework := initFrameWork()
 		Context("Test integrity verifier function", func() {
+			It("Test rsources should be unmonitored if rsp is not exist.", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "unmonitored-configmap"
+				server_name := "integrity-verifier-server"
+				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				server := GetPodName(framework, iv_namespace, server_name)
+				Eventually(func() error {
+					cmdstr := "kubectl logs " + server + " -c server -n " + iv_namespace + " | grep " + expected
+					out, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+					// fmt.Print("out1: ", string(out), "\n")
+					if cmd_err != nil {
+						return cmd_err
+					}
+					cmdstr = "kubectl logs " + server + " -c forwarder -n " + iv_namespace + " | grep " + expected + " | grep unprotected"
+					out2, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+					// fmt.Print("out2: ", string(out2), "\n")
+					if cmd_err != nil {
+						return cmd_err
+					}
+					if len(string(out)) != 0 && len(string(out2)) != 0 {
+						return nil
+					}
+					return fmt.Errorf("Fail to check unmonitored resource")
+				}, timeout, 1).Should(BeNil())
+				Eventually(func() error {
+					return CheckConfigMap(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+				cmd_err = Kubectl("delete", "cm", expected, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+			})
 			It("Test RSP should be created properly", func() {
+				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-rsp"
 				cmd_err := Kubectl("apply", "-f", test_rsp, "-n", test_namespace)
@@ -143,8 +181,9 @@ var _ = Describe("Test integrity verifier", func() {
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Test unsigned resouce should be blocked", func() {
+				framework := initFrameWork()
 				time.Sleep(time.Second * 30)
-				var timeout int = 60
+				var timeout int = 120
 				expected := "test-configmap"
 				cmd_err := Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
 				Expect(cmd_err).NotTo(BeNil())
@@ -153,7 +192,8 @@ var _ = Describe("Test integrity verifier", func() {
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Test (ResourceSignature) signed resouce should be allowed", func() {
-				var timeout int = 60
+				framework := initFrameWork()
+				var timeout int = 120
 				expected := "test-configmap"
 				cmd_err := Kubectl("apply", "-f", test_configmap_rs, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
@@ -164,7 +204,8 @@ var _ = Describe("Test integrity verifier", func() {
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Test (Annotation) signed resouce should be allowed", func() {
-				var timeout int = 60
+				framework := initFrameWork()
+				var timeout int = 120
 				expected := "test-configmap2"
 				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
@@ -172,74 +213,136 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
+			It("Test changing whitelisted part should be allowed", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap"
+				server_name := "integrity-verifier-server"
+				server := GetPodName(framework, iv_namespace, server_name)
+				// apply cm
+				cmd_err := Kubectl("apply", "-f", test_configmap_updated, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					// check forwarder log
+					cmdstr := "kubectl logs " + server + " -c forwarder -n " + iv_namespace + " | grep " + expected + " | grep no-mutation | grep UPDATE"
+					out, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+					if cmd_err != nil {
+						return cmd_err
+					}
+					if len(string(out)) == 0 {
+						return fmt.Errorf("Fail to find expected forwarder log")
+					}
+					return nil
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Test request is allowed if filtered by IgnoredKind", func() {
+			})
+			It("Test request is allowed if filtered by IgnoredSA", func() {
+			})
+			It("Test request is allowed if error occured", func() {
+			})
+			It("Test unsigned resource can be created if filtered by exclude rule", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap3"
+				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					return CheckConfigMap(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			// It("Test RSP should be deleted properly", func() {
+			// 	framework := initFrameWork()
+			// 	var timeout int = 120
+			// 	expected := "test-rsp"
+			// 	cmd_err := Kubectl("delete", "-f", test_rsp, "-n", test_namespace)
+			// 	Expect(cmd_err).To(BeNil())
+			// 	Eventually(func() error {
+			// 		_, err := framework.RSPClient.ResourceSigningProfiles(test_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+			// 		return err
+			// 	}, timeout, 1).ShouldNot(BeNil())
+			// })
+			// It("Test unsigned resouce should not blocked", func() {
+			// 	framework := initFrameWork()
+			// 	var timeout int = 120
+			// 	expected := "test-configmap4"
+			// 	cmd_err := Kubectl("create", "cm", test_configmap, "-n", test_namespace)
+			// 	Expect(cmd_err).To(BeNil())
+			// 	Eventually(func() error {
+			// 		return CheckConfigMap(framework, test_namespace, expected)
+			// 	}, timeout, 1).Should(BeNil())
+			// })
 		})
-		// Context("RSP in IV NS is effective for blocking unsigned admission on newly created NS", func() {
-		// 	It("Test RSP should be created properly", func() {
-		// 		var timeout int = 60
-		// 		expected := "test-rsp"
-		// 		By("Creating test rsp: " + test_rsp + " ns: " + iv_namespace)
-		// 		cmd_err := Kubectl("apply", "-f", test_rsp, "-n", iv_namespace)
-		// 		Expect(cmd_err).To(BeNil())
-		// 		Eventually(func() error {
-		// 			_, err := framework.RSPClient.ResourceSigningProfiles(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
-		// 			if err != nil {
-		// 				return err
-		// 			}
-		// 			return nil
-		// 		}, timeout, 1).Should(BeNil())
-		// 	})
-		// 	It("Test unsigned resource should be blocked in new namespace", func() {
-		// 		time.Sleep(time.Second * 15)
-		// 		var timeout int = 60
-		// 		expected := "test-configmap"
-		// 		By("Creating new namespace: " + test_namespace2)
-		// 		cmd_err := Kubectl("create", "ns", test_namespace2)
-		// 		Expect(cmd_err).To(BeNil())
-		// 		By("Creating test configmap in ns: " + test_namespace2)
-		// 		cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace2)
-		// 		Expect(cmd_err).NotTo(BeNil())
-		// 		Eventually(func() error {
-		// 			return CheckEventNoSignature(framework, test_namespace, expected)
-		// 		}, timeout, 1).Should(BeNil())
-		// 	})
-		// 	It("Test signed resource should be allowed in new namespace", func() {
-		// 		var timeout int = 60
-		// 		expected := "test-configmap2"
-		// 		By("Creating test configmap in ns: " + test_namespace2)
-		// 		cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace2)
-		// 		Expect(cmd_err).To(BeNil())
-		// 		Eventually(func() error {
-		// 			return CheckConfigMap(framework, test_namespace2, expected)
-		// 		}, timeout, 1).Should(BeNil())
-		// 	})
-		// })
+		Context("RSP in IV NS is effective for blocking unsigned admission on newly created NS", func() {
+			It("Test RSP should be created properly", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-rsp"
+				By("Creating test rsp: " + test_rsp + " ns: " + iv_namespace)
+				cmd_err := Kubectl("apply", "-f", test_rsp, "-n", iv_namespace)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					_, err := framework.RSPClient.ResourceSigningProfiles(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+					if err != nil {
+						return err
+					}
+					return nil
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Test unsigned resource should be blocked in new namespace", func() {
+				framework := initFrameWork()
+				time.Sleep(time.Second * 15)
+				var timeout int = 120
+				expected := "test-configmap"
+				By("Creating new namespace: " + test_namespace2)
+				cmd_err := Kubectl("create", "ns", test_namespace2)
+				Expect(cmd_err).To(BeNil())
+				By("Creating test configmap in ns: " + test_namespace2)
+				cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace2)
+				Expect(cmd_err).NotTo(BeNil())
+				Eventually(func() error {
+					return CheckEventNoSignature(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Test signed resource should be allowed in new namespace", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap2"
+				By("Creating test configmap in ns: " + test_namespace2)
+				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace2)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					return CheckConfigMap(framework, test_namespace2, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+		})
 	})
 
-	Describe("Test integrity verifier resources: delete", func() {
-		framework := initFrameWork()
-		It("Server and iv resources should be deleted properly", func() {
-			vc_name := "iv-config"
-			By("Load iv resource list")
-			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
-			By("Server should be deleted properly")
-			var timeout int = 600
-			expected := "integrity-verifier-server"
-			cmd_err := Kubectl("delete", "-f", integrityVerifierOperatorCR, "-n", iv_namespace)
-			Expect(cmd_err).To(BeNil())
-			Eventually(func() error {
-				return CheckPodStatus(framework, iv_namespace, expected)
-			}, timeout, 1).ShouldNot(BeNil())
-			By("Iv resources should be deleted properly")
-			for _, ivr := range iv_resource_list {
-				fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
-				if ivr.Name == "" || ivr.Kind == "IntegrityVerifier" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "integrity-verifier-operator-controller-manager" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
-					continue
-				}
-				err := CheckIVResources(framework, ivr.Kind, ivr.Namespace, ivr.Name)
-				Expect(err).NotTo(BeNil())
-			}
-		})
-	})
+	// Describe("Test integrity verifier resources: delete", func() {
+	// 	It("Server and iv resources should be deleted properly", func() {
+	// 		framework := initFrameWork()
+	// 		vc_name := "iv-config"
+	// 		By("Load iv resource list")
+	// 		vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
+	// 		Expect(err).To(BeNil())
+	// 		iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+	// 		By("Server should be deleted properly")
+	// 		var timeout int = 1200
+	// 		expected := "integrity-verifier-server"
+	// 		cmd_err := Kubectl("delete", "-f", integrityVerifierOperatorCR, "-n", iv_namespace)
+	// 		Expect(cmd_err).To(BeNil())
+	// 		Eventually(func() error {
+	// 			return CheckPodStatus(framework, iv_namespace, expected)
+	// 		}, timeout, 1).ShouldNot(BeNil())
+	// 		By("Iv resources should be deleted properly")
+	// 		for _, ivr := range iv_resource_list {
+	// 			fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
+	// 			if ivr.Name == "" || ivr.Kind == "IntegrityVerifier" || ivr.Kind == "SecurityContextConstraints" || ivr.Kind == "PodSecurityPolicy" || ivr.Name == "integrity-verifier-operator-controller-manager" || ivr.Name == "helmreleasemetadatas.apis.integrityverifier.io" {
+	// 				continue
+	// 			}
+	// 			err := CheckIVResources(framework, ivr.Kind, ivr.Namespace, ivr.Name)
+	// 			Expect(err).NotTo(BeNil())
+	// 		}
+	// 	})
+	// })
 })

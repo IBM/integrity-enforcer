@@ -228,6 +228,7 @@ TEST_SECRET=keyring_secret
 TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
 TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
 
+
 test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 # perform test in a kind cluster after creating the cluster
 test-e2e: create-kind-cluster setup-image test-e2e-common test-e2e-clean-common delete-kind-cluster
@@ -346,6 +347,11 @@ setup-cr:
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	@if [ "$(TEST_LOCAL)" ]; then \
+		echo enable logAllResponse ; \
+		yq write -i $(TMP_CR_FILE) spec.verifierConfig.log.logLevel trace ;\
+		yq write -i $(TMP_CR_FILE) spec.verifierConfig.log.logAllResponse true ;\
+	fi
 
 create-cr:
 	kubectl apply -f $(TMP_CR_FILE) -n $(IV_OP_NS)

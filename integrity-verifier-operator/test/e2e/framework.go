@@ -36,6 +36,7 @@ var (
 	integrityVerifierOperatorCR_updated = "/tmp/" + "apis_v1alpha1_integrityverifier_update.yaml"
 	test_rsp                            = deploy_dir + "test-rsp.yaml"
 	test_configmap                      = deploy_dir + "test-configmap.yaml"
+	test_configmap_updated              = deploy_dir + "test-configmap-updated.yaml"
 	test_configmap2                     = deploy_dir + "test-configmap-annotation.yaml"
 	test_configmap_rs                   = deploy_dir + "test-configmap-rs.yaml"
 	DefaultSignPolicyCRName             = "sign-policy"

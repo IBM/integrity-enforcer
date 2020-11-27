@@ -6,3 +6,11 @@ spec:
   protectRules:
   - match:
     - kind: ConfigMap
+    exclude:
+    - name: test-configmap3
+  ignoreAttrs:
+  - attrs:
+    - data.comment
+    match:
+    - name: test-configmap
+      kind: ConfigMap
