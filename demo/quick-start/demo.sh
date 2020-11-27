@@ -162,10 +162,6 @@ NO_WAIT=false.
 
 p "THE END"
 
-if [ -f demo-magic.sh ]; then
-   rm demo-magic.sh
-fi
-
 if [ -f test-rsp.yaml ]; then
    rm test-rsp.yaml
 fi
