@@ -235,7 +235,7 @@ test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
 test-e2e: create-kind-cluster setup-image test-e2e-common test-e2e-clean-common delete-kind-cluster
 
 # perform test in an existing kind cluster and do not clean
-test-e2e-no-init: push-images-to-local test-e2e-common
+test-e2e-kind: push-images-to-local test-e2e-common
 
 # perform test in an existing cluster (e.g. ROKS, OCP etc.)
 test-e2e-remote: test-e2e-common test-e2e-clean-common
