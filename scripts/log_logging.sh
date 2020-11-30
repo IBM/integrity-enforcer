@@ -19,15 +19,15 @@ if ! [ -x "$(command -v kubectl)" ]; then
     exit 1
 fi
 
-if [ -z "$IE_NS" ]; then
-    echo "IE_NS is empty. Please set namespace name for integrity-enforcer."
+if [ -z "$IV_NS" ]; then
+    echo "IV_NS is empty. Please set namespace name for integrity-verifier."
     exit 1
 fi
 
-IE_FORWARDER_POD=`kubectl get pod -n ${IE_NS} | grep integrity-enforcer-server | grep Running | awk '{print $1}'`
-if [ -z "$IE_FORWARDER_POD" ]; then
-    echo "IE_FORWARDER_POD is empty. There is no running integrity-enforcer-server"
+IV_FORWARDER_POD=`kubectl get pod -n ${IV_NS} | grep integrity-verifier-server | grep Running | awk '{print $1}'`
+if [ -z "$IV_FORWARDER_POD" ]; then
+    echo "IV_FORWARDER_POD is empty. There is no running integrity-verifier-server"
     exit 1
 fi
 
-kubectl logs -f -n ${IE_NS} ${IE_FORWARDER_POD} -c forwarder
+kubectl logs -f -n ${IV_NS} ${IV_FORWARDER_POD} -c forwarder

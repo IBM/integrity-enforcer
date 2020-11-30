@@ -1,0 +1,30 @@
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: IntegrityVerifier
+metadata:
+  name: integrity-verifier-server
+spec:
+  namespace: integrity-verifier-operator-system
+  verifierConfig:
+    verifyType: pgp # x509
+    inScopeNamespaceSelector:
+      include:
+      - "*"
+      exclude:
+      - "kube-*"
+      - "openshift-*"
+  signPolicy:
+    policies:
+    - namespaces:
+      - "*"
+      signers:
+      - "SampleSigner"
+    - scope: "Cluster"
+      signers:
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      secret: keyring-secret
+      subjects:
+      - email: "sample_signer@signer.com"
+  keyRingConfigs:
+  - name: keyring-secret

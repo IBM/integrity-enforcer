@@ -1,43 +1,45 @@
 # Define Protected Resources
 
 
-## Create Resource Protection Profile
-You can define which resources should be protected with signature in IE. For resources in a namespace, custom resource `ResourceProtectionProfile` (RPP) is created in the same namespace. The example below shows a definition to protect config map and service resource in `secure-ns` namespace. Only a single RPP can be defined in each namespace.
+## Create Resource Signing Profile
+You can define which resources should be protected with signature by Integrity Verifier.
+For resources in a namespace, custom resource `ResourceSigningProfile` (RSP) is created in the same namespace.
+The example below shows a definition to protect ConfigMap and Service resource in `secure-ns` namespace.
 
 ```yaml
-apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
   namespace: secure-ns
 spec:
-  rules:
+  protectRules:
   - match:
     - kind: ConfigMap
     - kind: Service
 ```
 
-If you are cluster-admin role, you can create these resource by
+You can create these resource by
 
 ```
-oc apply -f sample-rpp.yaml -n secure-ns
+oc apply -f sample-rsp.yaml -n secure-ns
 ```
 
-This profile become effective in IE instantly for evaluating any further incoming admission requests.
+This profile become available instantly after creation, and any further incoming admission requests that match this profile will be evaluated by signature verification in IV.
 
-You can create these resource with valid signature even if you are not in cluster-admin role. It should be signed by a valid signer defined in the [Sign Policy](README_CONFIG_SIGNER_POLICY.md).
 
 ## Rule Syntax
 You can list rules to define protect resources.
 Rule has `match` and `exclude` fields.
-The rules can be defined with the fields `namespace, name, operation, apiVersion, apiGroup, kind, username`. In each field, values can be listed with "__,__" and "__*__" can be used as a wildcard.
+The rules can be defined with the fields `name, operation, apiVersion, apiGroup, kind, username`.
+In each field, values can be listed with "__,__" and "__*__" can be used as a wildcard.
 
 If you want to exclude some resources from matched resources, you can set rules in `exclude` field.
 
-For example, the rule below covers any config map except name `unprotected-cm` and any resources in apiGroup `rbac.authorization.k8s.io` in the same namespace.
+For example, the rule below covers any ConfigMap except name `unprotected-cm` and any resources in apiGroup `rbac.authorization.k8s.io` in the same namespace.
 
-```
-rules:
+```yaml
+protectRules:
 - match:
   - kind: ConfigMap
   exclude:
@@ -47,10 +49,10 @@ rules:
   - apiGroup: rbac.authorization.k8s.io
 ```
 
-Another example below is the rule below covers any resources in the same namespace.
+Another example below is the rule covers any resources in the same namespace.
 
-```
-rules:
+```yaml
+protectRules:
 - match:
   - kind: "*"
 ```
@@ -60,87 +62,150 @@ rules:
 
 The resources covered by the rule above cannot be created/updated without signature, but you may want to define cases for allowing requests in certain situations.
 
-You can use `ignoreServiceAccount` to define service accounts are allowed to request for matched resources. For example, any requests by `secure-operator` service account is allowed in `secure-ns`
+You can use `ignoreRules` to define a condition for allowing some requests that match this rule.
+For example, by the below RSP, all namespaced requests are protected in this namespace, but only requests by `secure-operator` ServiceAccount is allowed without signature.
 
 ```yaml
-ignoreServiceAccount:
+protectRules:
 - match:
-    kind: "*"
-  serviceAccountName:
-  - system:serviceaccount:secure-ns:secure-operator
+  - kind: "*"
+ignoreRules:
+- match:
+  - username: "system:serviceaccount:secure-ns:secure-operator"
 ```
 
-You can also set rules to allow some changes in the resource even without valid signature. For example, changes in attribute `data.comment1` in a config map `protected-cm` is allowed.
+## Define force check patterns (override allow pattern)
+You can also set rules to override allow patterns.
+For example, the following RSP will protect all requests in the namespace except ones by `secure-operator` ServiceAccount, but only the requests that are Secret kind will be protected with signature because it is specified in `forceCheckRules`.
+
+
+```yaml
+protectRules:
+- match:
+  - kind: "*"
+ignoreRules:
+- match:
+  - username: "system:serviceaccount:secure-ns:secure-operator"
+forceCheckRules:
+- match:
+  - kind: "Secret"
+```
+
+## Define allow change patterns
+
+You can also set rules to allow some changes in the resource even without valid signature. For example, changes in attribute `data.comment1` in a ConfigMap `protected-cm` is allowed.
 
 ```yaml
 ignoreAttrs:
 - attrs:
   - data.comment1
   match:
-    name: protected-cm
+  - name: protected-cm
     kind: ConfigMap
 ```
 
 
 ## Cluster scope
-For cluster-scope resources, cluster scope custom resource `ClusterResourceProtectionProfile` (CRPP) are used. The example below shows definition to protect ClusterRoleBinding resource `sample-crb`.
+Also for cluster-scope resources, you can use RSP to define protection rules.
+The only difference between "Namespaced" and "Cluster" scope in RSP is name condition.
+To avoid conflict of rules defined in multiple RSPs in different NS, a rule for Cluster scope resource must be set with concrete resource name condition.
+The example below shows how to protect ClusterRoleBinding with its name.
 
-```
-apiVersion: research.ibm.com/v1alpha1
-kind: ClusterResourceProtectionProfile
+```yaml
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: ResourceSigningProfile
 metadata:
-  name: sample-crpp
+  name: sample-rsp
 spec:
-rules:
-- match:
+  protectRules:
+  - match:
     - kind: ClusterRoleBinding
-    name: sample-crb
+      name: sample-crb
 ```
 
-Rule syntax is same as RPP.
+if the `name` is not specified or value for `name` has any wildcard "*", then the rule does not match with any requests.
+
+## Two types of RSP
+
+There are two types in RSP.
+  1. per-namespace RSP
+  2. IV namespace RSP
+1, per-namespace RSP will be created and managed by user, and it has different lifecycle from the one of IV itself. 
+2, IV namespace RSP, this is managed by IV operator. It is defined in IV CR, and operator will reconcile it.
+
+All syntax around rules are exactly same between these 2 types, but the namespace scope is different.
+
+per-NS RSP, is basically used only for requests in the same namespace.
+If per-NS RSP is created in `secure-ns`, then this profile is available only in `secure-ns`.
+
+IV NS RSP, is created in IV namespace, but it will be evaluated with some other namespaced requests. 
+This target namespace is defined in `targetNamespaceSelector` in RSP spec.
+
+The following is an example of IV NS RSP definition in IV CR.
+It is available for requests in `secure-ns` and `test-ns`.
+
+```yaml
+spec:
+  resourceSigningProfiles:
+  - name: multi-ns-rsp
+    targetNamespaceSelector:
+      include:
+      - secure-ns
+      - test-ns
+    protectRules:
+    - match:
+      - kind: ConfigMap
+```
+
+for this `targetNamespaceSelector`, label selector also can be used instead of namespace list, like below.
+This RSP will protect ConfgiMap in all namespaces that have `sampleNamespaceLabel: foo` or `sampleNamespaceLabel: bar` labels.
+
+```yaml
+spec:
+  resourceSigningProfiles:
+  - name: multi-ns-rsp
+    targetNamespaceSelector:
+      labelSelector:
+        matchExpressions:
+        - key: "sampleNamespaceLabel"
+          operator: In
+          value: ["foo", "bar"]
+    protectRules:
+    - match:
+      - kind: ConfigMap
+```
 
 
-## Default RPP/CRPP
+<!-- ## Delete/Disable RSP
 
-Cluster default RPP and CRPP are predefined in IE namespace. They are automatically created by IE operator when installing IE to the cluster. It is managed only by IE admin.
+RSP and CRSP have two lifecycle flags `disabled` and `delete`. Those fields are `false` by default.
 
-Default RPP/CRPP includes
-- service accounts which are considered as platform operator.
-- changes which are considered as expected normal platform behavior.
+If `disabled` is set to `true`, the RSP (CRSP) becomes invalid and ignored when checking signature (This implies no RSP is defined in the namespace). When you set it to `false` back, the RSP will become effective again.
 
-
-## Delete/Disable RPP
-
-RPP and CRPP have two lifecycle flags `disabled` and `delete`. Those fields are `false` by default.
-
-If `disabled` is set to `true`, the RPP (CRPP) becomes invalid and ignored when checking signature (This implies no RPP is defined in the namespace). When you set it to `false` back, the RPP will become effective again.
-
-When you want to delete RPP, set `delete` to `true`, then IE will delete RPP (CRPP). RPP and CRPP cannot be deleted directly, so need to set this flag when you want to delete then.
+When you want to delete RSP, set `delete` to `true`, then IV will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
 
 ```
-apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
   namespace: secure-ns
 spec:
   disabled: false
   delete: false
-```
+``` -->
 
-## Example of RPP
+## Example of RSP
 
-The whole RPP is represented like this.
-```
-apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+The whole RSP is represented like this. (this is example of per-namespace RSP.)
+```yaml
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
   namespace: secure-ns
 spec:
-  disabled: false
-  delete: false
-  rules:
+  protectRules:
   - match:
     - kind: ConfigMap
     - kins: Secret
@@ -149,14 +214,11 @@ spec:
       name: unprotected-cm
   - match:
     - apiGroup: rbac.authorization.k8s.io
-  ignoreServiceAccount:
-  - match:
-      kind: "*"
-    serviceAccountName:
-    - system:serviceaccount:secure-ns:secure-operator
+  ignoreRules:
+  - username: system:serviceaccount:secure-ns:secure-operator
   ignoreAttrs:
   - match:
-      name: protected-cm
+    - name: protected-cm
       kind: ConfigMap
     attrs:
     - data.comment1

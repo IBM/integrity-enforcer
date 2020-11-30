@@ -2,3 +2,9 @@ nohup.out
 .DS_Store
 docs/node_modules/
 docs/_book/
+*.gpg
+cover.out
+kubeconfig_managed
+.build-harness-bootstrap
+.build-harness
+!vbh/.build-harness-bootstrap

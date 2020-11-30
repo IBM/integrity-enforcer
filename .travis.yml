@@ -1,48 +1,100 @@
-language: node_js
-node_js:
-- 10
-sudo: false
-before_install:
-- openssl aes-256-cbc -K $encrypted_225a7d4b2fd8_key -iv $encrypted_225a7d4b2fd8_iv -in ie_travis_gh_deploy_key.enc -out ie_travis_gh_deploy_key -d
-- chmod 600 ie_travis_gh_deploy_key
-- eval `ssh-agent -s`
-- ssh-add ie_travis_gh_deploy_key
-install:
-- pushd .
-- cd ${DIR_TEMPLATE}
-- npm install -g gitbook-cli
-- npm install
-- which gitbook
-- popd
+language: go
+
+service:
+  - docker
+
+go:
+   - "1.14.x"
+
+os:
+  - linux
+
+services:
+  - docker
 
 branches:
   only:
-  - master
-  - add-docs
-script:
-- pushd .
-- cd ${DIR_TEMPLATE}
-- gitbook install
-- gitbook build
-- git push -f git@github.com:${GH_REPO}.git --delete gh-pages
-- pushd .
-- cd _book
-- git init
-- git checkout -b gh-pages
-- git add .
-- git commit -m "Publishing site on `date "+%Y-%m-%d %H:%M:%S"`"
-- git push -f git@github.com:${GH_REPO}.git gh-pages
-- popd
-- rm -rf _book
-- popd
-before_deploy:
-- git config --global user.email "muew@jp.ibm.com"
-- git config --global user.name "Yuji Watanabe"
-- git config --global push.default simple
+    - master
+    - /^release-[0-9]+\..*$/
+
+#addons:
+#  sonarcloud:
+#    organization: "open-cluster-management"
+#    token:
+#      secure: "ZSZzRQRHoNDLi0m1lXdVQNnTcWEqXbTpkyi3sOnRrTuro9tg8J4AscptKw5K0WBvisHxtc0tXMavBmibt6YTEVN2srhanyIkvU1i4Wsfl7Rkhrhq+bsuZQVSMfsNDig1cnV6S8T1JleXGx8WPXJpwBAV6Dk5G2ll7+zt+8MN7fHnQ5FBFTZaqHvOY/WBcL70z7YNqfHcV3forByPOxgBJO+iNAUCFFBZrmp4vY7T3uYpmUztBjim1nBIrTq3mi5U20jIoFe9TV6BZJo1XWYsS6SSHubuhUtAqy6npxxQt3b/byg0Ja0QFL6sGT0gs4JyCjV+IOYLuigGl+V+ChtlyICOh0w/aUlq/gHUnJy1necJJSwjK+BvW2T48B1muLUDK4yio8GuaRd43U+X8E8H8UN5d3LlFxesROA4dB7YCkOx5WoE8gm4yGsURmnprPI3WABeNCT+SPbnzUbwfYPRk1K/Ka0Hns/vfjqgvoMnwRNi+B1ifFHcVqDjTeJPvdMFCIU/xWewRmTMO2gevRPsiLd7mOxLIvkuPFD9XIHP1MQic8gHekMlmVww2EqPCknYOG8GfgbpbABsQmYmvg76M0N8ulSec4mDqbxq41utf32E4GxAROBgaDZEAsjZYFwgcn+VkfmKGANC3ufpEPhiupkW+Uz124P6WB5Sj5Wz2vc="
+  
 env:
   global:
-  - DIR_TEMPLATE=docs
-  - GH_REPO=IBM/integrity-enforcer
-notifications:
-  slack:
-    secure: DGSuvNzEJJRaCqmlcNVIhbYsAsrkaGuIjyYTjTEUOpmrD7oK+xnaquERM+KrfQMCAFJX8/MnT4lfJg56PPfEMQ/Y7HxmXZg8q/LxQg9D3a6Q3V9oGj2imxQZMaaaIl7OA/GvxIl1o8+JI5nlAT4whABJ6ZPZ1KCLzgTzcg/ODAFaQMRwV6ZfX3F6cAecpilrRcPlmwDkC5LdiuvslbdXv9XQcVBtYml/OAoqFfdf+H9nrcF9BGhAk2Rm6beHci4xjwwN9usgQuDbtwzld0ZS2F/r7h/DYo9Xpe7It8K/lw58ddDxr9tsZY3qG2I2cwkW79E1llXiIf7EWfqlbSHHXvqId/3Giqe/RdAk9XuXkLeAQImn1rzQW1P+BCQo+Z1oLh0VCLDr/NatRWRpZqvJ3UyvTOpGKwQPNDwNk6N6d1uiCMREh/Foe6YIzzf+OWSBnw+pVk5AQ+ls8g+Kpda7RvoAXE99pcxAewH683rsRq+qwDakRtoJGeThCOyIDVeneGJVdb1XZ4G6mKb9tYy+Zc5wAQAECl+PiqJg/3NbdTUCr554Qk1AIs2/RQ9runy2iAJyoo5bSK6ajIbPL3uLL1MS9O8AGa5wcSrbdM91/ZoMWuvu+KGlap/liZKaIuLvws/kFEGN+aoZvhcISRmwEGIzocfscfdkL37W+kHf2UI=
+    # Required
+    - OS=linux
+    - COMPONENT_TAG_EXTENSION="-${TRAVIS_COMMIT}"
+    # Component Specific
+    - COMPONENT_TYPE="make"
+    - COMPONENT_INIT_COMMAND=${TRAVIS_BUILD_DIR}/build/install-dependencies.sh
+    - COMPONENT_BUILD_COMMAND=${TRAVIS_BUILD_DIR}/build/build.sh
+    - COMPONENT_UNIT_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-unit-tests.sh
+    - COMPONENT_E2E_TEST_COMMAND=${TRAVIS_BUILD_DIR}/build/run-e2e-tests.sh
+
+before_install:
+  - ./build/install-dependencies.sh
+  - export IV_REPO_ROOT=$TRAVIS_BUILD_DIR
+
+stages:
+  - lint
+  - build
+  - test-unit
+  - test-e2e
+  - publish
+
+jobs:
+  include:
+    - stage: lint
+      name: "Run code lint"
+      script:
+         - |
+           make lint
+    - stage: build
+      name: "Build the image and push it"
+      script:
+         - |
+           if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+               make build-images NO_CACHE=true
+           elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+               make init
+               make component/build
+           fi
+    - stage: test-unit
+      name: "Run unit test"
+      script:
+        - set -e
+        - |
+          if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+              make test-unit
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+              make init
+              make component/test/unit
+          fi
+    - stage: test-e2e
+      name: "Deploy the image to a cluster and run e2e tests"
+      script:
+        - |
+          if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+              make test-e2e
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+              make init
+              make component/pull
+              make component/test/e2e
+          fi
+    - stage: publish
+      name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
+      if: env(ENABLE_PUBLISH) = true AND type = push AND branch =~ /^release-[0-9]+\..*$/
+      script:
+        - |
+          if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
+              make push-images
+              make build-bundle
+          elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
+              make init
+              ${TRAVIS_BUILD_DIR}/build/pipeline.sh
+          fi
+          
