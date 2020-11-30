@@ -171,22 +171,22 @@ pull-images:
 build-bundle:
 		@if [ "$(UPSTREAM_ENV)" = true ]; then \
 			if [ -z "$(QUAY_REGISTRY)" ]; then \
-                echo "QUAY_REGISTRY is empty."; \
-                exit 1; \
-            fi; \
-            if [ -z "$(QUAY_USER)" ]; then \
-                echo "QUAY_USER is empty."; \
-                exit 1; \
-            fi; \
-            if [ -z "$(QUAY_PASS)" ]; then \
-                echo "QUAY_PASS is empty."; \
-                exit 1; \
-            fi; \
+				echo "QUAY_REGISTRY is empty."; \
+				exit 1; \
+			fi; \
+			if [ -z "$(QUAY_USER)" ]; then \
+				echo "QUAY_USER is empty."; \
+				exit 1; \
+			fi; \
+			if [ -z "$(QUAY_PASS)" ]; then \
+				echo "QUAY_PASS is empty."; \
+				exit 1; \
+			fi; \
 			docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}; \
 			$(IV_REPO_ROOT)/build/build_bundle.sh; \
 		else \
 			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh; \
-		fi
+		fi						
 
 ############################################################
 # clean section
