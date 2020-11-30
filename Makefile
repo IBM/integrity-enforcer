@@ -32,6 +32,11 @@ export $(shell sed 's/=.*//' $(ENV_CONFIG))
 
 include $(VERIFIER_OP_DIR)Makefile
 
+ifeq ($(IV_TEMP_DIR),)
+TMP_DIR = /tmp/
+else
+TMP_DIR = $(IV_TEMP_DIR)
+endif
 
 # CICD BUILD HARNESS
 ####################
@@ -128,19 +133,19 @@ check: lint
 lint: lint-init  lint-verify lint-op-init lint-op-verify
 
 lint-init:
-	cd $(VERIFIER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > /tmp/lint_results.txt
+	cd $(VERIFIER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > $(TMP_DIR)lint_results_iv.txt
 
 lint-verify:
-	$(eval FAILURES=$(shell cat /tmp/lint_results.txt | grep "FAIL:"))
-	/tmp/lint_results.txt
+	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results_iv.txt | grep "FAIL:"))
+	cat  $(TMP_DIR)lint_results_iv.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 lint-op-init:
-	cd $(VERIFIER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > lint_results.txt
+	cd $(VERIFIER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > $(TMP_DIR)lint_results.txt
 
 lint-op-verify:
-	$(eval FAILURES=$(shell cat $(VERIFIER_OP_DIR)lint_results.txt | grep "FAIL:"))
-	cat $(VERIFIER_OP_DIR)lint_results.txt
+	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results.txt | grep "FAIL:"))
+	cat $(TMP_DIR)lint_results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 
@@ -206,11 +211,11 @@ copyright-check:
 test-unit: test-init test-verify
 
 test-init:
-	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > /tmp/results.txt
+	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > $(TMP_DIR)results.txt
 
 test-verify:
-	$(eval FAILURES=$(shell cat /tmp/results.txt | grep "FAIL:"))
-	cat /tmp/results.txt
+	$(eval FAILURES=$(shell cat $(TMP_DIR)results.txt | grep "FAIL:"))
+	cat $(TMP_DIR)results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 
@@ -232,8 +237,8 @@ TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SAMPLE_SIGNER_SUBJECT_EMAIL=test@enterprise.com
 TEST_SECRET=keyring_secret
-TMP_CR_FILE=/tmp/apis_v1alpha1_integrityverifier.yaml
-TMP_CR_UPDATED_FILE=/tmp/apis_v1alpha1_integrityverifier_update.yaml
+TMP_CR_FILE=$(TMP_DIR)apis_v1alpha1_integrityverifier.yaml
+TMP_CR_UPDATED_FILE=$(TMP_DIR)apis_v1alpha1_integrityverifier_update.yaml
 # export KUBE_CONTEXT_USERNAME=kind-test-managed
 
 test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
@@ -350,11 +355,11 @@ delete-keyring-secret:
 install-operator:
 	@echo
 	@echo setting image
-	cp $(VERIFIER_OP_DIR)config/manager/kustomization.yaml /tmp/kustomization.yaml  #copy original file to tmp dir.
+	cp $(VERIFIER_OP_DIR)config/manager/kustomization.yaml $(TMP_DIR)kustomization.yaml  #copy original file to tmp dir.
 	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
 	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
-	cp /tmp/kustomization.yaml $(VERIFIER_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
+	cp $(TMP_DIR)kustomization.yaml $(VERIFIER_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
 
 delete-operator:
 	@echo
@@ -424,21 +429,3 @@ clean-tmp:
 	@if [ -f "$(TMP_CR_UPDATED_FILE)" ]; then\
 		rm $(TMP_CR_UPDATED_FILE);\
 	fi
-
-
-############################################################
-# e2e test coverage
-############################################################
-#build-instrumented:
-#	go test -covermode=atomic -coverpkg=github.com/open-cluster-management/$(IMG)... -c -tags e2e ./cmd/manager -o build/_output/bin/$(IMG)-instrumented
-
-#run-instrumented:
-#	WATCH_NAMESPACE="managed" ./build/_output/bin/$(IMG)-instrumented -test.run "^TestRunMain$$" -test.coverprofile=coverage_e2e.out &>/dev/null &
-
-#stop-instrumented:
-#	ps -ef | grep 'config-po' | grep -v grep | awk '{print $$2}' | xargs kill
-
-#coverage-merge:
-#	@echo merging the coverage report
-#	gocovmerge $(PWD)/coverage_* >> coverage.out
-#	cat coverage.out
