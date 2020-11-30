@@ -3,7 +3,7 @@ kind: IntegrityVerifier
 metadata:
   name: integrity-verifier-server
 spec:
-  namespace: integrity-verifier-ns
+  namespace: integrity-verifier-operator-system
   verifierConfig:
     verifyType: pgp # x509
     inScopeNamespaceSelector:

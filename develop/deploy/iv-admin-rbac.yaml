@@ -2,7 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: iv-admin-role
-  namespace: integrity-verifier-ns
+  namespace: integrity-verifier-operator-system
 rules:
   - apiGroups:
     - ""
@@ -42,7 +42,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
     name: iv-admin-rolebinding
-    namespace: integrity-verifier-ns
+    namespace: integrity-verifier-operator-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
