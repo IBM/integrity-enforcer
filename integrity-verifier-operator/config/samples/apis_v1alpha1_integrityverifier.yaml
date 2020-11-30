@@ -26,5 +26,14 @@ spec:
       secret: keyring-secret
       subjects:
       - email: "sample_signer@signer.com"
+  resourceSigningProfiles:
+  - name: test-rsp
+    targetNamespaceSelector:
+      include:
+      - "test-ns-*"
+    protectRules:
+    - match:
+      - kind: ConfigMap
+      - kind: Deployment
   keyRingConfigs:
   - name: keyring-secret
