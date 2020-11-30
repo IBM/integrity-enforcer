@@ -2,7 +2,7 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: ie-signing-pipline-admin
+  name: iv-signing-pipline-admin
 rules:
 - apiGroups:
   - triggers.tekton.dev
@@ -31,7 +31,7 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ie-signing-pipline-admin
+  name: iv-signing-pipline-admin
 imagePullSecrets:
   - name: registry-secret
 
@@ -39,11 +39,11 @@ imagePullSecrets:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: ie-signing-pipline-admin-binding
+  name: iv-signing-pipline-admin-binding
 subjects:
   - kind: ServiceAccount
-    name: ie-signing-pipline-admin
+    name: iv-signing-pipline-admin
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: ie-signing-pipline-admin
+  name: iv-signing-pipline-admin

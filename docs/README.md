@@ -1,9 +1,9 @@
-# Integrity Enforcer
+# Integrity Verifier
 
-## Integrity Enforcer (IE)
-Integrity Enforcer is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) on Kubernetes cluster.
+## Integrity Verifier (IV)
+Integrity Verifier is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) on Kubernetes cluster.
 
-Integrity Enforcer's capabilities are
+Integrity Verifier's capabilities are
 
 - Allow to deploy authorized application pakcages only
 - Allow to use signed deployment params only

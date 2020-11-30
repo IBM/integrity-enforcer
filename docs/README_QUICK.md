@@ -2,24 +2,16 @@
 
 ## Prerequisites
 ​
-The following prerequisites must be satisfied to deploy IE on a cluster.
+The following prerequisites must be satisfied to deploy Integrity Verifier on a cluster.
 - A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
-- Prepare a namespace to deploy IE. (We will use `integrity-enforcer-ns` namespace in this document.)
-- All requests to namespaces with label integrity-enforced=true are passed to IE. You can set label to a namespace `secure-ns` by
-  ```
-  kubectl label namespace secure-ns integrity-enforced=true
-  ```
-  or unset it by
-  ```
-  kubectl label namespace secure-ns integrity-enforced-
-  ```
-- A secret resource (ie-certpool-secret / keyring-secret) which contains public key and certificates should be setup for enabling signature verification by IE.
+- Prepare a namespace to deploy Integrity Verifier. (We will use `integrity-verifier-operator-system` namespace in this document.)
+- A secret resource (keyring-secret) which contains public key and certificates should be setup for enabling signature verification by Integrity Verifier.
 
 ---
 
-## Install Integrity Enforcer
+## Install Integrity Verifier
 ​
-This section describe the steps for deploying Integrity Enforcer (IE) on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
+This section describe the steps for deploying Integrity Verifier (IV) on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
 
 ### Retrive the source from `integrity-enforcer` Git repository.
 
@@ -27,28 +19,32 @@ git clone this repository and moved to `integrity-enforcer` directory
 
 ```
 $ git clone https://github.com/IBM/integrity-enforcer.git
-$ cd integrity-enforcer
+$ cd integrity-verifier
 $ pwd /home/repo/integrity-enforcer
 ```
 In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-### Prepape namespace for installing IE
+### Prepape namespace for installing Integrity Verifier
 
-You can deploy IE to any namespace. In this document, we will use `integrity-enforcer-ns` to deploy IE.
+You can deploy Integrity Verifier to any namespace. In this document, we will use `integrity-verifier-operator-system` to deploy Integrity Verifier.
 ```
-oc create ns integrity-enforcer-ns
-oc project integrity-enforcer-ns
-```
-All the commands are executed on the `integrity-enforcer-ns` namespace unless mentioned explicitly.
-
-### Define public key secret in IE
-
-IE requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  IE supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to IE.
-
-First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
+make create-ns
 
 ```
-$ gpg --export signer@enterprise.com > /tmp/pubring.gpg
+We switch to `integrity-verifier-operator-system` namespace.
+```
+oc project integrity-verifier-operator-system
+```
+All the commands are executed on the `integrity-verifier-operator-system` namespace unless mentioned explicitly.
+
+### Define public key secret in Integrity Verifier
+
+Integrity Verifier requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  Integrity Verifier supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to Integrity Verifier.
+
+First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `sample_signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
+
+```
+$ gpg --export sample_signer@enterprise.com > /tmp/pubring.gpg
 ```
 
 If you do not have any PGP key or you want to use new key, generate new one and export it to a file. See [this GitHub document](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/generating-a-new-gpg-key).
@@ -56,86 +52,93 @@ If you do not have any PGP key or you want to use new key, generate new one and 
 Then, create a secret that includes a pubkey ring for verifying signatures of resources
 
 ```
-oc create secret generic --save-config keyring-secret  -n integrity-enforcer-ns --from-file=/tmp/pubring.gpg
+oc create secret generic --save-config keyring-secret  -n integrity-verifier-operator-system --from-file=/tmp/pubring.gpg
 ```
 
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Enforcer. For that, configure signPolicy in the following Integrity Enforcer Custom Resource [file](../operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml). Example below shows a signer `signer-a` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in a namespace `secure-ns`.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Verifier. For that, configure signPolicy in the following Integrity Verifier Custom Resource [file](../operator/config/samples/apis.integrityverifier.io_v1alpha1_integrityverifier_cr.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
 ```yaml
-# Edit operator/deploy/crds/research.ibm.com_v1alpha1_integrityenforcer_cr.yaml
-
-apiVersion: research.ibm.com/v1alpha1
-kind: IntegrityEnforcer
+# Edit integrity-verifier-operator/config/samples/apis_v1alpha1_integrityverifier.yaml
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: IntegrityVerifier
 metadata:
-  name: integrity-enforcer-server
+  name: integrity-verifier-server
 spec:
-  ...
-  enforcerConfig:
+  namespace: integrity-verifier-operator-system
+  verifierConfig:
     verifyType: pgp # x509
-    ...
-    signPolicy:
-      policies:
-      - namespaces:
-        - "*"
-        signers:
-        - "ClusterSigner"
-        - "HelmClusterSigner"
-      # bind signer with a namespace
-      - namespaces:
-        - "secure-ns"
-        signers:
-        - "signer-a"
+    inScopeNamespaceSelector:
+      include:
+      - "*"
+      exclude:
+      - "kube-*"
+      - "openshift-*"
+  signPolicy:
+    policies:
+    - namespaces:
+      - "*"
       signers:
-      - name: "ClusterSigner"
-        subjects:
-        - commonName: "ClusterAdmin"
-      - name: "HelmClusterSigner"
-        subjects:
-        # define cluster-wide signer here
-        - email: signer@enterprise.com
-      ### define per-namespace signer ###
-      - name: "signer-a"
-        subjects:
-        - email: signer@enterprise.com
+      - "SampleSigner"
+    - scope: "Cluster"
+      signers:
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      secret: keyring-secret
+      subjects:
+      - email: "signer@enterprise.com"
+  keyRingConfigs:
+  - name: keyring-secret
+
+
 ```
 
-### Install IE to a cluster
 
-IE can be installed to a cluster using a series of steps which are bundled in a script called [`install_enforcer.sh`](../scripts/install_enforcer.sh). Before executing the script `install_enforcer.sh`, setup local environment as follows:
-- `IE_ENV=remote`  (for deploying IE on OpenShift or ROKS clusters, use this [guide](README_DEPLOY_IE_LOCAL.md) for deploying IE in minikube)
-- `IE_NS=integrity-enforcer-ns` (a namespace where IE to be deployed)
-- `IE_REPO_ROOT=<set absolute path of the root directory of cloned integrity-enforcer source repository`
+
+### Install Integrity Verifier to a cluster
+
+Integrity Verifier can be installed to a cluster using a series of steps which are bundled in a script called [`install_verifier.sh`](../scripts/install_verifier.sh). Before executing the script `install_verifier.sh`, setup local environment as follows:
+- `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
+- `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
+
+`~/kube/config/minikube` is the Kuebernetes config file with credentials for accessing a cluster via `kubectl`.
 
 Example:
 ```
-$ export IE_ENV=remote
-$ export IE_NS=integrity-enforcer-ns
-$ export IE_REPO_ROOT=/home/repo/integrity-enforcer
+$ export KUBECONFIG=~/kube/config/minikube
+$ export IV_REPO_ROOT=/home/repo/integrity-enforcer
 ```
 
-Then, execute the following script to deploy IE in a cluster.
+Execute the following make commands to build Integrity Verifier images.
+```
+$ cd integrity-verifier
+$ make build-images
+$ make tag-images-to-local
+```
+
+Then, execute the following script to deploy Integrity Verifier in a cluster.
 
 ```
-$ cd integrity-enforcer
-$ ./scripts/install_enforcer.sh
+$ make install-crds
+$ make install-operator
 ```
 
-After successful installation, you should see two pods are running in the namespace `integrity-enforcer-ns`.
+After successful installation, you should see two pods are running in the namespace `integrity-verifier-operator-system`.
 
 ```
-$ oc get pod -n integrity-enforcer-ns
-integrity-enforcer-operator-c4699c95c-4p8wp   1/1     Running   0          5m
-integrity-enforcer-server-85c787bf8c-h5bnj    2/2     Running   0          82m
+$ oc get pod -n integrity-verifier-operator-system
+integrity-verifier-operator-c4699c95c-4p8wp   1/1     Running   0          5m
+integrity-verifier-server-85c787bf8c-h5bnj    2/2     Running   0          82m
 ```
 
 ---
 
-## Protect Resources with Integrity Enforcer
+## Protect Resources with Integrity Verifier
 ​
-Once IE is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
+Once Integrity Verifier is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
 
 The steps for protecting resources include:
 - Define which reource(s) should be protected.
@@ -143,14 +146,14 @@ The steps for protecting resources include:
 
 ### Define which reource(s) should be protected
 
-You can define which resources should be protected with signature in a cluster by IE. A custom resource `ResourceProtectionProfile` (RPP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RPP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
+You can define which resources should be protected with signature in a cluster by Integrity Verifier. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
-apiVersion: research.ibm.com/v1alpha1
-kind: ResourceProtectionProfile
+apiVersion: apis.integrityverifier.io/v1alpha1
+kind: ResourceSigningProfile
 metadata:
-  name: sample-rpp
+  name: sample-rsp
 spec:
   rules:
   - match:
@@ -159,7 +162,7 @@ spec:
     - kind: Service
 EOF
 
-resourceprotectionprofile.research.ibm.com/sample-rpp created
+resourcesigningprofile.apis.integrityverifier.io/sample-rsp created
 ```
 
 See [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail specs.
@@ -186,7 +189,7 @@ run the command below for trying to create the configmap in `secure-ns` namespac
 
 ```
 $ oc apply -f /tmp/test-cm.yaml -n secure-ns
-Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-enforcer-ns.svc" denied the request: No signature found
+Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-verifier-operator-system.svc" denied the request: No signature found
 ```
 
 
@@ -203,7 +206,7 @@ Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature
 
 
 ```yaml
-apiVersion: research.ibm.com/v1alpha1
+apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSignature
 metadata:
   annotations:
@@ -221,7 +224,7 @@ spec:
 Create this resource.
 ```
 $ oc create -f /tmp/test-cm-rs.yaml -n secure-ns
-resourcesignature.research.ibm.com/rsig-test-cm created
+resourcesignature.apis.integrityverifier.io/rsig-test-cm created
 ```
 
 
@@ -233,7 +236,7 @@ configmap/test-cm created
 ```
 
 
-IE generates logs while processing admission requests in a cluster. Two types of logs are available. You can see IE server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
+Integrity Verifier generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Verifier server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
 
 If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
 ```json
@@ -250,7 +253,7 @@ If you want to see the result of admission check, you can see the detail by usin
   "claim.ownerNamespace": "secure-ns",
   "creator": "",
   "detectOnly": false,
-  "ieresource": false,
+  "ivresource": false,
   "ignoreSA": false,
   "kind": "ConfigMap",
   "ma.checked": "false",
@@ -280,25 +283,26 @@ If you want to see the result of admission check, you can see the detail by usin
   "request.objectHashType": "",
   "request.uid": "bdb62f22-22f8-4a4d-9ead-cc034e4ce07b",
   "requestScope": "Namespaced",
-  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=research.ibm.com/v1alpha1 kind=ResourceProtectionProfile name=sample-rpp namespace=secure-ns operation=UPDATE\n",
+  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=apis.integrityverifier.io/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
   "sig.allow": false,
   "sig.errMsg": "",
   "sig.errOccured": true,
   "sig.errReason": "Failed to verify signature; Signature is invalid",
   "timestamp": "2020-09-23T02:45:19.728Z",
   "type": "",
-  "userInfo": "{\"username\":\"IAM#gajan@jp.ibm.com\",\"groups\":[\"admin\",\"ie-group\",\"system:authenticated\"]}",
+  "userInfo": "{\"username\":\"IAM#gajan@jp.ibm.com\",\"groups\":[\"admin\",\"iv-group\",\"system:authenticated\"]}",
   "userName": "IAM#gajan@jp.ibm.com",
   "verified": false
 }
 ```
 
-### Clean up IE from the cluster
+### Clean up Integrity Verifier from the cluster
 
-When you want to remove IE from a cluster, run the uninstaller script [`delete_enforcer.sh`](../scripts/delete_enforcer.sh).
+When you want to remove Integrity Verifier from a cluster, run the uninstaller script [`delete_verifier.sh`](../scripts/delete_verifier.sh).
 ```
-$ cd integrity-enforcer
-$ ./scripts/delete_enforcer.sh
+$ cd integrity-verifier
+$ make delete-tmp-cr
+$ make delete-operator
 ```
 
 
