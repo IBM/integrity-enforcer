@@ -291,16 +291,34 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-
 		})
 		Context("RSP in IV NS is effective for blocking unsigned admission on newly created NS", func() {
 			BeforeEach(func() {
 				cmd_err := Kubectl("get", "ns", test_namespace)
-				if cmd_err != nil {
+				if cmd_err == nil {
+					test_rsp_name := "test-rsp"
+					err := Kubectl("get", "rsp", test_rsp_name, "-n", test_namespace)
+					if err == nil {
+						Kubectl("delete", "-f", test_rsp, "-n", test_namespace)
+					}
 					Kubectl("delete", "ns", test_namespace)
 				}
-				Kubectl("create", "ns", test_namespace)
 			})
+			// It("Delete test namespace", func() {
+			// 	cmd_err := Kubectl("get", "ns", test_namespace)
+			// 	if cmd_err == nil {
+			// 		test_rsp_name := "test-rsp"
+			// 		err := Kubectl("get", "rsp", test_rsp_name, "-n", test_namespace)
+			// 		if err == nil {
+			// 			err := Kubectl("delete", "-f", test_rsp, "-n", test_namespace)
+			// 			Expect(err).To(BeNil())
+			// 		}
+			// 		err = Kubectl("delete", "ns", test_namespace)
+			// 		Expect(err).To(BeNil())
+			// 	}
+			// 	cmd_err = Kubectl("get", "ns", test_namespace)
+			// 	Expect(cmd_err).NotTo(BeNil())
+			// })
 			It("Test RSP should be created properly", func() {
 				framework := initFrameWork()
 				var timeout int = 120
@@ -308,6 +326,7 @@ var _ = Describe("Test integrity verifier", func() {
 				By("Creating test rsp: " + test_rsp_iv + " ns: " + iv_namespace)
 				cmd_err := Kubectl("apply", "-f", test_rsp_iv, "-n", iv_namespace)
 				Expect(cmd_err).To(BeNil())
+				By("Checking rsp is created properly: " + test_rsp_iv + " ns: " + iv_namespace)
 				Eventually(func() error {
 					_, err := framework.RSPClient.ResourceSigningProfiles(iv_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
 					if err != nil {
@@ -318,7 +337,7 @@ var _ = Describe("Test integrity verifier", func() {
 			})
 			It("Test unsigned resource should be blocked in new namespace", func() {
 				framework := initFrameWork()
-				time.Sleep(time.Second * 15)
+				time.Sleep(time.Second * 30)
 				var timeout int = 120
 				expected := "test-configmap"
 				By("Creating new namespace: " + test_namespace)
@@ -335,8 +354,11 @@ var _ = Describe("Test integrity verifier", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap2"
+				By("Creating new namespace: " + test_namespace)
+				cmd_err := Kubectl("create", "ns", test_namespace)
+				Expect(cmd_err).To(BeNil())
 				By("Creating test configmap in ns: " + test_namespace)
-				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
+				cmd_err = Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
 					return CheckConfigMap(framework, test_namespace, expected)
