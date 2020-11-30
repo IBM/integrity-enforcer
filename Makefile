@@ -216,7 +216,7 @@ test-verify:
 
 .PHONY: test-e2e test-e2e-kind test-e2e-remote test-e2e-common test-e2e-clean-common
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
-.PHONY: install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-crds delete-operator
+.PHONY: install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
 .PHONY: create-ns create-key-ring tag-images-to-local
 
 
@@ -247,7 +247,7 @@ test-e2e-common:  check-local-test check-kubeconfig install-crds setup-iv-env in
 
 
 # common steps to clean e2e test resources in an existing cluster
-test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator delete-crds clean-tmp
+test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator clean-tmp
 
 check-kubeconfig:
 	@if [ -z "$(KUBECONFIG)" ]; then \
@@ -313,7 +313,7 @@ e2e-test:
 
 install-iv: check-kubeconfig install-crds setup-iv-env install-operator create-cr 
 
-uninstall-iv: delete-webhook delete-cr delete-keyring-secret delete-operator delete-crds
+uninstall-iv: delete-webhook delete-cr delete-keyring-secret delete-operator
 
 delete-webhook:
 	@echo deleting webhook
