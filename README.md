@@ -23,15 +23,14 @@ Integrity Verifier (IV) provides signature-based assurance of integrity for Kube
 See [Quick Start](./docs/README_QUICK.md)
 
 ## Supported Platforms
-​
+
 Integrity Verifier works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
 IV can be deployed with operator. We have verified the feasibility on the following platforms:
-​
-- [RedHat OpenShift 4.5](https://www.openshift.com/)
+
+- [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
 - [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
-- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.12
-- [Minikube v1.18.2](https://kubernetes.io/docs/setup/learning-environment/minikube/)
-​
+- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.14
+- [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
 
 ## How Integrity Verifier works
 - Resources to be protected in each namespace can be defined in the custom resource called `ResourceSigningProfile`. For example, the following snippet shows an example definition of protected resources in a namespace. This `ResourceSigningProfile` resource includes the matching rule for specifiying resources to such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by IV, so any matched request to create/update those resources are verified with signature.  (see [Define Protected Resources](./docs/README_FOR_RESOURCE_PROTECTION_PROFILE.md))
@@ -42,14 +41,16 @@ IV can be deployed with operator. We have verified the feasibility on the follow
   metadata:
     name: sample-rsp
   spec:
-    rules:
+    targetNamespaceSelector:
+      include:
+      - "secure-ns"
+      exclude:
+      - "kube-*"
+    protectRules:
     - match:
-      - namespace: secure-ns
-        kind: ConfigMap
-      - namespace: secure-ns
-        kind: Deployment
-      - namespace: secure-ns
-        kind: Service
+      - kind: ConfigMap
+      - kind: Deployment
+      - kind: Service
   ```
 ​
 - Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
