@@ -34,7 +34,7 @@ If you do not have any PGP key or you want to use new key, generate new one and 
 Then, create a secret that includes a pubkey ring for verifying signatures of resources
 
 ```
-oc create secret generic --save-config keyring-secret  -n integrity-verifier-ns --from-file=/tmp/pubring.gpg
+oc create secret generic --save-config keyring-secret  -n integrity-verifier-operator-system --from-file=/tmp/pubring.gpg
 ```
 
 You can run `scripts/gpg-rs-sign.sh` script to generate ResourceSignature YAML file which includes signature for a Yaml file. For example,
