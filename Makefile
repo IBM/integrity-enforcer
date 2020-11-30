@@ -149,10 +149,10 @@ lint-op-verify:
 ############################################################
 
 build-images:
-		if [ -z "$(NO_CACHE)" ]; then
-			$(IV_REPO_ROOT)/build/build_images.sh false
-		else
-			$(IV_REPO_ROOT)/build/build_images.sh $(NO_CACHE)
+		@if [ -z "$(NO_CACHE)" ]; then \
+			$(IV_REPO_ROOT)/build/build_images.sh false; \
+		else \
+			$(IV_REPO_ROOT)/build/build_images.sh $(NO_CACHE); \
 		fi
 
 docker-login:
@@ -167,25 +167,25 @@ pull-images:
 ############################################################
 # bundle section
 ############################################################
-.ONESHELL:
+
 build-bundle:
-		if [ ${UPSTREAM_ENV} = true ]; then
-			if [ -z "${QUAY_REGISTRY}" ]; then
-				echo "QUAY_REGISTRY is empty."
-				exit 1;
-			fi
-			if [ -z "${QUAY_USER}" ]; then
-				echo "QUAY_USER is empty."
-				exit 1;
-			fi
-			if [ -z "${QUAY_PASS}" ]; then
-				echo "QUAY_PASS is empty."
-				exit 1;
-			fi
-			docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}
-			$(IV_REPO_ROOT)/build/build_bundle.sh
-		else
-			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh
+		@if [ "$(UPSTREAM_ENV)" = true ]; then \
+            if [ -z "$(QUAY_REGISTRY)" ]; then \
+                echo "QUAY_REGISTRY is empty."; \
+                exit 1; \
+            fi; \
+            if [ -z "$(QUAY_USER)" ]; then \
+                echo "QUAY_REGISTRY is empty."; \
+                exit 1; \
+            fi; \
+            if [ -z "$(QUAY_PASS)" ]; then \
+                echo "QUAY_REGISTRY is empty."; \
+                exit 1; \
+            fi; \
+			docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}; \
+			$(IV_REPO_ROOT)/build/build_bundle.sh; \
+		else \
+			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh; \
 		fi
 
 ############################################################
