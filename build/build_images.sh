@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+CMDNAME=`basename $0`
+if [ $# -ne 1 ]; then
+  echo "Usage: $CMDNAME <no-cache>" 1>&2
+  exit 1
+fi
+
+NO_CACHE=$1
 
 if ! [ -x "$(command -v docker)" ]; then
     echo 'Error: docker is not installed.' >&2
@@ -79,7 +86,13 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-docker build -f ${DOCKERFILE} -t ${IV_SERVER_IMAGE_NAME_AND_VERSION} image/
+
+if [ "$NO_CACHE" = true ] ; then
+    docker build -f ${DOCKERFILE} -t ${IV_SERVER_IMAGE_NAME_AND_VERSION} image/ --no-cache
+else
+    docker build -f ${DOCKERFILE} -t ${IV_SERVER_IMAGE_NAME_AND_VERSION} image/
+fi
+
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -98,7 +111,12 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-docker build -t ${IV_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
+if [ "$NO_CACHE" = true ] ; then
+     docker build -t ${IV_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR} --no-cache
+else
+     docker build -t ${IV_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
+fi
+
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -119,7 +137,13 @@ if [ $exit_status -ne 0 ]; then
 fi
 
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${IV_OPERATOR} main.go
-docker build . -t ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
+
+if [ "$NO_CACHE" = true ] ; then
+    docker build . -t ${IV_OPERATOR_IMAGE_NAME_AND_VERSION} --no-cache
+else
+    docker build . -t ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
+fi
+
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"

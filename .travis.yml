@@ -60,7 +60,7 @@ jobs:
       script:
          - |
            if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = true ]; then
-               make build-images
+               make build-images NO_CACHE=true
            elif [ -z "$UPSTREAM_ENV" ] && [ "$UPSTREAM_ENV" = false ]; then
                make init
                make component/build
