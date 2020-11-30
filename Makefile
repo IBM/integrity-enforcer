@@ -149,7 +149,7 @@ lint-op-verify:
 ############################################################
 
 build-images:
-		$(IV_REPO_ROOT)/build/build_images.sh
+		$(IV_REPO_ROOT)/build/build_images.sh $(NO_CACHE)
 
 docker-login:
 		${IV_REPO_ROOT}/build/docker_login.sh

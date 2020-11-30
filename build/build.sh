@@ -22,7 +22,7 @@ echo "<repo>/<component>:<tag> : $1"
 
 # Run our build target
 
-make build-images
+make build-images NO_CACHE=true
 
 if [ ! -z "$UPSTREAM_ENV" ] || [ "$UPSTREAM_ENV" = false ]; then
 
