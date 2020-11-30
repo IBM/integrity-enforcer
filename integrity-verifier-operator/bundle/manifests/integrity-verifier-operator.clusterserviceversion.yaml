@@ -11,18 +11,6 @@ metadata:
             "name": "integrity-verifier-server"
           },
           "spec": {
-            "verifierConfig": {
-              "inScopeNamespaceSelector": {
-                "exclude": [
-                  "kube-*",
-                  "openshift-*"
-                ],
-                "include": [
-                  "*"
-                ]
-              },
-              "verifyType": "pgp"
-            },
             "keyRingConfigs": [
               {
                 "name": "keyring-secret"
@@ -57,6 +45,18 @@ metadata:
                   ]
                 }
               ]
+            },
+            "verifierConfig": {
+              "inScopeNamespaceSelector": {
+                "exclude": [
+                  "kube-*",
+                  "openshift-*"
+                ],
+                "include": [
+                  "*"
+                ]
+              },
+              "verifyType": "pgp"
             }
           }
         }
@@ -64,7 +64,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: integrity-verifier-operator.v0.0.19
+  name: integrity-verifier-operator.v0.0.4
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -99,13 +99,13 @@ spec:
             - apiGroups:
                 - apis.integrityverifier.io
               resources:
-                - verifierconfigs
                 - helmreleasemetadatas
                 - integrityverifiers
                 - integrityverifiers/finalizers
                 - resourcesignatures
                 - resourcesigningprofiles
                 - signpolicies
+                - verifierconfigs
               verbs:
                 - create
                 - delete
@@ -236,10 +236,21 @@ spec:
               spec:
                 containers:
                   - args:
+                      - --secure-listen-address=0.0.0.0:8443
+                      - --upstream=http://127.0.0.1:8080/
+                      - --logtostderr=true
+                      - --v=10
+                    image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+                    name: kube-rbac-proxy
+                    ports:
+                      - containerPort: 8443
+                        name: https
+                    resources: {}
+                  - args:
                       - --metrics-addr=127.0.0.1:8080
                       - --enable-leader-election
                     command:
-                      - /manager
+                      - /iv-op-app/manager
                     env:
                       - name: WATCH_NAMESPACE
                         valueFrom:
@@ -253,7 +264,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
-                    image: integrityverifier/integrity-verifier-operator:0.0.19
+                    image: integrityverifier/integrity-verifier-operator:0.0.4dev
                     imagePullPolicy: Always
                     name: manager
                     resources:
@@ -263,22 +274,8 @@ spec:
                       requests:
                         cpu: 200m
                         memory: 200Mi
-                  - args:
-                      - --secure-listen-address=0.0.0.0:8443
-                      - --upstream=http://127.0.0.1:8080/
-                      - --logtostderr=true
-                      - --v=10
-                    image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
-                    name: kube-rbac-proxy
-                    ports:
-                      - containerPort: 8443
-                        name: https
-                    resources: {}
                 imagePullSecrets:
                   - name: mappregkey
-                securityContext:
-                  runAsNonRoot: true
-                  runAsUser: 1000
                 serviceAccountName: integrity-verifier-operator-manager
                 terminationGracePeriodSeconds: 10
       permissions:
@@ -330,4 +327,4 @@ spec:
   provider:
     name: IBM
     url: https://github.com/ibm/integrity-enforcer
-  version: 0.0.19
+  version: 0.0.4
