@@ -17,8 +17,6 @@
 # FROM registry.access.redhat.com/ubi7/ubi:latest
 FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 
-USER root
-
 # RUN yum install -y tar
 
 RUN mkdir -p /iv-app && mkdir -p /iv-app/public
