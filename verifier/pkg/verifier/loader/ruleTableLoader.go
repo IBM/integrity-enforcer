@@ -107,12 +107,15 @@ func InitRuleTable(namespace, name string, tableType RuleTableType, reqc *common
 
 	table := NewRuleTable()
 	for _, rsp := range list1.Items {
-		singleTable := NewRuleTableFromProfile(rsp, tableType, namespace)
+		singleTable := NewRuleTableFromProfile(rsp, tableType, namespace, reqc)
 		if !rsp.Spec.Disabled {
 			table = table.Merge(singleTable)
 		}
 	}
-	table.Update(namespace, name)
+	err = table.Update(namespace, name)
+	if err != nil {
+		logger.Warn("Failed to update RuleTable: ", name, ", err: ", err.Error())
+	}
 	return table, nil
 }
 

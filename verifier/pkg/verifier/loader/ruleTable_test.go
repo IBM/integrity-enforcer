@@ -166,7 +166,7 @@ func createTestCases(t *testing.T) []RuleTableTestCase {
 func singleTestForMakingRuleTable(profiles *rspapi.ResourceSigningProfileList, expectedTable *RuleTable) (bool, *RuleTable, *RuleTable) {
 	table := NewRuleTable()
 	for _, profile := range profiles.Items {
-		tmpTable := NewRuleTableFromProfile(profile, RuleTableTypeProtect, testVerifierNamespace)
+		tmpTable := NewRuleTableFromProfile(profile, RuleTableTypeProtect, testVerifierNamespace, nil)
 		if tmpTable != nil {
 			table = table.Merge(tmpTable)
 		}
