@@ -37,6 +37,12 @@ Then, create a secret that includes a pubkey ring for verifying signatures of re
 oc create secret generic --save-config keyring-secret  -n integrity-verifier-operator-system --from-file=/tmp/pubring.gpg
 ```
 
+You can run `scripts/gpg-annotation-sign.sh` script to generate signature annotations in YAML file which appends a signature for a Yaml file as annotations. For example,
+
+```
+$ ./scripts/gpg-annotation-sign.sh signer@enterprise.com /tmp/test-cm.yaml /tmp/test-cm-with-signature.yaml
+```
+
 You can run `scripts/gpg-rs-sign.sh` script to generate ResourceSignature YAML file which includes signature for a Yaml file. For example,
 
 ```
