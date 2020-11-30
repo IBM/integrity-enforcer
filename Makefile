@@ -36,6 +36,7 @@ ifeq ($(IV_TEMP_DIR),)
 TMP_DIR = /tmp/
 else
 TMP_DIR = $(IV_TEMP_DIR)
+$(shell mkdir -p $(TMP_DIR))
 endif
 
 # CICD BUILD HARNESS
