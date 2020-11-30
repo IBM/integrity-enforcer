@@ -15,8 +15,6 @@ services:
 branches:
   only:
     - master
-    - develop
-    - fix/change-name
     - /^release-[0-9]+\..*$/
 
 #addons:
