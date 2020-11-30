@@ -380,9 +380,9 @@ setup-tmp-cr:
 	@echo copy cr into tmp dir
 	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml $(TMP_CR_FILE)
 	@echo insert image
-	yq write -i $(TMP_CR_FILE) spec.logger.image $(IV_LOGGING_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
-	yq write -i $(TMP_CR_FILE) spec.server.image $(IV_SERVER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
 	@echo setup signer policy
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
