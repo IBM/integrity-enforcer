@@ -21,13 +21,13 @@ rules:
 - apiGroups:
   - apis.integrityverifier.io
   resources:
-  - verifierconfigs
   - helmreleasemetadatas
   - integrityverifiers
   - integrityverifiers/finalizers
   - resourcesignatures
   - resourcesigningprofiles
   - signpolicies
+  - verifierconfigs
   verbs:
   - create
   - delete
