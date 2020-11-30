@@ -39,7 +39,7 @@ spec:
           # Get keyring secret
           export KUBECONFIG=/config/kubeconfig
 	
-          kubectl get secret keyring-secret -n integrity-verifier-ns -o json | jq -r '.data["pubring.gpg"]' | base64 -d > /tmp/tmp-secring.gpg
+          kubectl get secret keyring-secret -n integrity-verifier-operator-system -o json | jq -r '.data["pubring.gpg"]' | base64 -d > /tmp/tmp-secring.gpg
 
           # import keys
           gpg --import /tmp/tmp-secring.gpg
@@ -154,7 +154,7 @@ spec:
    
                 if [ -f $rsigfile ]; then
                    echo "Deploy signed artifacts: $file"
-                   kubectl apply -f $rsigfile -n integrity-verifier-ns
+                   kubectl apply -f $rsigfile -n integrity-verifier-operator-system
 
                    echo "Deploy signed artifacts: $file"                                                                                                                        
                    kubectl apply -f $rsfile -n $namespace

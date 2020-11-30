@@ -28,7 +28,7 @@ metadata:
                 "name": "keyring-secret"
               }
             ],
-            "namespace": "integrity-verifier-ns",
+            "namespace": "integrity-verifier-operator-system",
             "signPolicy": {
               "policies": [
                 {

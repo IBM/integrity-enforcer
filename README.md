@@ -55,7 +55,7 @@ IV can be deployed with operator. We have verified the feasibility on the follow
 - Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
 - Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [Sign Policy](./docs/README_CONFIG_SIGNER_POLICY.md).)
 - Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [How to Sign Resources](./docs/README_RESOURCE_SIGNATURE.md))
-- Integrity Verifier admission controller is installed in a dedicated namespace (e.g. `integrity-verifier-ns` in this document). It can be installed by operator. (see [Integrity Verifier Custom Resource](./docs/README_IV_OPERATOR_CR.md) for detail install options.)
+- Integrity Verifier admission controller is installed in a dedicated namespace (e.g. `integrity-verifier-operator-system` in this document). It can be installed by operator. (see [Integrity Verifier Custom Resource](./docs/README_IV_OPERATOR_CR.md) for detail install options.)
 ​
 
 ## Quick Start

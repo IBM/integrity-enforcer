@@ -86,7 +86,7 @@ This section describe the steps for preparing a Tekton signing pipeline to sign 
 
 This section describe steps for deploying and running a Tekton pipeline in an OpenShift cluster to sign resources of an application to be deployed in a target cluster.
 
-The sample Tekton signing pipeline would pull sources of an application from a specified Git repository and sign specified YAML resources in the cloned repository and deploy them to a target cluster protected by `integrity-verifier-ns`
+The sample Tekton signing pipeline would pull sources of an application from a specified Git repository and sign specified YAML resources in the cloned repository and deploy them to a target cluster protected by `integrity-verifier-operator-system`
 
 1. Create a namespace `artifact-signing-ns` in a cluster where the pipeline would run. The sample pipeline would be deployed in this namespace.
 
@@ -207,7 +207,7 @@ The sample Tekton signing pipeline would pull sources of an application from a s
    In the target cluster, check if resource signature is successfully deployed.
 
    ```
-      $ oc get resourcesignature.apis.integrityverifier.io rsig-iv-sample-app -n integrity-verifier-ns
+      $ oc get resourcesignature.apis.integrityverifier.io rsig-iv-sample-app -n integrity-verifier-operator-system
       NAME                 AGE
       rsig-iv-sample-app   29s
 
