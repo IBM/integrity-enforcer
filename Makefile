@@ -311,6 +311,14 @@ e2e-test:
 # setup iv
 ############################################################
 
+install-iv: check-kubeconfig install-crds setup-iv-env install-operator create-cr 
+
+uninstall-iv: delete-webhook delete-cr delete-keyring-secret delete-operator delete-crds
+
+delete-webhook:
+	@echo deleting webhook
+	kubectl delete mutatingwebhookconfiguration iv-webhook-config
+
 setup-iv-env: create-ns create-key-ring
 
 create-ns:
