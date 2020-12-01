@@ -114,10 +114,11 @@ rules:
   resources:
   - podsecuritypolicies
   verbs:
-  - get
   - create
   - delete
+  - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -129,9 +130,3 @@ rules:
   - roles
   verbs:
   - '*'
-# - apiGroups:
-#   - security.openshift.io
-#   resources:
-#   - securitycontextconstraints
-#   verbs:
-#   - '*'
