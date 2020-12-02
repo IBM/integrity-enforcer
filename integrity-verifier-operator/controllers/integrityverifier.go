@@ -39,6 +39,7 @@ import (
 	ec "github.com/IBM/integrity-enforcer/verifier/pkg/apis/verifierconfig/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -1029,6 +1030,11 @@ func (r *IntegrityVerifierReconciler) createOrUpdateWebhook(instance *apiv1alpha
 			return ctrl.Result{}, err
 		}
 		// Created successfully - return and requeue
+
+		reqLogger.Info("Webhook has been created.", "Name", instance.Name)
+		evtName := fmt.Sprintf("iv-webhook-reconciled")
+		_ = r.createOrUpdateWebhookEvent(instance, evtName, expected.Name)
+
 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
 	} else if err != nil {
 		return ctrl.Result{}, err
@@ -1087,4 +1093,78 @@ func (r *IntegrityVerifierReconciler) isDeploymentAvailable(instance *apiv1alpha
 	}
 
 	return false
+}
+
+func (r *IntegrityVerifierReconciler) createOrUpdateWebhookEvent(instance *apiv1alpha1.IntegrityVerifier, evtName, webhookName string) error {
+	ctx := context.Background()
+	evtNamespace := instance.Namespace
+	involvedObject := v1.ObjectReference{
+		Namespace:  evtNamespace,
+		APIVersion: instance.APIVersion,
+		Kind:       instance.Kind,
+		Name:       instance.Name,
+	}
+	now := time.Now()
+	evtSourceName := "IntegrityVerifier"
+	msg := fmt.Sprintf("IntegrityVerifier reconciled MutatingWebhookConfiguration \"%s\"", webhookName)
+	expected := &v1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      evtName,
+			Namespace: evtNamespace,
+		},
+		InvolvedObject:      involvedObject,
+		Type:                evtSourceName,
+		Source:              v1.EventSource{Component: evtSourceName},
+		ReportingController: evtSourceName,
+		ReportingInstance:   evtName,
+		Action:              evtName,
+		FirstTimestamp:      metav1.NewTime(now),
+		LastTimestamp:       metav1.NewTime(now),
+		EventTime:           metav1.NewMicroTime(now),
+		Message:             msg,
+		Reason:              msg,
+	}
+	found := &v1.Event{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"Event.Name", expected.Name)
+
+	// If Event does not exist, create it and requeue
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: expected.Namespace}, found)
+
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new event")
+		err = r.Create(ctx, expected)
+		if err != nil && errors.IsAlreadyExists(err) {
+			// Already exists from previous reconcile, requeue.
+			reqLogger.Info("Skip creating event: resource already exists")
+			return nil
+		} else if err != nil {
+			reqLogger.Error(err, "Failed to create new event")
+			return err
+		}
+		// Created successfully - return and requeue
+		return nil
+	} else if err != nil {
+		return err
+	} else {
+		// Update Event
+		found.Count = found.Count + 1
+		found.EventTime = metav1.NewMicroTime(now)
+		found.LastTimestamp = metav1.NewTime(now)
+		found.Message = msg
+		found.Reason = msg
+		found.ReportingController = evtSourceName
+		found.ReportingInstance = evtName
+
+		err = r.Update(ctx, found)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update Event", "Namespace", instance.Namespace, "Name", found.Name)
+			return err
+		}
+		reqLogger.Info("Updated Event", "Deployment.Name", found.Name)
+		// Spec updated - return and requeue
+		return nil
+	}
 }

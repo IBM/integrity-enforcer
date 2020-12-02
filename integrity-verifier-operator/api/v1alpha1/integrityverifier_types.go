@@ -321,7 +321,7 @@ func (self *IntegrityVerifier) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName
 }
 
-func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) []*common.ResourceRef {
+func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {
 	opPodName := os.Getenv("POD_NAME")
 	opPodNamespace := os.Getenv("POD_NAMESPACE")
 	tmpParts := strings.Split(opPodName, "-")
@@ -347,7 +347,11 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) []*comm
 	_pspType := getTypeFromObj(&policyv1.PodSecurityPolicy{}, scheme)
 	_cmType := getTypeFromObj(&v1.ConfigMap{}, scheme)
 
-	ieResourceList := []*common.ResourceRef{
+	ivOperatorResourceList := []*common.ResourceRef{
+		{
+			Kind: _crdType.Kind,
+			Name: self.GetIntegrityVerifierCRDName(),
+		},
 		{
 			Kind:      _deployType.Kind,
 			Name:      opDeployName,
@@ -358,10 +362,9 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) []*comm
 			Name:      self.Name,
 			Namespace: self.Namespace,
 		},
-		{
-			Kind: _crdType.Kind,
-			Name: self.GetIntegrityVerifierCRDName(),
-		},
+	}
+
+	ivServerResourceList := []*common.ResourceRef{
 		{
 			Kind: _crdType.Kind,
 			Name: self.GetVerifierConfigCRDName(),
@@ -476,11 +479,11 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) []*comm
 				Name:      prof.Name,
 				Namespace: self.Namespace,
 			}
-			ieResourceList = append(ieResourceList, tmpRef)
+			ivServerResourceList = append(ivServerResourceList, tmpRef)
 		}
 	}
 
-	return ieResourceList
+	return ivOperatorResourceList, ivServerResourceList
 }
 
 func getTypeFromObj(obj runtime.Object, scheme *runtime.Scheme) metav1.TypeMeta {

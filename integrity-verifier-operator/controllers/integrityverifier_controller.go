@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -266,5 +267,6 @@ func (r *IntegrityVerifierReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&apisv1alpha1.IntegrityVerifier{}).
 		Owns(&apisv1alpha1.IntegrityVerifier{}).
+		Owns(&admv1.MutatingWebhookConfiguration{}).
 		Complete(r)
 }
