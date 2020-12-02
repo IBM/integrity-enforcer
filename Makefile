@@ -155,9 +155,6 @@ build-images:
 		fi
 
 
-quay-login:
-		${IV_REPO_ROOT}/build/quay_login.sh
-
 push-images:
 		${IV_REPO_ROOT}/build/push_images.sh
 
@@ -170,7 +167,6 @@ pull-images:
 
 build-bundle:
 		@if [ "$(IV_ENV)" = local ]; then \
-			make quay-login; \
 			$(IV_REPO_ROOT)/build/build_bundle.sh; \
 		else \
 			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh; \
