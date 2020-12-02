@@ -51,7 +51,21 @@ fi
 
 if ! [ -x "$(command -v kustomize)" ]; then
 	if [[ "$OS_NAME" == "Linux" ]]; then
-		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+                where=$PWD
+                if [ -f $where/kustomize ]; then
+                  echo "A file named kustomize already exists (remove it first)."
+                  exit 1
+                fi
+
+		wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.8.5/kustomize_v3.8.5_linux_amd64.tar.gz
+                if [ -e ./kustomize_v*_linux_amd64.tar.gz ]; then
+                   tar xzf ./kustomize_v*_linux_amd64.tar.gz
+                else
+                   echo "Error: kustomize binary with the version ${version#v} does not exist!"
+                   exit 1
+                fi
+                ./kustomize version
+                echo kustomize installed to current directory.
 	elif [[ "$OS_NAME" == "Darwin" ]]; then
 		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 	fi

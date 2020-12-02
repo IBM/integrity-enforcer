@@ -16,20 +16,24 @@
 
 set -e
 
-echo "BUILD GOES HERE!"
-
-echo "<repo>/<component>:<tag> : $1"
+echo "SECURITY SCAN GOES HERE!"
 
 # Run our build target
 
-make build-images NO_CACHE=true
 
-echo "Pushing images with Travis build tag"
+echo "Scaning integrity verifier images : $(date)"
 
-${IV_REPO_ROOT}/build/push_images_ocm.sh
+echo IV_VERSION ${IV_VERSION}
+export SECURITYSCANS_IMAGE_NAME=${IV_IMAGE}
+echo SECURITYSCANS_IMAGE_NAME ${SECURITYSCANS_IMAGE_NAME}
+make security/scans
 
-echo "Building integrity verifier bundle starting : $(date)"
+export SECURITYSCANS_IMAGE_NAME=${IV_LOGGING}
+echo SECURITYSCANS_IMAGE_NAME ${SECURITYSCANS_IMAGE_NAME}
+make security/scans
 
-${IV_REPO_ROOT}/build/build_bundle_ocm.sh
+export SECURITYSCANS_IMAGE_NAME=${IV_OPERATOR}
+echo SECURITYSCANS_IMAGE_NAME ${SECURITYSCANS_IMAGE_NAME}
+make security/scans
 
-echo "Building integrity verifier bundle completed : $(date)"
+echo "Scanning integrity verifier images completed : $(date)"

@@ -14,16 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [ -z "${DOCKER_REGISTRY}" ]; then
-	echo "DOCKER_REGISTRY is empty."
-	exit 1;
-fi
-if [ -z "${DOCKER_USER}" ]; then
-	echo "DOCKER_USER is empty."
-	exit 1;
-fi
-if [ -z "${DOCKER_PASS}" ]; then
-	echo "DOCKER_PASS is empty."
-	exit 1;
-fi
-docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} -p ${DOCKER_PASS}
+set -e
+
+echo "SONAR SCAN GOES HERE!"
+
+# Run our build target
+
+
+echo "SONAR Scaning integrity verifier"
+
+
+echo "SONAR Scanning integrity verifier completed : $(date)"

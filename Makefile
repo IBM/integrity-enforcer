@@ -19,6 +19,9 @@
 ifeq ($(IV_REPO_ROOT),)
 $(error IV_REPO_ROOT is not set)
 endif
+ifeq ($(IV_ENV),)
+$(error "IV_ENV is empty. Please set local or remote.")
+endif
 
 include  .env
 export $(shell sed 's/=.*//' .env)
@@ -41,18 +44,8 @@ endif
 
 # CICD BUILD HARNESS
 ####################
-ifeq ($(UPSTREAM_ENV),true)
-  USE_VENDORIZED_BUILD_HARNESS = false
-else
-  USE_VENDORIZED_BUILD_HARNESS ?=
-endif
-
-
-ifndef USE_VENDORIZED_BUILD_HARNESS
+ifeq ($(IV_ENV), remote)
 -include $(shell curl -s -H 'Authorization: token ${GITHUB_TOKEN}' -H 'Accept: application/vnd.github.v4.raw' -L https://api.github.com/repos/open-cluster-management/build-harness-extensions/contents/templates/Makefile.build-harness-bootstrap -o .build-harness-bootstrap; echo .build-harness-bootstrap)
-else
-#-include vbh/.build-harness-bootstrap
--include $(shell curl -sSL -o .build-harness "https://git.io/build-harness"; echo .build-harness)
 endif
 ####################
 
@@ -161,10 +154,8 @@ build-images:
 			$(IV_REPO_ROOT)/build/build_images.sh $(NO_CACHE); \
 		fi
 
-docker-login:
-		${IV_REPO_ROOT}/build/docker_login.sh
 
-push-images: docker-login
+push-images:
 		${IV_REPO_ROOT}/build/push_images.sh
 
 pull-images:
@@ -175,24 +166,11 @@ pull-images:
 ############################################################
 
 build-bundle:
-		@if [ "$(UPSTREAM_ENV)" = true ]; then \
-			if [ -z "$(QUAY_REGISTRY)" ]; then \
-				echo "QUAY_REGISTRY is empty."; \
-				exit 1; \
-			fi; \
-			if [ -z "$(QUAY_USER)" ]; then \
-				echo "QUAY_USER is empty."; \
-				exit 1; \
-			fi; \
-			if [ -z "$(QUAY_PASS)" ]; then \
-				echo "QUAY_PASS is empty."; \
-				exit 1; \
-			fi; \
-			docker login ${QUAY_REGISTRY} -u ${QUAY_USER} -p ${QUAY_PASS}; \
+		@if [ "$(IV_ENV)" = local ]; then \
 			$(IV_REPO_ROOT)/build/build_bundle.sh; \
 		else \
 			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh; \
-		fi						
+		fi
 
 ############################################################
 # clean section
@@ -430,3 +408,50 @@ clean-tmp:
 	@if [ -f "$(TMP_CR_UPDATED_FILE)" ]; then\
 		rm $(TMP_CR_UPDATED_FILE);\
 	fi
+
+.PHONY: sec-scan
+
+sec-scan:
+	$(IV_REPO_ROOT)/build/sec_scan.sh
+
+.PHONY: sonar-go-test-iv sonar-go-test-op
+
+sonar-go-test-iv:
+	@if [ "$(IV_ENV)" = remote ]; then \
+		make go/gosec-install; \
+	fi
+	@echo "-> Starting sonar-go-test"
+	@echo "--> Starting go test"
+	cd $(VERIFIER_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	@echo "--> Running gosec"
+	gosec -fmt sonarqube -out gosec.json -no-fail ./...
+	@echo "---> gosec gosec.json"
+	@cat gosec.json
+	@if [ "$(IV_ENV)" = remote ]; then \
+		echo "--> Running sonar-scanner"; \
+		unset SONARQUBE_SCANNER_PARAMS; \
+		sonar-scanner --debug; \
+	fi
+
+sonar-go-test-op:
+	@if [ "$(IV_ENV)" = remote ]; then \
+		make go/gosec-install; \
+	fi
+	@echo "-> Starting sonar-go-test"
+	@echo "--> Starting go test"
+	cd $(VERIFIER_OP_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	@echo "--> Running gosec"
+	gosec -fmt sonarqube -out gosec.json -no-fail ./...
+	@echo "---> gosec gosec.json"
+	@cat gosec.json
+	@if [ "$(IV_ENV)" = remote ]; then \
+		echo "--> Running sonar-scanner"; \
+		unset SONARQUBE_SCANNER_PARAMS; \
+		sonar-scanner --debug; \
+	fi
+
+.PHONY: publish
+
+publish:
+	$(IV_REPO_ROOT)/build/publish_images.sh
+	$(IV_REPO_ROOT)/build/publish_bundle_ocm.sh
