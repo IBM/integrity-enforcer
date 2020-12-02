@@ -56,6 +56,7 @@ if ! [ -x "$(command -v kustomize)" ]; then
                   echo "A file named kustomize already exists (remove it first)."
                   exit 1
                 fi
+
 		wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.8.5/kustomize_v3.8.5_linux_amd64.tar.gz
                 if [ -e ./kustomize_v*_linux_amd64.tar.gz ]; then
                    tar xzf ./kustomize_v*_linux_amd64.tar.gz
@@ -66,10 +67,8 @@ if ! [ -x "$(command -v kustomize)" ]; then
                 popd >& /dev/null
                 ./kustomize version
                 echo kustomize installed to current directory.
-
-		#curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 	elif [[ "$OS_NAME" == "Darwin" ]]; then
-		#curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 	fi
 	chmod +x ./kustomize
 	sudo mv ./kustomize /usr/local/bin/kustomize
