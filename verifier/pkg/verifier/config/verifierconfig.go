@@ -37,7 +37,8 @@ type PatchConfig struct {
 }
 
 type IVResourceCondition struct {
-	References             []*common.ResourceRef `json:"references,omitempty"`
+	OperatorResources      []*common.ResourceRef `json:"operatorResources,omitempty"`
+	ServerResources        []*common.ResourceRef `json:"serverResources,omitempty"`
 	OperatorServiceAccount string                `json:"operatorServiceAccount,omitempty"`
 }
 
@@ -84,9 +85,19 @@ type PluginConfig struct {
 	Enabled bool   `json:"enabled,omitempty"`
 }
 
-func (self *IVResourceCondition) Match(reqc *common.ReqContext) bool {
+func (self *IVResourceCondition) IsOperatorResource(reqc *common.ReqContext) bool {
 	ref := reqc.ResourceRef()
-	for _, refi := range self.References {
+	for _, refi := range self.OperatorResources {
+		if refi.EqualsWithoutVersionCheck(ref) {
+			return true
+		}
+	}
+	return false
+}
+
+func (self *IVResourceCondition) IsServerResource(reqc *common.ReqContext) bool {
+	ref := reqc.ResourceRef()
+	for _, refi := range self.ServerResources {
 		if refi.EqualsWithoutVersionCheck(ref) {
 			return true
 		}

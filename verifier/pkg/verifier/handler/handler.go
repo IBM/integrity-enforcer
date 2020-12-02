@@ -118,10 +118,11 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	if self.checkIfIVResource() {
 		self.ctx.IVResource = true
-		if self.checkIfIVAdminRequest() || self.checkIfIVServerRequest() || self.checkIfIVOperatorRequest() {
+		if (self.checkIfIVOperatorResource() && self.checkIfIVAdminRequest()) || (self.checkIfIVServerResource() && (self.checkIfIVOperatorRequest() || self.checkIfIVServerRequest())) {
 			allowed = true
 			evalReason = common.REASON_IV_ADMIN
 		} else {
+			evalReason = common.REASON_BLOCK_IV_RESOURCE_OPERATION
 			self.ctx.Protected = true
 		}
 	} else {
@@ -280,6 +281,11 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		if err != nil {
 			logger.Error("Failed to create an event; ", err)
 		}
+	} else if self.ctx.IVResource {
+		err := self.createOrUpdateEvent()
+		if err != nil {
+			logger.Error("Failed to create an event; ", err)
+		}
 	}
 
 	//log context
@@ -353,11 +359,6 @@ func (self *RequestHandler) evalFinalDecisionForIVResource(allowed bool, evalRea
 		dr.Verified = false
 		dr.Message = self.ctx.AbortReason
 		dr.ReasonCode = common.REASON_ABORTED
-	} else if !self.checkIfIVAdminRequest() && !self.checkIfIVServerRequest() && !self.checkIfIVOperatorRequest() {
-		dr.Allow = false
-		dr.Verified = true
-		dr.ReasonCode = common.REASON_BLOCK_IV_RESOURCE_OPERATION
-		dr.Message = common.ReasonCodeMap[common.REASON_BLOCK_IV_RESOURCE_OPERATION].Message
 	} else if allowed {
 		dr.Allow = true
 		dr.Verified = true
@@ -366,7 +367,7 @@ func (self *RequestHandler) evalFinalDecisionForIVResource(allowed bool, evalRea
 	} else {
 		dr.Allow = false
 		dr.Verified = false
-		dr.Message = errMsg
+		dr.Message = common.ReasonCodeMap[evalReason].Message
 		dr.ReasonCode = evalReason
 	}
 
@@ -441,7 +442,7 @@ func (self *RequestHandler) logEntry() {
 
 func (self *RequestHandler) logContext() {
 	// avoid to log events for IV to update RuleTables
-	if self.checkIfIVResource() && self.checkIfIVServerRequest() {
+	if self.checkIfIVServerResource() && self.checkIfIVServerRequest() {
 		return
 	}
 	if self.CheckIfContextLogEnabled() {
@@ -569,9 +570,19 @@ func (self *RequestHandler) checkIfUnprocessedInIV() bool {
 }
 
 func (self *RequestHandler) checkIfIVResource() bool {
+	return self.checkIfIVOperatorResource() || self.checkIfIVServerResource()
+}
+
+func (self *RequestHandler) checkIfIVOperatorResource() bool {
 	ieResCondition := self.config.IVResourceCondition
-	isIVResouce := ieResCondition.Match(self.reqc)
-	return isIVResouce
+	isIVOpResouce := ieResCondition.IsOperatorResource(self.reqc)
+	return isIVOpResouce
+}
+
+func (self *RequestHandler) checkIfIVServerResource() bool {
+	ieResCondition := self.config.IVResourceCondition
+	isIVSvResouce := ieResCondition.IsServerResource(self.reqc)
+	return isIVSvResouce
 }
 
 func (self *RequestHandler) checkIfProfileResource() bool {
@@ -674,8 +685,13 @@ func (self *RequestHandler) createOrUpdateEvent() error {
 		return err
 	}
 
+	resultStr := "deny"
+	if self.ctx.Allow {
+		resultStr = "allow"
+	}
+
 	sourceName := "IntegrityVerifier"
-	evtName := fmt.Sprintf("iv-deny-%s-%s-%s", strings.ToLower(self.reqc.Operation), strings.ToLower(self.reqc.Kind), self.reqc.Name)
+	evtName := fmt.Sprintf("iv-%s-%s-%s-%s", resultStr, strings.ToLower(self.reqc.Operation), strings.ToLower(self.reqc.Kind), self.reqc.Name)
 	evtNamespace := self.reqc.Namespace
 	involvedObject := v1.ObjectReference{
 		Namespace:  self.reqc.Namespace,
