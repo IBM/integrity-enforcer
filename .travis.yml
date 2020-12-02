@@ -82,7 +82,7 @@ jobs:
       if: env(ENABLE_PUBLISH) = true AND type = push AND branch = master
       script:
         - |
-          #make init
-          ${TRAVIS_BUILD_DIR}/build/publish_images.sh
-          ${TRAVIS_BUILD_DIR}/build/publish_bundle_ocm.sh
+          make init
+          make component/build
+          make publish
           #${TRAVIS_BUILD_DIR}/build/pipeline.sh
