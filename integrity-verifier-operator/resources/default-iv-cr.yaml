@@ -13,7 +13,7 @@ spec:
     - name: helm
       enabled: false
     ieResource: "apis.integrityverifier.io"
-    ivAdminUserGroup: ""
+    ivAdminUserGroup: "system:masters,system:cluster-admins"
     ignore:
     - kind: Event
     - kind: Lease

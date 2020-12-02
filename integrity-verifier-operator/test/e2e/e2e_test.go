@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	. "github.com/onsi/ginkgo" //nolint:golint
 	. "github.com/onsi/gomega" //nolint:golint
 
@@ -75,7 +76,9 @@ var _ = Describe("Test integrity verifier", func() {
 			vc_name := "iv-config"
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
-			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+			iv_resource_list := []*common.ResourceRef{}
+			iv_resource_list = append(iv_resource_list, vc.Spec.VerifierConfig.IVResourceCondition.OperatorResources...)
+			iv_resource_list = append(iv_resource_list, vc.Spec.VerifierConfig.IVResourceCondition.ServerResources...)
 			By("Check created iv resources...")
 			for _, ivr := range iv_resource_list {
 				fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
@@ -99,7 +102,9 @@ var _ = Describe("Test integrity verifier", func() {
 			vc_name := "iv-config"
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
-			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+			iv_resource_list := []*common.ResourceRef{}
+			iv_resource_list = append(iv_resource_list, vc.Spec.VerifierConfig.IVResourceCondition.OperatorResources...)
+			iv_resource_list = append(iv_resource_list, vc.Spec.VerifierConfig.IVResourceCondition.ServerResources...)
 			By("Try to Delete iv resources...")
 			for _, ivr := range iv_resource_list {
 				fmt.Print(ivr.Kind, " : ", ivr.Name, "\n")
@@ -363,7 +368,9 @@ var _ = Describe("Test integrity verifier", func() {
 			By("Load iv resource list")
 			vc, err := framework.VerifierConfigClient.VerifierConfigs(iv_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
-			iv_resource_list := vc.Spec.VerifierConfig.IVResourceCondition.References
+			iv_resource_list := []*common.ResourceRef{}
+			iv_resource_list = append(iv_resource_list, vc.Spec.VerifierConfig.IVResourceCondition.OperatorResources...)
+			iv_resource_list = append(iv_resource_list, vc.Spec.VerifierConfig.IVResourceCondition.ServerResources...)
 			By("Server should be deleted properly")
 			var timeout int = 300
 			expected := "integrity-verifier-server"
