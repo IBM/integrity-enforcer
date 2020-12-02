@@ -1123,6 +1123,7 @@ func (r *IntegrityVerifierReconciler) createOrUpdateWebhookEvent(instance *apiv1
 		EventTime:           metav1.NewMicroTime(now),
 		Message:             msg,
 		Reason:              msg,
+		Count:               1,
 	}
 	found := &v1.Event{}
 
