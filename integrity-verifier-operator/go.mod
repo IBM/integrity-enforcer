@@ -1,5 +1,7 @@
 module github.com/IBM/integrity-enforcer/integrity-verifier-operator
 
+replace github.com/IBM/integrity-enforcer/integrity-verifier-operator => ../integrity-verifier-operator
+
 go 1.13
 
 require (
