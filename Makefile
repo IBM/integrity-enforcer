@@ -422,3 +422,39 @@ clean-tmp:
 
 sec-scan:
 	$(IV_REPO_ROOT)/build/sec_scan.sh
+
+.PHONY: sonar-go-test-iv sonar-go-test-op
+
+sonar-go-test-iv:
+	@if [ "$(IV_ENV)" = remote ]; then \
+		make go/gosec-install; \
+	fi
+	@echo "-> Starting sonar-go-test"
+	@echo "--> Starting go test"
+	cd $(VERIFIER_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	@echo "--> Running gosec"
+	gosec -fmt sonarqube -out gosec.json -no-fail ./...
+	@echo "---> gosec gosec.json"
+	@cat gosec.json
+	@if [ "$(IV_ENV)" = remote ]; then \
+		@echo "--> Running sonar-scanner"; \
+		unset SONARQUBE_SCANNER_PARAMS; \
+		sonar-scanner --debug; \
+	fi
+
+sonar-go-test-op:
+	@if [ "$(IV_ENV)" = remote ]; then \
+		make go/gosec-install; \
+	fi
+	@echo "-> Starting sonar-go-test"
+	@echo "--> Starting go test"
+	cd $(VERIFIER_OP_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	@echo "--> Running gosec"
+	gosec -fmt sonarqube -out gosec.json -no-fail ./...
+	@echo "---> gosec gosec.json"
+	@cat gosec.json
+	@if [ "$(IV_ENV)" = remote ]; then \
+		@echo "--> Running sonar-scanner"; \
+		unset SONARQUBE_SCANNER_PARAMS; \
+		sonar-scanner --debug; \
+	fi
