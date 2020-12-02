@@ -417,3 +417,8 @@ clean-tmp:
 	@if [ -f "$(TMP_CR_UPDATED_FILE)" ]; then\
 		rm $(TMP_CR_UPDATED_FILE);\
 	fi
+
+.PHONY: sec-scan
+
+sec-scan:
+	$(IV_REPO_ROOT)/build/sec_scan.sh
