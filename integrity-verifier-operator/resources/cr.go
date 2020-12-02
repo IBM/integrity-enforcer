@@ -67,8 +67,11 @@ func BuildVerifierConfigForIV(cr *apiv1alpha1.IntegrityVerifier, scheme *runtime
 	}
 	operatorSA := getOperatorServiceAccount()
 
+	ivOperatorResources, ivServerResources := cr.GetIVResourceList(scheme)
+
 	ecc.Spec.VerifierConfig.IVResourceCondition = &econf.IVResourceCondition{
-		References:             cr.GetIVResourceList(scheme),
+		OperatorResources:      ivOperatorResources,
+		ServerResources:        ivServerResources,
 		OperatorServiceAccount: operatorSA,
 	}
 	if ecc.Spec.VerifierConfig.CommonProfile == nil {
