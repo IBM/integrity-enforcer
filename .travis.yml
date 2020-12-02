@@ -67,8 +67,8 @@ jobs:
         - |
           make init
           make component/test/unit
-          make sonar-go-test-iv
-          make sonar-go-test-op
+          #make sonar-go-test-iv
+          #make sonar-go-test-op
           # make sonar/go enable it after resolving package references to upstream repo
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
@@ -83,4 +83,6 @@ jobs:
       script:
         - |
           make init
-          ${TRAVIS_BUILD_DIR}/build/pipeline.sh          
+          ${TRAVIS_BUILD_DIR}/build/publish_images.sh
+          ${TRAVIS_BUILD_DIR}/build/publish_bundle_ocm.sh
+          #${TRAVIS_BUILD_DIR}/build/pipeline.sh
