@@ -290,8 +290,8 @@ If you want to see the result of admission check, you can see the detail by usin
   "sig.errReason": "Failed to verify signature; Signature is invalid",
   "timestamp": "2020-09-23T02:45:19.728Z",
   "type": "",
-  "userInfo": "{\"username\":\"IAM#gajan@jp.ibm.com\",\"groups\":[\"admin\",\"iv-group\",\"system:authenticated\"]}",
-  "userName": "IAM#gajan@jp.ibm.com",
+  "userInfo": "{\"username\":\"IAM#sample_signer@enterprise.com\",\"groups\":[\"admin\",\"iv-group\",\"system:authenticated\"]}",
+  "userName": "IAM#sample_signer@enterprise.com",
   "verified": false
 }
 ```
