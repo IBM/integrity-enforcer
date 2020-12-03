@@ -135,8 +135,9 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
 
     ```
     $ export KUBECONFIG=~/kube/config/minikube
-    $ export IV_REPO_ROOT=/home/gajan/go/src/github.com/IBM/integrity-enforcer      
+    $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
     ``` 
+    In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
     Execute the following make commands to build Integrity Verifier images.
     ```
