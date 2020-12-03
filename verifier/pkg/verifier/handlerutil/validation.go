@@ -29,6 +29,45 @@ import (
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 )
 
+func ValidateResource(reqc *common.ReqContext, verifierNamespace string) (bool, string) {
+	if reqc.IsDeleteRequest() {
+		return true, ""
+	}
+
+	if reqc.Kind == common.ProfileCustomResourceKind {
+		ok, err := ValidateResourceSigningProfile(reqc, verifierNamespace)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if reqc.Kind == common.SignatureCustomResourceKind {
+		ok, err := ValidateResourceSignature(reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if reqc.Kind == common.VerifierConfigCustomResourceAPIVersion {
+		ok, err := ValidateVerifierConfig(reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if reqc.Kind == common.SignPolicyCustomResourceKind {
+		ok, err := ValidateSignPolicy(reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	} else if reqc.Kind == common.HelmReleaseMetadataCustomResourceAPIVersion {
+		ok, err := ValidateHelmReleaseMetadata(reqc)
+		if err != nil {
+			return false, fmt.Sprintf("Validation error; %s", err.Error())
+		}
+		return ok, ""
+	}
+	return true, ""
+}
+
 func ValidateResourceSigningProfile(reqc *common.ReqContext, verifierNamespace string) (bool, error) {
 	var data *rsp.ResourceSigningProfile
 	err := json.Unmarshal(reqc.RawObject, &data)

@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	handler "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/handler"
 	loader "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/loader"
@@ -70,8 +71,16 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 		logger.InitServerLogger(config.VerifierConfig.LoggerConfig())
 	}
 
+	reqGvk := admissionReviewReq.Request.Kind
+	reqGv := metav1.GroupVersion{Group: reqGvk.Group, Version: reqGvk.Version}
 	//create context
-	reqHandler := handler.NewRequestHandler(config.VerifierConfig)
+	reqRef := &common.ResourceRef{
+		Name:       admissionReviewReq.Request.Name,
+		Namespace:  admissionReviewReq.Request.Namespace,
+		ApiVersion: reqGv.String(),
+		Kind:       reqGvk.Kind,
+	}
+	reqHandler := handler.NewRequestHandler(reqRef, config.VerifierConfig)
 	admissionRequest := admissionReviewReq.Request
 
 	//process request
