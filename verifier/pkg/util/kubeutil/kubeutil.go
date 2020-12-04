@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -57,4 +59,15 @@ func GetKubeConfig() (*rest.Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+func MatchLabels(obj metav1.Object, labelSelector *metav1.LabelSelector) (bool, error) {
+	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return false, err
+	}
+	labelsMap := obj.GetLabels()
+	labelsSet := labels.Set(labelsMap)
+	matched := selector.Matches(labelsSet)
+	return matched, nil
 }

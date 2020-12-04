@@ -19,8 +19,8 @@ package verifier
 import (
 	"strings"
 
+	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
-	"github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
 	handlerutil "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/handlerutil"
 	sign "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/sign"
 )
@@ -33,7 +33,7 @@ import (
 
 type profileChecker struct {
 	*commonHandler
-	profile                      profile.SigningProfile
+	profile                      rspapi.ResourceSigningProfile
 	allowedForThisProfile        bool
 	errMsgForThisProfile         string
 	evalReasonForThisProfile     int
@@ -83,7 +83,7 @@ func (self *profileChecker) run() (bool, int, string, *common.SignatureEvalResul
 	return self.allowedForThisProfile, self.evalReasonForThisProfile, self.errMsgForThisProfile, self.signResultForThisProfile, self.mutationResultForThisProfile
 }
 
-func (self *profileChecker) evalSignature(signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error) {
+func (self *profileChecker) evalSignature(signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
 	signPolicy := self.loader.GetSignPolicy()
 	plugins := self.GetEnabledPlugins()
 	if evaluator, err := sign.NewSignatureEvaluator(self.config, signPolicy, plugins); err != nil {
@@ -95,7 +95,7 @@ func (self *profileChecker) evalSignature(signingProfile profile.SigningProfile)
 	}
 }
 
-func (self *profileChecker) evalMutation(signingProfile profile.SigningProfile) (*common.MutationEvalResult, error) {
+func (self *profileChecker) evalMutation(signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
 	reqc := self.reqc
 	checker := handlerutil.NewMutationChecker()
 	return checker.Eval(reqc, signingProfile)
