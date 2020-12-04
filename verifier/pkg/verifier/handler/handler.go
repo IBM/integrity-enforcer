@@ -594,10 +594,16 @@ func (self *RequestHandler) checkIfNamespaceRequest() bool {
 }
 
 func (self *RequestHandler) checkIfIVAdminRequest() bool {
-	if self.config.IVAdminUserGroup == "" {
-		return false
+	groupMatched := false
+	if self.config.IVAdminUserGroup != "" {
+		groupMatched = common.MatchPatternWithArray(self.config.IVAdminUserGroup, self.reqc.UserGroups)
 	}
-	return common.MatchPatternWithArray(self.config.IVAdminUserGroup, self.reqc.UserGroups) //"system:masters"
+	userMatched := false
+	if self.config.IVAdminUserName != "" {
+		userMatched = common.MatchPattern(self.config.IVAdminUserName, self.reqc.UserName)
+	}
+	isAdmin := (groupMatched || userMatched)
+	return isAdmin
 }
 
 func (self *RequestHandler) checkIfIVServerRequest() bool {
