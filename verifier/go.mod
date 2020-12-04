@@ -1,5 +1,7 @@
 module github.com/IBM/integrity-enforcer/verifier
 
+replace github.com/IBM/integrity-enforcer/verifier => ../verifier
+
 replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm
 
 go 1.13
