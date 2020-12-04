@@ -64,7 +64,9 @@ type VerifierConfig struct {
 	IVResource          string               `json:"ivResource,omitempty"`
 	IVResourceCondition *IVResourceCondition `json:"ivResourceCondition,omitempty"`
 	IVAdminUserGroup    string               `json:"ivAdminUserGroup,omitempty"`
+	IVAdminUserName     string               `json:"ivAdminUserName,omitempty"`
 	IVServerUserName    string               `json:"ivServerUserName,omitempty"`
+	Options             []string             `json:"options,omitempty"`
 }
 
 type LoggingScopeConfig struct {
