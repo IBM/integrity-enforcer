@@ -211,23 +211,23 @@ func (r *IntegrityVerifierReconciler) Reconcile(req ctrl.Request) (ctrl.Result, 
 		return recResult, recErr
 	}
 
-	// ConfigMap (RuleTable)
-	recResult, recErr = r.createOrUpdateRuleTableConfigMap(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
+	// // ConfigMap (RuleTable)
+	// recResult, recErr = r.createOrUpdateRuleTableConfigMap(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
 
-	// ConfigMap (IgnoreSATable)
-	recResult, recErr = r.createOrUpdateIgnoreRuleTableConfigMap(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
+	// // ConfigMap (IgnoreSATable)
+	// recResult, recErr = r.createOrUpdateIgnoreRuleTableConfigMap(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
 
-	// ConfigMap (ForceCheckTable)
-	recResult, recErr = r.createOrUpdateForceCheckRuleTableConfigMap(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
+	// // ConfigMap (ForceCheckTable)
+	// recResult, recErr = r.createOrUpdateForceCheckRuleTableConfigMap(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
 
 	//Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)

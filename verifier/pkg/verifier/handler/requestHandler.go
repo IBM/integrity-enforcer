@@ -17,12 +17,11 @@
 package verifier
 
 import (
+	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
-	profile "github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
 	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	handlerutil "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/handlerutil"
 	v1beta1 "k8s.io/api/admission/v1beta1"
-	v1 "k8s.io/api/core/v1"
 )
 
 /**********************************************
@@ -55,7 +54,6 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 
 	self.logEntry()
 
-	profileReferences := []*v1.ObjectReference{}
 	allowed := false
 	evalReason := common.REASON_UNEXPECTED
 
@@ -63,30 +61,12 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 		return createAdmissionResponse(false, msg)
 	}
 
-	forceMatched, forcedProfileRefs := self.checkIfForced()
-	if forceMatched {
-		self.ctx.Protected = true
-		profileReferences = append(profileReferences, forcedProfileRefs...)
-	}
-
-	if !forceMatched {
-		ignoreMatched, _ := self.checkIfIgnored()
-		if ignoreMatched {
-			self.ctx.IgnoredSA = true
-			allowed = true
-			evalReason = common.REASON_IGNORED_SA
-		}
-	}
-
 	protected := false
+	matchedProfiles := []rspapi.ResourceSigningProfile{}
 	if !self.ctx.Aborted && !allowed {
-		tmpProtected, matchedProfileRefs := self.checkIfProtected()
-		if tmpProtected {
-			protected = true
-			profileReferences = append(profileReferences, matchedProfileRefs...)
-		}
+		protected, matchedProfiles = self.checkIfProtected()
 	}
-	if !forceMatched && !protected {
+	if !protected {
 		allowed = true
 		evalReason = common.REASON_NOT_PROTECTED
 	} else {
@@ -94,16 +74,15 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 	}
 
 	var errMsg string
-	var denyingProfile profile.SigningProfile
+	var denyingProfile *rspapi.ResourceSigningProfile
 	var sigEvalResult *common.SignatureEvalResult
 	var mutEvalResult *common.MutationEvalResult
 	if !self.ctx.Aborted && self.ctx.Protected && !allowed {
-		signingProfiles := self.loader.SigningProfile(profileReferences)
-		for _, signingProfile := range signingProfiles {
-			signingProfileChecker := &profileChecker{commonHandler: self.commonHandler, profile: signingProfile}
-			allowed, evalReason, errMsg, sigEvalResult, mutEvalResult = signingProfileChecker.run()
+		for _, prof := range matchedProfiles {
+			profChecker := &profileChecker{commonHandler: self.commonHandler, profile: prof}
+			allowed, evalReason, errMsg, sigEvalResult, mutEvalResult = profChecker.run()
 			if !allowed {
-				denyingProfile = signingProfile
+				denyingProfile = &prof
 				break
 			}
 		}
@@ -140,15 +119,6 @@ func (self *RequestHandler) Run(req *v1beta1.AdmissionRequest) *v1beta1.Admissio
 			pt := v1beta1.PatchTypeJSONPatch
 			return &pt
 		}()
-	}
-
-	// Reload RuleTable only when RSP/namespace request is allowed.
-	// however, RSP request by IV server is exception because it is just updating only `status` about denied request.
-	if self.ctx.Allow && (self.checkIfProfileResource() && !self.checkIfIVServerRequest() || self.checkIfNamespaceRequest()) {
-		err := self.loader.ReloadRuleTable(self.reqc)
-		if err != nil {
-			logger.Error("Failed to reload RuleTable; ", err)
-		}
 	}
 
 	if !self.ctx.Allow && denyingProfile != nil {

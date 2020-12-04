@@ -20,7 +20,9 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/IBM/integrity-enforcer/verifier/pkg/util/kubeutil"
 	"github.com/jinzhu/copier"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -68,9 +70,23 @@ type NamespaceSelector struct {
 	Exclude       []string              `json:"exclude,omitempty"`
 }
 
-func (self *NamespaceSelector) MatchNamespace(namespace string) bool {
-	included := MatchWithPatternArray(namespace, self.Include)
-	excluded := MatchWithPatternArray(namespace, self.Exclude)
+func (self *NamespaceSelector) MatchNamespace(namespace *v1.Namespace) bool {
+	labelMatched := false
+	if self.LabelSelector != nil {
+		if ok, _ := kubeutil.MatchLabels(namespace, self.LabelSelector); ok {
+			labelMatched = true
+		}
+	}
+	if len(self.Include) == 0 && len(self.Exclude) == 0 {
+		return labelMatched
+	} else {
+		return self.MatchNamespaceName(namespace.GetName())
+	}
+}
+
+func (self *NamespaceSelector) MatchNamespaceName(nsName string) bool {
+	included := MatchWithPatternArray(nsName, self.Include)
+	excluded := MatchWithPatternArray(nsName, self.Exclude)
 	return included && !excluded
 }
 

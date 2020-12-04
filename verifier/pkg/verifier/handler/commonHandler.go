@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	policy "github.com/IBM/integrity-enforcer/verifier/pkg/common/policy"
 	kubeutil "github.com/IBM/integrity-enforcer/verifier/pkg/util/kubeutil"
@@ -44,10 +45,11 @@ import (
 ***********************************************/
 
 type commonHandler struct {
-	config *config.VerifierConfig
-	loader *loader.Loader
-	ctx    *CheckContext
-	reqc   *common.ReqContext
+	config    *config.VerifierConfig
+	loader    *loader.Loader
+	ctx       *CheckContext
+	reqc      *common.ReqContext
+	ruletable *loader.RuleTable2
 }
 
 func (self *commonHandler) inScopeCheck(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
@@ -58,6 +60,7 @@ func (self *commonHandler) inScopeCheck(req *v1beta1.AdmissionRequest) *v1beta1.
 
 	//init loader
 	self.loader = loader.NewLoader(self.config, reqNamespace)
+	self.ruletable = loader.NewRuleTable2(self.loader.RSP.GetData(), self.loader.Namespace.GetData(), self.config.Namespace)
 
 	// check if reqNamespace matches VerifierConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
@@ -115,11 +118,7 @@ func (self *commonHandler) createPatch() []byte {
 }
 
 func (self *commonHandler) checkIfProfileTargetNamespace(reqNamespace string) bool {
-	profileTargetNamespaces := self.loader.ProfileTargetNamespaces()
-	if len(profileTargetNamespaces) == 0 {
-		return false
-	}
-	return common.ExactMatchWithPatternArray(reqNamespace, profileTargetNamespaces)
+	return self.ruletable.CheckIfTargetNamespace(reqNamespace)
 }
 
 func (self *commonHandler) checkIfInScopeNamespace(reqNamespace string) bool {
@@ -127,7 +126,7 @@ func (self *commonHandler) checkIfInScopeNamespace(reqNamespace string) bool {
 	if inScopeNSSelector == nil {
 		return false
 	}
-	return inScopeNSSelector.MatchNamespace(reqNamespace)
+	return inScopeNSSelector.MatchNamespaceName(reqNamespace)
 }
 
 func (self *commonHandler) checkIfDryRunAdmission() bool {
@@ -236,25 +235,10 @@ func (self *commonHandler) GetEnabledPlugins() map[string]bool {
 	return self.config.GetEnabledPlugins()
 }
 
-func (self *commonHandler) checkIfProtected() (bool, []*v1.ObjectReference) {
+func (self *commonHandler) checkIfProtected() (bool, []rspapi.ResourceSigningProfile) {
 	reqFields := self.reqc.Map()
-	table := self.loader.ProtectRules()
-	protected, matchedProfileRefs := table.Match(reqFields, self.config.Namespace)
-	return protected, matchedProfileRefs
-}
-
-func (self *commonHandler) checkIfIgnored() (bool, []*v1.ObjectReference) {
-	reqFields := self.reqc.Map()
-	table := self.loader.IgnoreRules()
-	matched, matchedProfileRefs := table.Match(reqFields, self.config.Namespace)
-	return matched, matchedProfileRefs
-}
-
-func (self *commonHandler) checkIfForced() (bool, []*v1.ObjectReference) {
-	reqFields := self.reqc.Map()
-	table := self.loader.ForceCheckRules()
-	matched, matchedProfileRefs := table.Match(reqFields, self.config.Namespace)
-	return matched, matchedProfileRefs
+	protected, matchedProfiles := self.ruletable.CheckIfProtected(reqFields)
+	return protected, matchedProfiles
 }
 
 func (self *commonHandler) CheckIfBreakGlassEnabled() bool {

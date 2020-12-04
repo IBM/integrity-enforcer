@@ -261,7 +261,7 @@ func NewRuleTableFromProfile(sProfile rspapi.ResourceSigningProfile, tableType R
 
 		matchedNamespaceList := []string{}
 		for _, ns := range namespaceList.Items {
-			if (len(targetNs.Include) == 0 && len(targetNs.Exclude) == 0) || targetNs.MatchNamespace(ns.GetName()) {
+			if (len(targetNs.Include) == 0 && len(targetNs.Exclude) == 0) || targetNs.MatchNamespace(&ns) {
 				matchedNamespaceList = append(matchedNamespaceList, ns.GetName())
 			}
 		}

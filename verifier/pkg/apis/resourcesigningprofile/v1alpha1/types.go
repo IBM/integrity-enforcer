@@ -21,6 +21,7 @@ import (
 
 	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	"github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
+	"github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -75,13 +76,28 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.ProtectRules) == 0
 }
 
-func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *profile.Rule) {
-	for _, rule := range self.Spec.ProtectRules {
+func (self ResourceSigningProfile) Match(reqFields map[string]string) bool {
+	for _, rule := range self.Spec.ForceCheckRules {
 		if rule.MatchWithRequest(reqFields) {
-			return true, rule
+			logger.Debug(reqFields["Name"], ": test1")
+			return true
 		}
 	}
-	return false, nil
+	for _, rule := range self.Spec.IgnoreRules {
+		if rule.MatchWithRequest(reqFields) {
+			logger.Debug(reqFields["Name"], ": test2")
+			return false
+		}
+	}
+	for _, rule := range self.Spec.ProtectRules {
+		if rule.MatchWithRequest(reqFields) {
+			logger.Debug(reqFields["Name"], ": test3")
+			return true
+		}
+	}
+	logger.Debug(reqFields["Name"], ": test4")
+
+	return false
 }
 
 func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) ResourceSigningProfile {
