@@ -1,12 +1,13 @@
 #!/bin/bash
 CMDNAME=`basename $0`
-if [ $# -ne 4 ]; then
-  echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR>" 1>&2
+if [ $# -ne 5 ]; then
+  echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR> <DELETE-FLAG>" 1>&2
   echo "E.g.:  ./ocm-verification-key-setup \\
 		integrity-verifier-operator-system \\
                 keyring-secret \\
 		mQENBF4Wp7sBCADCq09Zqu8QYs... \\
-		environment:dev"
+		environment:dev" \\
+                false
   exit 1
 fi
 
@@ -19,6 +20,7 @@ NAMESPACE=$1
 PUBRING_KEY_NAME=$2
 PUBRING_KEY_VALUE=$3
 PLACEMENT_KEY_VALUE=$4
+DELETE_FLAG=$5
 
 if [ -z "$PLACEMENT_KEY_VALUE" ]; then
     echo "Please pass <PLACEMENT-RULE-KEY-VALUE-PAIR> as parameter e.g. 'environment:dev'"
@@ -47,7 +49,13 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     BASE='base64'
 fi
 
-cat <<EOF | kubectl apply -f -
+OPERATION="apply"
+
+if [ "$DELETE_FLAG" = true ] ; then
+  OPERATION="delete"
+fi
+
+cat <<EOF | kubectl ${OPERATION} -f -
 apiVersion: v1
 kind: Namespace
 metadata:
