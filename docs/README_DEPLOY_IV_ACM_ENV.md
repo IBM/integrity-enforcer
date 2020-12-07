@@ -1,12 +1,12 @@
 
-# How to install Integrity Verifier using the ACM policy
+# How to install Integrity Verifier using the [ACM](https://www.redhat.com/en/technologies/management/advanced-cluster-management) policy.
 
 ## 
 
-This section describe the steps for deploying Integrity Verifier (IV) on your managed cluster via ACM policy.
+This section describe the steps for deploying Integrity Verifier (IV) on your ACM managed cluster via policy.
 
 1. Retrive the source from `policy-collection` Git repository.
-
+    
     git clone this repository and moved to `policy-collection` directory
 
     ```
