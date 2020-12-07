@@ -44,7 +44,7 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-ver
 ```
 
 
-### Delete verification key to hub cluster so that it can probagate to managed cluster
+### Delete verification key from hub cluster and a managed cluster(s)
 
 First connect to a ACM hub cluster where a verification key is already setup and execute the following script to delete the key from hub the cluster as well as a managed cluster(s).
 
