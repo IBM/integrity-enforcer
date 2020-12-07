@@ -81,13 +81,17 @@ This section describe the steps for deploying Integrity Verifier (IV) on your AC
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
      ```
      
-     Before execute the make command, setup local environment as follows:
-     - IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository>
-    
-     The following example shows how to set up a local envionement.
+     Before executing the script `ocm-sign-policy.sh`, setup local environment as follows:
+     - `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
+     - `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
 
+      `~/kube/config/target_cluster` is the Kuebernetes config file with credentials for accessing a cluster (ie. a ACM hub cluster.) via `kubectl`.
+
+     Example:
+     ```
      $ export KUBECONFIG=~/kube/config/target_cluster
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
+     ```
 
      Then, execute the sample script `ocm-sign-policy.sh`in `scripts` dir to apply signature annotations on YAML resources in a directory.
     
