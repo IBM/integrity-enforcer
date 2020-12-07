@@ -32,14 +32,13 @@ Usage: acm-verification-key-setup.sh <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY
        - <PLACEMENT-RULE-KEY-VALUE-PAIR>: To select the managed clusters in which verification key needs to be setup,  use placement rule flags.
        
 
+
 ```
-$ cd scripts/ACM
-$ ./acm-verification-key-setup.sh 
-          integrity-verifier-operator-system  \  
+curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
+          integrity-verifier-operator-system  \
           keyring-secret  \
           /tmp/pubring.gpg \
-          environment:dev |  kubectl apply -f -
-
+          environment:dev  |  kubectl apply -f -
 ```
 
 
@@ -47,21 +46,27 @@ $ ./acm-verification-key-setup.sh
 First connect to a ACM hub cluster where a verification key is alreadt setup and execute the following commands to delete keys from hubcluster as well as managed cluster.
 
 ```
-$ cd scripts/ACM
-$ ./acm-verification-key-setup.sh 
+curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
           integrity-verifier-operator-system  \
           keyring-secret  \
           /tmp/pubring.gpg \
-          environment:dev |  kubectl delete -f -
-
+          environment:dev  |  kubectl delete -f -
 ```
 
-Pass two parameters 
+Pass the following parameters 
 1.  Namespace
 
     `integrity-verifier-operator-system`  is the target namespace where verification key would be created in managed cluster. 
      (the namespace where integrity enforcer would be deployed in managed cluster)
+
+2.  Verification key name
+
+     Name of the verification to be used for deploying Integrity Verifier
         
-2.  Verification key 
+3.  Verification key file path
 
     Pass the file path of verification key (e.g. /tmp/pubring.gpg).        
+
+4.  Placement rule flags
+
+   To select the managed clusters in which verification key needs to be setup,  use placement rule flags.
