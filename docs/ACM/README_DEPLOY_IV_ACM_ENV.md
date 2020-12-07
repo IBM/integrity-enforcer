@@ -65,15 +65,8 @@ This section describe the steps for deploying Integrity Verifier (IV) on your AC
 
     ```
 
-    ```
-    $ git clone https://github.com/IBM/integrity-enforcer.git
-    $ cd integrity-enforcer
-    $ pwd /home/repo/integrity-enforcer
-    $ export IE_REPO_ROOT=/home/repo/integrity-enforcer
-
-    ```
-   
-   3. Sign GRC polices
+  
+   3. Sign ACM polices
      
      ```
      $ git clone https://github.com/IBM/integrity-enforcer.git
@@ -81,7 +74,7 @@ This section describe the steps for deploying Integrity Verifier (IV) on your AC
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
      ```
      
-     Before executing the script `ocm-sign-policy.sh`, setup local environment as follows:
+     Before executing the script `acm-sign-policy.sh`, setup local environment as follows:
      - `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
      - `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
 
@@ -93,16 +86,16 @@ This section describe the steps for deploying Integrity Verifier (IV) on your AC
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
      ```
 
-     Then, execute the sample script `ocm-sign-policy.sh`in `scripts` dir to apply signature annotations on YAML resources in a directory.
+     Then, execute the sample script `acm-sign-policy.sh`in `scripts/ACM` dir to apply signature annotations on YAML resources in a directory.
     
      ```
-     cd integrity-verifier/scripts
-     $./ocm-sign-policy.sh signer@enterprise.com <YAML-RESOURCES=DIRECTORY>
+     cd integrity-verifier/scripts/ACM
+     $./acm-sign-policy.sh signer@enterprise.com <YAML-RESOURCES=DIRECTORY>
      ```
      
-     Usage: ocm-sign-policy.sh <signer> <YAML files directory>
+     Usage: acm-sign-policy.sh <signer> <YAML files directory>
       - <signer>: Use the `signer` setup above e.g. `signer@enterprise.com`
-      - <YAML files directory>:  The directory where the YAML to be signed exist. (e.g. `/home/repo/policy-collection/community`  for signing policies under `community directory' in ACM policy collection (GIT] (https://github.com/open-cluster-management/policy-collection.git))
+      - <YAML files directory>:  The directory where the YAML to be signed exist. (e.g. `/home/repo/policy-collection/community`  for signing policies under `community directory' in ACM policy collection cloned from: (GIT] (https://github.com/open-cluster-management/policy-collection.git))
      
     
 6. Deploy signed polices
