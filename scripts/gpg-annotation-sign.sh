@@ -15,8 +15,8 @@
 # limitations under the License.
 
 CMDNAME=`basename $0`
-if [ $# -ne 3 ]; then
-  echo "Usage: $CMDNAME <signer> <input> <output>" 1>&2
+if [ $# -ne 2 ]; then
+  echo "Usage: $CMDNAME <signer> <input>" 1>&2
   exit 1
 fi
 
@@ -27,18 +27,13 @@ fi
 
 SIGNER=$1
 INPUT_FILE=$2
-OUT_FILE=$3
+
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     base='base64'
 fi
-
-yq read $INPUT_FILE -d 0 > $OUT_FILE
-
-yq d $OUT_FILE  metadata.annotations.message -i
-yq d $OUT_FILE  metadata.annotations.signature -i
 
 metaname=$(cat $INPUT_FILE | yq r - 'metadata.name')
 
@@ -48,10 +43,11 @@ msg=`cat $INPUT_FILE | $base`
 # signature
 sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
 
-yq d $OUT_FILE metadata.annotations.message -i
-yq d $OUT_FILE metadata.annotations.signature -i
+yq d $INPUT_FILE metadata.annotations.message -i
+yq d $INPUT_FILE metadata.annotations.signature -i
 
-yq w -i $OUT_FILE metadata.annotations.message $msg
-yq w -i $OUT_FILE metadata.annotations.signature $sig
+yq w -i $INPUT_FILE metadata.annotations.message $msg
+yq w -i $INPUT_FILE metadata.annotations.signature $sig
+
 
 rm temp-aaa.yaml
