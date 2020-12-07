@@ -1,10 +1,12 @@
-# How to deploy verification key to an [ACM](https://www.redhat.com/en/technologies/management/advanced-cluster-management) managed cluster.
+# How to deploy verification key to an ACM managed cluster.
 
 ## Prerequisites
 ​
 The following prerequisites must be satisfied to deploy Integrity Verifier on a cluster.
-- An ACM hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command
-- A secret resource (keyring-secret) which contains public key and certificates should be setup in an ACM managed cluster(s) for enabling signature verification by Integrity Verifier.
+- An [ACM]((https://www.redhat.com/en/technologies/management/advanced-cluster-management)) hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command
+
+## Verification Key setup
+- A secret resource (keyring-secret) which contains public key and certificates should be setup in an ACM managed cluster(s) for enabling signature verification by Integrity Verifier. We describe how we could setup a verification key next.
 
 
 ## Verification key Type
@@ -25,13 +27,17 @@ If you do not have any PGP key or you want to use new key, generate new one and 
 ### Deploy verification key to hub cluster so that it can probagate to managed cluster
 First connect to a ACM hub cluster and execute the following commands to setup keys on managed clusters connectted to the hub cluster.
 
+
 Usage: acm-verification-key-setup.sh <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR> <DELETE-FLAG>
+
+```      
        - <NAMESPACE>:  The namespace in the hub cluster and managed cluster where the verification key would be created
        - <PUBRING-KEY-NAME>:  The name of the verification key, which should be same as the key setup used for deploying Integrity Verifiier. see [Doc](../README_QUICK.md). 
        - <PUBRING-KEY-FILE-PATH>: The file path of verification key (e.g. /tmp/pubring.gpg)
        - <PLACEMENT-RULE-KEY-VALUE-PAIR>: To select the managed clusters in which verification key needs to be setup,  use placement rule flags.
-       
-
+```
+   
+ Excute the scripts as follows.
 
 ```
 curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
