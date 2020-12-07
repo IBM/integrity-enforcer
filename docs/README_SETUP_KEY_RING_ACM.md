@@ -1,4 +1,4 @@
-# How to deploy verification key to an [ACM] (https://www.redhat.com/en/technologies/management/advanced-cluster-management) managed cluster.
+# How to deploy verification key to an [ACM](https://www.redhat.com/en/technologies/management/advanced-cluster-management) managed cluster.
 
 ## Prerequisites
 ​
