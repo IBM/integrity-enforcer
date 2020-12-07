@@ -49,6 +49,11 @@ The following prerequisites must be satisfied to deploy Integrity Verifier on an
  
   We will use the script: [acm-sign-policy.sh](https://github.com/IBM/integrity-enforcer/blob/master/scripts/acm-sign-policy.sh) for signing ACM polices cloned from git [https://github.com/gajananan/policy-collection.git].
   
+  Pass the following parameters. 
+ 
+   - SIGNER-EMAIL-USED-IN-PGP-KEYSETUP: Use the email used in setting a PGP key (e.g. `signer@enterprise.com`).  
+   - POLICY-FILES-DIRECTORY:  The directory where the [ACM policy](https://github.com/open-cluster-management/policy-collection.git) files (YAML) to be signed exist. (e.g.  Pass `/home/repo/policy-collection/community` as dir to sign polices under `community` directory).
+   
  Execute the sample script `acm-sign-policy.sh` to apply signature annotations on YAML resources in a directory.
     
  ```
@@ -56,12 +61,8 @@ The following prerequisites must be satisfied to deploy Integrity Verifier on an
                  <SIGNER-EMAIL-USED-IN-PGP-KEYSETUP> \
                  <POLICY-FILES-DIRECTORY>
  ```
- Note, `acm-sign-policy.sh` script would annotate the YAML files in the directory <YAML-RESOURCES=DIRECTORY>. Make a backup of YAML files if you need.
+ Note:  `acm-sign-policy.sh` script would annotate the YAML files in the directory <YAML-RESOURCES=DIRECTORY>. Make a backup of YAML files if you need.
      
- Pass the following parameters. 
- 
-   - SIGNER-EMAIL-USED-IN-PGP-KEYSETUP: Use the email used in setting a PGP key (e.g. `signer@enterprise.com`).  
-   - POLICY-FILES-DIRECTORY:  The directory where the [ACM policy](https://github.com/open-cluster-management/policy-collection.git) files (YAML) to be signed exist. (e.g.  Pass `/home/repo/policy-collection/community` as dir to sign polices under `community` directory).
    
 ## Persit signed ACM policies to the git hub repository   
  
