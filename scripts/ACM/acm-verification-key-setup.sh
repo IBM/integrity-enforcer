@@ -1,13 +1,12 @@
 #!/bin/bash
 CMDNAME=`basename $0`
-if [ $# -ne 5 ]; then
-  echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR> <DELETE-FLAG>" 1>&2
-  echo "E.g.:  ./ocm-verification-key-setup \\
+if [ $# -ne 4 ]; then
+  echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-FAILE-PATH> <PLACEMENT-RULE-KEY-VALUE-PAIR>" 1>&2
+  echo "E.g.:  ./acm-verification-key-setup \\
 		integrity-verifier-operator-system \\
                 keyring-secret \\
-		mQENBF4Wp7sBCADCq09Zqu8QYs... \\
+	        /tmp/pubring.gpg \\
 		environment:dev" \\
-                false
   exit 1
 fi
 
@@ -18,9 +17,8 @@ fi
 
 NAMESPACE=$1
 PUBRING_KEY_NAME=$2
-PUBRING_KEY_VALUE=$3
+PUBRING_KEY_FILE_PATH=$3
 PLACEMENT_KEY_VALUE=$4
-DELETE_FLAG=$5
 
 if [ -z "$PLACEMENT_KEY_VALUE" ]; then
     echo "Please pass <PLACEMENT-RULE-KEY-VALUE-PAIR> as parameter e.g. 'environment:dev'"
@@ -49,13 +47,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     BASE='base64'
 fi
 
-OPERATION="apply"
 
-if [ "$DELETE_FLAG" = true ] ; then
-  OPERATION="delete"
-fi
-
-cat <<EOF | kubectl ${OPERATION} -f -
+cat <<EOF
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -63,7 +56,7 @@ metadata:
 ---
 apiVersion: v1
 data:
-  pubring.gpg: `echo ${PUBRING_KEY_VALUE}`
+  pubring.gpg: `cat ${PUBRING_KEY_FILE_PATH} | ${BASE}`
 kind: Secret
 metadata:
   annotations:

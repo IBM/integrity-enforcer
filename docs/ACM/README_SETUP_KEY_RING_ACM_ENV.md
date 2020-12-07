@@ -16,7 +16,7 @@ The following prerequisites must be satisfied to deploy Integrity Verifier on a 
 First, you need to export a public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
 
 ```
-$ gpg --export signer@enterprise.com > /tmp/pubring.gpg
+$ gpg --armor --export signer@enterprise.com > /tmp/pubring.gpg
 ```
 
 If you do not have any PGP key or you want to use new key, generate new one and export it to a file. See [this GitHub document](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/generating-a-new-gpg-key).
@@ -28,9 +28,8 @@ First connect to a ACM hub cluster and execute the following commands to setup k
 Usage: acm-verification-key-setup.sh <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR> <DELETE-FLAG>
        - <NAMESPACE>:  The namespace in the hub cluster and managed cluster where the verification key would be created
        - <PUBRING-KEY-NAME>:  The name of the verification key, which should be same as the key setup used for deploying Integrity Verifiier. see [Doc](../README_QUICK.md). 
-       - <PUBRING-KEY-VALUE>: The encoded value of the verifcaton key 
+       - <PUBRING-KEY-FILE-PATH>: The file path of verification key (e.g. /tmp/pubring.gpg)
        - <PLACEMENT-RULE-KEY-VALUE-PAIR>: To select the managed clusters in which verification key needs to be setup,  use placement rule flags.
-       - <DELETE-FLAG>:  If the flag set to `false`,  key would be setup in hub and managed cluster. If the flag set to `true`, key would be deleted from hub and managed cluster.
        
 
 ```
@@ -38,9 +37,8 @@ $ cd scripts/ACM
 $ ./acm-verification-key-setup.sh 
           integrity-verifier-operator-system  \  
           keyring-secret  \
-          $(cat /tmp/pubring.gpg | base64 -w 0) \
-          environment:dev \
-          false
+          /tmp/pubring.gpg \
+          environment:dev |  kubectl apply -f -
 
 ```
 
@@ -53,9 +51,8 @@ $ cd scripts/ACM
 $ ./acm-verification-key-setup.sh 
           integrity-verifier-operator-system  \
           keyring-secret  \
-          $(cat /tmp/pubring.gpg | base64 -w 0) \
-          environment:dev \
-          true
+          /tmp/pubring.gpg \
+          environment:dev |  kubectl delete -f -
 
 ```
 
@@ -67,5 +64,4 @@ Pass two parameters
         
 2.  Verification key 
 
-    Pass the encoded content of /tmp/pubring.gpg : `$(cat /tmp/pubring.gpg | base64 -w 0)`
-        
+    Pass the file path of verification key (e.g. /tmp/pubring.gpg).        
