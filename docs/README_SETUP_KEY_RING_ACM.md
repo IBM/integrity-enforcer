@@ -1,14 +1,19 @@
-# How to deploy verification key to managed cluster
+# How to deploy verification key to an [ACM](https://www.redhat.com/en/technologies/management/advanced-cluster-management) managed cluster.
+
+## Prerequisites
+​
+The following prerequisites must be satisfied to deploy Integrity Verifier on a cluster.
+- An ACM hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command
+- A secret resource (keyring-secret) which contains public key and certificates should be setup in an ACM managed cluster(s) for enabling signature verification by Integrity Verifier.
 
 
 ## Verification key Type
 `pgp`: use [gpg key](https://www.gnupg.org/index.html) for signing.
 
 
-
 ### GPG Key Setup
 
-First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
+First, you need to export a public key to a file. The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
 
 ```
 $ gpg --export signer@enterprise.com > /tmp/pubring.gpg

@@ -1,12 +1,12 @@
 
-# How to install Integrity Verifier using the ACM policy
+# How to install Integrity Verifier using the [ACM](https://www.redhat.com/en/technologies/management/advanced-cluster-management) policy.
 
 ## 
 
-This section describe the steps for deploying Integrity Verifier (IV) on your managed cluster via ACM policy.
+This section describe the steps for deploying Integrity Verifier (IV) on your ACM managed cluster via policy.
 
 1. Retrive the source from `policy-collection` Git repository.
-
+    
     git clone this repository and moved to `policy-collection` directory
 
     ```
@@ -81,13 +81,17 @@ This section describe the steps for deploying Integrity Verifier (IV) on your ma
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
      ```
      
-     Before execute the make command, setup local environment as follows:
-     - IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository>
-    
-     The following example shows how to set up a local envionement.
+     Before executing the script `ocm-sign-policy.sh`, setup local environment as follows:
+     - `IV_REPO_ROOT=<set absolute path of the root directory of cloned integrity-verifier source repository`
+     - `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
 
+      `~/kube/config/target_cluster` is the Kuebernetes config file with credentials for accessing a cluster (ie. a ACM hub cluster.) via `kubectl`.
+
+     Example:
+     ```
      $ export KUBECONFIG=~/kube/config/target_cluster
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
+     ```
 
      Then, execute the sample script `acm-sign-policy.sh`in `scripts` dir to apply signature annotations on YAML resources in a directory.
     
