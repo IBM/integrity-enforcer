@@ -15,7 +15,7 @@ To see how to create a verification key,  refer to [doc](../README_VERIFICATION_
 We will use the script: [acm-verification-key-setup.sh](https://github.com/IBM/integrity-enforcer/blob/master/scripts/acm-verification-key-setup.sh) for setting up a verification key.
 
 ```
-$ ./acm-verification-key-setup.sh \
+$ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
                NAMESPACE \
                PUBRING-KEY-NAME  \
                PUBRING_KEY_FILE_PATH \
