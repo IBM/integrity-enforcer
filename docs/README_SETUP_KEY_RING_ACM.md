@@ -20,7 +20,7 @@ If you do not have any PGP key or you want to use new key, generate new one and 
 ### Deploy verification key to hub cluster so that it can probagate to managed cluster
 First connect to a ACM hub cluster and execute the following commands to setup keys on managed clusters connectted to the hub cluster.
 
-Usage: ocm-verification-key-setup.sh <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR> <DELETE-FLAG>
+Usage: acm-verification-key-setup.sh <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-VALUE> <PLACEMENT-RULE-KEY-VALUE-PAIR> <DELETE-FLAG>
        - <NAMESPACE>:  The namespace in the hub cluster and managed cluster where the verification key would be created
        - <PUBRING-KEY-NAME>:  The name of the verification key, which should be same as the key setup used for deploying Integrity Verifiier. see [Doc](README_QUICK.md). 
        - <PUBRING-KEY-VALUE>: The encoded value of the verifcaton key 
@@ -30,7 +30,7 @@ Usage: ocm-verification-key-setup.sh <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY
 
 ```
 $ cd scripts
-$ ./ocm-verification-key-setup.sh 
+$ ./acm-verification-key-setup.sh 
           integrity-verifier-operator-system  \  
           keyring-secret  \
           $(cat /tmp/pubring.gpg | base64 -w 0) \
@@ -45,7 +45,7 @@ First connect to a ACM hub cluster where a verification key is alreadt setup and
 
 ```
 $ cd scripts
-$ ./ocm-verification-key-setup.sh 
+$ ./acm-verification-key-setup.sh 
           integrity-verifier-operator-system  \
           keyring-secret  \
           $(cat /tmp/pubring.gpg | base64 -w 0) \

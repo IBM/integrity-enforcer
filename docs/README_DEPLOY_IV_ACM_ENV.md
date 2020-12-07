@@ -89,14 +89,14 @@ This section describe the steps for deploying Integrity Verifier (IV) on your ma
      $ export KUBECONFIG=~/kube/config/target_cluster
      $ export IV_REPO_ROOT=/home/repo/integrity-enforcer
 
-     Then, execute the sample script `ocm-sign-policy.sh`in `scripts` dir to apply signature annotations on YAML resources in a directory.
+     Then, execute the sample script `acm-sign-policy.sh`in `scripts` dir to apply signature annotations on YAML resources in a directory.
     
      ```
      cd integrity-verifier/scripts
-     $./ocm-sign-policy.sh signer@enterprise.com <YAML-RESOURCES=DIRECTORY>
+     $./acm-sign-policy.sh signer@enterprise.com <YAML-RESOURCES=DIRECTORY>
      ```
      
-     Usage: ocm-sign-policy.sh <signer> <YAML files directory>
+     Usage: acm-sign-policy.sh <signer> <YAML files directory>
       - <signer>: Use the `signer` setup above e.g. `signer@enterprise.com`
       - <YAML files directory>:  The directory where the YAML to be signed exist. (e.g. `/home/repo/policy-collection/community`  for signing policies under `community directory' in ACM policy collection (GIT] (https://github.com/open-cluster-management/policy-collection.git))
      
