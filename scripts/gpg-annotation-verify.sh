@@ -27,6 +27,13 @@ fi
 msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.message')
 sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.signature')
 
+msg_body=`cat $INPUT_FILE | $base`
+
+if [ "${msg}" != "${msg_body}" ]; then
+   echo Input file content has been changed.
+   exit 0
+fi
+
 if [ -z ${msg} ] || [ -z ${sign} ] ; then
    echo "Input file is not yet signed."
 else
@@ -42,7 +49,7 @@ else
       exit 0
    else
       echo $status
-      echo "Signature not verified."
+      echo "Signature is invalid"
       exit 1
    fi
    echo --------------------------------------------------
