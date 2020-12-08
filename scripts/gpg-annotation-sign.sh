@@ -35,7 +35,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base='base64'
 fi
 
-metaname=$(cat $INPUT_FILE | yq r - 'metadata.name')
+yq d $INPUT_FILE metadata.annotations.message -i
+yq d $INPUT_FILE metadata.annotations.signature -i
 
 # message
 msg=`cat $INPUT_FILE | $base`
@@ -43,11 +44,9 @@ msg=`cat $INPUT_FILE | $base`
 # signature
 sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
 
-yq d $INPUT_FILE metadata.annotations.message -i
-yq d $INPUT_FILE metadata.annotations.signature -i
-
 yq w -i $INPUT_FILE metadata.annotations.message $msg
 yq w -i $INPUT_FILE metadata.annotations.signature $sig
 
-
-rm temp-aaa.yaml
+if [ -f temp-aaa.yaml ]; then
+   rm temp-aaa.yaml
+fi

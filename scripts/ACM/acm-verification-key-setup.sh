@@ -1,7 +1,7 @@
 #!/bin/bash
 CMDNAME=`basename $0`
 if [ $# -ne 4 ]; then
-  echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-FAILE-PATH> <PLACEMENT-RULE-KEY-VALUE-PAIR>" 1>&2
+  echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-FILE-PATH> <PLACEMENT-RULE-KEY-VALUE-PAIR>" 1>&2
   echo "E.g.:  ./acm-verification-key-setup \\
 		integrity-verifier-operator-system \\
                 keyring-secret \\
