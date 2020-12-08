@@ -26,49 +26,53 @@ fi
 msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.message')
 sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.signature')
 
-cat $INPUT_FILE > /tmp/input
+IV_TMP_DIR=$(mktemp -d "INTEGRITY_VERIRFY_TMP_DIR_XXX")
+IV_INPUT_FILE=$(mktemp -p ${IV_TMP_DIR} "input_XXX.yaml")
+IV_SIGN_FILE=$(mktemp -p ${IV_TMP_DIR} "input_XXX.sig")
+IV_MSG_FILE=$(mktemp -p ${IV_TMP_DIR} "input_XXX.msg")
 
-yq d /tmp/input metadata.annotations.message -i
-yq d /tmp/input metadata.annotations.signature -i
+
+cat ${INPUT_FILE} > ${IV_INPUT_FILE}
+
+yq d ${IV_INPUT_FILE} metadata.annotations.message -i
+yq d ${IV_INPUT_FILE} metadata.annotations.signature -i
 
 
-msg_body=`cat /tmp/input | $base`
+msg_body=`cat ${IV_INPUT_FILE} | $base`
 
 if [ "${msg}" != "${msg_body}" ]; then
    echo Input file content has been changed.
+   if [ -d ${IV_TMP_DIR} ]; then
+     rm -rf ${IV_TMP_DIR}
+   fi
    exit 0
 fi
 
 if [ -z ${msg} ] || [ -z ${sign} ] ; then
    echo "Input file is not yet signed."
 else
-   echo $msg | ${base_decode} >  /tmp/msg
-   echo $sign | ${base_decode} > /tmp/sign.sig
+   echo $msg | ${base_decode} >  ${IV_MSG_FILE}
+   echo $sign | ${base_decode} > ${IV_SIGN_FILE}
 
-   status=$(gpg --no-default-keyring --keyring ${PUBRING_KEY} --dry-run --verify /tmp/sign.sig /tmp/msg 2>&1)
+   status=$(gpg --no-default-keyring --keyring ${PUBRING_KEY} --dry-run --verify ${IV_SIGN_FILE}  ${IV_MSG_FILE} 2>&1)
+
+   if [ -d ${IV_TMP_DIR} ]; then
+     rm -rf ${IV_TMP_DIR}
+   fi
+
    result=$(echo $status | grep "Good" | wc -c)
    echo ----------------------------------------------
    if [ ${result} -gt 0 ]; then
       echo $status
       echo "Signature is successfully verified."
-      exit 0
+      exit 1
    else
       echo $status
       echo "Signature is invalid"
-      exit 1
+      exit 0
    fi
    echo --------------------------------------------------
-   if [ -f /tmp/msg ]; then
-     rm /tmp/msg
-   fi
 
-   if [ -f /tmp/sign.sig ]; then
-     rm /tmp/sign.sig
-   fi
-
-   if [ -f /tmp/input ]; then
-     rm  /tmp/input
-   fi
 fi
 
 
