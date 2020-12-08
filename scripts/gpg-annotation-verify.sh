@@ -46,6 +46,13 @@ else
       exit 1
    fi
    echo --------------------------------------------------
+   if [ -f /tmp/msg ]; then
+     rm /tmp/msg
+   fi
+
+   if [ -f /tmp/sign.sig ]; then
+     rm /tmp/sign.sig
+   fi
 fi
 
 
