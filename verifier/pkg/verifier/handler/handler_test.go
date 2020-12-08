@@ -138,7 +138,7 @@ func TestProtectedCheck(t *testing.T) {
 func TestRSPCheck(t *testing.T) {
 	reqc, config, data, ctx, _, prof, expectedDr := getTestData()
 	actualDr := resourceSigningProfileCheck(prof, reqc, config, data, ctx)
-	actualDr.denyRSP = nil // `denyRSP` is an internal-use attribute. this must be ignored for checking equivalent
+	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
