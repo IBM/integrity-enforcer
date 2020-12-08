@@ -62,20 +62,20 @@ func NewRSPLoader(verifierNamespace, profileNamespace, requestNamespace string, 
 	}
 }
 
-func (self *RSPLoader) GetData() []rspapi.ResourceSigningProfile {
+func (self *RSPLoader) GetData(doK8sApiCall bool) []rspapi.ResourceSigningProfile {
 	if len(self.Data) == 0 {
-		self.Load()
+		self.Load(doK8sApiCall)
 	}
 	return self.Data
 }
 
-func (self *RSPLoader) Load() {
+func (self *RSPLoader) Load(doK8sApiCall bool) {
 	var err error
 	var list1 *rspapi.ResourceSigningProfileList
 	var keyName string
 
 	keyName = "RSPLoader/list"
-	if cached := cache.GetString(keyName); cached == "" {
+	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
 		list1, err = self.Client.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceSigningProfile:", err)
@@ -86,7 +86,7 @@ func (self *RSPLoader) Load() {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
 		}
-	} else {
+	} else if cached != "" {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
 			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
@@ -94,8 +94,10 @@ func (self *RSPLoader) Load() {
 		}
 	}
 	data := []rspapi.ResourceSigningProfile{}
-	for _, d := range list1.Items {
-		data = append(data, d)
+	if list1 != nil {
+		for _, d := range list1.Items {
+			data = append(data, d)
+		}
 	}
 	self.Data = data
 	return

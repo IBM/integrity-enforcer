@@ -59,6 +59,10 @@ func NewRuleTable2(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Nam
 	}
 }
 
+func (self *RuleTable2) IsEmpty() bool {
+	return len(self.items) == 0
+}
+
 func (self *RuleTable2) CheckIfTargetNamespace(nsName string) bool {
 	if nsName == "" {
 		return true
@@ -87,7 +91,7 @@ func matchNamespaceListWithSelector(namespaces []v1.Namespace, nsSelector *commo
 	matched := []string{}
 	for _, ns := range namespaces {
 		if nsSelector.MatchNamespace(&ns) {
-			matched = append(matched, ns.GetName())
+			matched = append(matched, (&ns).GetName())
 		}
 	}
 	return matched

@@ -45,6 +45,7 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 		"metadata.creationTimestamp",
 		"metadata.uid",
 		"metadata.generation",
+		"metadata.managedFields",
 	}
 
 	maResult := &common.MutationEvalResult{

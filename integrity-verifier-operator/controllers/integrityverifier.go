@@ -849,21 +849,6 @@ func (r *IntegrityVerifierReconciler) createOrUpdateConfigMap(instance *apiv1alp
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrityVerifierReconciler) createOrUpdateRuleTableConfigMap(instance *apiv1alpha1.IntegrityVerifier) (ctrl.Result, error) {
-	expected := res.BuildRuleTableLockConfigMapForCR(instance)
-	return r.createOrUpdateConfigMap(instance, expected)
-}
-
-func (r *IntegrityVerifierReconciler) createOrUpdateIgnoreRuleTableConfigMap(instance *apiv1alpha1.IntegrityVerifier) (ctrl.Result, error) {
-	expected := res.BuildIgnoreRuleTableLockConfigMapForCR(instance)
-	return r.createOrUpdateConfigMap(instance, expected)
-}
-
-func (r *IntegrityVerifierReconciler) createOrUpdateForceCheckRuleTableConfigMap(instance *apiv1alpha1.IntegrityVerifier) (ctrl.Result, error) {
-	expected := res.BuildForceCheckRuleTableLockConfigMapForCR(instance)
-	return r.createOrUpdateConfigMap(instance, expected)
-}
-
 /**********************************************
 
 				Deployment
