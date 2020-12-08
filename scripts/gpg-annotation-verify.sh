@@ -14,6 +14,11 @@ fi
 INPUT_FILE=$1
 PUBRING_KEY=$2
 
+if ! [ -x "$(command -v yq)" ]; then
+   echo 'Error: yq is not installed.' >&2
+   exit 1
+fi
+
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
     base_decode='base64 -d'
@@ -22,14 +27,20 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base_decode='base64 -D'
 fi
 
-
 msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.message')
 sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.signature')
 
-IV_TMP_DIR=$(mktemp -d "INTEGRITY_VERIRFY_TMP_DIR_XXX")
-IV_INPUT_FILE=$(mktemp -p ${IV_TMP_DIR} "input_XXX.yaml")
-IV_SIGN_FILE=$(mktemp -p ${IV_TMP_DIR} "input_XXX.sig")
-IV_MSG_FILE=$(mktemp -p ${IV_TMP_DIR} "input_XXX.msg")
+
+IV_TMP_DIR="INTEGRITY_VERIRFY_TMP_DIR_XXX"
+
+if [ ! -d ${IV_TMP_DIR} ]; then
+   mkdir ${IV_TMP_DIR}
+fi
+
+
+IV_INPUT_FILE="${IV_TMP_DIR}/input_XXX.yaml"
+IV_SIGN_FILE="${IV_TMP_DIR}/input_XXX.sig"
+IV_MSG_FILE="${IV_TMP_DIR}/input_XXX.msg"
 
 
 cat ${INPUT_FILE} > ${IV_INPUT_FILE}
