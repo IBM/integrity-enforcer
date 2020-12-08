@@ -27,7 +27,13 @@ fi
 msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.message')
 sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.signature')
 
-msg_body=`cat $INPUT_FILE | $base`
+cat $INPUT_FILE > /tmp/input
+
+yq d /tmp/input metadata.annotations.message -i
+yq d /tmp/input metadata.annotations.signature -i
+
+
+msg_body=`cat /tmp/input | $base`
 
 if [ "${msg}" != "${msg_body}" ]; then
    echo Input file content has been changed.
@@ -59,6 +65,10 @@ else
 
    if [ -f /tmp/sign.sig ]; then
      rm /tmp/sign.sig
+   fi
+
+   if [ -f /tmp/input ]; then
+     rm  /tmp/input
    fi
 fi
 
