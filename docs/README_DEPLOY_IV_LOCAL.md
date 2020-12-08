@@ -32,63 +32,28 @@ This section describe the steps for deploying Integrity Verifier (IV) on your lo
     
     If you would like to use default key setup, the following command creates a public key secret for verifying signature
     ```
-    make create-key-ring
+    $ make create-key-ring
     ```
 
-    If you would like to use your own key, please follow the steps:
+    If you would like to use your own key, please follow the steps in [doc](README_VERIFICATION_KEY_SETUP.md) to generate a one:
 
-    1. If you do not have a PGP key, generate PGP key as follows.
-   
-        Use your `name` and `email` to generate PGP key using the following command
-        ```
-        $ gpg --full-generate-key
-        ```
+    Once you have the encoded content of a verification key `/tmp/pubring.gpg`, embed it to `/tmp/keyring-secret.yaml` as follows.
 
-        Confirm if key is avaialble in keyring. The following example shows a PGP key is successfully generated using email `signer@enterprise.com`
-        ```
-        $ gpg -k signer@enterprise.com
-        gpg: checking the trustdb
-        gpg: marginals needed: 3  completes needed: 1  trust model: pgp
-        gpg: depth: 0  valid:   2  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 2u
-        pub   rsa3072 2020-09-24 [SC]
-              FE866F3F88FCDAF42BB1B1ED23EC90D3DAD9A6C0
-        uid           [ultimate] signer@enterprise.com <signer@enterprise.com>
-        sub   rsa3072 2020-09-24 [E]
-        ```
+      ```yaml
+       apiVersion: v1
+       kind: Secret
+       metadata:
+         name: keyring-secret
+         type: Opaque
+       data:
+         pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
+      ```
 
-    2. Once you have a PGP key, export it as follows.
+    Create `keyring-secret` in a namespace ``integrity-verifier-operator-system`` in the cluster.
 
-        The following example shows a pubkey for a signer identified by an email `signer@enterprise.com` is exported and stored in `~/.gnupg/pubring.gpg`.
-
-        ```
-        $ gpg --export signer@enterprise.com > ~/.gnupg/pubring.gpg
-        ```
-
-    3.  Define a secret that includes a pubkey ring for verifying signatures of resources
-        
-        The encoded content of `~/.gnupg/pubring.gpg` can be retrived by using the following command:
-
-        ```
-        $ cat ~/.gnupg/pubring.gpg | base64
-        ```
-
-        Once you have the encoded content of `~/.gnupg/pubring.gpg`, embed it to `/tmp/keyring-secret.yaml` as follows.
-
-            ```yaml
-            apiVersion: v1
-            kind: Secret
-            metadata:
-              name: keyring-secret
-              type: Opaque
-            data:
-              pubring.gpg: mQGNBF5nKwIBDADIiSiWZkD713UWpg2JBPomrj/iJRiMh ...
-            ```
-
-    4.  Create `keyring-secret` in a namespace ``integrity-verifier-operator-system`` in the cluster.
-
-        ```
-        $ oc create -f  /tmp/keyring-secret.yaml -n `integrity-verifier-operator-system`
-        ```
+    ```
+    $ oc create -f  /tmp/keyring-secret.yaml -n `integrity-verifier-operator-system`
+    ```
 
 4. Define which signers (identified by email) should sign the resources in a specific namespace.
 
