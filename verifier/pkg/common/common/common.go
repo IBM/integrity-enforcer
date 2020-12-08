@@ -58,6 +58,15 @@ const (
 	LabelValueUnverified = "unverified"
 )
 
+type DecisionType string
+
+const (
+	DecisionUndetermined = "undetermined"
+	DecisionAllow        = "allow"
+	DecisionDeny         = "deny"
+	DecisionError        = "error"
+)
+
 /**********************************************
 
 				NamespaceSelector
@@ -331,6 +340,7 @@ type ReasonCode struct {
 
 const (
 	REASON_INTERNAL = iota //
+	REASON_VALIDATION_FAIL
 	REASON_RULE_MATCH
 	REASON_VALID_SIG
 	REASON_VERIFIED_OWNER
@@ -357,6 +367,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_INTERNAL: {
 		Message: "internal request",
 		Code:    "internal",
+	},
+	REASON_VALIDATION_FAIL: {
+		Message: "Validation failed; format is wrong",
+		Code:    "validation-fail",
 	},
 	REASON_RULE_MATCH: {
 		Message: "allowed by rule",

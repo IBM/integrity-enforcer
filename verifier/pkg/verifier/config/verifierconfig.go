@@ -219,6 +219,14 @@ func (ec *VerifierConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
 }
 
+func (ec *VerifierConfig) ConsoleLogEnabled(reqc *common.ReqContext) bool {
+	return ec.Log.ConsoleLog.IsInScope(reqc)
+}
+
+func (ec *VerifierConfig) ContextLogEnabled(reqc *common.ReqContext) bool {
+	return ec.Log.ContextLog.IsInScope(reqc)
+}
+
 func (ec *VerifierConfig) GetEnabledPlugins() map[string]bool {
 	plugins := map[string]bool{}
 	for _, plg := range ec.Plugin {

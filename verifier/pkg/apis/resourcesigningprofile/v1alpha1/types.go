@@ -21,7 +21,6 @@ import (
 
 	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	"github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
-	"github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -79,23 +78,19 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 func (self ResourceSigningProfile) Match(reqFields map[string]string) bool {
 	for _, rule := range self.Spec.ForceCheckRules {
 		if rule.MatchWithRequest(reqFields) {
-			logger.Debug(reqFields["Name"], ": test1")
 			return true
 		}
 	}
 	for _, rule := range self.Spec.IgnoreRules {
 		if rule.MatchWithRequest(reqFields) {
-			logger.Debug(reqFields["Name"], ": test2")
 			return false
 		}
 	}
 	for _, rule := range self.Spec.ProtectRules {
 		if rule.MatchWithRequest(reqFields) {
-			logger.Debug(reqFields["Name"], ": test3")
 			return true
 		}
 	}
-	logger.Debug(reqFields["Name"], ": test4")
 
 	return false
 }

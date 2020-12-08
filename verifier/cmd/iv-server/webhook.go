@@ -23,10 +23,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	handler "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/handler"
-	loader "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/loader"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,9 +56,6 @@ func init() {
 	cfgBytes, _ := json.Marshal(config)
 	logger.Trace(string(cfgBytes))
 	logger.Info("VerifierConfig is loaded.")
-
-	loader.InitAllRuleTables(config.VerifierConfig.Namespace)
-	logger.Info("RuleTable has been set.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
@@ -71,16 +66,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 		logger.InitServerLogger(config.VerifierConfig.LoggerConfig())
 	}
 
-	reqGvk := admissionReviewReq.Request.Kind
-	reqGv := metav1.GroupVersion{Group: reqGvk.Group, Version: reqGvk.Version}
-	//create context
-	reqRef := &common.ResourceRef{
-		Name:       admissionReviewReq.Request.Name,
-		Namespace:  admissionReviewReq.Request.Namespace,
-		ApiVersion: reqGv.String(),
-		Kind:       reqGvk.Kind,
-	}
-	reqHandler := handler.NewRequestHandler(reqRef, config.VerifierConfig)
+	reqHandler := handler.NewHandler(config.VerifierConfig)
 	admissionRequest := admissionReviewReq.Request
 
 	//process request

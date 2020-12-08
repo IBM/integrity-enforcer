@@ -53,20 +53,20 @@ func NewSignPolicyLoader(verifierNamespace string) *SignPolicyLoader {
 	}
 }
 
-func (self *SignPolicyLoader) GetData() *spolapi.SignPolicy {
+func (self *SignPolicyLoader) GetData(doK8sApiCall bool) *spolapi.SignPolicy {
 	if self.Data == nil {
-		self.Load()
+		self.Load(doK8sApiCall)
 	}
 	return self.Data
 }
 
-func (self *SignPolicyLoader) Load() {
+func (self *SignPolicyLoader) Load(doK8sApiCall bool) {
 	var err error
 	var list1 *spolapi.SignPolicyList
 	var keyName string
 
 	keyName = fmt.Sprintf("SignPolicyLoader/%s/list", self.verifierNamespace)
-	if cached := cache.GetString(keyName); cached == "" {
+	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
 		list1, err = self.Client.SignPolicies(self.verifierNamespace).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get SignPolicy:", err)
@@ -77,7 +77,7 @@ func (self *SignPolicyLoader) Load() {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
 		}
-	} else {
+	} else if cached != "" {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
 			logger.Error("failed to Unmarshal cached SignPolicy:", err)
@@ -86,7 +86,7 @@ func (self *SignPolicyLoader) Load() {
 	}
 
 	data := &spolapi.SignPolicy{}
-	if len(list1.Items) > 0 {
+	if list1 != nil && len(list1.Items) > 0 {
 		data = &(list1.Items[0])
 	}
 	self.Data = data

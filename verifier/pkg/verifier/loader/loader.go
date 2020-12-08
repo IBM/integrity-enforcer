@@ -17,12 +17,7 @@
 package loader
 
 import (
-	rsig "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesignature/v1alpha1"
-	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
-	policy "github.com/IBM/integrity-enforcer/verifier/pkg/common/policy"
 	config "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/config"
-	v1 "k8s.io/api/core/v1"
 )
 
 /**********************************************
@@ -50,46 +45,4 @@ func NewLoader(cfg *config.VerifierConfig, reqNamespace string) *Loader {
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace),
 	}
 	return loader
-}
-
-func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []rspapi.ResourceSigningProfile {
-	signingProfiles := []rspapi.ResourceSigningProfile{}
-
-	rsps := self.RSP.GetByReferences(profileReferences)
-	for _, d := range rsps {
-		if !d.Spec.Disabled {
-			signingProfiles = append(signingProfiles, d)
-		}
-	}
-
-	return signingProfiles
-
-}
-
-func (self *Loader) UpdateProfileStatus(profile *rspapi.ResourceSigningProfile, reqc *common.ReqContext, errMsg string) error {
-	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
-	sp := self.SignPolicy.GetData()
-	conditions := []policy.BreakGlassCondition{}
-	if sp != nil {
-		conditions = append(conditions, sp.Spec.SignPolicy.BreakGlass...)
-	}
-	return conditions
-}
-
-func (self *Loader) GetSignPolicy() *policy.SignPolicy {
-	spol := self.SignPolicy.GetData()
-	return spol.Spec.SignPolicy
-}
-
-func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.ResourceSignatureList {
-	items := self.ResourceSignature.GetData(reqc)
-
-	return &rsig.ResourceSignatureList{Items: items}
 }
