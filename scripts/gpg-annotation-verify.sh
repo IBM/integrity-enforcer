@@ -1,8 +1,8 @@
 #!/bin/bash
 
 CMDNAME=`basename $0`
-if [ $# -ne 3 ]; then
-  echo "Usage: $CMDNAME <signer> <input-file> <pubring-key>" 1>&2
+if [ $# -ne 2 ]; then
+  echo "Usage: $CMDNAME  <input-file> <pubring-key>" 1>&2
   exit 1
 fi
 
@@ -11,9 +11,8 @@ if [ ! -e $2 ]; then
   exit 1
 fi
 
-SIGNER=$1
-INPUT_FILE=$2
-PUBRING_KEY=$3
+INPUT_FILE=$1
+PUBRING_KEY=$2
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
@@ -46,7 +45,7 @@ else
    echo $msg | ${base_decode} >  /tmp/msg
    echo $sign | ${base_decode} > /tmp/sign.sig
 
-   status=$(gpg --no-default-keyring --keyring ${PUBRING_KEY} --verify /tmp/sign.sig /tmp/msg 2>&1)
+   status=$(gpg --no-default-keyring --keyring ${PUBRING_KEY} --dry-run --verify /tmp/sign.sig /tmp/msg 2>&1)
    result=$(echo $status | grep "Good" | wc -c)
    echo ----------------------------------------------
    if [ ${result} -gt 0 ]; then
