@@ -12,11 +12,6 @@ if [ ! -e $2 ]; then
 fi
 
 
-if [ -z "$IV_REPO_ROOT" ]; then
-    echo "IV_REPO_ROOT is empty. Please set root directory for IV repository"
-    exit 1
-fi
-
 SIGNER=$1
 TARGET_DIR=$2
 
@@ -24,6 +19,6 @@ find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
 do
   echo Signing  $file with signer: ${SIGNER}
 
-  $IV_REPO_ROOT/scripts/gpg-annotation-sign.sh ${SIGNER} "$file"
+  ../gpg-annotation-sign.sh ${SIGNER} "$file"
 done
 
