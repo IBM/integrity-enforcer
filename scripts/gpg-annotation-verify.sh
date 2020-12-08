@@ -31,16 +31,16 @@ msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.message')
 sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.signature')
 
 
-IV_TMP_DIR="INTEGRITY_VERIRFY_TMP_DIR_XXX"
+IV_TMP_DIR="/tmp/iv_tmp_dir"
 
 if [ ! -d ${IV_TMP_DIR} ]; then
    mkdir ${IV_TMP_DIR}
 fi
 
 
-IV_INPUT_FILE="${IV_TMP_DIR}/input_XXX.yaml"
-IV_SIGN_FILE="${IV_TMP_DIR}/input_XXX.sig"
-IV_MSG_FILE="${IV_TMP_DIR}/input_XXX.msg"
+IV_INPUT_FILE="${IV_TMP_DIR}/input.yaml"
+IV_SIGN_FILE="${IV_TMP_DIR}/input.sig"
+IV_MSG_FILE="${IV_TMP_DIR}/input.msg"
 
 
 cat ${INPUT_FILE} > ${IV_INPUT_FILE}
