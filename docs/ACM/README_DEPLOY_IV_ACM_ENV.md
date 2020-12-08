@@ -98,9 +98,10 @@ The following prerequisites must be satisfied to deploy Integrity Verifier on an
  Execute the sample script `acm-sign-policy.sh` to apply signature annotations on YAML resources in a directory.
     
  ```
+  $ cd policy-collection
   $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-sign-policy.sh | bash -s \
-                 <SIGNER-EMAIL-USED-IN-PGP-KEYSETUP> \
-                 <POLICY-FILES-DIRECTORY>
+                signer@enterprise.com \
+                community/integrity
  ```
  Note:  `acm-sign-policy.sh` script would annotate the YAML files in the directory <YAML-RESOURCES=DIRECTORY>. Make a backup of YAML files if you need.
      
