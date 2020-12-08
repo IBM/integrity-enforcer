@@ -37,9 +37,11 @@ else
    result=$(echo $status | grep "Good" | wc -c)
    echo ----------------------------------------------
    if [ ${result} -gt 0 ]; then
+      echo $status
       echo "Signature is successfully verified."
       exit 0
    else
+      echo $status
       echo "Signature not verified."
       exit 1
    fi
