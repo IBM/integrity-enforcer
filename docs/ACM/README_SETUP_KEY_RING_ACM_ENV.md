@@ -32,7 +32,7 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-ver
 ```
 
 We pass the following parameters:
-- `integrity-verifier-operator-system` - The namespace where verification key would be created in managed cluster. This should be the namespace the one set in Step 1 in [doc](README_DEPLOY_IV_ACM_ENV.md)
+- `integrity-verifier-operator-system` - The namespace where verification key would be created in managed cluster. This should be the namespace the one set in Step 1 in [doc](README_ENABLE_IV_PROTECTION_ACM_ENV.md)
 - `keyring-secret` - The name of secret resource which would include the verification
 - `/tmp/pubring.gpg` - The file path of the verification key exported. see [doc](../README_VERIFICATION_KEY_SETUP.md)
 - `environment:dev` - We will use placement rule flags which are the labels/tags that idetifies a managed cluster(s). We use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)
@@ -51,7 +51,7 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-ver
 ```
 
 We pass the following parameters:
-- `integrity-verifier-operator-system` - The namespace where verification key would be created in managed cluster. This should be the namespace the one set in Step 1 in [doc](README_DEPLOY_IV_ACM_ENV.md)
+- `integrity-verifier-operator-system` - The namespace where verification key would be created in managed cluster. This should be the namespace the one set in Step 1 in [doc](README_ENABLE_IV_PROTECTION_ACM_ENV.md)
 - `keyring-secret` - The name of secret resource which would include the verification
 - `/tmp/pubring.gpg` - The file path of the verification key exported. see [doc](../README_VERIFICATION_KEY_SETUP.md)
 - `environment:dev` - We will use placement rule flags which are the labels/tags that idetifies a managed cluster(s). We use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)

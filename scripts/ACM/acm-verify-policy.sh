@@ -15,5 +15,7 @@ PUBRING_KEY=$2
 find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
 do
   echo "Verifying signature annotation in ${file}"
-  curl -s https://raw.githubusercontent.com/IBM/open-cluster-management/master/scripts/gpg-annotation-verify.sh  "$file" ${PUBRING_KEY}
+
+  curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/gpg-annotation-verify.sh | bash -s "$file" ${PUBRING_KEY}
+
 done
