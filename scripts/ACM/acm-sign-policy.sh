@@ -15,7 +15,7 @@ do
   cp ${file} ${file}.backup
   echo Original file backed up as ${file}.backup
 
-  curl -s https://raw.githubusercontent.com/IBM/open-cluster-management/master/scripts/gpg-annotation-sign.sh | bash -s ${SIGNER} "$file"
+  curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/gpg-annotation-sign.sh | bash -s ${SIGNER} "$file"
 
   echo Signature annotation is attached in $file.
 done
