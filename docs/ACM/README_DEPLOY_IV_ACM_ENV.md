@@ -165,10 +165,10 @@ oc create ns <custom namespace>
       ``` 
        
       We pass the following parameters:
-        - https://github.com/\<YOUR-ORG-NAME\>/policy-collection.git -  The URL for the forked`policy-collection` GitHub reposiory.
+        - https://github.com/YOUR-ORG-NAME/policy-collection.git -  The URL for the forked`policy-collection` GitHub reposiory.
         - `community/integrity` - The directory where `policy-integrity.yaml` is located.
     
-      The above command will configure your forked [policy-collection](https://github.com/\<YOUR-ORG-NAME\>/policy-collection) GitHub repository as the target to run the sync against to create `policy-integrity` in the ACM hub cluster.
+      The above command will configure your forked `policy-collection` GitHub repository as the target to run the sync against to create `policy-integrity` in the ACM hub cluster.
 
       General instructions to deploy ACM policies to an ACM hub cluster as well as ACM managed cluster(s) using GitOps can be found in [doc](https://github.com/open-cluster-management/policy-collection).
 
@@ -220,7 +220,7 @@ oc create ns <custom namespace>
        $ git push origin master
       ```
 
-      After ACM hub cluster syncs the polices in the GitHub repository, the updated configration changes in `policy-integrity` will be applied to an ACM managed cluster(s), This will trigger the deployment of IV server in the target namespace specified in the `policy-integry` in the clusters.
+      After ACM hub cluster syncs the polices in the GitHub repository, the updated configuration changes in `policy-integrity` will be applied to an ACM managed cluster(s), This will trigger the deployment of IV server in the target namespace specified in the `policy-integry` in the clusters.
 
 ## Signing Multiple ACM policies at once.
 
