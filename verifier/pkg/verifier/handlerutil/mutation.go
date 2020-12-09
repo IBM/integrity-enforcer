@@ -41,11 +41,14 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 		common.ResourceIntegrityLabelKey,
 		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
-		"status",
+		"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
+		"metadata.annotations.deprecated.daemonset.template.generation",
 		"metadata.creationTimestamp",
 		"metadata.uid",
 		"metadata.generation",
 		"metadata.managedFields",
+		"metadata.resourceVersion",
+		"status",
 	}
 
 	maResult := &common.MutationEvalResult{
