@@ -8,18 +8,19 @@ The document describe how to install Integrity Verifier (IV) to an ACM managed c
 The following prerequisites must be satisfied to deploy IV on an ACM managed cluster. 
 
 - An [ACM]((https://www.redhat.com/en/technologies/management/advanced-cluster-management)) hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command.
-- IV requires a pair of keys for signing and verifying signatures of ACM polices that need to be protected in a managed cluster. IV supports X509 or PGP key for signing/verifying resources. Refer to [doc](../README_VERIFICATION_KEY_SETUP.md) for setting up signing and verification keys. 
+- IV requires a pair of keys for signing and verifying signatures of ACM polices that need to be protected in a managed cluster. Refer to [doc](../README_VERIFICATION_KEY_SETUP.md) for setting up signing and verification keys. 
 - The script for deploying a verification key to an ACM managed cluster requires [yq](https://github.com/mikefarah/yq) installed on the host where we run the script.
 - Installing IV requires a namespace (with same name) in an ACM hub cluster and managed clusters. Make sure it is possible to create namespaces in the ACM hub cluster and managed clusters.
   - Creating namespace for IV in managed cluster is handled automatically when deploying it via an ACM policy.   
-- Installation steps requires a host where we run the scripts.  Below steps are tested on Mac OS and Ubuntu hosts.   
+- Installation steps requires a host where we run the scripts.  Below steps are tested on Mac OS and Ubuntu hosts. 
+- Installing IV and signing ACM polices involve retriving and commiting sources from GitHub repository. Make sure to install [git](https://github.com/git-guides/install-git) on the host. 
 
 ## Installation Steps
 
 Installing IV on an ACM managed cluster requires the following steps:
 - Step 1: Prepare a namespace in an ACM hub cluster. 
 - Step 2: Deploy a verification key to an ACM managed cluster
-- Step 3: Deploying Integrity Verifier to an ACM managed cluster using ACM polices.
+- Step 3: Deploying Integrity Verifier to an ACM managed cluster using an ACM policy.
 
 ### Step 1: Prepare a namespace in an ACM hub cluster. 
 Connect to the ACM Hub cluster and execute the following command:
@@ -29,6 +30,13 @@ oc create ns integrity-verifier-operator-system
 ```
 The above command will create a namespace `integrity-verifier-operator-system` in the ACM hub cluster.
 
+By default, we use `integrity-verifier-operator-system` in this document.
+If you prefer to call the namespace something else, you can run the following instead: 
+ 
+```
+oc create ns <custom namespace> 
+```
+
 ### Step 2:  Deploy a verification key to an ACM managed cluster. 
    
    Integrity Verifier requires a secret in an ACM managed cluster(s), that includes a pubkey ring for verifying signatures of ACM polices that need to be protected. 
@@ -36,16 +44,17 @@ The above command will create a namespace `integrity-verifier-operator-system` i
     
 
 
-### Step 3: Deploying Integrity Verifier to an ACM managed cluster using ACM polices.
+### Step 3: Deploying Integrity Verifier to an ACM managed cluster using an ACM policy.
    
-   We will use [policy-integrity.yaml](https://github.com/open-cluster-management/policy-collection/blob/master/community/integrity/policy-integrity.yaml) to deploy Integrity Verifier on an ACM managed cluster.
-   
+   We will use an ACM policy called `policy-integrity`, which is specified in [policy-integrity.yaml](https://github.com/open-cluster-management/policy-collection/blob/master/community/integrity/policy-integrity.yaml), to deploy Integrity Verifier to an ACM managed cluster(s).
+
+   The following steps shows how to retrive ACM policies and customize them. 
    
  1. Retrive the source from [policy-collection](https://github.com/open-cluster-management/policy-collection) Git repository.
    
-      Fork [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository. We will use the forked version of this repo as the target to run the sync against. 
+      Fork [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository. We will use the forked version of this repo as the target to run the sync against when deploying ACM policies to an ACM cluster. 
    
-      Then `git clone` the forked repository.
+      Then, `git clone` the forked repository.
 
       The following example shows how to clone `policy-collection` and move to `policy-collection` directory
        ```
@@ -53,8 +62,38 @@ The above command will create a namespace `integrity-verifier-operator-system` i
        $ cd policy-collection
        ```
   2. Configure `policy-integrity.yaml`, which is an ACM policy for deploying IV to an ACM managed cluster(s)
-    
-        a)  Configure a signer
+
+      You can find `policy-integrity.yaml` in the directory `policy-collection/community/integrity/` of the cloned GitHub repository.
+
+      a)  Configure the Namespace to deploy IV to an ACM managed cluster(s)
+
+
+      By default, `policy-integrity.yaml` specifies a namespace as `integrity-verifier-operator-system` to be created in an ACM managed cluster(s) for deploying IV.
+
+        ```
+          - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+              name: integrity-namespace-policy
+            spec:
+              remediationAction: enforce
+              severity: High
+              namespaceSelector:
+                exclude: ["kube-*"]
+                include: ["default"]
+              object-templates:
+              - complianceType: musthave
+                objectDefinition:
+                  kind: Namespace # must have namespace 'integrity-verifier-operator-system'
+                  apiVersion: v1
+                  metadata:
+                    name: integrity-verifier-operator-system
+        ```
+
+        If you use your custom namespace in Step 1, change all instances of  `integrity-verifier-operator-system` to your custom namespace in `policy-integrity.yaml`.
+
+      b)  Configure a signer's email
 
         By default, `policy-integrity.yaml` includes a signer (`signer@enterprise.com`) as shown in following example.
       
@@ -74,9 +113,11 @@ The above command will create a namespace `integrity-verifier-operator-system` i
                   subjects:
                   - email: "signer@enterprise.com"
         ```
-        If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own.
+        If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own signer's email.
 
-     b)  Configure the [placement rule](https://github.com/open-cluster-management/policy-collection) to select which ACM managed clusters Integrity Verifier should be deployed.  
+     c)  Configure the placement rule 
+
+      The [placement rule](https://github.com/open-cluster-management/policy-collection) in `policy-integrity.yaml` determines which ACM managed clusters Integrity Verifier should be deployed.  
 
       By default, `policy-integrity.yaml` includes a `placement rule` as shown in the following example. 
 
@@ -97,13 +138,15 @@ The above command will create a namespace `integrity-verifier-operator-system` i
         - key: `environment` 
         - values: `dev`
 
-      If you would like to use your own tags for selecting ACM managed clusters, change the above tags to your own.
+      If you would like to use your own tags for selecting ACM managed clusters as target for deploying IV, change the above tags to your own.
 
-  3. Create `policy-integrity.yaml` on an ACM managed cluster.
+  3. Enable `policy-integrity` on an ACM managed cluster (GitOps).
   
-      a)  Commit the `policy-integrity.yaml` to forked `policy-collection` GitHub repository, if you have customized as described above.
+      a)  Commit your changed configuration in `policy-integrity.yaml` to the `policy-collection` GitHub repository that you cloned earlier, if you have customized as described above.
 
-      The following example shows how to check in configured `policy-integrity.yaml` to `policy-collection` GitHub repository.
+      If you have not customized `policy-integrity.yaml`, skip this step.
+
+      The following example shows how to commit your custom `policy-integrity.yaml` to `policy-collection` GitHub repository.
 
        ```
        $ cd policy-collection
@@ -111,28 +154,75 @@ The above command will create a namespace `integrity-verifier-operator-system` i
        $ git commit -m "policy integrity is configured"
        $ git push origin master
        ```
-
-       If you have not customized `policy-integrity.yaml`, skip this step.
+      
         
-      a)  Deploy `policy-integrity.yaml` to an ACM hub cluster.
+      b)  Create `policy-integrity` in the ACM hub cluster.
 
-      Connect to the ACM Hub cluster and execute the following commands to deploy `policy-integrity.yaml` to it.
-
-      The following example shows we use `policy-community` as a namespace for deploying `policy-integrity.yaml`, which is in `community/integrity` directory, to an ACM hub cluster.  
+      Connect to the ACM Hub cluster and execute the following commands to create `policy-integrity` in it. 
         
       ```
         $ curl -s https://raw.githubusercontent.com/open-cluster-management/policy-collection/master/deploy/deploy.sh | bash -s  https://github.com/<YOUR-ORG-NAME>/policy-collection.git community/integrity policy-community
       ``` 
        
       We pass the following parameters:
-        - https://github.com/open-cluster-management/policy-collection.git -  The URL for `policy-collection` GitHub reposiory.
+        - https://github.com/\<YOUR-ORG-NAME\>/policy-collection.git -  The URL for the forked`policy-collection` GitHub reposiory.
         - `community/integrity` - The directory where `policy-integrity.yaml` is located.
     
-      The above command will configure [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository as the target to run the sync against to deploy `policy-integrity.yaml` to the ACM hub cluster.
+      The above command will configure your forked [policy-collection](https://github.com/\<YOUR-ORG-NAME\>/policy-collection) GitHub repository as the target to run the sync against to create `policy-integrity` in the ACM hub cluster.
 
       General instructions to deploy ACM policies to an ACM hub cluster as well as ACM managed cluster(s) using GitOps can be found in [doc](https://github.com/open-cluster-management/policy-collection).
 
-## Signing ACM policies.
+      After ACM hub cluster syncs the polices in the GitHub repository, an ACM policy called `policy-integrity`  will be created in an ACM managed cluster(s) which are selected based on the placement rule in the policy.
+
+      Successfull creation of `policy-integrity` in an ACM managed cluster(s) will trigger the deployment of IV operator in the target namespace specified in the `policy-integry` in the clusters.
+
+      c) Enable IV server on an ACM managed cluster (GitOps).
+
+      After deploying IV operator using `policy-integrity` in an ACM managed cluster(s),  we will enable IV server.
+
+      For this, change the `complianceType` configuration for `integrity-cr-policy` from `mustnothave` to `musthave`
+
+      After applying the above change, the following example shows the `complianceType` configuration for `integrity-cr-policy`.
+
+      ```
+        - objectDefinition:
+          apiVersion: policy.open-cluster-management.io/v1
+          kind: ConfigurationPolicy
+          metadata:
+            name: integrity-cr-policy
+          spec:
+            remediationAction: enforce 
+            severity: high
+            namespaceSelector:
+              exclude: ["kube-*"]
+              include: ["integrity-verifier-operator-system"]
+            object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: apis.integrityverifier.io/v1alpha1
+                kind: IntegrityVerifier
+                metadata:
+                  name: integrity-verifier-server
+                spec:
+                  logger:
+                    image: quay.io/open-cluster-management/integrity-verifier-logging:0.0.4
+                  server:
+                    image: quay.io/open-cluster-management/integrity-verifier-server:0.0.4
+      ```
+      We will commit the above configuration change in `policy-integrity.yaml` to GitHub repository.
+
+      The following example shows how to commit your custom `policy-integrity.yaml` to `policy-collection` GitHub repository.
+
+      ```
+       $ cd policy-collection
+       $ git add community/integrity/policy-integrity.yaml
+       $ git commit -m "Configuration changed in policy integrity"
+       $ git push origin master
+      ```
+
+      After ACM hub cluster syncs the polices in the GitHub repository, the updated configration changes in `policy-integrity` will be applied to an ACM managed cluster(s), This will trigger the deployment of IV server in the target namespace specified in the `policy-integry` in the clusters.
+
+## Signing Multiple ACM policies at once.
 
 We will use Integrity Verifier to protect integrity of all `ACM policies` created in an ACM managed cluster(s). For this, IV requires `ACM policies` to be signed.
 
@@ -171,9 +261,8 @@ We describe how to sign ACM polices as below.
 
       The utility script [acm-sign-policy.sh] would append signature annotation to the original file, which are backed up before annotating (e.g. `policy-integrity.yaml`  will be backedup as policy-integrity.yaml.backup).
 
-        a)  Commit the `policy-integrity.yaml` to forked `policy-collection` GitHub repository, if you have customized as described above.
-
-  3.  Commit the signed ACM policies files to the forked`policy-collection` GitHub repository which is synced with the ACM hub cluster.
+    
+  3.  Commit the signed ACM policies files to the forked`policy-collection` GitHub repository which will be synced with the ACM hub cluster.
 
       The following example shows how to commit the signed polices files to the forked`policy-collection` GitHub repository.
 
@@ -186,3 +275,4 @@ We describe how to sign ACM polices as below.
        ```
 
        Once we commit the signed policy files to the forked `policy-collection` GitHub repository, the signed ACM polices will be synched by the ACM hub cluster to update the deployed ACM policies with signature annotations in the ACM managed cluster(s). Once the signature annotations are updated to the deployed ACM policies, IV will protect thier integrity.  Any further changes requires the policy signing process described above.
+
