@@ -49,7 +49,7 @@ The above command will create a namespace `integrity-verifier-operator-system` i
 
       The following example shows how to clone `policy-collection` and move to `policy-collection` directory
        ```
-       $ git clone https://github.com/gajananan/policy-collection.git
+       $ git clone https://github.com/<YOUR-ORG-NAME>/policy-collection.git
        $ cd policy-collection
        ```
   2. Configure `policy-integrity.yaml`, which is an ACM policy for deploying IV to an ACM managed cluster(s)
@@ -118,12 +118,71 @@ The above command will create a namespace `integrity-verifier-operator-system` i
 
       Connect to the ACM Hub cluster and execute the following commands to deploy `policy-integrity.yaml` to it.
 
-       The following example shows we use `policy-community` as a namespace for deploying `policy-integrity.yaml`, which is in `community/integrity` directory, to an ACM hub cluster.  
+      The following example shows we use `policy-community` as a namespace for deploying `policy-integrity.yaml`, which is in `community/integrity` directory, to an ACM hub cluster.  
         
-       ```
-        $ curl -s https://raw.githubusercontent.com/open-cluster-management/policy-collection/master/deploy/deploy.sh | bash -s  https://github.com/open-cluster-management/policy-collection.git community/integrity policy-community
-       ``` 
-      
-       The above command will configure [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository as the target to run the sync against to deploy `policy-integrity.yaml` found in `community/integrity` directory to the ACM hub cluster.
+      ```
+        $ curl -s https://raw.githubusercontent.com/open-cluster-management/policy-collection/master/deploy/deploy.sh | bash -s  https://github.com/<YOUR-ORG-NAME>/policy-collection.git community/integrity policy-community
+      ``` 
+       
+      We pass the following parameters:
+        - https://github.com/open-cluster-management/policy-collection.git -  The URL for `policy-collection` GitHub reposiory.
+        - `community/integrity` - The directory where `policy-integrity.yaml` is located.
     
-      General instructions to deploy ACM policies to an ACM hub cluster as well as ACM managed cluster(s) using GitOps can be found in [doc](https://github.com/open-cluster-management/policy-collection) .
+      The above command will configure [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository as the target to run the sync against to deploy `policy-integrity.yaml` to the ACM hub cluster.
+
+      General instructions to deploy ACM policies to an ACM hub cluster as well as ACM managed cluster(s) using GitOps can be found in [doc](https://github.com/open-cluster-management/policy-collection).
+
+## Signing ACM policies.
+
+We will use Integrity Verifier to protect integrity of all `ACM policies` created in an ACM managed cluster(s). For this, IV requires `ACM policies` to be signed.
+
+We describe how to sign ACM polices as below.
+
+ 1. Retrive the source from [policy-collection](https://github.com/open-cluster-management/policy-collection) Git repository.
+   
+      Fork [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository. We will use the forked version of this repo as the target to run the sync against. 
+   
+      Then `git clone` the forked repository.
+
+      The following example shows how to clone `policy-collection` and move to `policy-collection` directory
+       ```
+       $ git clone https://github.com/<YOUR-ORG-NAME>/policy-collection.git
+       $ cd policy-collection
+       ```
+  2.  Create signature annotations to ACM policies files in the cloned `policy-collection` GitHub repository.
+
+      We will use the utility script [acm-sign-policy.sh](https://github.com/IBM/integrity-enforcer/blob/master/scripts/acm-sign-policy.sh) for signing ACM polices to be deployed to an ACM managed cluster.
+
+      The following example shows we use the utility script [acm-sign-policy.sh] to append signature annotations to 
+      ACM policies files.
+
+      ```
+      $ cd policy-collection
+      $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-sign-policy.sh | bash -s \
+                    signer@enterprise.com \
+                    community/integrity
+      ```
+
+      We pass the following parameters:
+        - `signer@enterprise.com` -   The default signer email used for setting up signing and verification in deploying IV to an ACM managed cluster.  
+          - If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own.
+
+        - `community/integrity` - The directory of policy files to be signed.
+
+      The utility script [acm-sign-policy.sh] would append signature annotation to the original file, which are backed up before annotating (e.g. `policy-integrity.yaml`  will be backedup as policy-integrity.yaml.backup).
+
+        a)  Commit the `policy-integrity.yaml` to forked `policy-collection` GitHub repository, if you have customized as described above.
+
+  3.  Commit the signed ACM policies files to the forked`policy-collection` GitHub repository which is synced with the ACM hub cluster.
+
+      The following example shows how to commit the signed polices files to the forked`policy-collection` GitHub repository.
+
+       ```
+       $ cd policy-collection
+       $ git status
+       $ git add -u
+       $ git commit -m "Signature annotation added to ACM policies"
+       $ git push origin master
+       ```
+
+       Once we commit the signed policy files to the forked `policy-collection` GitHub repository, the signed ACM polices will be synched by the ACM hub cluster to update the deployed ACM policies with signature annotations in the ACM managed cluster(s). Once the signature annotations are updated to the deployed ACM policies, IV will protect thier integrity.  Any further changes requires the policy signing process described above.
