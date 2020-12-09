@@ -160,12 +160,14 @@ oc create ns <custom namespace>
 
       Connect to the ACM Hub cluster and execute the following commands to create `policy-integrity` in it. 
         
+      Note: Change      
+
       ```
-        $ curl -s https://raw.githubusercontent.com/open-cluster-management/policy-collection/master/deploy/deploy.sh | bash -s  https://github.com/<YOUR-ORG-NAME>/policy-collection.git community/integrity policy-community
+        $ curl -s https://raw.githubusercontent.com/open-cluster-management/policy-collection/master/deploy/deploy.sh | bash -s  https://github.com/<YOUR-ORG-NAME>/policy-collection.git community policy-community
       ``` 
        
       We pass the following parameters:
-        - https://github.com/YOUR-ORG-NAME/policy-collection.git -  The URL for the forked`policy-collection` GitHub reposiory.
+        - https://github.com/YOUR-ORG-NAME/policy-collection.git -  The URL for the forked `policy-collection` GitHub reposiory. 
         - `community/integrity` - The directory where `policy-integrity.yaml` is located.
     
       The above command will configure your forked `policy-collection` GitHub repository as the target to run the sync against to create `policy-integrity` in the ACM hub cluster.
@@ -276,3 +278,115 @@ We describe how to sign ACM polices as below.
 
        Once we commit the signed policy files to the forked `policy-collection` GitHub repository, the signed ACM polices will be synched by the ACM hub cluster to update the deployed ACM policies with signature annotations in the ACM managed cluster(s). Once the signature annotations are updated to the deployed ACM policies, IV will protect thier integrity.  Any further changes requires the policy signing process described above.
 
+## Uninstall the installed IV from an ACM managed cluster(s)
+
+We will use `policy-integrity` to uninstall Integrity Verifier from an ACM managed cluster(s) as described below.
+
+
+ 1. Retrive the source from [policy-collection](https://github.com/open-cluster-management/policy-collection) Git repository.
+   
+      Fork [policy-collection](https://github.com/open-cluster-management/policy-collection) GitHub repository. We will use the forked version of this repo as the target to run the sync against. 
+   
+      Then `git clone` the forked repository.
+
+      The following example shows how to clone `policy-collection` and move to `policy-collection` directory
+       ```
+       $ git clone https://github.com/<YOUR-ORG-NAME>/policy-collection.git
+       $ cd policy-collection
+       ```
+
+ 2. Change `policy-integrity` content as below.     
+    
+    In ``policy-integrity.yaml` file, we wil change the `complianceType` configuration from `musthave` to `mustnothave` for the following ConfigurationPolicies:
+    - `integrity-namespace-policy`
+    - `integrity-og-policy`
+    - `integrity-catrsc-policy`
+    - `integrity-sub-policy`
+    - `integrity-cr-policy` 
+
+
+    After applying the above change, the following example shows the `complianceType` configuration for `integrity-namespace-policy`
+
+    ```
+    - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: integrity-namespace-policy
+      spec:
+        remediationAction: enforce
+        severity: High
+        namespaceSelector:
+          exclude: ["kube-*"]
+          include: ["default"]
+        object-templates:
+        - complianceType: mustnothave
+          objectDefinition:
+            kind: Namespace 
+            apiVersion: v1
+            metadata:
+              name: integrity-verifier-operator-system
+    ```
+ 3. Afte applying above change in `policy-integrity.yaml`, create signature annotations as below.
+
+    We will use the utility script [acm-sign-policy.sh](https://github.com/IBM/integrity-enforcer/blob/master/scripts/acm-sign-policy.sh) for signing ACM polices to be deployed to an ACM managed cluster.
+
+      The following example shows we use the utility script [acm-sign-policy.sh] to append signature annotations to 
+      ACM policies files.
+
+      ```
+      $ cd policy-collection
+      $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-sign-policy.sh | bash -s \
+                    signer@enterprise.com \
+                    community/integrity
+      ```
+
+ 4.  Commit the signed `policy-integrity.yaml` file to the forked `policy-collection` GitHub repository which will be synced with the ACM hub cluster.
+
+      The following example shows how to commit the signed polices files to the forked`policy-collection` GitHub repository.
+
+       ```
+       $ cd policy-collection
+       $ git status
+       $ git add -u
+       $ git commit -m "Signature annotation added to ACM policies"
+       $ git push origin master
+       ```   
+
+       ACM hub cluster will sync the latest `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger unstalling IV server, IV operator, IV namespace.
+
+  5.  Remove `policy-integrity` from ACM managed cluster(s)
+
+      By default, `policy-integrity.yaml` includes a `placement rule` as shown in the following example. In such case, change the values as below.
+
+      ```
+         apiVersion: apps.open-cluster-management.io/v1
+         kind: PlacementRule
+         metadata:
+           name: placement-integrity-policy
+         spec:
+           clusterConditions:
+           - status: "True"
+             type: ManagedClusterConditionAvailable
+           clusterSelector:
+             matchExpressions:
+             - {key: environment, operator: In, values:   ["-"]}
+      ```   
+    6.  Commit the changes in `policy-integrity.yaml` file to the forked `policy-collection` GitHub repository which will be synced with the ACM hub cluster.
+
+      The following example shows how to commit the signed polices files to the forked`policy-collection` GitHub repository.
+
+       ```
+       $ cd policy-collection
+       $ git status
+       $ git add -u
+       $ git commit -m "Placement rule changed."
+       $ git push origin master
+       ```   
+
+       ACM hub cluster will sync the latest `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger unstalling `policy-integrity` from the ACM managed cluster(s).  
+
+     
+
+
+   
