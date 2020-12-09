@@ -9,12 +9,11 @@ if [ ! -e $3 ]; then
   exit 1
 fi
 
-SCRIPT_DIR=$(cd $(dirname $0); pwd)
 TARGET_DIR=$1
 PUBRING_KEY=$2
 
 find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
 do
   echo "Verifying signature annotation in ${file}"
-  $SCRIPT_DIR/../gpg-annotation-verify.sh  "$file" ${PUBRING_KEY}
+  curl -s https://raw.githubusercontent.com/IBM/open-cluster-management/master/scripts/gpg-annotation-verify.sh  "$file" ${PUBRING_KEY}
 done
