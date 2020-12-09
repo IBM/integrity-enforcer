@@ -17,11 +17,11 @@ You will use `policy-integrity` to disable Integrity Verifier protection in an A
 
  2. Configure `policy-integrity.yaml` as below.  
 
- Change the `complianceType` configuration for `integrity-cr-policy` from `musthave` to `mustnothave` in `policy-integrity.yaml`.
+    Change the `complianceType` configuration for `integrity-cr-policy` from `musthave` to `mustnothave` in `policy-integrity.yaml`.
 
-      The following example shows the `complianceType` configuration for `integrity-cr-policy` changed from `musthave` to `mustnothave`.
+    The following example shows the `complianceType` configuration for `integrity-cr-policy` changed from `musthave` to `mustnothave`.
 
-      ```
+    ```
         - objectDefinition:
           apiVersion: policy.open-cluster-management.io/v1
           kind: ConfigurationPolicy
