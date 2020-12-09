@@ -8,7 +8,6 @@ if [ ! -e $2 ]; then
   echo "$2 does not exist"
   exit 1
 fi
-SCRIPT_DIR=$(cd $(dirname $0); pwd)
 SIGNER=$1
 TARGET_DIR=$2
 find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
@@ -16,6 +15,7 @@ do
   cp ${file} ${file}.backup
   echo Original file backed up as ${file}.backup
 
-  $SCRIPT_DIR/../gpg-annotation-sign.sh ${SIGNER} "$file"
+  curl -s https://raw.githubusercontent.com/IBM/open-cluster-management/master/scripts/gpg-annotation-sign.sh | bash -s ${SIGNER} "$file"
+
   echo Signature annotation is attached in $file.
 done
