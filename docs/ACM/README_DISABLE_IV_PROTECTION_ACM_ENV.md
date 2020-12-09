@@ -122,7 +122,9 @@ Once you disable Integrity Verifier protection,  you can edit any ACM policies i
        $ git push origin master
        ``` 
 
-    ACM hub cluster will sync the updated `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger removing Integrity Verifier operator from an ACM managed cluster(s).      
+    ACM hub cluster will sync the updated `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger removing Integrity Verifier operator from an ACM managed cluster(s).  
+
+    Note that this will action will also remove secret resource with verification key setup in [doc](README_SETUP_KEY_RING_ACM_ENV.md). If you would need to reenable Integrity Verifier Protection to an ACM managed cluster, follow the [doc](README_SETUP_KEY_RING_ACM_ENV.md) to setup the verification key in an ACM managed cluster(s)
 
     Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity` means that `policy-integrity` is updated in an ACM managed cluster(s) and Integrity Verifier operator is removed from an ACM managed cluster(s).
 
