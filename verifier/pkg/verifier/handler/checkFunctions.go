@@ -147,18 +147,28 @@ func deleteCheck(reqc *common.ReqContext, config *config.VerifierConfig, data *R
 func protectedCheck(reqc *common.ReqContext, config *config.VerifierConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := reqc.Map()
 	ruleTable := data.GetRuleTable(config.Namespace)
-	protected, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
+	protected, ignoreMatched, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
 	if !protected {
 		ctx.Allow = true
 		ctx.Verified = true
 		ctx.Protected = false
-		ctx.ReasonCode = common.REASON_NOT_PROTECTED
-		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
-		return &DecisionResult{
-			Type:       common.DecisionAllow,
-			ReasonCode: common.REASON_NOT_PROTECTED,
-			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
-		}, nil
+		if ignoreMatched {
+			ctx.ReasonCode = common.REASON_IGNORE_RULE_MATCHED
+			ctx.Message = common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message
+			return &DecisionResult{
+				Type:       common.DecisionAllow,
+				ReasonCode: common.REASON_IGNORE_RULE_MATCHED,
+				Message:    common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message,
+			}, nil
+		} else {
+			ctx.ReasonCode = common.REASON_NOT_PROTECTED
+			ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
+			return &DecisionResult{
+				Type:       common.DecisionAllow,
+				ReasonCode: common.REASON_NOT_PROTECTED,
+				Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+			}, nil
+		}
 	} else {
 		ctx.Protected = true
 	}

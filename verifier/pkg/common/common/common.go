@@ -50,6 +50,13 @@ const (
 	ResourceIntegrityLabelKey = "integrityverifier.io/resourceIntegrity"
 	ReasonLabelKey            = "integrityverifier.io/reason"
 
+	SignatureAnnotationKey     = "integrityverifier.io/signature"
+	MessageAnnotationKey       = "integrityverifier.io/message"
+	CertificateAnnotationKey   = "integrityverifier.io/certificate"
+	SignatureTypeAnnotationKey = "integrityverifier.io/signatureType"
+	MessageScopeAnnotationKey  = "integrityverifier.io/messageScope"
+	MutableAttrsAnnotationKey  = "integrityverifier.io/mutableAttrs"
+
 	ResSigLabelApiVer = "integrityverifier.io/sigobject-apiversion"
 	ResSigLabelKind   = "integrityverifier.io/sigobject-kind"
 	ResSigLabelTime   = "integrityverifier.io/sigtime"
@@ -238,12 +245,12 @@ type SignatureAnnotation struct {
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
-		Signature:     self.getString("signature"),
-		SignatureType: self.getString("signatureType"),
-		Certificate:   self.getString("certificate"),
-		Message:       self.getString("message"),
-		MessageScope:  self.getString("messageScope"),
-		MutableAttrs:  self.getString("mutableAttrs"),
+		Signature:     self.getString(SignatureAnnotationKey),
+		SignatureType: self.getString(SignatureTypeAnnotationKey),
+		Certificate:   self.getString(CertificateAnnotationKey),
+		Message:       self.getString(MessageAnnotationKey),
+		MessageScope:  self.getString(MessageScopeAnnotationKey),
+		MutableAttrs:  self.getString(MutableAttrsAnnotationKey),
 	}
 }
 
@@ -350,6 +357,7 @@ const (
 	REASON_IV_ADMIN
 	REASON_IGNORED_SA
 	REASON_NOT_PROTECTED
+	REASON_IGNORE_RULE_MATCHED
 	REASON_BLOCK_IV_RESOURCE_OPERATION
 	REASON_NOT_VERIFIED
 	REASON_SKIP_DELETE
@@ -407,6 +415,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_NOT_PROTECTED: {
 		Message: "not protected",
 		Code:    "unprotected",
+	},
+	REASON_IGNORE_RULE_MATCHED: {
+		Message: "ignore rule matched",
+		Code:    "ignore-rule-matched",
 	},
 	REASON_BLOCK_IV_RESOURCE_OPERATION: {
 		Message: "block oprations for IV resouce",

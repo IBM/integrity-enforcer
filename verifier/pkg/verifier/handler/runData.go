@@ -20,6 +20,7 @@ import (
 	rsigapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	spolapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/signpolicy/v1alpha1"
+	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	loader "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/loader"
@@ -60,14 +61,14 @@ func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSig
 
 func (self *RunData) GetRSPList() []rspapi.ResourceSigningProfile {
 	if self.RSPList == nil && self.loader != nil {
-		self.RSPList = self.loader.RSP.GetData(true)
+		self.RSPList, _ = self.loader.RSP.GetData(true)
 	}
 	return self.RSPList
 }
 
 func (self *RunData) GetNSList() []v1.Namespace {
 	if self.NSList == nil && self.loader != nil {
-		self.NSList = self.loader.Namespace.GetData(true)
+		self.NSList, _ = self.loader.Namespace.GetData(true)
 	}
 	return self.NSList
 }
@@ -80,21 +81,40 @@ func (self *RunData) setRuleTable(verifierNamespace string) {
 }
 
 func (self *RunData) GetRuleTable(verifierNamespace string) *loader.RuleTable2 {
-	if self.ruleTable == nil || self.ruleTable.IsEmpty() {
-		if self.loader != nil {
-			self.RSPList = self.loader.RSP.GetData(true)
-			self.NSList = self.loader.Namespace.GetData(true)
+	rspReloaded := false
+	nsReloaded := false
+	if self.loader != nil {
+		var tmpRSPList []rspapi.ResourceSigningProfile
+		var tmpNSList []v1.Namespace
+		tmpRSPList, rspReloaded = self.loader.RSP.GetData(true)
+		tmpNSList, nsReloaded = self.loader.Namespace.GetData(true)
+		if rspReloaded {
+			self.RSPList = tmpRSPList
 		}
+		if nsReloaded {
+			self.NSList = tmpNSList
+		}
+	}
+	if self.ruleTable == nil || self.ruleTable.IsEmpty() || rspReloaded || nsReloaded {
 		self.setRuleTable(verifierNamespace)
 	}
+	// rtBytes, _ := json.Marshal(self.ruleTable)
+	// logger.Trace("GetRuleTable(): ", string(rtBytes))
 	return self.ruleTable
 }
 
 func (self *RunData) Init(reqc *common.ReqContext, verifierNamespace string) {
 	// self.GetSignPolicy()
 	// self.GetResSigList(reqc)
-	self.RSPList = self.loader.RSP.GetData(false)
-	self.NSList = self.loader.Namespace.GetData(false)
+	self.RSPList, _ = self.loader.RSP.GetData(false)
+	self.NSList, _ = self.loader.Namespace.GetData(false)
 	self.setRuleTable(verifierNamespace)
+	return
+}
+
+func (self *RunData) resetRuleTableCache() {
+	self.loader.RSP.ClearCache()
+	self.loader.Namespace.ClearCache()
+	logger.Debug("RuleTable cache has been cleared")
 	return
 }

@@ -75,24 +75,24 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.ProtectRules) == 0
 }
 
-func (self ResourceSigningProfile) Match(reqFields map[string]string) bool {
+func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *profile.Rule) {
 	for _, rule := range self.Spec.ForceCheckRules {
 		if rule.MatchWithRequest(reqFields) {
-			return true
+			return true, rule
 		}
 	}
 	for _, rule := range self.Spec.IgnoreRules {
 		if rule.MatchWithRequest(reqFields) {
-			return false
+			return false, rule
 		}
 	}
 	for _, rule := range self.Spec.ProtectRules {
 		if rule.MatchWithRequest(reqFields) {
-			return true
+			return true, rule
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) ResourceSigningProfile {

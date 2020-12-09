@@ -23,14 +23,14 @@ import (
 )
 
 type RuleItem2 struct {
-	profile          rspapi.ResourceSigningProfile `json:"-"`
-	targetNamespaces []string                      `json:"-"`
+	Profile          rspapi.ResourceSigningProfile `json:"profile,omitempty"`
+	TargetNamespaces []string                      `json:"targetNamespaces,omitempty"`
 }
 
 type RuleTable2 struct {
-	items             []RuleItem2 `json:"-"`
-	namespaces        []string    `json:"-"`
-	verifierNamespace string      `json:"-"`
+	Items             []RuleItem2 `json:"items,omitempty"`
+	Namespaces        []string    `json:"namespaces,omitempty"`
+	VerifierNamespace string      `json:"verifierNamespace,omitempty"`
 }
 
 func NewRuleTable2(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, verifierNamespace string) *RuleTable2 {
@@ -49,42 +49,45 @@ func NewRuleTable2(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Nam
 		} else {
 			targetNamespaces = append(targetNamespaces, pNamespace)
 		}
-		items = append(items, RuleItem2{profile: p, targetNamespaces: targetNamespaces})
+		items = append(items, RuleItem2{Profile: p, TargetNamespaces: targetNamespaces})
 		allTargetNamespaces = common.GetUnionOfArrays(allTargetNamespaces, targetNamespaces)
 	}
 	return &RuleTable2{
-		items:             items,
-		namespaces:        allTargetNamespaces,
-		verifierNamespace: verifierNamespace,
+		Items:             items,
+		Namespaces:        allTargetNamespaces,
+		VerifierNamespace: verifierNamespace,
 	}
 }
 
 func (self *RuleTable2) IsEmpty() bool {
-	return len(self.items) == 0
+	return len(self.Items) == 0
 }
 
 func (self *RuleTable2) CheckIfTargetNamespace(nsName string) bool {
 	if nsName == "" {
 		return true
 	}
-	return common.ExactMatchWithPatternArray(nsName, self.namespaces)
+	return common.ExactMatchWithPatternArray(nsName, self.Namespaces)
 }
 
-func (self *RuleTable2) CheckIfProtected(reqFields map[string]string) (bool, []rspapi.ResourceSigningProfile) {
+func (self *RuleTable2) CheckIfProtected(reqFields map[string]string) (bool, bool, []rspapi.ResourceSigningProfile) {
 	matchedProfiles := []rspapi.ResourceSigningProfile{}
 	reqNs := reqFields["Namespace"]
 	reqScope := reqFields["ResourceScope"]
-	matched := false
-	for _, item := range self.items {
-		if reqScope == "Namespaced" && !common.ExactMatchWithPatternArray(reqNs, item.targetNamespaces) {
+	protected := false
+	ignoreMatched := false
+	for _, item := range self.Items {
+		if reqScope == "Namespaced" && !common.ExactMatchWithPatternArray(reqNs, item.TargetNamespaces) {
 			continue
 		}
-		if item.profile.Match(reqFields) {
-			matched = true
-			matchedProfiles = append(matchedProfiles, item.profile)
+		if tmpProtected, matchedRule := item.Profile.Match(reqFields); tmpProtected {
+			protected = true
+			matchedProfiles = append(matchedProfiles, item.Profile)
+		} else if !tmpProtected && matchedRule != nil {
+			ignoreMatched = true
 		}
 	}
-	return matched, matchedProfiles
+	return protected, ignoreMatched, matchedProfiles
 }
 
 func matchNamespaceListWithSelector(namespaces []v1.Namespace, nsSelector *common.NamespaceSelector) []string {

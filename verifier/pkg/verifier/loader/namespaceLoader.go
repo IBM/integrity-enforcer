@@ -49,25 +49,28 @@ func NewNamespaceLoader() *NamespaceLoader {
 	}
 }
 
-func (self *NamespaceLoader) GetData(doK8sApiCall bool) []v1.Namespace {
+func (self *NamespaceLoader) GetData(doK8sApiCall bool) ([]v1.Namespace, bool) {
+	reloaded := false
 	if len(self.Data) == 0 {
-		self.Load(doK8sApiCall)
+		reloaded = self.Load(doK8sApiCall)
 	}
-	return self.Data
+	return self.Data, reloaded
 }
 
-func (self *NamespaceLoader) Load(doK8sApiCall bool) {
+func (self *NamespaceLoader) Load(doK8sApiCall bool) bool {
 	var err error
 	var list1 *v1.NamespaceList
 	var keyName string
+	reloaded := false
 
 	keyName = "NamespaceLoader/list"
 	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
 		list1, err = self.Client.Namespaces().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get Namespace:", err)
-			return
+			return false
 		}
+		reloaded = true
 		logger.Debug("Namespace reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
@@ -77,7 +80,7 @@ func (self *NamespaceLoader) Load(doK8sApiCall bool) {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
 			logger.Error("failed to Unmarshal cached Namespace:", err)
-			return
+			return false
 		}
 	}
 
@@ -86,5 +89,9 @@ func (self *NamespaceLoader) Load(doK8sApiCall bool) {
 		data = list1.Items
 	}
 	self.Data = data
-	return
+	return reloaded
+}
+
+func (self *NamespaceLoader) ClearCache() {
+	cache.Unset("NamespaceLoader/list")
 }

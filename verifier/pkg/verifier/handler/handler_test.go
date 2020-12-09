@@ -24,6 +24,7 @@ import (
 
 	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
+	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	"github.com/IBM/integrity-enforcer/verifier/pkg/verifier/config"
 )
 
@@ -36,6 +37,14 @@ const (
 	testProf2File  = "testdata/prof2.json"
 	testDr2File    = "testdata/dr2.json"
 )
+
+func init() {
+	var config *config.VerifierConfig
+	configBytes, _ := ioutil.ReadFile(testConfigFile)
+	_ = json.Unmarshal(configBytes, &config)
+	logger.InitContextLogger(config.ContextLoggerConfig())
+	logger.InitServerLogger(config.LoggerConfig())
+}
 
 func getTestData() (*common.ReqContext, *config.VerifierConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
 	var reqc *common.ReqContext

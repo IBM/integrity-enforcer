@@ -44,8 +44,8 @@ msg=`cat $INPUT_FILE | $base`
 # signature
 sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
 
-yq w -i $INPUT_FILE metadata.annotations.message $msg
-yq w -i $INPUT_FILE metadata.annotations.signature $sig
+yq w -i $INPUT_FILE 'metadata.annotations."integrityverifier.io/message"' $msg
+yq w -i $INPUT_FILE 'metadata.annotations."integrityverifier.io/signature"' $sig
 
 if [ -f temp-aaa.yaml ]; then
    rm temp-aaa.yaml

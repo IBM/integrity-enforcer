@@ -76,6 +76,9 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 	// create Event & update RSP status
 	self.Report(dr.denyRSP)
 
+	// clear some cache if needed
+	self.finalize(resp)
+
 	return resp
 }
 
@@ -208,6 +211,25 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 		dr.ReasonCode = common.REASON_BREAK_GLASS
 	}
 	return dr
+}
+
+func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
+	if !resp.Allowed {
+		return
+	}
+	resetRuleTableCache := false
+	ivServer := checkIfIVServerRequest(self.reqc, self.config)
+	ivOperator := checkIfIVOperatorRequest(self.reqc, self.config)
+	if self.reqc.Kind == "Namespace" {
+		resetRuleTableCache = true
+	} else if self.reqc.Kind == common.ProfileCustomResourceKind && !ivServer && !ivOperator {
+		resetRuleTableCache = true
+	}
+	if resetRuleTableCache {
+		// if namespace/RSP request is allowed, then reset cache for RuleTable (RSP list & NS list).
+		self.data.resetRuleTableCache()
+	}
+	return
 }
 
 func (self *Handler) logEntry() {
