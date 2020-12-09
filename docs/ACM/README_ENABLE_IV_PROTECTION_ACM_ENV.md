@@ -156,8 +156,10 @@ oc create ns <custom namespace>
        $ git push origin master
        ```
       
-      b) Create a new namespace (e.g. `policy-community`) in the ACM hub cluster to deploy `policy-integrity`. 
-
+      b)  Create a new namespace (e.g. `policy-community`) in the ACM hub cluster to deploy `policy-integrity`. 
+      ```
+      oc create ns policy-community
+      ```
       c)  Create `policy-integrity` in the ACM hub cluster in newly created namespace.
 
       Connect to the ACM Hub cluster and execute the following script with the following parameters:
@@ -174,6 +176,8 @@ oc create ns <custom namespace>
 
       After ACM hub cluster syncs the polices in the GitHub repository, an ACM policy called `policy-integrity`  will be created in the ACM hub cluster and in an ACM managed cluster(s) which are selected based on the placement rule in the policy. 
       
+      Wait for few mintutes for policies to be setup in the ACM hub cluster and managed cluster(s)
+
       Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity` means that `policy-integrity` is also created in an ACM managed cluster(s). This will trigger the deployment of Integrity Verifier operator to an ACM managed cluster(s), in the target namespace specified in the `policy-integrity`.
 
       c) Enable Integrity Verifiier protection in an ACM managed cluster (GitOps).
@@ -228,43 +232,38 @@ oc create ns <custom namespace>
 ## Steps for signing an ACM Policy
 
   1. Go to the source of your cloned `policy-collection` GitHub repository in the host.  
-   Find `policy-egress-firewall-sample.yaml` in the directory `policy-collection/community/CM-Configuration-Management/` of the cloned GitHub repository.
+   Find `policy-ocp4-certs.yaml` in the directory `policy-collection/community/SC-System-and-Communications-Protection/` of the cloned GitHub repository.
 
-  2. Change a configuration in `policy-egress-firewall-sample.yaml`
+  2. Change a configuration in `policy-ocp4-certs.yaml`
 
-      The following example shows `severity` is changed from `low` to `high`
+      The following example shows `minimumDuration` is changed from `400h` to `100h`
      ```
       - objectDefinition:
           apiVersion: policy.open-cluster-management.io/v1
-          kind: ConfigurationPolicy
+          kind: CertificatePolicy
           metadata:
-            name: egress-example
+            name: openshift-cert-policy
           spec:
             remediationAction: inform
-            severity: high  << CHANGE FROM low >>
-            namespaceSelector:
-              exclude:
-                - kube-*
-              include:
-                - default
+            minimumDuration: 100h << CHANGED from 400h to 100h>>
      ```
 
-  3. Create signature annotation in `policy-egress-firewall-sample.yaml` as below.
+  3. Create signature annotation in `policy-ocp4-certs.yaml` as below.
 
       Use the utility script [gpg-annotation-sign.sh](https://github.com/open-cluster-management/integrity-verifier/blob/master/scripts/gpg-annotation-sign.sh) for signing updated `policy-integrity` to be deployed to an ACM managed cluster.
 
-      The following example shows how to use the utility script [gpg-annotation-sign.sh] to append signature annotations to `policy-egress-firewall-sample.yaml`, with the following parameters:
+      The following example shows how to use the utility script [gpg-annotation-sign.sh] to append signature annotations to `policy-ocp4-certs.yaml`, with the following parameters:
       - `signer@enterprise.com` - The default `signer` email, or change it to your own `signer` email.
-      - `CM-Configuration-Management/policy-egress-firewall-sample.yaml` - the relative path of the updated policy file `policy-integrity.yaml`
+      - `SC-System-and-Communications-Protection/policy-ocp4-certs.yaml` - the relative path of the updated policy file `policy-ocp4-certs.yaml`
 
       ```
       $ cd policy-collection
       $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/gpg-annotation-sign.sh | bash -s \
                     signer@enterprise.com \
-                    community/CM-Configuration-Management/policy-egress-firewall-sample.yaml
+                    community/SC-System-and-Communications-Protection/policy-ocp4-certs.yaml
       ```
 
- 4.  Commit the signed `policy-egress-firewall-sample.yaml` file to the forked `policy-collection` GitHub repository.
+ 4.  Commit the signed `policy-ocp4-certs.yaml` file to the forked `policy-collection` GitHub repository.
 
       The following example shows how to commit the signed polices files to the forked`policy-collection` GitHub repository.
 
@@ -276,4 +275,4 @@ oc create ns <custom namespace>
        $ git push origin master
        ```  
 
-      Confirm the status (i.e. Compliance) of `egress-example` policy in the ACM hub cluster. You can find `egress-example` policy in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `egress-example` policy means that `egress-example` is updated in an ACM managed cluster(s) after the succesfull signature verification by Integrity Verifier.
+      Confirm the status (i.e. Compliance) of `policy-cert-ocp4` policy in the ACM hub cluster. You can find `policy-cert-ocp4` policy in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-cert-ocp4` policy means that `policy-cert-ocp4` is updated in an ACM managed cluster(s) after the succesfull signature verification by Integrity Verifier.
