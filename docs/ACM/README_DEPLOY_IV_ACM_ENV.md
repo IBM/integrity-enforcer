@@ -168,7 +168,7 @@ oc create ns <custom namespace>
        
       We pass the following parameters:
         - https://github.com/YOUR-ORG-NAME/policy-collection.git -  The URL for the forked `policy-collection` GitHub reposiory. 
-        - `community/integrity` - The directory where `policy-integrity.yaml` is located.
+        - `community` - The directory where `policy-integrity.yaml` is located.
     
       The above command will configure your forked `policy-collection` GitHub repository as the target to run the sync against to create `policy-integrity` in the ACM hub cluster.
 
@@ -252,16 +252,16 @@ We describe how to sign ACM polices as below.
       $ cd policy-collection
       $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-sign-policy.sh | bash -s \
                     signer@enterprise.com \
-                    community/integrity
+                    community
       ```
 
       We pass the following parameters:
         - `signer@enterprise.com` -   The default signer email used for setting up signing and verification in deploying IV to an ACM managed cluster.  
           - If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own.
 
-        - `community/integrity` - The directory of policy files to be signed.
+        - `community` - The directory of policy files to be signed.
 
-      The utility script [acm-sign-policy.sh] would append signature annotation to the original file, which are backed up before annotating (e.g. `policy-integrity.yaml`  will be backedup as policy-integrity.yaml.backup).
+      The utility script [acm-sign-policy.sh] would append signature annotation to each original file, which is backed up before annotating (e.g. `policy-integrity.yaml`  will be backedup as policy-integrity.yaml.backup).
 
     
   3.  Commit the signed ACM policies files to the forked`policy-collection` GitHub repository which will be synced with the ACM hub cluster.
