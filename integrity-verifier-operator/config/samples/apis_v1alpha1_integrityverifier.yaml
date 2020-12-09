@@ -5,9 +5,6 @@ metadata:
 spec:
   namespace: integrity-verifier-operator-system
   verifierConfig:
-    # mode: detect
-    log:
-      logLevel: trace
     verifyType: pgp # x509
     inScopeNamespaceSelector:
       include:
@@ -28,35 +25,6 @@ spec:
     - name: "SampleSigner"
       secret: keyring-secret
       subjects:
-      - email: "hirokuni.kitahara1@ibm.com"
-  resourceSigningProfiles:
-  - name: sample-rsp
-    targetNamespaceSelector:
-      include:
-      - secure-ns
-      - test-ns
-    protectRules:
-    - match:
-      - kind: ConfigMap
-    ignoreRules:
-    - match:
-      - kind: ConfigMap
-        name: sample-*
-    forceCheckRules:
-    - match:
-      - kind: ConfigMap
-        name: sample-cm
-    ignoreAttrs:
-    - attrs:
-      - data.key2
-      match:
-      - name: sample-cm
-        kind: ConfigMap
+      - email: "sample_signer@signer.com"
   keyRingConfigs:
   - name: keyring-secret
-  server:
-    image: localhost:5000/integrity-verifier-server:0.0.5dev
-    imagePullPolicy: Always
-  logger:
-    image: localhost:5000/integrity-verifier-logging:0.0.5dev
-    imagePullPolicy: Always
