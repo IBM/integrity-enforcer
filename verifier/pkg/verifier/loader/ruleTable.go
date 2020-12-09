@@ -22,20 +22,20 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-type RuleItem2 struct {
+type RuleItem struct {
 	Profile          rspapi.ResourceSigningProfile `json:"profile,omitempty"`
 	TargetNamespaces []string                      `json:"targetNamespaces,omitempty"`
 }
 
-type RuleTable2 struct {
-	Items             []RuleItem2 `json:"items,omitempty"`
-	Namespaces        []string    `json:"namespaces,omitempty"`
-	VerifierNamespace string      `json:"verifierNamespace,omitempty"`
+type RuleTable struct {
+	Items             []RuleItem `json:"items,omitempty"`
+	Namespaces        []string   `json:"namespaces,omitempty"`
+	VerifierNamespace string     `json:"verifierNamespace,omitempty"`
 }
 
-func NewRuleTable2(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, verifierNamespace string) *RuleTable2 {
+func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, verifierNamespace string) *RuleTable {
 	allTargetNamespaces := []string{}
-	items := []RuleItem2{}
+	items := []RuleItem{}
 	for _, p := range profiles {
 		pNamespace := p.GetNamespace()
 		targetNamespaces := []string{}
@@ -49,28 +49,28 @@ func NewRuleTable2(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Nam
 		} else {
 			targetNamespaces = append(targetNamespaces, pNamespace)
 		}
-		items = append(items, RuleItem2{Profile: p, TargetNamespaces: targetNamespaces})
+		items = append(items, RuleItem{Profile: p, TargetNamespaces: targetNamespaces})
 		allTargetNamespaces = common.GetUnionOfArrays(allTargetNamespaces, targetNamespaces)
 	}
-	return &RuleTable2{
+	return &RuleTable{
 		Items:             items,
 		Namespaces:        allTargetNamespaces,
 		VerifierNamespace: verifierNamespace,
 	}
 }
 
-func (self *RuleTable2) IsEmpty() bool {
+func (self *RuleTable) IsEmpty() bool {
 	return len(self.Items) == 0
 }
 
-func (self *RuleTable2) CheckIfTargetNamespace(nsName string) bool {
+func (self *RuleTable) CheckIfTargetNamespace(nsName string) bool {
 	if nsName == "" {
 		return true
 	}
 	return common.ExactMatchWithPatternArray(nsName, self.Namespaces)
 }
 
-func (self *RuleTable2) CheckIfProtected(reqFields map[string]string) (bool, bool, []rspapi.ResourceSigningProfile) {
+func (self *RuleTable) CheckIfProtected(reqFields map[string]string) (bool, bool, []rspapi.ResourceSigningProfile) {
 	matchedProfiles := []rspapi.ResourceSigningProfile{}
 	reqNs := reqFields["Namespace"]
 	reqScope := reqFields["ResourceScope"]

@@ -41,8 +41,8 @@ type RunData struct {
 	SignPolicy *spolapi.SignPolicy            `json:"signPolicy,omitempty"`
 	ResSigList *rsigapi.ResourceSignatureList `json:"resSigList,omitempty"`
 
-	loader    *loader.Loader     `json:"-"`
-	ruleTable *loader.RuleTable2 `json:"-"`
+	loader    *loader.Loader    `json:"-"`
+	ruleTable *loader.RuleTable `json:"-"`
 }
 
 func (self *RunData) GetSignPolicy() *spolapi.SignPolicy {
@@ -74,13 +74,13 @@ func (self *RunData) GetNSList() []v1.Namespace {
 }
 
 func (self *RunData) setRuleTable(verifierNamespace string) {
-	ruleTable := loader.NewRuleTable2(self.RSPList, self.NSList, verifierNamespace)
+	ruleTable := loader.NewRuleTable(self.RSPList, self.NSList, verifierNamespace)
 	if ruleTable != nil && !ruleTable.IsEmpty() {
 		self.ruleTable = ruleTable
 	}
 }
 
-func (self *RunData) GetRuleTable(verifierNamespace string) *loader.RuleTable2 {
+func (self *RunData) GetRuleTable(verifierNamespace string) *loader.RuleTable {
 	rspReloaded := false
 	nsReloaded := false
 	if self.loader != nil {
