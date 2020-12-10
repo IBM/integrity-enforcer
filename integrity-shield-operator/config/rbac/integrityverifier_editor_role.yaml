@@ -1,0 +1,24 @@
+# permissions for end users to edit integrityshields.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: integrityshield-editor-role
+rules:
+- apiGroups:
+  - apis.integrityshield.io
+  resources:
+  - integrityshields
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apis.integrityshield.io
+  resources:
+  - integrityshields/status
+  verbs:
+  - get
