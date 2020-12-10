@@ -64,13 +64,13 @@ func ExactMatchWithPatternArray(value string, patternArray []string) bool {
 func GetUnionOfArrays(array1, array2 []string) []string {
 	newArray := []string{}
 	for _, val := range array1 {
-		exists := ExactMatchWithPatternArray(val, array1)
+		exists := ExactMatchWithPatternArray(val, newArray)
 		if !exists {
 			newArray = append(newArray, val)
 		}
 	}
 	for _, val := range array2 {
-		exists := ExactMatchWithPatternArray(val, array2)
+		exists := ExactMatchWithPatternArray(val, newArray)
 		if !exists {
 			newArray = append(newArray, val)
 		}

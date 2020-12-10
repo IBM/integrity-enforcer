@@ -87,8 +87,7 @@ type PluginConfig struct {
 	Enabled bool   `json:"enabled,omitempty"`
 }
 
-func (self *IVResourceCondition) IsOperatorResource(reqc *common.ReqContext) bool {
-	ref := reqc.ResourceRef()
+func (self *IVResourceCondition) IsOperatorResource(ref *common.ResourceRef) bool {
 	for _, refi := range self.OperatorResources {
 		if refi.EqualsWithoutVersionCheck(ref) {
 			return true
@@ -97,8 +96,7 @@ func (self *IVResourceCondition) IsOperatorResource(reqc *common.ReqContext) boo
 	return false
 }
 
-func (self *IVResourceCondition) IsServerResource(reqc *common.ReqContext) bool {
-	ref := reqc.ResourceRef()
+func (self *IVResourceCondition) IsServerResource(ref *common.ResourceRef) bool {
 	for _, refi := range self.ServerResources {
 		if refi.EqualsWithoutVersionCheck(ref) {
 			return true
@@ -219,6 +217,14 @@ func (ec *VerifierConfig) LoggerConfig() logger.LoggerConfig {
 func (ec *VerifierConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	lc := ec.LogConfig()
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
+}
+
+func (ec *VerifierConfig) ConsoleLogEnabled(reqc *common.ReqContext) bool {
+	return ec.Log.ConsoleLog.IsInScope(reqc)
+}
+
+func (ec *VerifierConfig) ContextLogEnabled(reqc *common.ReqContext) bool {
+	return ec.Log.ContextLog.IsInScope(reqc)
 }
 
 func (ec *VerifierConfig) GetEnabledPlugins() map[string]bool {

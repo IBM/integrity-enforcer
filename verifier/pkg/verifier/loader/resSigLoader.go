@@ -46,7 +46,7 @@ type ResSigLoader struct {
 	reqKind            string
 
 	Client *rsigclient.ApisV1alpha1Client
-	Data   []*rsigapi.ResourceSignature
+	Data   *rsigapi.ResourceSignatureList
 }
 
 func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader {
@@ -62,14 +62,14 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 	}
 }
 
-func (self *ResSigLoader) GetData(reqc *common.ReqContext) []*rsigapi.ResourceSignature {
-	if len(self.Data) == 0 {
-		self.Load(reqc)
+func (self *ResSigLoader) GetData(reqc *common.ReqContext, doK8sApiCall bool) *rsigapi.ResourceSignatureList {
+	if self.Data == nil {
+		self.Load(reqc, doK8sApiCall)
 	}
 	return self.Data
 }
 
-func (self *ResSigLoader) Load(reqc *common.ReqContext) {
+func (self *ResSigLoader) Load(reqc *common.ReqContext, doK8sApiCall bool) {
 	var err error
 	var list1, list2 *rsigapi.ResourceSignatureList
 	var keyName string
@@ -80,7 +80,7 @@ func (self *ResSigLoader) Load(reqc *common.ReqContext) {
 	labelSelector := fmt.Sprintf("%s=%s,%s=%s", common.ResSigLabelApiVer, reqApiVersion, common.ResSigLabelKind, reqKind)
 
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.signatureNamespace, labelSelector)
-	if cached := cache.GetString(keyName); cached == "" {
+	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
 		list1, err = self.Client.ResourceSignatures(self.signatureNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
@@ -91,7 +91,7 @@ func (self *ResSigLoader) Load(reqc *common.ReqContext) {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
 		}
-	} else {
+	} else if cached != "" {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
 			logger.Error("failed to Unmarshal cached ResourceSignature:", err)
@@ -99,7 +99,7 @@ func (self *ResSigLoader) Load(reqc *common.ReqContext) {
 		}
 	}
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.requestNamespace, labelSelector)
-	if cached := cache.GetString(keyName); cached == "" {
+	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
 		list2, err = self.Client.ResourceSignatures(self.requestNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			logger.Error("failed to get ResourceSignature:", err)
@@ -119,14 +119,18 @@ func (self *ResSigLoader) Load(reqc *common.ReqContext) {
 	}
 
 	data := []*rsigapi.ResourceSignature{}
-	for _, d := range list1.Items {
-		data = append(data, d)
+	if list1 != nil {
+		for _, d := range list1.Items {
+			data = append(data, d)
+		}
 	}
-	for _, d := range list2.Items {
-		data = append(data, d)
+	if list2 != nil {
+		for _, d := range list2.Items {
+			data = append(data, d)
+		}
 	}
 	sortedData := sortByTimestamp(data)
-	self.Data = sortedData
+	self.Data = &rsigapi.ResourceSignatureList{Items: sortedData}
 	return
 }
 

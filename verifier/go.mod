@@ -9,6 +9,7 @@ go 1.13
 require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
+	github.com/google/uuid v1.1.1
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a

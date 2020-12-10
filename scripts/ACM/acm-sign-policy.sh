@@ -14,8 +14,9 @@ TARGET_DIR=$2
 find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
 do
   cp ${file} ${file}.backup
-  echo Original file backed up as ${file}.backup
+  echo Original file is backed up as ${file}.backup
 
   $SCRIPT_DIR/../gpg-annotation-sign.sh ${SIGNER} "$file"
+
   echo Signature annotation is attached in $file.
 done

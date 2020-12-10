@@ -51,9 +51,6 @@ const (
 	DefaultIVAdminClusterRoleBindingName  = "iv-admin-clusterrolebinding"
 	DefaultIVAdminRoleName                = "iv-admin-role"
 	DefaultIVAdminRoleBindingName         = "iv-admin-rolebinding"
-	DefaultRuleTableLockCMName            = "iv-rule-table-lock"
-	DefaultIgnoreTableLockCMName          = "iv-ignore-table-lock"
-	DefaultForceCheckTableLockCMName      = "iv-force-check-table-lock"
 	DefaultIVCRYamlPath                   = "./resources/default-iv-cr.yaml"
 	DefaultResourceSigningProfileYamlPath = "./resources/default-rsp.yaml"
 	DefaultKeyringFilename                = "pubring.gpg"
@@ -297,18 +294,6 @@ func (self *IntegrityVerifier) GetPodSecurityPolicyName() string {
 	return self.Spec.Security.PodSecurityPolicyName
 }
 
-func (self *IntegrityVerifier) GetRuleTableLockCMName() string {
-	return DefaultRuleTableLockCMName
-}
-
-func (self *IntegrityVerifier) GetIgnoreTableLockCMName() string {
-	return DefaultIgnoreTableLockCMName
-}
-
-func (self *IntegrityVerifier) GetForceCheckTableLockCMName() string {
-	return DefaultForceCheckTableLockCMName
-}
-
 func (self *IntegrityVerifier) GetIVServerDeploymentName() string {
 	return self.Name
 }
@@ -345,7 +330,6 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) ([]*com
 	_roleType := getTypeFromObj(&rbacv1.Role{}, scheme)
 	_rolebindingType := getTypeFromObj(&rbacv1.RoleBinding{}, scheme)
 	_pspType := getTypeFromObj(&policyv1.PodSecurityPolicy{}, scheme)
-	_cmType := getTypeFromObj(&v1.ConfigMap{}, scheme)
 
 	ivOperatorResourceList := []*common.ResourceRef{
 		{
@@ -449,21 +433,6 @@ func (self *IntegrityVerifier) GetIVResourceList(scheme *runtime.Scheme) ([]*com
 		{
 			Kind:      _pspType.Kind,
 			Name:      self.GetPodSecurityPolicyName(),
-			Namespace: self.Namespace,
-		},
-		{
-			Kind:      _cmType.Kind,
-			Name:      self.GetRuleTableLockCMName(),
-			Namespace: self.Namespace,
-		},
-		{
-			Kind:      _cmType.Kind,
-			Name:      self.GetIgnoreTableLockCMName(),
-			Namespace: self.Namespace,
-		},
-		{
-			Kind:      _cmType.Kind,
-			Name:      self.GetForceCheckTableLockCMName(),
 			Namespace: self.Namespace,
 		},
 		{

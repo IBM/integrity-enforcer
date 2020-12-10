@@ -91,7 +91,7 @@ var _ = Describe("Test integrity verifier", func() {
 		})
 		It("Deleting iv resources should be blocked", func() {
 			if skip_default_user_test {
-				Skip("this test should be done by default user")
+				Skip("This test should be done by default user")
 			}
 			time.Sleep(time.Second * 15)
 			framework := initFrameWork()
@@ -125,7 +125,7 @@ var _ = Describe("Test integrity verifier", func() {
 		})
 		It("IV Resources are changed when IV CR is updated", func() {
 			if !local_test {
-				Skip("this test is executed only in the local env.")
+				Skip("This test is executed only in the local env.")
 			}
 			framework := initFrameWork()
 			var timeout int = 120
@@ -151,8 +151,8 @@ var _ = Describe("Test integrity verifier", func() {
 	})
 
 	Describe("Test integrity verifier server", func() {
-		Context("Test integrity verifier function", func() {
-			It("Test rsources should be unmonitored if rsp is not exist.", func() {
+		Context("RSP in test ns is effective", func() {
+			It("Resources should be unmonitored if rsp does not exist.", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "unmonitored-configmap"
@@ -163,17 +163,10 @@ var _ = Describe("Test integrity verifier", func() {
 				Eventually(func() error {
 					cmdstr := "kubectl logs " + server + " -c server -n " + iv_namespace + " | grep " + expected
 					out, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
-					// fmt.Print("out1: ", string(out), "\n")
 					if cmd_err != nil {
 						return cmd_err
 					}
-					cmdstr = "kubectl logs " + server + " -c forwarder -n " + iv_namespace + " | grep " + expected + " | grep unprotected"
-					out2, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
-					// fmt.Print("out2: ", string(out2), "\n")
-					if cmd_err != nil {
-						return cmd_err
-					}
-					if len(string(out)) != 0 && len(string(out2)) != 0 {
+					if len(string(out)) != 0 {
 						return nil
 					}
 					return fmt.Errorf("Fail to check unmonitored resource")
@@ -181,10 +174,8 @@ var _ = Describe("Test integrity verifier", func() {
 				Eventually(func() error {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
-				cmd_err = Kubectl("delete", "cm", expected, "-n", test_namespace)
-				Expect(cmd_err).To(BeNil())
 			})
-			It("Test RSP should be created properly", func() {
+			It("RSP should be created properly", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-rsp"
@@ -198,7 +189,7 @@ var _ = Describe("Test integrity verifier", func() {
 					return nil
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test unsigned resouce should be blocked", func() {
+			It("Unsigned resouce should be blocked", func() {
 				framework := initFrameWork()
 				time.Sleep(time.Second * 30)
 				var timeout int = 120
@@ -209,7 +200,7 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckEventNoSignature(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test (ResourceSignature) signed resouce should be allowed", func() {
+			It("Signed resouce should be allowed (ResourceSignature) ", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap"
@@ -221,7 +212,7 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test (Annotation) signed resouce should be allowed", func() {
+			It("Signed resouce should be allowed (Annotation) ", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap2"
@@ -231,7 +222,7 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test changing whitelisted part should be allowed", func() {
+			It("Changing whitelisted part should be allowed", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap"
@@ -253,13 +244,13 @@ var _ = Describe("Test integrity verifier", func() {
 					return nil
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test request is allowed if filtered by IgnoredKind", func() {
+			It("Request is allowed if filtered by IgnoredKind", func() {
 			})
-			It("Test request is allowed if filtered by IgnoredSA", func() {
+			It("Request is allowed if filtered by IgnoredSA", func() {
 			})
-			It("Test request is allowed if error occured", func() {
+			It("Request is allowed if error occured", func() {
 			})
-			It("Test unsigned resource can be created if filtered by exclude rule", func() {
+			It("Unsigned resource can be created if filtered by exclude rule", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap3"
@@ -269,9 +260,9 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test RSP should be deleted properly", func() {
+			It("RSP should be deleted properly", func() {
 				if !local_test {
-					Skip("this test is executed only in the local env.")
+					Skip("This test is executed only in the local env.")
 				}
 				framework := initFrameWork()
 				var timeout int = 120
@@ -283,12 +274,13 @@ var _ = Describe("Test integrity verifier", func() {
 					return err
 				}, timeout, 1).ShouldNot(BeNil())
 			})
-			It("Test unsigned resouce should not blocked", func() {
+			It("Unsigned resouce should not be blocked", func() {
 				if !local_test {
-					Skip("this test is executed only in the local env.")
+					Skip("This test is executed only in the local env.")
 				}
 				framework := initFrameWork()
 				var timeout int = 120
+				time.Sleep(time.Second * 30)
 				expected := "test-configmap4"
 				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
@@ -297,7 +289,7 @@ var _ = Describe("Test integrity verifier", func() {
 				}, timeout, 1).Should(BeNil())
 			})
 		})
-		Context("RSP in IV NS is effective for blocking unsigned admission on newly created NS", func() {
+		Context("RSP in IV NS is effective on newly created NS", func() {
 			It("Delete test namespace", func() {
 				cmd_err := Kubectl("get", "ns", test_namespace)
 				if cmd_err == nil {
@@ -313,7 +305,7 @@ var _ = Describe("Test integrity verifier", func() {
 				cmd_err = Kubectl("get", "ns", test_namespace)
 				Expect(cmd_err).NotTo(BeNil())
 			})
-			It("Test RSP should be created properly", func() {
+			It("RSP should be created properly", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-rsp"
@@ -329,9 +321,8 @@ var _ = Describe("Test integrity verifier", func() {
 					return nil
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test unsigned resource should be blocked in new namespace", func() {
+			It("Unsigned resource should be blocked in new namespace", func() {
 				framework := initFrameWork()
-				time.Sleep(time.Second * 30)
 				var timeout int = 120
 				expected := "test-configmap"
 				By("Creating new namespace: " + test_namespace)
@@ -344,7 +335,7 @@ var _ = Describe("Test integrity verifier", func() {
 					return CheckEventNoSignature(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Test signed resource should be allowed in new namespace", func() {
+			It("Signed resource should be allowed in new namespace", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap2"
@@ -361,7 +352,7 @@ var _ = Describe("Test integrity verifier", func() {
 	Describe("Test integrity verifier resources: delete", func() {
 		It("Server and iv resources should be deleted properly", func() {
 			if !local_test {
-				Skip("this test is executed only in the local env.")
+				Skip("This test is executed only in the local env.")
 			}
 			framework := initFrameWork()
 			vc_name := "iv-config"

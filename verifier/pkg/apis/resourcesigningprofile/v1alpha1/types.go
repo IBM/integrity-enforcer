@@ -76,11 +76,22 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 }
 
 func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *profile.Rule) {
+	for _, rule := range self.Spec.ForceCheckRules {
+		if rule.MatchWithRequest(reqFields) {
+			return true, rule
+		}
+	}
+	for _, rule := range self.Spec.IgnoreRules {
+		if rule.MatchWithRequest(reqFields) {
+			return false, rule
+		}
+	}
 	for _, rule := range self.Spec.ProtectRules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
 		}
 	}
+
 	return false, nil
 }
 

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/verifier/pkg/apis/helmreleasemetadata/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	profile "github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
 	helm "github.com/IBM/integrity-enforcer/verifier/pkg/plugins/helm"
@@ -42,7 +43,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error)
+	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error)
 }
 
 /**********************************************
@@ -66,7 +67,7 @@ func NewVerifier(verifyType VerifyType, signType SignatureType, verifierNamespac
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -503,7 +504,7 @@ type HelmVerifier struct {
 	KeyPathList []string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile profile.SigningProfile) (*SigVerifyResult, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -592,10 +593,12 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.labels.\"%s\"", common.ResourceIntegrityLabelKey),
 	fmt.Sprintf("metadata.labels.\"%s\"", common.ReasonLabelKey),
-	"metadata.annotations.message",
-	"metadata.annotations.signature",
-	"metadata.annotations.certificate",
-	"metadata.annotations.signPaths",
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.CertificateAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),
 	"metadata.annotations.namespace",
 	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
 	"metadata.managedFields",

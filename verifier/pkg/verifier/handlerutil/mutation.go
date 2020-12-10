@@ -19,13 +19,14 @@ package handlerutil
 import (
 	"strings"
 
+	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	profile "github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
 	mapnode "github.com/IBM/integrity-enforcer/verifier/pkg/util/mapnode"
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, signingProfile profile.SigningProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct{}
@@ -34,16 +35,20 @@ func NewMutationChecker() MutationChecker {
 	return &ConcreteMutationChecker{}
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile profile.SigningProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
 		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
-		"status",
+		"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
+		"metadata.annotations.deprecated.daemonset.template.generation",
 		"metadata.creationTimestamp",
 		"metadata.uid",
 		"metadata.generation",
+		"metadata.managedFields",
+		"metadata.resourceVersion",
+		"status",
 	}
 
 	maResult := &common.MutationEvalResult{

@@ -19,7 +19,6 @@ package loader
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -63,89 +62,48 @@ func NewRSPLoader(verifierNamespace, profileNamespace, requestNamespace string, 
 	}
 }
 
-func (self *RSPLoader) GetData() []rspapi.ResourceSigningProfile {
+func (self *RSPLoader) GetData(doK8sApiCall bool) ([]rspapi.ResourceSigningProfile, bool) {
+	reloaded := false
 	if len(self.Data) == 0 {
-		self.Load()
+		reloaded = self.Load(doK8sApiCall)
 	}
-	return self.Data
+	return self.Data, reloaded
 }
 
-func (self *RSPLoader) Load() {
+func (self *RSPLoader) Load(doK8sApiCall bool) bool {
 	var err error
-	var list1, list2, list3 *rspapi.ResourceSigningProfileList
+	var list1 *rspapi.ResourceSigningProfileList
 	var keyName string
+	reloaded := false
 
-	keyName = fmt.Sprintf("RSPLoader/%s/list", self.verifierNamespace)
-	if cached := cache.GetString(keyName); cached == "" {
-		list1, err = self.Client.ResourceSigningProfiles(self.verifierNamespace).List(context.Background(), metav1.ListOptions{})
+	keyName = "RSPLoader/list"
+	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
+		list1, err = self.Client.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceSigningProfile:", err)
-			return
+			return false
 		}
+		reloaded = true
 		logger.Debug("ResourceSigningProfile reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
 		}
-	} else {
+	} else if cached != "" {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
 			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
-			return
-		}
-	}
-
-	keyName = fmt.Sprintf("RSPLoader/%s/list", self.profileNamespace)
-	if cached := cache.GetString(keyName); cached == "" {
-		list2, err = self.Client.ResourceSigningProfiles(self.profileNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			logger.Error("failed to get ResourceSigningProfile:", err)
-			return
-		}
-		logger.Debug("ResourceSigningProfile reloaded.")
-		if len(list2.Items) > 0 {
-			tmp, _ := json.Marshal(list2)
-			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
-		}
-	} else {
-		err = json.Unmarshal([]byte(cached), &list2)
-		if err != nil {
-			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
-			return
-		}
-	}
-
-	keyName = fmt.Sprintf("RSPLoader/%s/list", self.requestNamespace)
-	if cached := cache.GetString(keyName); cached == "" {
-		list3, err = self.Client.ResourceSigningProfiles(self.requestNamespace).List(context.Background(), metav1.ListOptions{})
-		if err != nil {
-			logger.Error("failed to get ResourceSigningProfile:", err)
-			return
-		}
-		logger.Debug("ResourceSigningProfile reloaded.")
-		if len(list3.Items) > 0 {
-			tmp, _ := json.Marshal(list3)
-			cache.SetString(keyName, string(tmp), &(self.defaultProfileInterval))
-		}
-	} else {
-		err = json.Unmarshal([]byte(cached), &list3)
-		if err != nil {
-			logger.Error("failed to Unmarshal cached ResourceSigningProfile:", err)
-			return
+			return false
 		}
 	}
 	data := []rspapi.ResourceSigningProfile{}
-	for _, d := range list1.Items {
-		data = append(data, d)
-	}
-	for _, d := range list2.Items {
-		data = append(data, d)
-	}
-	for _, d := range list3.Items {
-		data = append(data, d)
+	if list1 != nil {
+		for _, d := range list1.Items {
+			data = append(data, d)
+		}
 	}
 	self.Data = data
-	return
+	return reloaded
 }
 
 func (self *RSPLoader) GetByReferences(refs []*v1.ObjectReference) []rspapi.ResourceSigningProfile {
@@ -190,12 +148,7 @@ func (self *RSPLoader) GetDefaultProfile() (rspapi.ResourceSigningProfile, error
 	return rsp, nil
 }
 
-func (self *RSPLoader) UpdateStatus(sProfile profile.SigningProfile, reqc *common.ReqContext, errMsg string) error {
-	rsp, ok := sProfile.(rspapi.ResourceSigningProfile)
-	if !ok {
-		logger.Warn(fmt.Sprintf("The profile is not an instance of ResourceSigningProfile but one of %T; skip updating status.", sProfile))
-		return nil
-	}
+func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.ReqContext, errMsg string) error {
 	rspNamespace := rsp.GetNamespace()
 	rspName := rsp.GetName()
 	rspOrg, err := self.Client.ResourceSigningProfiles(rspNamespace).Get(context.Background(), rspName, metav1.GetOptions{})
@@ -211,4 +164,8 @@ func (self *RSPLoader) UpdateStatus(sProfile profile.SigningProfile, reqc *commo
 		return err
 	}
 	return nil
+}
+
+func (self *RSPLoader) ClearCache() {
+	cache.Unset("RSPLoader/list")
 }

@@ -17,12 +17,7 @@
 package loader
 
 import (
-	rsig "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesignature/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
-	policy "github.com/IBM/integrity-enforcer/verifier/pkg/common/policy"
-	profile "github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
 	config "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/config"
-	v1 "k8s.io/api/core/v1"
 )
 
 /**********************************************
@@ -33,8 +28,8 @@ import (
 
 type Loader struct {
 	SignPolicy        *SignPolicyLoader
-	RuleTable         *RuleTableLoader
 	RSP               *RSPLoader
+	Namespace         *NamespaceLoader
 	ResourceSignature *ResSigLoader
 }
 
@@ -46,77 +41,8 @@ func NewLoader(cfg *config.VerifierConfig, reqNamespace string) *Loader {
 	loader := &Loader{
 		SignPolicy:        NewSignPolicyLoader(verifierNamespace),
 		RSP:               NewRSPLoader(verifierNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
-		RuleTable:         NewRuleTableLoader(verifierNamespace),
+		Namespace:         NewNamespaceLoader(),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace),
 	}
 	return loader
-}
-
-func (self *Loader) ProtectRules() *RuleTable {
-	table := self.RuleTable.GetData()
-	return table
-}
-
-func (self *Loader) IgnoreRules() *RuleTable {
-	table := self.RuleTable.GetIgnoreData()
-	return table
-}
-
-func (self *Loader) ForceCheckRules() *RuleTable {
-	table := self.RuleTable.GetForceCheckData()
-	return table
-}
-
-func (self *Loader) SigningProfile(profileReferences []*v1.ObjectReference) []profile.SigningProfile {
-	signingProfiles := []profile.SigningProfile{}
-
-	rsps := self.RSP.GetByReferences(profileReferences)
-	for _, d := range rsps {
-		if !d.Spec.Disabled {
-			signingProfiles = append(signingProfiles, d)
-		}
-	}
-
-	return signingProfiles
-
-}
-
-func (self *Loader) ReloadRuleTable(reqc *common.ReqContext) error {
-	err := self.RuleTable.Reload(reqc)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (self *Loader) ProfileTargetNamespaces() []string {
-	return self.RuleTable.GetTargetNamespaces()
-}
-
-func (self *Loader) UpdateProfileStatus(profile profile.SigningProfile, reqc *common.ReqContext, errMsg string) error {
-	err := self.RSP.UpdateStatus(profile, reqc, errMsg)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (self *Loader) BreakGlassConditions() []policy.BreakGlassCondition {
-	sp := self.SignPolicy.GetData()
-	conditions := []policy.BreakGlassCondition{}
-	if sp != nil {
-		conditions = append(conditions, sp.Spec.SignPolicy.BreakGlass...)
-	}
-	return conditions
-}
-
-func (self *Loader) GetSignPolicy() *policy.SignPolicy {
-	spol := self.SignPolicy.GetData()
-	return spol.Spec.SignPolicy
-}
-
-func (self *Loader) ResSigList(reqc *common.ReqContext) *rsig.ResourceSignatureList {
-	items := self.ResourceSignature.GetData(reqc)
-
-	return &rsig.ResourceSignatureList{Items: items}
 }
