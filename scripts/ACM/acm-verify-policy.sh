@@ -16,6 +16,6 @@ find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
 do
   echo "Verifying signature annotation in ${file}"
 
-  $SCRIPT_DIR/../gpg-annotation-verify.sh | bash -s "$file" ${PUBRING_KEY}
+  $SCRIPT_DIR/../gpg-annotation-verify.sh  "$file" ${PUBRING_KEY}
 
 done
