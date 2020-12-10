@@ -24,6 +24,12 @@ if [ ! -e $2 ]; then
   echo "$2 does not exist"
   exit 1
 fi
+
+if [ -z "$ISHIELD_REPO_ROOT" ]; then
+    echo "ISHIELD_REPO_ROOT is empty. Please set env."
+    exit 1
+fi
+
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 SIGNER=$1
 TMP_DIR="$2"/IV_TMP
@@ -109,7 +115,7 @@ if [ -f ${INPUT_FILE} ]; then
    # Generating signature annotation
    echo -----------------------------
    echo [2/4] Generating signature annotation
-   $SCRIPT_DIR/gpg-annotation-sign.sh ${SIGNER} ${INPUT_FILE}
+   ${ISHIELD_REPO_ROOT}/scripts/gpg-annotation-sign.sh ${SIGNER} ${INPUT_FILE}
    echo done.
    echo -----------------------------
    echo ""
@@ -117,7 +123,7 @@ if [ -f ${INPUT_FILE} ]; then
    # Verifying signature annotation
    echo -----------------------------
    echo [3/4] Verifying signature annotation.
-   $SCRIPT_DIR/gpg-annotation-verify.sh ${INPUT_FILE} ${PUB_RING_KEY}
+   ${ISHIELD_REPO_ROOT}/scripts/gpg-annotation-verify.sh ${INPUT_FILE} ${PUB_RING_KEY}
    echo done.
    echo -----------------------------
    echo ""

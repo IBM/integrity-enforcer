@@ -294,7 +294,7 @@ e2e-test:
 
 test-gpg-annotation:
 	@echo
-	$(IV_REPO_ROOT)/scripts/unit-test-gpg-annotation.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(TMP_DIR)
+	$(ISHIELD_REPO_ROOT)/build/unit-test-gpg-annotation.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(ISHIELD_REPO_ROOT)/build
 ############################################################
 # setup ishield
 ############################################################
