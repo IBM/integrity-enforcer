@@ -200,9 +200,9 @@ oc create ns <custom namespace>
                   name: integrity-verifier-server
                 spec:
                   logger:
-                    image: quay.io/open-cluster-management/integrity-verifier-logging:0.0.4
+                    image: quay.io/open-cluster-management/integrity-verifier-logging:0.0.5
                   server:
-                    image: quay.io/open-cluster-management/integrity-verifier-server:0.0.4
+                    image: quay.io/open-cluster-management/integrity-verifier-server:0.0.5
       ```
       Commit the above configuration change in `policy-integrity.yaml` to `policy-collection` GitHub repository.
 
