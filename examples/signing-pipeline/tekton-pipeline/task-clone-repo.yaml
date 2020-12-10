@@ -43,8 +43,8 @@ spec:
              cd $WS
              rm * -rf
              rm -rf .git
-             if [ -f .iv-sign-config.json ]; then
-                rm .iv-sign-config.json             
+             if [ -f .ishield-sign-config.json ]; then
+                rm .ishield-sign-config.json             
                 echo removed !
              fi
              ls -la

@@ -19,15 +19,15 @@ if ! [ -x "$(command -v kubectl)" ]; then
     exit 1
 fi
 
-if [ -z "$IV_NS" ]; then
-    echo "IV_NS is empty. Please set namespace name for integrity-verifier."
+if [ -z "$ISHIELD_NS" ]; then
+    echo "ISHIELD_NS is empty. Please set namespace name for integrity-shield."
     exit 1
 fi
 
-IV_OPERATOR_POD=`kubectl get pod -n ${IV_NS} | grep integrity-verifier-operator | grep Running | awk '{print $1}'`
-if [ -z "$IV_OPERATOR_POD" ]; then
-    echo "IV_OPERATOR_POD is empty. There is no running integrity-verifier-operator"
+ISHIELD_OPERATOR_POD=`kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-operator | grep Running | awk '{print $1}'`
+if [ -z "$ISHIELD_OPERATOR_POD" ]; then
+    echo "ISHIELD_OPERATOR_POD is empty. There is no running integrity-shield-operator"
     exit 1
 fi
 
-kubectl logs -f -n ${IV_NS} ${IV_OPERATOR_POD} -c manager
+kubectl logs -f -n ${ISHIELD_NS} ${ISHIELD_OPERATOR_POD} -c manager

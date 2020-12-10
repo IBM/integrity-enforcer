@@ -26,26 +26,26 @@ if ! [ -x "$(command -v opm)" ]; then
 fi
 
 
-if [ -z "$VERIFIER_OP_DIR" ]; then
-    echo "VERIFIER_OP_DIR is empty. Please set env."
+if [ -z "$SHIELD_OP_DIR" ]; then
+    echo "SHIELD_OP_DIR is empty. Please set env."
     exit 1
 fi
 
 
-cd $VERIFIER_OP_DIR
+cd $SHIELD_OP_DIR
 
 echo "Current directory: $(pwd)"
 
 export COMPONENT_VERSION=${VERSION}
 export COMPONENT_DOCKER_REPO=${REGISTRY}
 
-# Build iv-operator bundle
+# Build ishield-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle IMG=${IV_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
+make bundle IMG=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
 
-csvfile="bundle/manifests/integrity-verifier-operator.clusterserviceversion.yaml"
+csvfile="bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
 
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "OwnNamespace").supported=true)') && echo "$change" >  tmp.json
@@ -56,13 +56,13 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
-make bundle-build BUNDLE_IMG=${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+make bundle-build BUNDLE_IMG=${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
-# Push iv-operator bundle
+# Push ishield-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
-#docker push ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
-export COMPONENT_NAME=${IV_BUNDLE}
+#docker push ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+export COMPONENT_NAME=${ISHIELD_BUNDLE}
 export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}
 #if [ `go env GOOS` == "linux" ]; then
 #    make component/push
@@ -74,35 +74,35 @@ echo DOCKER_PASS: ${DOCKER_PASS}
 docker login quay.io -u ${DOCKER_USER} -p ${DOCKER_PASS}
 make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 
-# Prepare iv-operator bundle index
+# Prepare ishield-operator bundle index
 echo -----------------------------
 echo [3/4] Adding bundle to index
 
-docker pull ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
+docker pull ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
-        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --tag ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+                      --tag ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 else
 	echo "Succesfulling pulled previous index"
-	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${IV_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --from-index ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
-                      --tag ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+                      --from-index ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
+                      --tag ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 fi
 
 rm -f tmp.Dockerfile
 
-# Build iv-operator bundle index
+# Build ishield-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
-docker build -f index.Dockerfile -t ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
+docker build -f index.Dockerfile -t ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
-# Push iv-operator bundle index
+# Push ishield-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
 
-#docker push ${IV_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
-export COMPONENT_NAME=${IV_INDEX}
+#docker push ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+export COMPONENT_NAME=${ISHIELD_INDEX}
 export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}
 #if [ `go env GOOS` == "linux" ]; then
 #    make component/push

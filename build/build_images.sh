@@ -37,44 +37,44 @@ if ! [ -x "$(command -v operator-sdk)" ]; then
     exit 1
 fi
 
-if [ -z "$IV_REPO_ROOT" ]; then
-    echo "IV_REPO_ROOT is empty. Please set root directory for IV repository"
+if [ -z "$ISHIELD_REPO_ROOT" ]; then
+    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IShield repository"
     exit 1
 fi
 
-if [ -z "$IV_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_SERVER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
-if [ -z "$IV_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
-if [ -z "$IV_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
-if [ -z "$IV_OPERATOR" ]; then
-    echo "IV_OPERATOR is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_OPERATOR" ]; then
+    echo "ISHIELD_OPERATOR is empty. Please set IShield build env settings."
     exit 1
 fi
 
 
-SERVICE_NAME=iv-server
+SERVICE_NAME=ishield-server
 
 
 BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
-LOGG_BASEDIR=${IV_REPO_ROOT}/logging/
-OPERATOR_BASEDIR=${IV_REPO_ROOT}/integrity-verifier-operator/
+LOGG_BASEDIR=${ISHIELD_REPO_ROOT}/logging/
+OPERATOR_BASEDIR=${ISHIELD_REPO_ROOT}/integrity-shield-operator/
 
-# Build iv-server image
+# Build ishield-server image
 echo -----------------------------
-echo [1/3] Building iv-server image.
-cd ${IV_REPO_ROOT}/verifier
+echo [1/3] Building ishield-server image.
+cd ${ISHIELD_REPO_ROOT}/shield
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -88,9 +88,9 @@ if [ $exit_status -ne 0 ]; then
 fi
 
 if [ "$NO_CACHE" = true ] ; then
-    docker build -f ${DOCKERFILE} -t ${IV_SERVER_IMAGE_NAME_AND_VERSION} image/ --no-cache
+    docker build -f ${DOCKERFILE} -t ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} image/ --no-cache
 else
-    docker build -f ${DOCKERFILE} -t ${IV_SERVER_IMAGE_NAME_AND_VERSION} image/
+    docker build -f ${DOCKERFILE} -t ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} image/
 fi
 
 exit_status=$?
@@ -102,9 +102,9 @@ echo done.
 echo -----------------------------
 echo ""
 
-# Build iv-logging image
+# Build ishield-logging image
 echo -----------------------------
-echo [2/3] Building iv-logging image.
+echo [2/3] Building ishield-logging image.
 cd ${LOGG_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
@@ -112,9 +112,9 @@ if [ $exit_status -ne 0 ]; then
     exit 1
 fi
 if [ "$NO_CACHE" = true ] ; then
-     docker build -t ${IV_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR} --no-cache
+     docker build -t ${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR} --no-cache
 else
-     docker build -t ${IV_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
+     docker build -t ${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
 fi
 
 exit_status=$?
@@ -126,9 +126,9 @@ echo done.
 echo -----------------------------
 echo ""
 
-# Build integrity-verifier-operator image
+# Build integrity-shield-operator image
 echo -----------------------------
-echo [3/3] Building integrity-verifier-operator image.
+echo [3/3] Building integrity-shield-operator image.
 cd ${OPERATOR_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
@@ -136,12 +136,12 @@ if [ $exit_status -ne 0 ]; then
     exit 1
 fi
 
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${IV_OPERATOR} main.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${ISHIELD_OPERATOR} main.go
 
 if [ "$NO_CACHE" = true ] ; then
-    docker build . -t ${IV_OPERATOR_IMAGE_NAME_AND_VERSION} --no-cache
+    docker build . -t ${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} --no-cache
 else
-    docker build . -t ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
+    docker build . -t ${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION}
 fi
 
 exit_status=$?

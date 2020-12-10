@@ -27,34 +27,34 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base_decode='base64 -D'
 fi
 
-msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityverifier.io/message"')
-sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityverifier.io/signature"')
+msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/message"')
+sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"')
 
 
-IV_TMP_DIR="/tmp/iv_tmp_dir"
+ISHIELD_TMP_DIR="/tmp/ishield_tmp_dir"
 
-if [ ! -d ${IV_TMP_DIR} ]; then
-   mkdir -p  ${IV_TMP_DIR}
+if [ ! -d ${ISHIELD_TMP_DIR} ]; then
+   mkdir -p  ${ISHIELD_TMP_DIR}
 fi
 
 
-IV_INPUT_FILE="${IV_TMP_DIR}/input.yaml"
-IV_SIGN_FILE="${IV_TMP_DIR}/input.sig"
-IV_MSG_FILE="${IV_TMP_DIR}/input.msg"
+ISHIELD_INPUT_FILE="${ISHIELD_TMP_DIR}/input.yaml"
+ISHIELD_SIGN_FILE="${ISHIELD_TMP_DIR}/input.sig"
+ISHIELD_MSG_FILE="${ISHIELD_TMP_DIR}/input.msg"
 
 
-cat ${INPUT_FILE} > ${IV_INPUT_FILE}
+cat ${INPUT_FILE} > ${ISHIELD_INPUT_FILE}
 
-yq d ${IV_INPUT_FILE} 'metadata.annotations."integrityverifier.io/message"' -i
-yq d ${IV_INPUT_FILE} 'metadata.annotations."integrityverifier.io/signature"' -i
+yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
+yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
 
 
-msg_body=`cat ${IV_INPUT_FILE} | $base`
+msg_body=`cat ${ISHIELD_INPUT_FILE} | $base`
 
 if [ "${msg}" != "${msg_body}" ]; then
    echo Input file content has been changed.
-   if [ -d ${IV_TMP_DIR} ]; then
-     rm -rf ${IV_TMP_DIR}
+   if [ -d ${ISHIELD_TMP_DIR} ]; then
+     rm -rf ${ISHIELD_TMP_DIR}
    fi
    exit 0
 fi
@@ -62,13 +62,13 @@ fi
 if [ -z ${msg} ] || [ -z ${sign} ] ; then
    echo "Input file is not yet signed."
 else
-   echo $msg | ${base_decode} >  ${IV_MSG_FILE}
-   echo $sign | ${base_decode} > ${IV_SIGN_FILE}
+   echo $msg | ${base_decode} >  ${ISHIELD_MSG_FILE}
+   echo $sign | ${base_decode} > ${ISHIELD_SIGN_FILE}
 
-   status=$(gpg --no-default-keyring --keyring ${PUBRING_KEY} --dry-run --verify ${IV_SIGN_FILE}  ${IV_MSG_FILE} 2>&1)
+   status=$(gpg --no-default-keyring --keyring ${PUBRING_KEY} --dry-run --verify ${ISHIELD_SIGN_FILE}  ${ISHIELD_MSG_FILE} 2>&1)
 
-   if [ -d ${IV_TMP_DIR} ]; then
-     rm -rf ${IV_TMP_DIR}
+   if [ -d ${ISHIELD_TMP_DIR} ]; then
+     rm -rf ${ISHIELD_TMP_DIR}
    fi
 
    result=$(echo $status | grep "Good" | wc -c)

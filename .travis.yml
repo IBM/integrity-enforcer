@@ -37,7 +37,7 @@ env:
 
 before_install:
   - ./build/install-dependencies.sh
-  - export IV_REPO_ROOT=$TRAVIS_BUILD_DIR
+  - export ISHIELD_REPO_ROOT=$TRAVIS_BUILD_DIR
 
 stages:
   - lint
@@ -67,7 +67,7 @@ jobs:
         - |
           make init
           make component/test/unit
-          make sonar-go-test-iv
+          make sonar-go-test-ishield
           make sonar-go-test-op
           # make sonar/go enable it after resolving package references to upstream repo
     - stage: test-e2e

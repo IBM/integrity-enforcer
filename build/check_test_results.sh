@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd ${VERIFIER_OP_DIR}
+cd ${SHIELD_OP_DIR}
 go test -v ./test/e2e | tee /tmp/e2e_results.txt
 
 FAILURES=$(cat /tmp/e2e_results.txt | grep "FAIL:" | wc -c)
@@ -28,4 +28,4 @@ else
     exit 0
 fi
 
-cd ${IV_REPO_ROOT}
+cd ${ISHIELD_REPO_ROOT}

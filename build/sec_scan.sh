@@ -21,19 +21,19 @@ echo "SECURITY SCAN GOES HERE!"
 # Run our build target
 
 
-echo "Scaning integrity verifier images : $(date)"
+echo "Scaning integrity shield images : $(date)"
 
-echo IV_VERSION ${IV_VERSION}
-export SECURITYSCANS_IMAGE_NAME=${IV_IMAGE}
+echo ISHIELD_VERSION ${ISHIELD_VERSION}
+export SECURITYSCANS_IMAGE_NAME=${ISHIELD_IMAGE}
 echo SECURITYSCANS_IMAGE_NAME ${SECURITYSCANS_IMAGE_NAME}
 make security/scans
 
-export SECURITYSCANS_IMAGE_NAME=${IV_LOGGING}
+export SECURITYSCANS_IMAGE_NAME=${ISHIELD_LOGGING}
 echo SECURITYSCANS_IMAGE_NAME ${SECURITYSCANS_IMAGE_NAME}
 make security/scans
 
-export SECURITYSCANS_IMAGE_NAME=${IV_OPERATOR}
+export SECURITYSCANS_IMAGE_NAME=${ISHIELD_OPERATOR}
 echo SECURITYSCANS_IMAGE_NAME ${SECURITYSCANS_IMAGE_NAME}
 make security/scans
 
-echo "Scanning integrity verifier images completed : $(date)"
+echo "Scanning integrity shield images completed : $(date)"

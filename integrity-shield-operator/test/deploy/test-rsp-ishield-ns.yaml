@@ -1,0 +1,11 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ResourceSigningProfile
+metadata:
+  name: test-rsp
+spec:
+  targetNamespaceSelector:
+    include:
+    - "test-*"
+  protectRules:
+  - match:
+    - kind: ConfigMap

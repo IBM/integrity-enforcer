@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1alpha1
 kind: Pipeline
 metadata:
-  name: pipeline-iv
+  name: pipeline-ishield
 spec:
   params:
     - name: pipeline-pvc
