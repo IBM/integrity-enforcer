@@ -16,11 +16,11 @@
 
 # LOAD ENVIRNOMENT SETTINGS (must be done at first)
 ###########################
-ifeq ($(IV_REPO_ROOT),)
-$(error IV_REPO_ROOT is not set)
+ifeq ($(ISHIELD_REPO_ROOT),)
+$(error ISHIELD_REPO_ROOT is not set)
 endif
-ifeq ($(IV_ENV),)
-$(error "IV_ENV is empty. Please set local or remote.")
+ifeq ($(ISHIELD_ENV),)
+$(error "ISHIELD_ENV is empty. Please set local or remote.")
 endif
 
 include  .env
@@ -33,18 +33,18 @@ endif
 include  $(ENV_CONFIG)
 export $(shell sed 's/=.*//' $(ENV_CONFIG))
 
-include $(VERIFIER_OP_DIR)Makefile
+include $(SHIELD_OP_DIR)Makefile
 
-ifeq ($(IV_TEMP_DIR),)
+ifeq ($(ISHIELD_TEMP_DIR),)
 TMP_DIR = /tmp/
 else
-TMP_DIR = $(IV_TEMP_DIR)
+TMP_DIR = $(ISHIELD_TEMP_DIR)
 $(shell mkdir -p $(TMP_DIR))
 endif
 
 # CICD BUILD HARNESS
 ####################
-ifeq ($(IV_ENV), remote)
+ifeq ($(ISHIELD_ENV), remote)
 -include $(shell curl -s -H 'Authorization: token ${GITHUB_TOKEN}' -H 'Accept: application/vnd.github.v4.raw' -L https://api.github.com/repos/open-cluster-management/build-harness-extensions/contents/templates/Makefile.build-harness-bootstrap -o .build-harness-bootstrap; echo .build-harness-bootstrap)
 endif
 ####################
@@ -127,15 +127,15 @@ check: lint
 lint: lint-init  lint-verify lint-op-init lint-op-verify
 
 lint-init:
-	cd $(VERIFIER_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > $(TMP_DIR)lint_results_iv.txt
+	cd $(SHIELD_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > $(TMP_DIR)lint_results_ishield.txt
 
 lint-verify:
-	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results_iv.txt | grep "FAIL:"))
-	cat  $(TMP_DIR)lint_results_iv.txt
+	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results_ishield.txt | grep "FAIL:"))
+	cat  $(TMP_DIR)lint_results_ishield.txt
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 lint-op-init:
-	cd $(VERIFIER_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > $(TMP_DIR)lint_results.txt
+	cd $(SHIELD_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > $(TMP_DIR)lint_results.txt
 
 lint-op-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results.txt | grep "FAIL:"))
@@ -149,27 +149,27 @@ lint-op-verify:
 
 build-images:
 		@if [ -z "$(NO_CACHE)" ]; then \
-			$(IV_REPO_ROOT)/build/build_images.sh false; \
+			$(ISHIELD_REPO_ROOT)/build/build_images.sh false; \
 		else \
-			$(IV_REPO_ROOT)/build/build_images.sh $(NO_CACHE); \
+			$(ISHIELD_REPO_ROOT)/build/build_images.sh $(NO_CACHE); \
 		fi
 
 
 push-images:
-		${IV_REPO_ROOT}/build/push_images.sh
+		${ISHIELD_REPO_ROOT}/build/push_images.sh
 
 pull-images:
-		${IV_REPO_ROOT}/build/pull_images.sh
+		${ISHIELD_REPO_ROOT}/build/pull_images.sh
 
 ############################################################
 # bundle section
 ############################################################
 
 build-bundle:
-		@if [ "$(IV_ENV)" = local ]; then \
-			$(IV_REPO_ROOT)/build/build_bundle.sh; \
+		@if [ "$(ISHIELD_ENV)" = local ]; then \
+			$(ISHIELD_REPO_ROOT)/build/build_bundle.sh; \
 		else \
-			$(IV_REPO_ROOT)/build/build_bundle_ocm.sh; \
+			$(ISHIELD_REPO_ROOT)/build/build_bundle_ocm.sh; \
 		fi
 
 ############################################################
@@ -181,7 +181,7 @@ clean::
 # check copyright section
 ############################################################
 copyright-check:
-	 - $(IV_REPO_ROOT)/build/copyright-check.sh $(TRAVIS_BRANCH)
+	 - $(ISHIELD_REPO_ROOT)/build/copyright-check.sh $(TRAVIS_BRANCH)
 
 ############################################################
 # unit test section
@@ -190,7 +190,7 @@ copyright-check:
 test-unit: test-init test-verify
 
 test-init:
-	cd $(VERIFIER_DIR) &&  go test -v  $(shell cd $(VERIFIER_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > $(TMP_DIR)results.txt
+	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > $(TMP_DIR)results.txt
 
 test-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results.txt | grep "FAIL:"))
@@ -204,7 +204,7 @@ test-verify:
 
 .PHONY: test-e2e test-e2e-kind test-e2e-remote test-e2e-common test-e2e-clean-common
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
-.PHONY: install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
+.PHONY: install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
 .PHONY: create-ns create-key-ring tag-images-to-local
 
 
@@ -216,11 +216,11 @@ TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SAMPLE_SIGNER_SUBJECT_EMAIL=test@enterprise.com
 TEST_SECRET=keyring_secret
-TMP_CR_FILE=$(TMP_DIR)apis_v1alpha1_integrityverifier.yaml
-TMP_CR_UPDATED_FILE=$(TMP_DIR)apis_v1alpha1_integrityverifier_update.yaml
+TMP_CR_FILE=$(TMP_DIR)apis_v1alpha1_integrityshield.yaml
+TMP_CR_UPDATED_FILE=$(TMP_DIR)apis_v1alpha1_integrityshield_update.yaml
 # export KUBE_CONTEXT_USERNAME=kind-test-managed
 
-test-e2e: export KUBECONFIG=$(VERIFIER_OP_DIR)kubeconfig_managed
+test-e2e: export KUBECONFIG=$(SHIELD_OP_DIR)kubeconfig_managed
 # perform test in a kind cluster after creating the cluster
 test-e2e: create-kind-cluster setup-image test-e2e-common test-e2e-clean-common delete-kind-cluster
 
@@ -231,7 +231,7 @@ test-e2e-kind: push-images-to-local test-e2e-common
 test-e2e-remote: test-e2e-common test-e2e-clean-common
 
 # common steps to do e2e test in an existing cluster
-test-e2e-common:  check-local-test check-kubeconfig install-crds setup-iv-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test
+test-e2e-common:  check-local-test check-kubeconfig install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test
 
 
 # common steps to clean e2e test resources in an existing cluster
@@ -252,8 +252,8 @@ check-local-test:
 create-kind-cluster:
 	@echo "creating cluster"
 	# kind create cluster --name test-managed
-	bash $(VERIFIER_OP_DIR)test/create-kind-cluster.sh
-	kind get kubeconfig --name test-managed > $(VERIFIER_OP_DIR)kubeconfig_managed
+	bash $(SHIELD_OP_DIR)test/create-kind-cluster.sh
+	kind get kubeconfig --name test-managed > $(SHIELD_OP_DIR)kubeconfig_managed
 
 delete-kind-cluster:
 	@echo deleting cluster
@@ -263,15 +263,15 @@ setup-image: build-images push-images-to-local
 
 tag-images-to-local:
 	@echo tag image for local registry
-	docker tag $(IV_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
-	docker tag $(IV_LOGGING_IMAGE_NAME_AND_VERSION) $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
-	docker tag $(IV_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
+	docker tag $(ISHIELD_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
+	docker tag $(ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION)
+	docker tag $(ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 push-images-to-local: tag-images-to-local
 	@echo push image into local registry
-	docker push $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
-	docker push $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
-	docker push $(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 setup-test-env:
 	@echo
@@ -292,75 +292,75 @@ setup-test-resources:
 e2e-test:
 	@echo
 	@echo run test
-	$(IV_REPO_ROOT)/build/check_test_results.sh
+	$(ISHIELD_REPO_ROOT)/build/check_test_results.sh
 
 
 ############################################################
-# setup iv
+# setup ishield
 ############################################################
 
-install-iv: check-kubeconfig install-crds setup-iv-env install-operator create-cr 
+install-ishield: check-kubeconfig install-crds setup-ishield-env install-operator create-cr 
 
-uninstall-iv: delete-webhook delete-cr delete-keyring-secret delete-operator
+uninstall-ishield: delete-webhook delete-cr delete-keyring-secret delete-operator
 
 delete-webhook:
 	@echo deleting webhook
-	kubectl delete mutatingwebhookconfiguration iv-webhook-config
+	kubectl delete mutatingwebhookconfiguration ishield-webhook-config
 
-setup-iv-env: create-ns create-key-ring
+setup-ishield-env: create-ns create-key-ring
 
 create-ns:
 	@echo
 	@echo creating namespace
-	kubectl create ns $(IV_OP_NS)
+	kubectl create ns $(ISHIELD_OP_NS)
 
 create-key-ring:
 	@echo creating keyring-secret
-	kubectl create -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
+	kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
 
 install-crds:
 	@echo installing crds
-	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl apply -f -
+	kustomize build $(SHIELD_OP_DIR)config/crd | kubectl apply -f -
 
 delete-crds:
 	@echo deleting crds
-	kustomize build $(VERIFIER_OP_DIR)config/crd | kubectl delete -f -
+	kustomize build $(SHIELD_OP_DIR)config/crd | kubectl delete -f -
 
 delete-keyring-secret:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(VERIFIER_OP_DIR)test/deploy/keyring_secret.yaml -n $(IV_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
 
 install-operator:
 	@echo
 	@echo setting image
-	cp $(VERIFIER_OP_DIR)config/manager/kustomization.yaml $(TMP_DIR)kustomization.yaml  #copy original file to tmp dir.
-	cd $(VERIFIER_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_IV_OPERATOR_IMAGE_NAME_AND_VERSION)
+	cp $(SHIELD_OP_DIR)config/manager/kustomization.yaml $(TMP_DIR)kustomization.yaml  #copy original file to tmp dir.
+	cd $(SHIELD_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
-	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl apply --validate=false -f -
-	cp $(TMP_DIR)kustomization.yaml $(VERIFIER_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
+	kustomize build $(SHIELD_OP_DIR)config/default | kubectl apply --validate=false -f -
+	cp $(TMP_DIR)kustomization.yaml $(SHIELD_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
 
 delete-operator:
 	@echo
 	@echo deleting operator
-	kustomize build $(VERIFIER_OP_DIR)config/default | kubectl delete -f -
+	kustomize build $(SHIELD_OP_DIR)config/default | kubectl delete -f -
 
 create-cr:
-	kubectl apply -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityverifier.yaml -n $(IV_OP_NS)
+	kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1alpha1_integrityshield.yaml -n $(ISHIELD_OP_NS)
 
 delete-cr:
-	kubectl delete -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityverifier.yaml -n $(IV_OP_NS)
+	kubectl delete -f ${SHIELD_OP_DIR}config/samples/apis_v1alpha1_integrityshield.yaml -n $(ISHIELD_OP_NS)
 
 # create a temporary cr with update image names as well as signers
 setup-tmp-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into tmp dir
-	cp $(VERIFIER_OP_DIR)config/samples/apis_v1alpha1_integrityverifier_local.yaml $(TMP_CR_FILE)
+	cp $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_local.yaml $(TMP_CR_FILE)
 	@echo insert image
-	yq write -i $(TMP_CR_FILE) spec.logger.image $(TEST_IV_LOGGING_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
-	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_IV_SERVER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
 	@echo setup signer policy
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
@@ -370,36 +370,36 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
 	@if [ "$(TEST_LOCAL)" ]; then \
 		echo enable logAllResponse ; \
-		yq write -i $(TMP_CR_FILE) spec.verifierConfig.log.logLevel trace ;\
-		yq write -i $(TMP_CR_FILE) spec.verifierConfig.log.logAllResponse true ;\
-		yq write -i $(TMP_CR_FILE) spec.verifierConfig.ivAdminUserGroup "system:masters,system:cluster-admins" ;\
+		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logLevel trace ;\
+		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logAllResponse true ;\
+		yq write -i $(TMP_CR_FILE) spec.shieldConfig.iShieldAdminUserGroup "system:masters,system:cluster-admins" ;\
 	fi
 
 create-tmp-cr:
-	kubectl apply -f $(TMP_CR_FILE) -n $(IV_OP_NS)
+	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
 
 delete-tmp-cr:
-	kubectl delete -f $(TMP_CR_FILE) -n $(IV_OP_NS)
+	kubectl delete -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
 
 
 # list resourcesigningprofiles
 list-rsp:
-	kubectl get resourcesigningprofiles.apis.integrityverifier.io --all-namespaces
+	kubectl get resourcesigningprofiles.apis.integrityshield.io --all-namespaces
 
 
 # show rule table
 show-rt:
-	kubectl get cm iv-rule-table-lock -n $(IV_NS) -o json | jq -r .binaryData.table | base64 -D | gzip -d
+	kubectl get cm ishield-rule-table-lock -n $(ISHIELD_NS) -o json | jq -r .binaryData.table | base64 -D | gzip -d
 
 # show forwarder log
 log-f:
-	bash $(IV_REPO_ROOT)/scripts/watch_events.sh
+	bash $(ISHIELD_REPO_ROOT)/scripts/watch_events.sh
 
 log-s:
-	bash $(IV_REPO_ROOT)/scripts/log_server.sh
+	bash $(ISHIELD_REPO_ROOT)/scripts/log_server.sh
 
 log-o:
-	bash $(IV_REPO_ROOT)/scripts/log_operator.sh
+	bash $(ISHIELD_REPO_ROOT)/scripts/log_operator.sh
 
 clean-tmp:
 	@if [ -f "$(TMP_CR_FILE)" ]; then\
@@ -412,38 +412,38 @@ clean-tmp:
 .PHONY: sec-scan
 
 sec-scan:
-	$(IV_REPO_ROOT)/build/sec_scan.sh
+	$(ISHIELD_REPO_ROOT)/build/sec_scan.sh
 
-.PHONY: sonar-go-test-iv sonar-go-test-op
+.PHONY: sonar-go-test-ishield sonar-go-test-op
 
-sonar-go-test-iv:
-	@if [ "$(IV_ENV)" = remote ]; then \
+sonar-go-test-ishield:
+	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		make go/gosec-install; \
 	fi
 	@echo "-> Starting sonar-go-test"
 	@echo "--> Starting go test"
-	cd $(VERIFIER_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	cd $(SHIELD_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
 	@echo "--> Running gosec"
 	gosec -fmt sonarqube -out gosec.json -no-fail ./...
 	@echo "---> gosec gosec.json"
 	@cat gosec.json
-	@if [ "$(IV_ENV)" = remote ]; then \
+	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		echo "--> Running sonar-scanner"; \
 		sonar-scanner --debug; \
 	fi
 
 sonar-go-test-op:
-	@if [ "$(IV_ENV)" = remote ]; then \
+	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		make go/gosec-install; \
 	fi
 	@echo "-> Starting sonar-go-test"
 	@echo "--> Starting go test"
-	cd $(VERIFIER_OP_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	cd $(SHIELD_OP_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
 	@echo "--> Running gosec"
 	gosec -fmt sonarqube -out gosec.json -no-fail ./...
 	@echo "---> gosec gosec.json"
 	@cat gosec.json
-	@if [ "$(IV_ENV)" = remote ]; then \
+	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		echo "--> Running sonar-scanner"; \
 		sonar-scanner --debug; \
 	fi
@@ -451,5 +451,5 @@ sonar-go-test-op:
 .PHONY: publish
 
 publish:
-	$(IV_REPO_ROOT)/build/publish_images.sh
-	$(IV_REPO_ROOT)/build/publish_bundle_ocm.sh
+	$(ISHIELD_REPO_ROOT)/build/publish_images.sh
+	$(ISHIELD_REPO_ROOT)/build/publish_bundle_ocm.sh

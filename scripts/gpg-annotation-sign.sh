@@ -35,8 +35,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base='base64'
 fi
 
-yq d $INPUT_FILE 'metadata.annotations."integrityverifier.io/message"' -i
-yq d $INPUT_FILE 'metadata.annotations."integrityverifier.io/signature"' -i
+yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' -i
+yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' -i
 
 # message
 msg=`cat $INPUT_FILE | $base`
@@ -44,8 +44,8 @@ msg=`cat $INPUT_FILE | $base`
 # signature
 sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
 
-yq w -i $INPUT_FILE 'metadata.annotations."integrityverifier.io/message"' $msg
-yq w -i $INPUT_FILE 'metadata.annotations."integrityverifier.io/signature"' $sig
+yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
+yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $sig
 
 if [ -f temp-aaa.yaml ]; then
    rm temp-aaa.yaml

@@ -26,10 +26,10 @@ make build-images NO_CACHE=true
 
 echo "Pushing images with Travis build tag"
 
-${IV_REPO_ROOT}/build/push_images_ocm.sh
+${ISHIELD_REPO_ROOT}/build/push_images_ocm.sh
 
-echo "Building integrity verifier bundle starting : $(date)"
+echo "Building integrity shield bundle starting : $(date)"
 
-${IV_REPO_ROOT}/build/build_bundle_ocm.sh
+${ISHIELD_REPO_ROOT}/build/build_bundle_ocm.sh
 
-echo "Building integrity verifier bundle completed : $(date)"
+echo "Building integrity shield bundle completed : $(date)"

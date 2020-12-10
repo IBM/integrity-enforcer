@@ -24,15 +24,15 @@ if ! [ -x "$(command -v jq)" ]; then
     exit 1
 fi
 
-if [ -z "$IV_NS" ]; then
-    echo "IV_NS is empty. Please set namespace name for integrity-verifier."
+if [ -z "$ISHIELD_NS" ]; then
+    echo "ISHIELD_NS is empty. Please set namespace name for integrity-shield."
     exit 1
 fi
 
-IV_SERVER_POD=`kubectl get pod -n ${IV_NS} | grep integrity-verifier-server | grep Running | awk '{print $1}'`
-if [ -z "$IV_SERVER_POD" ]; then
-    echo "IV_SERVER_POD is empty. There is no running integrity-verifier"
+ISHIELD_SERVER_POD=`kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-server | grep Running | awk '{print $1}'`
+if [ -z "$ISHIELD_SERVER_POD" ]; then
+    echo "ISHIELD_SERVER_POD is empty. There is no running integrity-shield"
     exit 1
 fi
 
-kubectl logs -f -n ${IV_NS} ${IV_SERVER_POD} -c forwarder | grep --line-buffered ' fw.events: ' | awk '{sub(/^.* fw.events: /, "", $0);print $0;fflush()}' | jq --unbuffered -r '. | [.namespace, .allowed, .verified, .kind, .name, .operation, .userName, ."sig.signer.displayName", ."claim.ownerKind", ."claim.ownerName", .msg, .reasonCode, .policy] | @tsv'
+kubectl logs -f -n ${ISHIELD_NS} ${ISHIELD_SERVER_POD} -c forwarder | grep --line-buffered ' fw.events: ' | awk '{sub(/^.* fw.events: /, "", $0);print $0;fflush()}' | jq --unbuffered -r '. | [.namespace, .allowed, .verified, .kind, .name, .operation, .userName, ."sig.signer.displayName", ."claim.ownerKind", ."claim.ownerName", .msg, .reasonCode, .policy] | @tsv'

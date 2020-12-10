@@ -40,12 +40,12 @@ OUTPUT_FILE=$4
 
 # compute signature (and encoded message and certificate)
 cat <<EOF > $OUTPUT_FILE
-apiVersion: apis.integrityverifier.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1alpha1
 kind: ResourceSignature
 metadata:
    annotations:
-      integrityverifier.io/messageScope: spec
-      integrityverifier.io/signature: ""
+      integrityshield.io/messageScope: spec
+      integrityshield.io/signature: ""
    name: ""
 spec:
    data:
@@ -90,9 +90,9 @@ resname=`cat $INPUT_FILE | yq r - -j | jq -r '.metadata.name'`
 rsigname="rsig-${reskind}-${resname}"
 
 # add new annotations
-yq w -i $OUTPUT_FILE 'metadata.annotations."integrityverifier.io/signature"' $rsigsig
-yq w -i $OUTPUT_FILE 'metadata.annotations."integrityverifier.io/certificate"' $crt
+yq w -i $OUTPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $rsigsig
+yq w -i $OUTPUT_FILE 'metadata.annotations."integrityshield.io/certificate"' $crt
 yq w -i $OUTPUT_FILE metadata.name $rsigname
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigsubject-apiversion"' $resApiVer
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigsubject-kind"' $resKind
-yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigtime"' $sigtime
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigsubject-apiversion"' $resApiVer
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigsubject-kind"' $resKind
+yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigtime"' $sigtime

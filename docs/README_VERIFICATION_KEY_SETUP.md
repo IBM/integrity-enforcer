@@ -1,7 +1,7 @@
 # How to Setup Signing and Verification Keys.
 
 ## Signing and Verification Key Setup
-Integrity Verifier requires a key pair (signing and verification keys) for verifying integrity of resources deployed in a cluster. Integrity Verifier supports X509 or PGP key for signing resources. A secret resource (keyring-secret) which contains public key and certificates should be setup in a cluster for enabling signature verification by Integrity Verifier. 
+Integrity Shield requires a key pair (signing and verification keys) for verifying integrity of resources deployed in a cluster. Integrity Shield supports X509 or PGP key for signing resources. A secret resource (keyring-secret) which contains public key and certificates should be setup in a cluster for enabling signature verification by Integrity Shield. 
 
 This document uses [gpg key](https://www.gnupg.org/index.html) for setting up signing and verification key.
 

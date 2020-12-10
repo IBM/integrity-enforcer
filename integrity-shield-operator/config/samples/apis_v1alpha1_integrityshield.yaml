@@ -1,0 +1,30 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: IntegrityShield
+metadata:
+  name: integrity-shield-server
+spec:
+  namespace: integrity-shield-operator-system
+  shieldConfig:
+    verifyType: pgp # x509
+    inScopeNamespaceSelector:
+      include:
+      - "*"
+      exclude:
+      - "kube-*"
+      - "openshift-*"
+  signPolicy:
+    policies:
+    - namespaces:
+      - "*"
+      signers:
+      - "SampleSigner"
+    - scope: "Cluster"
+      signers:
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      secret: keyring-secret
+      subjects:
+      - email: "sample_signer@signer.com"
+  keyRingConfigs:
+  - name: keyring-secret

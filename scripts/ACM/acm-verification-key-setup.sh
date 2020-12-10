@@ -3,7 +3,7 @@ CMDNAME=`basename $0`
 if [ $# -ne 4 ]; then
   echo "Usage: $CMDNAME <NAMESPACE> <PUBRING-KEY-NAME> <PUBRING-KEY-FILE-PATH> <PLACEMENT-RULE-KEY-VALUE-PAIR>" 1>&2
   echo "E.g.:  ./acm-verification-key-setup \\
-		integrity-verifier-operator-system \\
+		integrity-shield-operator-system \\
                 keyring-secret \\
 	        /tmp/pubring.gpg \\
 		environment:dev" \\

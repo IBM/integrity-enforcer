@@ -1,0 +1,167 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ResourceSigningProfile
+metadata:
+  name: default-rsp
+spec:
+  ignoreAttrs:
+  - attrs:
+    - metadata.managedFields.*
+    - metadata.resourceVersion
+    - metadata.selfLink
+    - metadata.annotations.control-plane.alpha.kubernetes.io/leader
+    - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+    - metadata.finalizers*
+    match:
+    - name: '*'
+  - attrs:
+    - secrets.0.name
+    - secrets.1.name
+    - secrets.2.name
+    - imagePullSecrets.0.name
+    - imagePullSecrets.1.name
+    - imagePullSecrets.2.name
+    match:
+    - kind: ServiceAccount
+  unprotectAttrs:
+  - attrs:
+    - metadata.annotations.argocd.argoproj.io/sync-wave
+    match:
+    - kind: "*"
+  ignoreRules: 
+  - match: 
+    - username: system:admin
+    - username: system:apiserver
+    - username: system:kube-scheduler
+    - username: system:serviceaccount:openshift-marketplace:marketplace-operator
+    - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
+    - username: system:serviceaccount:openshift-network-operator:default
+    - username: system:serviceaccount:openshift-monitoring:prometheus-operator
+    - username: system:serviceaccount:kube-system:generic-garbage-collector
+    - username: system:serviceaccount:kube-system:attachdetach-controller
+    - username: system:serviceaccount:kube-system:certificate-controller
+    - username: system:serviceaccount:kube-system:clusterrole-aggregation-controller
+    - username: system:serviceaccount:kube-system:cronjob-controller
+    - username: system:serviceaccount:kube-system:disruption-controller
+    - username: system:serviceaccount:kube-system:endpoint-controller
+    - username: system:serviceaccount:kube-system:horizontal-pod-autoscaler
+    - username: system:serviceaccount:kube-system:ibm-file-plugin
+    - username: system:serviceaccount:kube-system:ibm-keepalived-watcher
+    - username: system:serviceaccount:kube-system:ibmcloud-block-storage-plugin
+    - username: system:serviceaccount:kube-system:job-controller
+    - username: system:serviceaccount:kube-system:namespace-controller
+    - username: system:serviceaccount:kube-system:node-controller
+    - username: system:serviceaccount:kube-system:job-controller
+    - username: system:serviceaccount:kube-system:pod-garbage-collector
+    - username: system:serviceaccount:kube-system:pv-protection-controller
+    - username: system:serviceaccount:kube-system:pvc-protection-controller
+    - username: system:serviceaccount:kube-system:replication-controller
+    - username: system:serviceaccount:kube-system:resourcequota-controller
+    - username: system:serviceaccount:kube-system:service-account-controller
+    - username: system:serviceaccount:kube-system:statefulset-controller
+    - username: system:serviceaccount:ibm-common-services:cert-manager
+    - username: system:serviceaccount:openshift-cloud-credential-operator:default
+    - username: system:serviceaccount:openshift-machine-config-operator:default
+    - username: system:kube-controller-manager
+    - username: system:serviceaccount:openshift-infra:namespace-security-allocation-controller
+    - username: system:serviceaccount:openshift-cluster-version:default
+    - username: system:serviceaccount:openshift-authentication-operator:authentication-operator
+    - username: system:serviceaccount:openshift-apiserver-operator:openshift-apiserver-operator
+    - username: system:serviceaccount:openshift-kube-scheduler-operator:openshift-kube-scheduler-operator
+    - username: system:serviceaccount:openshift-kube-controller-manager-operator:kube-controller-manager-operator
+    - username: system:serviceaccount:openshift-controller-manager:openshift-controller-manager-sa
+    - username: system:serviceaccount:openshift-controller-manager-operator:openshift-controller-manager-operator
+    - username: system:serviceaccount:openshift-kube-apiserver-operator:kube-apiserver-operator
+    - username: system:serviceaccount:openshift-sdn:sdn-controller
+    - username: system:serviceaccount:openshift-machine-api:cluster-autoscaler-operator
+    - username: system:serviceaccount:openshift-machine-api:machine-api-operator
+    - username: system:serviceaccount:openshift-machine-config-operator:machine-config-controller
+    - username: system:serviceaccount:openshift-machine-api:machine-api-controllers
+    - username: system:serviceaccount:ibm-system:olm-operator-serviceaccount
+    - username: system:serviceaccount:openshift-cluster-storage-operator:csi-snapshot-controller-operator
+    - username: system:serviceaccount:openshift-kube-controller-manager:localhost-recovery-client
+    - username: system:serviceaccount:openshift-kube-storage-version-migrator-operator:kube-storage-version-migrator-operator
+    - username: system:serviceaccount:openshift-etcd-operator:etcd-operator
+    - username: system:serviceaccount:openshift-service-ca:service-ca
+    - username: system:serviceaccount:openshift-config-operator:openshift-config-operator
+    - username: system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
+    - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+    - username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
+    - username: system:serviceaccount:tigera-operator:tigera-operator
+  - match: 
+    - kind: ControllerRevision, Pod
+      username: system:serviceaccount:kube-system:daemon-set-controller
+  - match: 
+    - namespace: openshift-service-ca, openshift-network-operator
+      kind: ConfigMap
+      username: system:serviceaccount:openshift-service-ca:configmap-cabundle-injector-sa
+  - match: 
+    - namespace: openshift-service-ca-operator
+      kind: ConfigMap
+      username: system:serviceaccount:openshift-service-ca-operator:service-ca-operator
+  - match: 
+    - namespace: openshift-service-catalog-controller-manager-operator
+      kind: ConfigMap
+      username: system:serviceaccount:openshift-service-catalog-controller-manager-operator:openshift-service-catalog-controller-manager-operator
+  - match: 
+    - namespace: openshift-console-operator, openshift-console
+      username: system:serviceaccount:openshift-console-operator:console-operator
+  - match: 
+    - namespace: openshift-service-ca
+      kind: ConfigMap
+      username:  system:serviceaccount:openshift-service-ca:apiservice-cabundle-injector-sa
+    - namespace: openshift-service-ca
+      kind: ConfigMap
+      username:  system:serviceaccount:openshift-service-ca:service-serving-cert-signer-sa
+  - match: 
+    - namespace: openshift-service-catalog-apiserver-operator
+      kind: ConfigMap
+      username: system:serviceaccount:openshift-service-catalog-apiserver-operator:openshift-service-catalog-apiserver-operator
+  - match: 
+    - namespace: openshift-operator-lifecycle-manager
+      username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+  - match: 
+    - kind: Pod, PersistentVolumeClaim
+      username: system:serviceaccount:kube-system:persistent-volume-binder
+  - match: 
+    - namespace: openshift-cluster-node-tuning-operator
+      kind: ConfigMap,DaemonSet
+      username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
+  - match: 
+    - namespace: openshift
+      kind: Secret
+      username: system:serviceaccount:openshift-cluster-samples-operator:cluster-samples-operator
+  - match: 
+    - kind: ReplicaSet
+      username: system:serviceaccount:kube-system:deployment-controller
+  - match: 
+    - kind: Pod
+      username:  system:serviceaccount:kube-system:replicaset-controller
+  - match: 
+    - kind: PersistentVolumeClaim
+      username: system:serviceaccount:kube-system:statefulset-controller
+  - match: 
+    - namespace: openshift-ingress
+      kind: Deployment
+      username: system:serviceaccount:openshift-ingress-operator:ingress-operator
+  - match: 
+    - kind: ServiceAccount, Secret
+      username: system:serviceaccount:openshift-infra:serviceaccount-pull-secrets-controller
+  - match: 
+    - namespace: openshift-marketplace
+      kind: Pod
+      username: system:node:*
+  - match: 
+    - kind: ServiceAccount
+      username: system:kube-controller-manager
+  - match: 
+    - kind: EndpointSlice
+      username: system:serviceaccount:kube-system:endpointslice-controller
+  - match: 
+    - kind: Secret
+      username: system:kube-controller-manager
+  - match: 
+    - kind: ClusterServiceVersion, ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
+      username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+  - match: 
+    - kind: InstallPlan, Role, RoleBinding, Deployment
+      username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount

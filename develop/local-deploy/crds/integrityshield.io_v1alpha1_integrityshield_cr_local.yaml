@@ -1,0 +1,142 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: IntegrityShield
+metadata:
+  name: integrity-shield-server
+spec:
+  affinity: {}
+  resourceProtectionProfile: {}
+  shieldConfig:
+    verifyType: pgp # x509
+    plugin:
+    - name: helm
+      enabled: false
+    signPolicy:
+      policies:
+      - namespaces:
+        - "*"
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
+      - scope: Cluster
+        signers:
+        - "ClusterSigner"
+        - "HelmClusterSigner"
+      signers:
+      - name: "ClusterSigner"
+        subjects:
+        - commonName: "ClusterAdmin"
+      - name: "HelmClusterSigner"
+        subjects:
+        - email: cluster_signer@signer.com
+    ieResource: "apis.integrityshield.io"
+    iShieldAdminUserGroup: "system:masters,system:cluster-admins"
+    ignore:
+    - kind: Event
+    - kind: Lease
+    - kind: Endpoints
+    - kind: TokenReview
+    - kind: SubjectAccessReview
+    - kind: SelfSubjectAccessReview
+    patch:
+      enabled: true
+    log:
+      consoleLog:
+        enabled: true
+        inScope:
+        - kind: '*'
+      contextLog:
+        enabled: true
+        inScope:
+        - kind: '*'
+      logLevel: trace
+  shieldConfigCrName: ishield-config
+  globalConfig: 
+    detectionMode: false
+  imagePullSecrets: []
+  certPoolConfig:
+    createIfNotExist: false
+    keyValue: test
+    name: ishield-certpool-secret
+  keyRingConfig:
+    createIfNotExist: false
+    keyValue: test
+    name: keyring-secret
+  labels:
+    app: ishield-server
+  logger:
+    enabled: true
+    es:
+      enabled: false
+      host: 10.200.10.10
+      indexPrefix: ac-log
+      port: 9200
+      scheme: http
+    http:
+      enabled: false
+      endpoint: http://sample-http-server:8093/api
+    esSecretName: es-tls-certs
+    image: ishield-logging:local
+    imagePullPolicy: IfNotPresent
+    name: forwarder
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+    stdOutput: true
+  replicaCount: 1
+  security:
+    clusterRole: ishield-cluster-role
+    clusterRoleBinding: ishield-cluster-role-binding
+    podSecurityPolicyName: ishield-psp
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000610000
+    securityContextConstraintsName:  ishield-scc
+    serviceAccountName: ishield-sa
+    iShieldAdminSubjects:
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Group
+        name: system:masters
+      - apiGroup: rbac.authorization.k8s.io
+        kind: Group
+        name: system:cluster-admins
+    autoIShieldAdminRoleCreationDisabled: false
+  selector:
+    app: ishield-server
+  server:
+    chartBaseUrl: http://sample-chart-repo-server/charts
+    contextLogEnabled: true
+    shieldPolicyReloadSec: 10
+    image: ishield-server:local
+    imagePullPolicy: IfNotPresent
+    name: server
+    port: 8443
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    securityContext: {}
+  webhookConfigName: ishield-webhook-config
+  webhookServerTlsSecretName: ishield-server-tls
+  webhookServiceName: ishield-server
+  webhookNamespacedResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+  webhookClusterResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+    # OCP4.4 or earlier, need to select resources.
+    # - podsecuritypolicies
+    # - clusterrolebindings
+    # - clusterroles
