@@ -125,7 +125,7 @@ fi
 
 
 if [ -d "${TMP_DIR}" ]; then
-   # Verifying signature annotation
+   # Removing  temp files.
    echo -----------------------------
    echo [4/4] Removing  temp files
    echo "${TMP_DIR} exist, removing it."
