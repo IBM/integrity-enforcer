@@ -289,11 +289,3 @@ func (p *Result) DeepCopy() *Result {
 	p.DeepCopyInto(p2)
 	return p2
 }
-
-type SigningProfile interface {
-	Match(reqFields map[string]string) (bool, *Rule)
-	Kustomize(reqFields map[string]string) []*KustomizePattern
-	ProtectAttrs(reqFields map[string]string) []*AttrsPattern
-	UnprotectAttrs(reqFields map[string]string) []*AttrsPattern
-	IgnoreAttrs(reqFields map[string]string) []*AttrsPattern
-}

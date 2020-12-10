@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -31,11 +32,11 @@ type LoggerConfig struct {
 	FileDest string
 }
 
-var ServerLogger *log.Logger
+var ServerLogger *log.Entry
 var SessionTrace *SessionTraceHook
 var SessionLogger *log.Entry
 
-func GetServerLogger() *log.Logger {
+func GetServerLogger() *log.Entry {
 	return ServerLogger
 }
 
@@ -48,10 +49,11 @@ func GetSessionTraceString() string {
 }
 
 func InitServerLogger(config LoggerConfig) {
-	ServerLogger = newLogger(config)
+	ServerLoggerLogger := newLogger(config)
 	sessionTraceHook := NewSessionTraceHook(logrus.TraceLevel, &log.TextFormatter{})
 	SessionTrace = sessionTraceHook
-	ServerLogger.AddHook(sessionTraceHook)
+	ServerLoggerLogger.AddHook(sessionTraceHook)
+	ServerLogger = ServerLoggerLogger.WithField("loggerUID", uuid.New().String())
 }
 
 func InitSessionLogger(namespace, name, apiVersion, kind, operation string) {

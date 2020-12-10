@@ -25,7 +25,6 @@ import (
 
 	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	handler "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/handler"
-	loader "github.com/IBM/integrity-enforcer/verifier/pkg/verifier/loader"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,9 +56,6 @@ func init() {
 	cfgBytes, _ := json.Marshal(config)
 	logger.Trace(string(cfgBytes))
 	logger.Info("VerifierConfig is loaded.")
-
-	loader.InitAllRuleTables(config.VerifierConfig.Namespace)
-	logger.Info("RuleTable has been set.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
@@ -70,8 +66,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 		logger.InitServerLogger(config.VerifierConfig.LoggerConfig())
 	}
 
-	//create context
-	reqHandler := handler.NewRequestHandler(config.VerifierConfig)
+	reqHandler := handler.NewHandler(config.VerifierConfig)
 	admissionRequest := admissionReviewReq.Request
 
 	//process request

@@ -44,8 +44,8 @@ apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSignature
 metadata:
    annotations:
-      messageScope: spec
-      signature: ""
+      integrityverifier.io/messageScope: spec
+      integrityverifier.io/signature: ""
    name: ""
 spec:
    data:
@@ -90,8 +90,8 @@ resname=`cat $INPUT_FILE | yq r - -j | jq -r '.metadata.name'`
 rsigname="rsig-${reskind}-${resname}"
 
 # add new annotations
-yq w -i $OUTPUT_FILE metadata.annotations.signature $rsigsig
-yq w -i $OUTPUT_FILE metadata.annotations.certificate $crt
+yq w -i $OUTPUT_FILE 'metadata.annotations."integrityverifier.io/signature"' $rsigsig
+yq w -i $OUTPUT_FILE 'metadata.annotations."integrityverifier.io/certificate"' $crt
 yq w -i $OUTPUT_FILE metadata.name $rsigname
 yq w -i $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigsubject-apiversion"' $resApiVer
 yq w -i $OUTPUT_FILE 'metadata.labels."integrityverifier.io/sigsubject-kind"' $resKind

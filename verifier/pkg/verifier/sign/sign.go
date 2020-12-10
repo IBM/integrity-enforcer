@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	vrsig "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesignature/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	policy "github.com/IBM/integrity-enforcer/verifier/pkg/common/policy"
 	profile "github.com/IBM/integrity-enforcer/verifier/pkg/common/profile"
@@ -64,7 +65,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error)
+	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
@@ -177,7 +178,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile profile.SigningProfile) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
 	ref := reqc.ResourceRef()

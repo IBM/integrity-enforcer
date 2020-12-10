@@ -20,7 +20,9 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/IBM/integrity-enforcer/verifier/pkg/util/kubeutil"
 	"github.com/jinzhu/copier"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,12 +50,28 @@ const (
 	ResourceIntegrityLabelKey = "integrityverifier.io/resourceIntegrity"
 	ReasonLabelKey            = "integrityverifier.io/reason"
 
+	SignatureAnnotationKey     = "integrityverifier.io/signature"
+	MessageAnnotationKey       = "integrityverifier.io/message"
+	CertificateAnnotationKey   = "integrityverifier.io/certificate"
+	SignatureTypeAnnotationKey = "integrityverifier.io/signatureType"
+	MessageScopeAnnotationKey  = "integrityverifier.io/messageScope"
+	MutableAttrsAnnotationKey  = "integrityverifier.io/mutableAttrs"
+
 	ResSigLabelApiVer = "integrityverifier.io/sigobject-apiversion"
 	ResSigLabelKind   = "integrityverifier.io/sigobject-kind"
 	ResSigLabelTime   = "integrityverifier.io/sigtime"
 
 	LabelValueVerified   = "verified"
 	LabelValueUnverified = "unverified"
+)
+
+type DecisionType string
+
+const (
+	DecisionUndetermined = "undetermined"
+	DecisionAllow        = "allow"
+	DecisionDeny         = "deny"
+	DecisionError        = "error"
 )
 
 /**********************************************
@@ -68,9 +86,23 @@ type NamespaceSelector struct {
 	Exclude       []string              `json:"exclude,omitempty"`
 }
 
-func (self *NamespaceSelector) MatchNamespace(namespace string) bool {
-	included := MatchWithPatternArray(namespace, self.Include)
-	excluded := MatchWithPatternArray(namespace, self.Exclude)
+func (self *NamespaceSelector) MatchNamespace(namespace *v1.Namespace) bool {
+	labelMatched := false
+	if self.LabelSelector != nil {
+		if ok, _ := kubeutil.MatchLabels(namespace, self.LabelSelector); ok {
+			labelMatched = true
+		}
+	}
+	if len(self.Include) == 0 && len(self.Exclude) == 0 {
+		return labelMatched
+	} else {
+		return self.MatchNamespaceName(namespace.GetName())
+	}
+}
+
+func (self *NamespaceSelector) MatchNamespaceName(nsName string) bool {
+	included := MatchWithPatternArray(nsName, self.Include)
+	excluded := MatchWithPatternArray(nsName, self.Exclude)
 	return included && !excluded
 }
 
@@ -213,12 +245,12 @@ type SignatureAnnotation struct {
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
-		Signature:     self.getString("signature"),
-		SignatureType: self.getString("signatureType"),
-		Certificate:   self.getString("certificate"),
-		Message:       self.getString("message"),
-		MessageScope:  self.getString("messageScope"),
-		MutableAttrs:  self.getString("mutableAttrs"),
+		Signature:     self.getString(SignatureAnnotationKey),
+		SignatureType: self.getString(SignatureTypeAnnotationKey),
+		Certificate:   self.getString(CertificateAnnotationKey),
+		Message:       self.getString(MessageAnnotationKey),
+		MessageScope:  self.getString(MessageScopeAnnotationKey),
+		MutableAttrs:  self.getString(MutableAttrsAnnotationKey),
 	}
 }
 
@@ -315,6 +347,7 @@ type ReasonCode struct {
 
 const (
 	REASON_INTERNAL = iota //
+	REASON_VALIDATION_FAIL
 	REASON_RULE_MATCH
 	REASON_VALID_SIG
 	REASON_VERIFIED_OWNER
@@ -324,6 +357,7 @@ const (
 	REASON_IV_ADMIN
 	REASON_IGNORED_SA
 	REASON_NOT_PROTECTED
+	REASON_IGNORE_RULE_MATCHED
 	REASON_BLOCK_IV_RESOURCE_OPERATION
 	REASON_NOT_VERIFIED
 	REASON_SKIP_DELETE
@@ -341,6 +375,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_INTERNAL: {
 		Message: "internal request",
 		Code:    "internal",
+	},
+	REASON_VALIDATION_FAIL: {
+		Message: "Validation failed; format is wrong",
+		Code:    "validation-fail",
 	},
 	REASON_RULE_MATCH: {
 		Message: "allowed by rule",
@@ -377,6 +415,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_NOT_PROTECTED: {
 		Message: "not protected",
 		Code:    "unprotected",
+	},
+	REASON_IGNORE_RULE_MATCHED: {
+		Message: "ignore rule matched",
+		Code:    "ignore-rule-matched",
 	},
 	REASON_BLOCK_IV_RESOURCE_OPERATION: {
 		Message: "block oprations for IV resouce",

@@ -19,60 +19,59 @@ package loader
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
-	spolapi "github.com/IBM/integrity-enforcer/verifier/pkg/apis/signpolicy/v1alpha1"
-	spolclient "github.com/IBM/integrity-enforcer/verifier/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	cache "github.com/IBM/integrity-enforcer/verifier/pkg/util/cache"
 	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "k8s.io/api/core/v1"
+	v1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 )
 
-// SignPolicy
+// Namespace
 
-type SignPolicyLoader struct {
-	interval          time.Duration
-	verifierNamespace string
-
-	Client *spolclient.ApisV1alpha1Client
-	Data   *spolapi.SignPolicy
+type NamespaceLoader struct {
+	interval time.Duration
+	Client   *v1client.CoreV1Client
+	Data     []v1.Namespace
 }
 
-func NewSignPolicyLoader(verifierNamespace string) *SignPolicyLoader {
-	interval := time.Second * 10
+func NewNamespaceLoader() *NamespaceLoader {
+	interval := time.Second * 30
 	config, _ := rest.InClusterConfig()
-	client, _ := spolclient.NewForConfig(config)
+	client, _ := v1client.NewForConfig(config)
 
-	return &SignPolicyLoader{
-		interval:          interval,
-		verifierNamespace: verifierNamespace,
-		Client:            client,
+	return &NamespaceLoader{
+		interval: interval,
+		Client:   client,
 	}
 }
 
-func (self *SignPolicyLoader) GetData(doK8sApiCall bool) *spolapi.SignPolicy {
-	if self.Data == nil {
-		self.Load(doK8sApiCall)
+func (self *NamespaceLoader) GetData(doK8sApiCall bool) ([]v1.Namespace, bool) {
+	reloaded := false
+	if len(self.Data) == 0 {
+		reloaded = self.Load(doK8sApiCall)
 	}
-	return self.Data
+	return self.Data, reloaded
 }
 
-func (self *SignPolicyLoader) Load(doK8sApiCall bool) {
+func (self *NamespaceLoader) Load(doK8sApiCall bool) bool {
 	var err error
-	var list1 *spolapi.SignPolicyList
+	var list1 *v1.NamespaceList
 	var keyName string
+	reloaded := false
 
-	keyName = fmt.Sprintf("SignPolicyLoader/%s/list", self.verifierNamespace)
+	keyName = "NamespaceLoader/list"
 	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
-		list1, err = self.Client.SignPolicies(self.verifierNamespace).List(context.Background(), metav1.ListOptions{})
+		list1, err = self.Client.Namespaces().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			logger.Error("failed to get SignPolicy:", err)
-			return
+			logger.Error("failed to get Namespace:", err)
+			return false
 		}
-		logger.Debug("SignPolicy reloaded.")
+		reloaded = true
+		logger.Debug("Namespace reloaded.")
 		if len(list1.Items) > 0 {
 			tmp, _ := json.Marshal(list1)
 			cache.SetString(keyName, string(tmp), &(self.interval))
@@ -80,15 +79,19 @@ func (self *SignPolicyLoader) Load(doK8sApiCall bool) {
 	} else if cached != "" {
 		err = json.Unmarshal([]byte(cached), &list1)
 		if err != nil {
-			logger.Error("failed to Unmarshal cached SignPolicy:", err)
-			return
+			logger.Error("failed to Unmarshal cached Namespace:", err)
+			return false
 		}
 	}
 
-	data := &spolapi.SignPolicy{}
+	data := []v1.Namespace{}
 	if list1 != nil && len(list1.Items) > 0 {
-		data = &(list1.Items[0])
+		data = list1.Items
 	}
 	self.Data = data
-	return
+	return reloaded
+}
+
+func (self *NamespaceLoader) ClearCache() {
+	cache.Unset("NamespaceLoader/list")
 }

@@ -210,8 +210,8 @@ apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSignature
 metadata:
   annotations:
-    messageScope: spec
-    signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t
+    integrityverifier.io/messageScope: spec
+    integrityverifier.io/signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t
   name: rsig-test-cm
 spec:
   data:

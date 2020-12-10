@@ -27,8 +27,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base_decode='base64 -D'
 fi
 
-msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.message')
-sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations.signature')
+msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityverifier.io/message"')
+sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityverifier.io/signature"')
 
 
 IV_TMP_DIR="/tmp/iv_tmp_dir"
@@ -45,8 +45,8 @@ IV_MSG_FILE="${IV_TMP_DIR}/input.msg"
 
 cat ${INPUT_FILE} > ${IV_INPUT_FILE}
 
-yq d ${IV_INPUT_FILE} metadata.annotations.message -i
-yq d ${IV_INPUT_FILE} metadata.annotations.signature -i
+yq d ${IV_INPUT_FILE} 'metadata.annotations."integrityverifier.io/message"' -i
+yq d ${IV_INPUT_FILE} 'metadata.annotations."integrityverifier.io/signature"' -i
 
 
 msg_body=`cat ${IV_INPUT_FILE} | $base`
