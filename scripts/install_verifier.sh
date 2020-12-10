@@ -39,7 +39,7 @@ if [ -z "$IV_REPO_ROOT" ]; then
     exit 1
 fi
 
-IMG=integrityverifier/integrity-verifier-operator:0.0.5
+IMG=quay.io/open-cluster-management/integrity-verifier-operator:0.0.5
 VERIFIER_OP_DIR=${IV_REPO_ROOT}"/integrity-verifier-operator/"
 
 echo ""
