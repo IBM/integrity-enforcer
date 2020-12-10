@@ -200,9 +200,9 @@ oc create ns <custom namespace>
                   name: integrity-shield-server
                 spec:
                   logger:
-                    image: quay.io/open-cluster-management/integrity-shield-logging:0.0.5
+                    image: quay.io/open-cluster-management/integrity-shield-logging:0.1.0
                   server:
-                    image: quay.io/open-cluster-management/integrity-shield-server:0.0.5
+                    image: quay.io/open-cluster-management/integrity-shield-server:0.1.0
       ```
       Commit the above configuration change in `policy-integrity.yaml` to `policy-collection` GitHub repository.
 
