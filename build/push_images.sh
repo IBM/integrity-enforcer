@@ -21,44 +21,44 @@ if ! [ -x "$(command -v docker)" ]; then
 fi
 
 
-if [ -z "$IV_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_SERVER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
-if [ -z "$IV_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
-if [ -z "$IV_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "IV_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set iv build env settings."
+if [ -z "$ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
 
 
-# Push integrity-verifier-server image
+# Push integrity-shield-server image
 echo -----------------------------
-echo [1/3] Pushing integrity-verifier-server image.
-docker push ${IV_SERVER_IMAGE_NAME_AND_VERSION}
+echo [1/3] Pushing integrity-shield-server image.
+docker push ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
 
 
-# Push integrity-verifier-logging image
+# Push integrity-shield-logging image
 echo -----------------------------
-echo [2/3] Pushing integrity-verifier-logging image.
-docker push ${IV_LOGGING_IMAGE_NAME_AND_VERSION}
+echo [2/3] Pushing integrity-shield-logging image.
+docker push ${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
 
-# Push integrity-verifier-operator image
+# Push integrity-shield-operator image
 echo -----------------------------
-echo [3/3] Pushing integrity-verifier-operator image.
-docker push ${IV_OPERATOR_IMAGE_NAME_AND_VERSION}
+echo [3/3] Pushing integrity-shield-operator image.
+docker push ${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
