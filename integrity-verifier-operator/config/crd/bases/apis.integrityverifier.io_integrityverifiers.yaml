@@ -2102,13 +2102,33 @@ spec:
                   type: object
                 ivAdminUserGroup:
                   type: string
+                ivAdminUserName:
+                  type: string
                 ivResource:
                   type: string
                 ivResourceCondition:
                   properties:
+                    operatorResources:
+                      items:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - apiVersion
+                        - kind
+                        - name
+                        - namespace
+                        type: object
+                      type: array
                     operatorServiceAccount:
                       type: string
-                    references:
+                    serverResources:
                       items:
                         properties:
                           apiVersion:
@@ -2255,6 +2275,10 @@ spec:
                   type: string
                 namespace:
                   type: string
+                options:
+                  items:
+                    type: string
+                  type: array
                 patch:
                   properties:
                     enabled:

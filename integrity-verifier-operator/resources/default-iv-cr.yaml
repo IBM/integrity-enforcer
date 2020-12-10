@@ -60,7 +60,7 @@ spec:
       enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
-    image: integrityverifier/integrity-verifier-logging:0.0.4
+    image: integrityverifier/integrity-verifier-logging:0.0.5
     imagePullPolicy: Always
     name: forwarder
     resources:
@@ -92,7 +92,7 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     verifierPolicyReloadSec: 10
-    image: integrityverifier/integrity-verifier-server:0.0.4
+    image: integrityverifier/integrity-verifier-server:0.0.5
     imagePullPolicy: Always
     name: server
     port: 8443

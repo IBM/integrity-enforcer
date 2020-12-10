@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # Current Operator version
-VERSION ?= 0.0.4
+VERSION ?= 0.0.5
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -27,7 +27,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= integrityverifier/integrity-verifier-operator:0.0.4
+IMG ?= integrityverifier/integrity-verifier-operator:0.0.5
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
