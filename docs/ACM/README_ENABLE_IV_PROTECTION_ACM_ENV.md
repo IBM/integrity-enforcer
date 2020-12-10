@@ -224,7 +224,7 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-ver
               policy-ocp4-certs.yaml
 ```
 
-- This script will create backup in the same directory with .backup extension. you need to add this to .gitignore
+- This script will modify the original file. If you would like to keep the original file, keep a backup of the file before signing.
 - You need to create new signature whenever you change policy and apply it to clusters. Otherwise, the change will be blocked and not applied.
 - If you want to sign all policies under some directory, you can use this script iteratively. Here is the example of the script for signing policies in dir:
 
