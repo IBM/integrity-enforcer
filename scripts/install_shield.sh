@@ -24,54 +24,54 @@ if ! [ -x "$(command -v kustomize)" ]; then
     exit 1
 fi
 
-if [ -z "$IV_NS" ]; then
-    echo "IV_NS is empty. Please set namespace name for integrity-verifier."
+if [ -z "$ISHIELD_NS" ]; then
+    echo "ISHIELD_NS is empty. Please set namespace name for integrity-shield."
     exit 1
 fi
 
-if [ -z "$IV_ENV" ]; then
-    echo "IV_ENV is empty. Please set local or remote."
+if [ -z "$ISHIELD_ENV" ]; then
+    echo "ISHIELD_ENV is empty. Please set local or remote."
     exit 1
 fi
 
-if [ -z "$IV_REPO_ROOT" ]; then
-    echo "IV_REPO_ROOT is empty. Please set root directory for IV repository"
+if [ -z "$ISHIELD_REPO_ROOT" ]; then
+    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IShield repository"
     exit 1
 fi
 
-IMG=quay.io/open-cluster-management/integrity-verifier-operator:0.0.5
-VERIFIER_OP_DIR=${IV_REPO_ROOT}"/integrity-verifier-operator/"
+IMG=quay.io/open-cluster-management/integrity-shield-operator:0.0.5
+SHIELD_OP_DIR=${ISHIELD_REPO_ROOT}"/integrity-shield-operator/"
 
 echo ""
-echo "------------- Set integrity-verifier operator watch namespace -------------"
+echo "------------- Set integrity-shield operator watch namespace -------------"
 echo ""
-export WATCH_NAMESPACE=$IV_NS
+export WATCH_NAMESPACE=$ISHIELD_NS
 
 echo ""
-echo "------------- Install integrity-verifier -------------"
+echo "------------- Install integrity-shield -------------"
 echo ""
 
 echo ""
 echo "------------- Create crd -------------"
 echo ""
-cd ${VERIFIER_OP_DIR}
-kustomize build ${VERIFIER_OP_DIR}config/crd | kubectl apply -f -
+cd ${SHIELD_OP_DIR}
+kustomize build ${SHIELD_OP_DIR}config/crd | kubectl apply -f -
 
 echo ""
 echo "------------- Install operator -------------"
 echo ""
 
-cd ${VERIFIER_OP_DIR}config/manager
+cd ${SHIELD_OP_DIR}config/manager
 kustomize edit set image controller=${IMG}
-kustomize build ${VERIFIER_OP_DIR}config/default | kubectl apply -f -
+kustomize build ${SHIELD_OP_DIR}config/default | kubectl apply -f -
 
 echo ""
 echo "------------- Create CR -------------"
 echo ""
-cd $IV_REPO_ROOT
+cd $ISHIELD_REPO_ROOT
 
-if [ $IV_ENV = "local" ]; then
-   kubectl apply -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityverifier_local.yaml -n $IV_NS
+if [ $ISHIELD_ENV = "local" ]; then
+   kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1alpha1_integrityshield_local.yaml -n $ISHIELD_NS
 else
-   kubectl apply -f ${VERIFIER_OP_DIR}config/samples/apis_v1alpha1_integrityverifier.yaml -n $IV_NS
+   kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1alpha1_integrityshield.yaml -n $ISHIELD_NS
 fi

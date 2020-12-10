@@ -1,11 +1,11 @@
-apiVersion: apis.integrityverifier.io/v1alpha1
-kind: IntegrityVerifier
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: IntegrityShield
 metadata:
-  name: integrity-verifier-server
+  name: integrity-shield-server
 spec:
   affinity: {}
   resourceProtectionProfile: {}
-  verifierConfig:
+  shieldConfig:
     verifyType: pgp # x509
     plugin:
     - name: helm
@@ -28,8 +28,8 @@ spec:
       - name: "HelmClusterSigner"
         subjects:
         - email: cluster_signer@signer.com
-    ieResource: "apis.integrityverifier.io"
-    ivAdminUserGroup: "system:masters,system:cluster-admins"
+    ieResource: "apis.integrityshield.io"
+    iShieldAdminUserGroup: "system:masters,system:cluster-admins"
     ignore:
     - kind: Event
     - kind: Lease
@@ -49,20 +49,20 @@ spec:
         inScope:
         - kind: '*'
       logLevel: trace
-  verifierConfigCrName: iv-config
+  shieldConfigCrName: ishield-config
   globalConfig: 
     detectionMode: false
   imagePullSecrets: []
   certPoolConfig:
     createIfNotExist: false
     keyValue: test
-    name: iv-certpool-secret
+    name: ishield-certpool-secret
   keyRingConfig:
     createIfNotExist: false
     keyValue: test
     name: keyring-secret
   labels:
-    app: iv-server
+    app: ishield-server
   logger:
     enabled: true
     es:
@@ -75,7 +75,7 @@ spec:
       enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
-    image: iv-logging:local
+    image: ishield-logging:local
     imagePullPolicy: IfNotPresent
     name: forwarder
     resources:
@@ -91,29 +91,29 @@ spec:
     stdOutput: true
   replicaCount: 1
   security:
-    clusterRole: iv-cluster-role
-    clusterRoleBinding: iv-cluster-role-binding
-    podSecurityPolicyName: iv-psp
+    clusterRole: ishield-cluster-role
+    clusterRoleBinding: ishield-cluster-role-binding
+    podSecurityPolicyName: ishield-psp
     securityContext:
       runAsNonRoot: true
       runAsUser: 1000610000
-    securityContextConstraintsName:  iv-scc
-    serviceAccountName: iv-sa
-    ivAdminSubjects:
+    securityContextConstraintsName:  ishield-scc
+    serviceAccountName: ishield-sa
+    iShieldAdminSubjects:
       - apiGroup: rbac.authorization.k8s.io
         kind: Group
         name: system:masters
       - apiGroup: rbac.authorization.k8s.io
         kind: Group
         name: system:cluster-admins
-    autoIVAdminRoleCreationDisabled: false
+    autoIShieldAdminRoleCreationDisabled: false
   selector:
-    app: iv-server
+    app: ishield-server
   server:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
-    verifierPolicyReloadSec: 10
-    image: iv-server:local
+    shieldPolicyReloadSec: 10
+    image: ishield-server:local
     imagePullPolicy: IfNotPresent
     name: server
     port: 8443
@@ -125,9 +125,9 @@ spec:
         cpu: 200m
         memory: 256Mi
     securityContext: {}
-  webhookConfigName: iv-webhook-config
-  webhookServerTlsSecretName: iv-server-tls
-  webhookServiceName: iv-server
+  webhookConfigName: ishield-webhook-config
+  webhookServerTlsSecretName: ishield-server-tls
+  webhookServiceName: ishield-server
   webhookNamespacedResource:
     apiGroups: ["*"]
     apiVersions: ["*"]

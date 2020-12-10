@@ -2,12 +2,12 @@
 
 
 ## Create Resource Signing Profile
-You can define which resources should be protected with signature by Integrity Verifier.
+You can define which resources should be protected with signature by Integrity Shield.
 For resources in a namespace, custom resource `ResourceSigningProfile` (RSP) is created in the same namespace.
 The example below shows a definition to protect ConfigMap and Service resource in `secure-ns` namespace.
 
 ```yaml
-apiVersion: apis.integrityverifier.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -25,7 +25,7 @@ You can create these resource by
 oc apply -f sample-rsp.yaml -n secure-ns
 ```
 
-This profile become available instantly after creation, and any further incoming admission requests that match this profile will be evaluated by signature verification in IV.
+This profile become available instantly after creation, and any further incoming admission requests that match this profile will be evaluated by signature verification in IShield.
 
 
 ## Rule Syntax
@@ -112,7 +112,7 @@ To avoid conflict of rules defined in multiple RSPs in different NS, a rule for 
 The example below shows how to protect ClusterRoleBinding with its name.
 
 ```yaml
-apiVersion: apis.integrityverifier.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -129,19 +129,19 @@ if the `name` is not specified or value for `name` has any wildcard "*", then th
 
 There are two types in RSP.
   1. per-namespace RSP
-  2. IV namespace RSP
-1, per-namespace RSP will be created and managed by user, and it has different lifecycle from the one of IV itself. 
-2, IV namespace RSP, this is managed by IV operator. It is defined in IV CR, and operator will reconcile it.
+  2. IShield namespace RSP
+1, per-namespace RSP will be created and managed by user, and it has different lifecycle from the one of IShield itself. 
+2, IShield namespace RSP, this is managed by IShield operator. It is defined in IShield CR, and operator will reconcile it.
 
 All syntax around rules are exactly same between these 2 types, but the namespace scope is different.
 
 per-NS RSP, is basically used only for requests in the same namespace.
 If per-NS RSP is created in `secure-ns`, then this profile is available only in `secure-ns`.
 
-IV NS RSP, is created in IV namespace, but it will be evaluated with some other namespaced requests. 
+IShield NS RSP, is created in IShield namespace, but it will be evaluated with some other namespaced requests. 
 This target namespace is defined in `targetNamespaceSelector` in RSP spec.
 
-The following is an example of IV NS RSP definition in IV CR.
+The following is an example of IShield NS RSP definition in IShield CR.
 It is available for requests in `secure-ns` and `test-ns`.
 
 ```yaml
@@ -182,10 +182,10 @@ RSP and CRSP have two lifecycle flags `disabled` and `delete`. Those fields are 
 
 If `disabled` is set to `true`, the RSP (CRSP) becomes invalid and ignored when checking signature (This implies no RSP is defined in the namespace). When you set it to `false` back, the RSP will become effective again.
 
-When you want to delete RSP, set `delete` to `true`, then IV will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
+When you want to delete RSP, set `delete` to `true`, then IShield will delete RSP (CRSP). RSP and CRSP cannot be deleted directly, so need to set this flag when you want to delete then.
 
 ```
-apiVersion: apis.integrityverifier.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
@@ -199,7 +199,7 @@ spec:
 
 The whole RSP is represented like this. (this is example of per-namespace RSP.)
 ```yaml
-apiVersion: apis.integrityverifier.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
   name: sample-rsp

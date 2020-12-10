@@ -1,14 +1,14 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: iv-admin-role
-  namespace: integrity-verifier-operator-system
+  name: ishield-admin-role
+  namespace: integrity-shield-operator-system
 rules:
   - apiGroups:
     - ""
     resources:
-    - integrityverifiers
-    - verifierconfigs
+    - integrityshields
+    - shieldconfigs
     - signpolicies
     verbs:
     - create
@@ -22,7 +22,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: iv-admin-cluster-role
+  name: ishield-admin-cluster-role
 rules:
   - apiGroups:
     - ""
@@ -41,12 +41,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-    name: iv-admin-rolebinding
-    namespace: integrity-verifier-operator-system
+    name: ishield-admin-rolebinding
+    namespace: integrity-shield-operator-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: iv-admin-role
+  name: ishield-admin-role
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
@@ -55,11 +55,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: iv-admin-cluster-rolebinding
+  name: ishield-admin-cluster-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: iv-admin-cluster-role
+  name: ishield-admin-cluster-role
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group

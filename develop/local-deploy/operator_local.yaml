@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: integrity-verifier-operator
+  name: integrity-shield-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: integrity-verifier-operator
+      name: integrity-shield-operator
   template:
     metadata:
       labels:
-        name: integrity-verifier-operator
+        name: integrity-shield-operator
     spec:
-      serviceAccountName: integrity-verifier-operator
+      serviceAccountName: integrity-shield-operator
       containers:
-        - name: integrity-verifier-operator
+        - name: integrity-shield-operator
           # Replace this with the built image name
-          image: integrity-verifier-operator:0.0.3
+          image: integrity-shield-operator:0.0.3
           command:
-          - integrity-verifier-operator
+          - integrity-shield-operator
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
@@ -30,7 +30,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "integrity-verifier-operator"
+              value: "integrity-shield-operator"
           resources:
             limits:
               cpu: 500m

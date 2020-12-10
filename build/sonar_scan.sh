@@ -21,7 +21,7 @@ echo "SONAR SCAN GOES HERE!"
 # Run our build target
 
 
-echo "SONAR Scaning integrity verifier"
+echo "SONAR Scaning integrity shield"
 
 
-echo "SONAR Scanning integrity verifier completed : $(date)"
+echo "SONAR Scanning integrity shield completed : $(date)"

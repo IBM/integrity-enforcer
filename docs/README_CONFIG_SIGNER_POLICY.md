@@ -1,15 +1,15 @@
 ## Sign Policy
 
 ### This CR should not be edited directly.
-Usually, SignPolicy CR is automatically created/updated using `signPolicy` config in IntegrityVerifier CR.
+Usually, SignPolicy CR is automatically created/updated using `signPolicy` config in IntegrityShield CR.
 Please note that operator would reconcile the resource with the original one and it might remove your direct changes.
 
 ### Define signer for each namespaces
 
 SignPolicy is a custom resource to define who can be a valid signer for resources in a namespace or for cluster scope resources.
-Only a SignPolicy which is created in IV namespace (`integrity-verifier-operator-system` in this doc) by operator is valid and all other instances are not used by IV.
+Only a SignPolicy which is created in IShield namespace (`integrity-shield-operator-system` in this doc) by operator is valid and all other instances are not used by IShield.
 
-To update SignPolicy after IV deployment, please update the `signPolicy` in IntegrityVerifier CR.
+To update SignPolicy after IShield deployment, please update the `signPolicy` in IntegrityShield CR.
 
 Example below is to define
 - signer `signer-a` is identified when email of subject of signature is `signer@enterprise.com` and the verification key for this subject is included in `sample-keyring` secret
@@ -33,7 +33,7 @@ spec:
       - email: signer@enterprise.com
 ```
 
-Updating IV CR with the above block, the operator will update the SignPolicy resource.
+Updating IShield CR with the above block, the operator will update the SignPolicy resource.
 
 You can define namespace matcher by using `excludeNamespaces`.
 For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`.
@@ -60,7 +60,7 @@ spec:
 ```
 
 ### Configure Verification Key
-`secret` name must be specified for very signer subject configuration. This secret is also needed to be set in `keyRingConfigs` in IV CR. Here is the example to define multiple verification keys and multiple signers.
+`secret` name must be specified for very signer subject configuration. This secret is also needed to be set in `keyRingConfigs` in IShield CR. Here is the example to define multiple verification keys and multiple signers.
 
 ```yaml
 spec:
@@ -120,7 +120,7 @@ spec:
       - scope: Cluster
 ```
 
-During break glass mode on, the request without signature will be allowed even if protected by RSP, and the label `integrityverifier.io/resourceIntegrity: unverified` will be attached to the resource.
+During break glass mode on, the request without signature will be allowed even if protected by RSP, and the label `integrityshield.io/resourceIntegrity: unverified` will be attached to the resource.
 
 
 ### Example of Sign Policy

@@ -1,11 +1,11 @@
 ## Example: Helm Verification
 
-This document describes the steps to protect Helm chart resources with Integrity Verifier (IV).
+This document describes the steps to protect Helm chart resources with Integrity Shield (IShield).
 
 
-### Easy 5 Steps for Helm chart installation with IV verification 
+### Easy 5 Steps for Helm chart installation with IShield verification 
 
-IV provides protection for Helm chart resources. To protect the Helm chart resources, let's get a manifest of the resources with `helm template` command.
+IShield provides protection for Helm chart resources. To protect the Helm chart resources, let's get a manifest of the resources with `helm template` command.
 
 1. Create a manifest of Helm chart resources with `helm template` command, the arguments should be the same as the ones when you execute `helm install` actually.
 
@@ -30,7 +30,7 @@ IV provides protection for Helm chart resources. To protect the Helm chart resou
    `/tmp/sample-chart-rsp.yaml` is generated, and the content is something like this.
 
    ```
-   apiVersion: apis.integrityverifier.io/v1alpha1
+   apiVersion: apis.integrityshield.io/v1alpha1
    kind: ResourceSigningProfile
    metadata:
      name: ac-test-chart-rsp

@@ -26,41 +26,41 @@ fi
 
 #clear
 
-if [ -z "$IV_REPO_ROOT" ]; then
-    echo "IV_REPO_ROOT is empty. Please set root directory for IE repository"
+if [ -z "$ISHIELD_REPO_ROOT" ]; then
+    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IE repository"
     exit 1
 fi
 
-source $IV_REPO_ROOT/iv-build.conf
+source $ISHIELD_REPO_ROOT/ishield-build.conf
 
-cd ${IV_REPO_ROOT};
+cd ${ISHIELD_REPO_ROOT};
 
 echo "===== ENTER Deployment Admin ====="
 
 echo
 NO_WAIT=true
-p "First, we create Integrity Verifier (IV) Custome Resource Definitions (CRDs). Please enter."
+p "First, we create Integrity Shield (IShield) Custome Resource Definitions (CRDs). Please enter."
 read
 pe "make install-crds"
 echo
-p "===== Integrity Verifier CRDs are created."
+p "===== Integrity Shield CRDs are created."
 echo
 NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "First, Let's create a namespace in cluster to deploy Integrity Verifier. Please enter."
+p "First, Let's create a namespace in cluster to deploy Integrity Shield. Please enter."
 read
 pe "make create-ns"
 echo
-p "===== A namespace ${IV_OP_NS} is created in cluster. ====="
+p "===== A namespace ${ISHIELD_OP_NS} is created in cluster. ====="
 echo
 NO_WAIT=false
 
 
 echo
 NO_WAIT=true
-p "Then, Let's create a verification key as a secret in cluster. Integrity Verifier would use this key to verify integrity of resources. Please enter."
+p "Then, Let's create a verification key as a secret in cluster. Integrity Shield would use this key to verify integrity of resources. Please enter."
 read
 pe "make create-key-ring"
 echo
@@ -71,33 +71,33 @@ NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "Now, we are ready to install IntegrityVerifier. Please enter."
+p "Now, we are ready to install IntegrityShield. Please enter."
 read
 pe "make install-operator"
 echo
-echo "===== Integrtity Verifier operator is being deployed in cluster. ====="
+echo "===== Integrtity Shield operator is being deployed in cluster. ====="
 echo
-echo "Then, we set up IntegrityVerifier custome resource (CR)."
+echo "Then, we set up IntegrityShield custome resource (CR)."
 make setup-tmp-cr
 echo
-echo "===== Integrity Verifier CR is set up. ====="
+echo "===== Integrity Shield CR is set up. ====="
 echo
-echo "After setting up Integrity Verifier CR,  Let's now deploy Integrity Verfier CR in the cluster."
+echo "After setting up Integrity Shield CR,  Let's now deploy Integrity Verfier CR in the cluster."
 make create-cr
 echo
-echo "===== Integrity Verifier CR is created in cluster. ====="
+echo "===== Integrity Shield CR is created in cluster. ====="
 echo
 NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "Please wait until Integrity Verifier (two pods) is successfully deployed in the namespace ${IV_OP_NS}."
+p "Please wait until Integrity Shield (two pods) is successfully deployed in the namespace ${ISHIELD_OP_NS}."
 p "Let's wait (this script would resume shortly) "
 while true; do
-   IV_STATUS=$(kubectl get pod -n ${IV_OP_NS} | grep integrity-verifier-server | awk '{print $3}')
-   if [[ "$IV_STATUS" == "Running" ]]; then
+   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_OP_NS} | grep integrity-shield-server | awk '{print $3}')
+   if [[ "$ISHIELD_STATUS" == "Running" ]]; then
       echo
-      echo -n "===== Integrity Verifier server has started, let's continue with verifying integrity of resources. ====="
+      echo -n "===== Integrity Shield server has started, let's continue with verifying integrity of resources. ====="
       echo
       break
    else
@@ -108,7 +108,7 @@ done
 
 echo
 NO_WAIT=true
-p "Now, we would set up a sample namespace (e.g. ${TEST_NS}) to show how IntegrityVerifier verifies integrity of resources in that namespace. Please enter to create namespace."
+p "Now, we would set up a sample namespace (e.g. ${TEST_NS}) to show how IntegrityShield verifies integrity of resources in that namespace. Please enter to create namespace."
 read
 pe "make setup-test-env"
 echo
@@ -117,7 +117,7 @@ echo
 NO_WAIT=false
 
 echo
-cp ${VERIFIER_OP_DIR}test/deploy/test-rsp.yaml test-rsp.yaml
+cp ${SHIELD_OP_DIR}test/deploy/test-rsp.yaml test-rsp.yaml
 NO_WAIT=true
 p "First, we define which reource(s) should be protected in ResourceSigningProfile(RSP). Please enter to see a sample RSP."
 read
@@ -136,7 +136,7 @@ echo
 NO_WAIT=false
 
 echo
-cp ${VERIFIER_OP_DIR}test/deploy/test-configmap.yaml test-configmap.yaml
+cp ${SHIELD_OP_DIR}test/deploy/test-configmap.yaml test-configmap.yaml
 NO_WAIT=true
 p "Now, Please enter to see a sample ConfigMap resource that we would create in cluster."
 read
@@ -150,12 +150,12 @@ p "Try creating the configmap in $NS namespace without signature. Please enter."
 read
 pe "kubectl apply -f test-configmap.yaml -n ${TEST_NS}"
 echo
-p "===== Resource creation request was blocked by Integrity Verifier because no signature for this resource is stored in the cluster. ====="
+p "===== Resource creation request was blocked by Integrity Shield because no signature for this resource is stored in the cluster. ====="
 read
 NO_WAIT=false
 
 echo
-cp ${VERIFIER_OP_DIR}test/deploy/test-configmap-annotation.yaml test-configmap-annotation.yaml
+cp ${SHIELD_OP_DIR}test/deploy/test-configmap-annotation.yaml test-configmap-annotation.yaml
 NO_WAIT=true
 p "Now, we create a resource with signature annotation. Please enter to see a sample ConfigMap resource with signature."
 read
@@ -169,7 +169,7 @@ p "Create the ConfigMap resource with signature annotation. Please enter."
 read
 pe "kubectl  apply -f test-configmap-annotation.yaml -n ${TEST_NS}"
 echo
-p "===== It should be successful this time because Integrity Verifier successfully verified corresponding signature, available as annotation in the resource. ====="
+p "===== It should be successful this time because Integrity Shield successfully verified corresponding signature, available as annotation in the resource. ====="
 read
 NO_WAIT=false.
 

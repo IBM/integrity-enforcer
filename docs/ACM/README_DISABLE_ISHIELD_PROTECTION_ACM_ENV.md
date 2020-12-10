@@ -1,16 +1,16 @@
-## Disble Integrity Verifier protection in an ACM managed cluster(s)
+## Disble Integrity Shield protection in an ACM managed cluster(s)
 
-The document describe how to disable Integrity Verifier (IV) protection in an ACM managed cluster.
+The document describe how to disable Integrity Shield (IShield) protection in an ACM managed cluster.
 
 ## Prerequisites
 - An [ACM]((https://www.redhat.com/en/technologies/management/advanced-cluster-management)) hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command.
-- Integrity Verifier protection is already enabled in an ACM managed cluster(s). Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). 
+- Integrity Shield protection is already enabled in an ACM managed cluster(s). Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). 
 - Disabling steps requires a host where we run the scripts.  Below steps are tested on Mac OS and Ubuntu hosts. 
-- Disabling Integrity Verifier protection and signing ACM polices involve retriving and commiting sources from GitHub repository. Make sure to install [git](https://github.com/git-guides/install-git) on the host. 
+- Disabling Integrity Shield protection and signing ACM polices involve retriving and commiting sources from GitHub repository. Make sure to install [git](https://github.com/git-guides/install-git) on the host. 
 
-## Steps for disabling Integrity Verifier protection in an ACM managed cluster(s)
+## Steps for disabling Integrity Shield protection in an ACM managed cluster(s)
 
-You will use `policy-integrity` to disable Integrity Verifier protection in an ACM managed cluster(s) as described below.
+You will use `policy-integrity` to disable Integrity Shield protection in an ACM managed cluster(s) as described below.
 
  1. Go to the source of your cloned `policy-collection` GitHub repository in the host.  
    Find `policy-integrity.yaml` in the directory `policy-collection/community/CM-Configuration-Management/` of the cloned GitHub repository.
@@ -32,23 +32,23 @@ You will use `policy-integrity` to disable Integrity Verifier protection in an A
             severity: high
             namespaceSelector:
               exclude: ["kube-*"]
-              include: ["integrity-verifier-operator-system"]
+              include: ["integrity-shield-operator-system"]
             object-templates:
             - complianceType: mustnothave <<CHANGED FROM musthave>>
               objectDefinition:
-                apiVersion: apis.integrityverifier.io/v1alpha1
-                kind: IntegrityVerifier
+                apiVersion: apis.integrityshield.io/v1alpha1
+                kind: IntegrityShield
                 metadata:
-                  name: integrity-verifier-server
+                  name: integrity-shield-server
                 spec:
                   logger:
-                    image: quay.io/open-cluster-management/integrity-verifier-logging:0.0.5
+                    image: quay.io/open-cluster-management/integrity-shield-logging:0.0.5
                   server:
-                    image: quay.io/open-cluster-management/integrity-verifier-server:0.0.5
+                    image: quay.io/open-cluster-management/integrity-shield-server:0.0.5
       ```
 3.  Create signature annotation in `policy-integrity.yaml` as below.
 
-    Use the utility script [gpg-annotation-sign.sh](https://github.com/open-cluster-management/integrity-verifier/blob/master/scripts/gpg-annotation-sign.sh) for signing updated `policy-integrity` to be deployed to an ACM managed cluster.
+    Use the utility script [gpg-annotation-sign.sh](https://github.com/open-cluster-management/integrity-shield/blob/master/scripts/gpg-annotation-sign.sh) for signing updated `policy-integrity` to be deployed to an ACM managed cluster.
 
       The following example shows how to use the utility script [gpg-annotation-sign.sh] to append signature annotations to `policy-integrity.yaml`, with the following parameters:
       - `signer@enterprise.com` - The default `signer` email, or change it to your own `signer` email.
@@ -56,23 +56,23 @@ You will use `policy-integrity` to disable Integrity Verifier protection in an A
 
       ```
       $ cd policy-collection
-      $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/gpg-annotation-sign.sh | bash -s \
+      $ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-annotation-sign.sh | bash -s \
                     signer@enterprise.com \
                     community/CM-Configuration-Management/policy-integrity.yaml
       ```
 
  4.  Commit the signed `policy-integrity.yaml` file to the forked `policy-collection` GitHub repository.
  
-      The ACM hub cluster will sync the updated `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger disabling Integrity Verifier protection in an ACM managed cluster(s). 
+      The ACM hub cluster will sync the updated `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger disabling Integrity Shield protection in an ACM managed cluster(s). 
 
       Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity` means that `policy-integrity` is updated in an ACM managed cluster(s). 
 
-      Once you disable Integrity Verifier protection,  you can edit any ACM policies in an ACM managed cluster(s) without signature.
+      Once you disable Integrity Shield protection,  you can edit any ACM policies in an ACM managed cluster(s) without signature.
 
-## Steps for removing Integrity Verifier operator from an ACM managed cluster(s)
+## Steps for removing Integrity Shield operator from an ACM managed cluster(s)
 
-- Step 1: Disable Integrity Verifier protection in an ACM managed cluster(s) as described above, before removing Integrity Verifier operator from an ACM managed cluster(s).
-- Step 2: Follow the following steps to remove Integrity Verifier operator from an ACM managed cluster(s).
+- Step 1: Disable Integrity Shield protection in an ACM managed cluster(s) as described above, before removing Integrity Shield operator from an ACM managed cluster(s).
+- Step 2: Follow the following steps to remove Integrity Shield operator from an ACM managed cluster(s).
 
 1. Configure `policy-integrity.yaml` as below.      
     
@@ -98,23 +98,23 @@ You will use `policy-integrity` to disable Integrity Verifier protection in an A
             kind: Namespace 
             apiVersion: v1
             metadata:
-              name: integrity-verifier-operator-system
+              name: integrity-shield-operator-system
     ```
 2. Commit the update `policy-integrity.yaml` file to the `policy-collection` GitHub repository.
 
-    ACM hub cluster will sync the updated `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger removing Integrity Verifier operator from an ACM managed cluster(s).  
+    ACM hub cluster will sync the updated `policy-integrity` from GitHub repository to the ACM managed cluster(s). This will trigger removing Integrity Shield operator from an ACM managed cluster(s).  
 
-    Note that this will also remove secret resource with verification key setup in [doc](README_SETUP_KEY_RING_ACM_ENV.md). If you would need to reenable Integrity Verifier Protection to an ACM managed cluster, follow the [doc](README_SETUP_KEY_RING_ACM_ENV.md) to setup the verification key in an ACM managed cluster(s)
+    Note that this will also remove secret resource with verification key setup in [doc](README_SETUP_KEY_RING_ACM_ENV.md). If you would need to reenable Integrity Shield Protection to an ACM managed cluster, follow the [doc](README_SETUP_KEY_RING_ACM_ENV.md) to setup the verification key in an ACM managed cluster(s)
 
-    Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity` means that `policy-integrity` is updated in an ACM managed cluster(s) and Integrity Verifier operator is removed from an ACM managed cluster(s).
+    Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity` means that `policy-integrity` is updated in an ACM managed cluster(s) and Integrity Shield operator is removed from an ACM managed cluster(s).
 
 ## Steps for removing `policy-integrity` from an ACM managed cluster(s)    
 
-- Step 1: Disable Integrity Verifier protection in an ACM managed cluster(s)
+- Step 1: Disable Integrity Shield protection in an ACM managed cluster(s)
 
-- Step 2: Remove Integrity Verifier operator from an ACM managed cluster(s)
+- Step 2: Remove Integrity Shield operator from an ACM managed cluster(s)
 
-- Step 3: Follow the following steps to remove `policy-integrity` from an ACM managed cluster(s) after disabling Integrity Protection and removing Integrity Verifier operator from an ACM managed cluster(s)
+- Step 3: Follow the following steps to remove `policy-integrity` from an ACM managed cluster(s) after disabling Integrity Protection and removing Integrity Shield operator from an ACM managed cluster(s)
 
 1. Configure `policy-integrity.yaml` as below. 
 

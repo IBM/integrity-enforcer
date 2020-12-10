@@ -3,21 +3,21 @@
 ## Clone Repo
 ```
 $ git clone git@github.com:IBM/integrity-enforcer.git
-$ cd integrity-verifier
+$ cd integrity-shield
 ```
 
 ## Setup
 Before executing the script, setup local environment as follows:
 
-- `IV_REPO_ROOT`: set absolute path of the root directory of cloned integrity-verifier source repository
-- `KUBECONFIG=~/kube/config/minikube`  (for deploying IV on minikube cluster)
+- `ISHIELD_REPO_ROOT`: set absolute path of the root directory of cloned integrity-shield source repository
+- `KUBECONFIG=~/kube/config/minikube`  (for deploying IShield on minikube cluster)
 
 `~/kube/config/minikube` is the Kuebernetes config file with credentials for accessing a cluster via `kubectl`.
 
 For example
 ```
 $ export KUBECONFIG=~/kube/config/minikube
-$ export IV_REPO_ROOT=/repo/integrity-enforcer
+$ export ISHIELD_REPO_ROOT=/repo/integrity-enforcer
 ```
 
 ## Make commands∂
@@ -30,13 +30,13 @@ $ make tag-images-to-local
 ```
 
 The make commands refer the steps for
-- Building Integrity Verifier container images
-- Tagging Integrity Verifier container images to be used locally.
+- Building Integrity Shield container images
+- Tagging Integrity Shield container images to be used locally.
 
 Three images are built.
-- `integrity-verifier-operator` is image for operator which manages Integrity Verifier
-- `integrity-verifier-server` is image for IV server
-- `integrity-verifier-logging` is image for IV logging side car
+- `integrity-shield-operator` is image for operator which manages Integrity Shield
+- `integrity-shield-server` is image for IShield server
+- `integrity-shield-logging` is image for IShield logging side car
 
 ### Push images
 ```
@@ -48,11 +48,11 @@ You may need to setup image registry (e.g. dockerhub, quay.io etc.) and change t
 For example
 ```
 $ export DOCKER_REGISTRY=docker.io
-$ export DOCKER_USER=integrityverifier
+$ export DOCKER_USER=integrityshield
 $ export DOCKER_PASS=<password>
 ```
 
-### Install IV to cluster
+### Install IShield to cluster
 ```
 $ make install-crds
 $ make install-operator
@@ -62,18 +62,18 @@ $ make create-tmp-cr
 
 The make commands refer the steps for
 - Create CRDs
-- Install Integrity Verifier operator
-- Prepare Integrity Verifier custom resource (operator installs IV server automatically)
-- Install Integrity Verifier custom resource (operator installs IV server automatically)
+- Install Integrity Shield operator
+- Prepare Integrity Shield custom resource (operator installs IShield server automatically)
+- Install Integrity Shield custom resource (operator installs IShield server automatically)
 
-### Uninstall IV from cluster
+### Uninstall IShield from cluster
 ```
 $ make delete-tmp-cr
 $ make delete-operator
 ```
 
 The make command refers to the steps for
-- Delete Integrity Verifier custom resource (operator installs IV server automatically)
-- Delete Integrity Verifier operator
+- Delete Integrity Shield custom resource (operator installs IShield server automatically)
+- Delete Integrity Shield operator
 - Delete CRDs
 
