@@ -35,8 +35,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base='base64'
 fi
 
-yq d $INPUT_FILE metadata.annotations.message -i
-yq d $INPUT_FILE metadata.annotations.signature -i
+yq d $INPUT_FILE 'metadata.annotations."integrityverifier.io/message"' -i
+yq d $INPUT_FILE 'metadata.annotations."integrityverifier.io/signature"' -i
 
 # message
 msg=`cat $INPUT_FILE | $base`

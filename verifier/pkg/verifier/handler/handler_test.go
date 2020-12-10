@@ -28,6 +28,7 @@ import (
 	"github.com/IBM/integrity-enforcer/verifier/pkg/common/common"
 	logger "github.com/IBM/integrity-enforcer/verifier/pkg/util/logger"
 	"github.com/IBM/integrity-enforcer/verifier/pkg/verifier/config"
+	"k8s.io/api/admission/v1beta1"
 )
 
 const (
@@ -91,6 +92,12 @@ func getTestData(num int) (*common.ReqContext, *config.VerifierConfig, *RunData,
 	_ = json.Unmarshal(drBytes, &dr)
 	dr0 = &DecisionResult{
 		Type: common.DecisionUndetermined,
+	}
+	var req *v1beta1.AdmissionRequest
+	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
+	if req != nil {
+		reqc.RawObject = req.Object.Raw
+		reqc.RawOldObject = req.OldObject.Raw
 	}
 	return reqc, config, data, ctx, dr0, prof, dr
 }

@@ -35,8 +35,8 @@ apiVersion: apis.integrityverifier.io/v1alpha1
 kind: ResourceSignature
 metadata:
    annotations:
-      messageScope: spec
-      signature: ""
+      integrityverifier.io/messageScope: spec
+      integrityverifier.io/signature: ""
    name: ""
 spec:
    data:

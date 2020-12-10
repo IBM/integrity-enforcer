@@ -32,8 +32,8 @@ import (
 type ReqContext struct {
 	ResourceScope   string          `json:"resourceScope,omitempty"`
 	DryRun          bool            `json:"dryRun"`
-	RawObject       []byte          `json:"rawObject"`
-	RawOldObject    []byte          `json:"rawOldObject"`
+	RawObject       []byte          `json:"-"`
+	RawOldObject    []byte          `json:"-"`
 	RequestJsonStr  string          `json:"request"`
 	RequestUid      string          `json:"requestUid"`
 	Namespace       string          `json:"namespace"`
