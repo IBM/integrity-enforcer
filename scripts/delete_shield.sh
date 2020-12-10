@@ -35,7 +35,7 @@ if [ -z "$ISHIELD_ENV" ]; then
 fi
 
 if [ -z "$ISHIELD_REPO_ROOT" ]; then
-    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IV repository"
+    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IShield repository"
     exit 1
 fi
 

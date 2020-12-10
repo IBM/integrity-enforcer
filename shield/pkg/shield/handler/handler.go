@@ -62,7 +62,7 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 	// make AdmissionResponse based on DecisionResult
 	resp := &v1beta1.AdmissionResponse{}
 	if dr.isUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityVerifeir failed to decide the response for this request")
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request")
 	} else if dr.isErrorOccurred() {
 		resp = createAdmissionResponse(false, dr.Message)
 	} else {

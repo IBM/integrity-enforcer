@@ -27,7 +27,7 @@ fi
 #clear
 
 if [ -z "$ISHIELD_REPO_ROOT" ]; then
-    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IE repository"
+    echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IShield repository"
     exit 1
 fi
 
@@ -82,7 +82,7 @@ make setup-tmp-cr
 echo
 echo "===== Integrity Shield CR is set up. ====="
 echo
-echo "After setting up Integrity Shield CR,  Let's now deploy Integrity Verfier CR in the cluster."
+echo "After setting up Integrity Shield CR,  Let's now deploy Integrity Shield CR in the cluster."
 make create-cr
 echo
 echo "===== Integrity Shield CR is created in cluster. ====="
