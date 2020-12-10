@@ -372,7 +372,7 @@ setup-tmp-cr:
 		echo enable logAllResponse ; \
 		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logLevel trace ;\
 		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logAllResponse true ;\
-		yq write -i $(TMP_CR_FILE) spec.shieldConfig.ishieldAdminUserGroup "system:masters,system:cluster-admins" ;\
+		yq write -i $(TMP_CR_FILE) spec.shieldConfig.iShieldAdminUserGroup "system:masters,system:cluster-admins" ;\
 	fi
 
 create-tmp-cr:

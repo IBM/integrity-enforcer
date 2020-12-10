@@ -67,11 +67,11 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	}
 	operatorSA := getOperatorServiceAccount()
 
-	ishieldOperatorResources, ishieldServerResources := cr.GetIShieldResourceList(scheme)
+	iShieldOperatorResources, iShieldServerResources := cr.GetIShieldResourceList(scheme)
 
 	ecc.Spec.ShieldConfig.IShieldResourceCondition = &econf.IShieldResourceCondition{
-		OperatorResources:      ishieldOperatorResources,
-		ServerResources:        ishieldServerResources,
+		OperatorResources:      iShieldOperatorResources,
+		ServerResources:        iShieldServerResources,
 		OperatorServiceAccount: operatorSA,
 	}
 	if ecc.Spec.ShieldConfig.CommonProfile == nil {

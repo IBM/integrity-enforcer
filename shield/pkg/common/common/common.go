@@ -422,7 +422,7 @@ var ReasonCodeMap = map[int]ReasonCode{
 	},
 	REASON_BLOCK_ISHIELD_RESOURCE_OPERATION: {
 		Message: "block oprations for ishield resouce",
-		Code:    "block-ishieldresource-operation",
+		Code:    "block-ishield-resource-operation",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",

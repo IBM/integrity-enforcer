@@ -36,7 +36,7 @@ type CheckContext struct {
 	BreakGlassModeEnabled bool   `json:"breakGlass"`
 	IgnoredSA             bool   `json:"ignoredSA"`
 	Protected             bool   `json:"protected"`
-	IShieldResource       bool   `json:"ishieldresource"`
+	IShieldResource       bool   `json:"iShieldResource"`
 	Allow                 bool   `json:"allow"`
 	Verified              bool   `json:"verified"`
 	Aborted               bool   `json:"aborted"`
@@ -92,7 +92,7 @@ func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string
 		//context
 		"ignoreSA":        self.IgnoredSA,
 		"protected":       self.Protected,
-		"ishieldresource": self.IShieldResource,
+		"iShieldResource": self.IShieldResource,
 		"allowed":         self.Allow,
 		"verified":        self.Verified,
 		"aborted":         self.Aborted,

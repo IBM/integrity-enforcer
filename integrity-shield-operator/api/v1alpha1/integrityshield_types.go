@@ -331,7 +331,7 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 	_rolebindingType := getTypeFromObj(&rbacv1.RoleBinding{}, scheme)
 	_pspType := getTypeFromObj(&policyv1.PodSecurityPolicy{}, scheme)
 
-	ishieldOperatorResourceList := []*common.ResourceRef{
+	iShieldOperatorResourceList := []*common.ResourceRef{
 		{
 			Kind: _crdType.Kind,
 			Name: self.GetIntegrityShieldCRDName(),
@@ -348,7 +348,7 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 		},
 	}
 
-	ishieldServerResourceList := []*common.ResourceRef{
+	iShieldServerResourceList := []*common.ResourceRef{
 		{
 			Kind: _crdType.Kind,
 			Name: self.GetShieldConfigCRDName(),
@@ -448,11 +448,11 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 				Name:      prof.Name,
 				Namespace: self.Namespace,
 			}
-			ishieldServerResourceList = append(ishieldServerResourceList, tmpRef)
+			iShieldServerResourceList = append(iShieldServerResourceList, tmpRef)
 		}
 	}
 
-	return ishieldOperatorResourceList, ishieldServerResourceList
+	return iShieldOperatorResourceList, iShieldServerResourceList
 }
 
 func getTypeFromObj(obj runtime.Object, scheme *runtime.Scheme) metav1.TypeMeta {

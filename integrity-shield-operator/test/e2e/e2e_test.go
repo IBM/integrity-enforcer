@@ -80,12 +80,12 @@ var _ = Describe("Test integrity shield", func() {
 			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
 			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
 			By("Check created ishield resources...")
-			for _, ishieldr := range ishield_resource_list {
-				fmt.Print(ishieldr.Kind, " : ", ishieldr.Name, "\n")
-				if ishieldr.Name == "" || ishieldr.Kind == "IntegrityShield" || ishieldr.Kind == "SecurityContextConstraints" || ishieldr.Kind == "PodSecurityPolicy" || ishieldr.Name == "helmreleasemetadatas.apis.integrityshield.io" {
+			for _, iShieldRes := range ishield_resource_list {
+				fmt.Print(iShieldRes.Kind, " : ", iShieldRes.Name, "\n")
+				if iShieldRes.Name == "" || iShieldRes.Kind == "IntegrityShield" || iShieldRes.Kind == "SecurityContextConstraints" || iShieldRes.Kind == "PodSecurityPolicy" || iShieldRes.Name == "helmreleasemetadatas.apis.integrityshield.io" {
 					continue
 				}
-				err := CheckIShieldResources(framework, ishieldr.Kind, ishieldr.Namespace, ishieldr.Name)
+				err := CheckIShieldResources(framework, iShieldRes.Kind, iShieldRes.Namespace, iShieldRes.Name)
 				Expect(err).To(BeNil())
 			}
 		})
@@ -106,16 +106,16 @@ var _ = Describe("Test integrity shield", func() {
 			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
 			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
 			By("Try to Delete ishield resources...")
-			for _, ishieldr := range ishield_resource_list {
-				fmt.Print(ishieldr.Kind, " : ", ishieldr.Name, "\n")
-				if ishieldr.Name == "" || ishieldr.Kind == "SecurityContextConstraints" || ishieldr.Kind == "PodSecurityPolicy" || ishieldr.Name == "helmreleasemetadatas.apis.integrityshield.io" {
+			for _, iShieldRes := range ishield_resource_list {
+				fmt.Print(iShieldRes.Kind, " : ", iShieldRes.Name, "\n")
+				if iShieldRes.Name == "" || iShieldRes.Kind == "SecurityContextConstraints" || iShieldRes.Kind == "PodSecurityPolicy" || iShieldRes.Name == "helmreleasemetadatas.apis.integrityshield.io" {
 					continue
 				}
-				if ishieldr.Namespace != "" {
-					cmd_err := Kubectl("delete", ishieldr.Kind, ishieldr.Name, "-n", ishieldr.Namespace)
+				if iShieldRes.Namespace != "" {
+					cmd_err := Kubectl("delete", iShieldRes.Kind, iShieldRes.Name, "-n", iShieldRes.Namespace)
 					Expect(cmd_err).NotTo(BeNil())
 				} else {
-					cmd_err := Kubectl("delete", ishieldr.Kind, ishieldr.Name)
+					cmd_err := Kubectl("delete", iShieldRes.Kind, iShieldRes.Name)
 					Expect(cmd_err).NotTo(BeNil())
 				}
 			}
@@ -372,12 +372,12 @@ var _ = Describe("Test integrity shield", func() {
 			}, timeout, 1).ShouldNot(BeNil())
 			By("Iv resources should be deleted properly")
 			time.Sleep(time.Second * 30)
-			for _, ishieldr := range ishield_resource_list {
-				fmt.Print(ishieldr.Kind, " : ", ishieldr.Name, "\n")
-				if ishieldr.Name == "" || ishieldr.Kind == "IntegrityShield" || ishieldr.Kind == "SecurityContextConstraints" || ishieldr.Kind == "PodSecurityPolicy" || ishieldr.Name == "integrity-shield-operator-controller-manager" || ishieldr.Name == "helmreleasemetadatas.apis.integrityshield.io" || ishieldr.Name == "integrityshields.apis.integrityshield.io" {
+			for _, iShieldRes := range ishield_resource_list {
+				fmt.Print(iShieldRes.Kind, " : ", iShieldRes.Name, "\n")
+				if iShieldRes.Name == "" || iShieldRes.Kind == "IntegrityShield" || iShieldRes.Kind == "SecurityContextConstraints" || iShieldRes.Kind == "PodSecurityPolicy" || iShieldRes.Name == "integrity-shield-operator-controller-manager" || iShieldRes.Name == "helmreleasemetadatas.apis.integrityshield.io" || iShieldRes.Name == "integrityshields.apis.integrityshield.io" {
 					continue
 				}
-				err := CheckIShieldResources(framework, ishieldr.Kind, ishieldr.Namespace, ishieldr.Name)
+				err := CheckIShieldResources(framework, iShieldRes.Kind, iShieldRes.Namespace, iShieldRes.Name)
 				Expect(err).NotTo(BeNil())
 			}
 		})

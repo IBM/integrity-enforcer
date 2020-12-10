@@ -892,7 +892,7 @@ spec:
                   type: string
                 clusterRoleBinding:
                   type: string
-                ishieldAdminSubjects:
+                iShieldAdminSubjects:
                   items:
                     description: Subject contains a reference to the object or user identities a role binding applies to.  This can either hold a direct API object reference, or a value for non-objects such as user and group names.
                     properties:
@@ -1617,13 +1617,13 @@ spec:
                           type: object
                       type: object
                   type: object
-                ishieldAdminUserGroup:
+                iShieldAdminUserGroup:
                   type: string
-                ishieldAdminUserName:
+                iShieldAdminUserName:
                   type: string
-                ishieldResource:
+                iShieldResource:
                   type: string
-                ishieldResourceCondition:
+                iShieldResourceCondition:
                   properties:
                     operatorResources:
                       items:
@@ -1664,7 +1664,7 @@ spec:
                         type: object
                       type: array
                   type: object
-                ishieldServerUserName:
+                iShieldServerUserName:
                   type: string
                 keyPathList:
                   items:

@@ -12,9 +12,8 @@ spec:
     plugin:
     - name: helm
       enabled: false
-    ieResource: "apis.integrityshield.io"
-    ishieldAdminUserName: ""
-    ishieldAdminUserGroup: "system:masters,system:cluster-admins"
+    iShieldAdminUserName: ""
+    iShieldAdminUserGroup: "system:masters,system:cluster-admins"
     ignore:
     - kind: Event
     - kind: Lease
@@ -78,7 +77,7 @@ spec:
     podSecurityPolicyName: ishield-psp
     securityContextConstraintsName:  ishield-scc
     serviceAccountName: ishield-sa
-    ishieldAdminSubjects:
+    iShieldAdminSubjects:
       - apiGroup: rbac.authorization.k8s.io
         kind: Group
         name: system:masters
