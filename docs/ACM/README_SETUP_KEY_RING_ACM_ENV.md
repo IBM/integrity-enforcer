@@ -4,36 +4,29 @@
 ​
 The following prerequisites must be satisfied to deploy Integrity Verifier on an ACM managed cluster via [ACM policies](https://github.com/open-cluster-management/policy-collection).
 - An [ACM]((https://www.redhat.com/en/technologies/management/advanced-cluster-management)) hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command
+- The namespace where verification key would be deployed, is already created in Step 1 in [doc](README_ENABLE_IV_PROTECTION_ACM_ENV.md)
 
-## Verification Key Setup
-A secret resource (keyring-secret) which contains a public key should be setup in an ACM managed cluster(s) for enabling signature verification by Integrity Verifier. We describe how we could setup a verification key on an ACM managed cluster.
+## Setup verification key in an ACM managed cluster(s)
+A secret resource (default name `keyring-secret`) which contains a public key should be setup in an ACM managed cluster(s) for enabling signature verification by Integrity Verifier. 
+
+Setting up a verification key on an ACM managed cluster requires the following steps:
+ - Step 1 Create signing and verification key pairs
+ - Step 2 Deploy verification key to an ACM hub cluster so that it can probagate to a managed cluster(s).
+
+
+### Step 1 Create signing and verification key pairs
+
 To see how to create a verification key,  refer to [doc](../README_VERIFICATION_KEY_SETUP.md)
 
 
-### The script for setting up verification key to an ACM hub cluster so that it can probagate to a managed cluster(s)
+### Step 2 Deploy verification key to an ACM hub cluster so that it can probagate to a managed cluster(s).
 
-We will use the script: [acm-verification-key-setup.sh](https://github.com/IBM/integrity-enforcer/blob/master/scripts/acm-verification-key-setup.sh) for setting up a verification key.
+First connect to an ACM hub cluster and execute the [acm-verification-key-setup.sh](https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh) script to setup a verification key on an ACM managed cluster(s) connected to the ACM hub cluster with the following parameters:
 
-```
-$ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
-               NAMESPACE \
-               PUBRING-KEY-NAME  \
-               PUBRING_KEY_FILE_PATH \
-               PLACEMENT-RULE-KEY-VALUE-PAIR
-```
-
-Pass the following parameters.
-
-- NAMESPACE:  The namespace where verification key would be created in managed cluster. The should be the namespace where Integrity Verifier would be deployed in a managed cluster. (We will use integrity-verifier-operator-system namespace in this document.)
-- PUBRING-KEY-NAME:  The name of the verification key to be used for deploying Integrity Verifier. (e.g. keyring-secret)
-- PUBRING_KEY_FILE_PATH: The file path of the verification key (e.g. /tmp/pubring.gpg).
-- PLACEMENT-RULE-KEY-VALUE-PAIR:  We will use placement rule flags which are the labels/tags that idetifies a managed cluster(s). We use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)
-
-### Deploy verification key to an ACM hub cluster so that it can probagate to a managed cluster(s).
-
-First connect to an ACM hub cluster and execute the following script to setup a veification key on a managed cluster(s) connected to the hub cluster.
-
-Execute the script `acm-verification-key-setup.sh` as follows.
+- `integrity-verifier-operator-system` - The namespace where verification key would be created in the ACM hub cluster. This should be the namespace created in Step 1 in [doc](README_ENABLE_IV_PROTECTION_ACM_ENV.md)
+- `keyring-secret` - The name of secret resource which would include the verification key. The name should match with signer in `policy-integrity.yaml` (see Step 3.b in [doc](README_ENABLE_IV_PROTECTION_ACM_ENV.md))
+- `/tmp/pubring.gpg` - The file path of the verification key exported as described in [doc](../README_VERIFICATION_KEY_SETUP.md)
+- `environment:dev` - The placement rule flags which are the labels/tags that idetifies a managed cluster(s). Use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)
 
 ```
 curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
@@ -44,9 +37,14 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-ver
 ```
 
 
-### Delete verification key from hub cluster and a managed cluster(s)
+## Remove verification key from an ACM hub cluster and an ACM  managed cluster(s)
 
-First connect to a ACM hub cluster where a verification key is already setup and execute the following script to delete the key from hub the cluster as well as a managed cluster(s).
+First connect to a ACM hub cluster where a verification key is already setup and execute the following script to delete the key from hub the cluster as well as a managed cluster(s) with the following parameters:
+
+- `integrity-verifier-operator-system` - The namespace where verification key would be created in the ACM hub cluster. This should be the namespace created in Step 1 in [doc](README_ENABLE_IV_PROTECTION_ACM_ENV.md)
+- `keyring-secret` - The name of secret resource which would include the verification key
+- `/tmp/pubring.gpg` - The file path of the verification key exported as described in [doc](../README_VERIFICATION_KEY_SETUP.md)
+- `environment:dev` - The placement rule flags which are the labels/tags that idetifies a managed cluster(s). Use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)
 
 ```
 curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
@@ -55,3 +53,4 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-ver
           /tmp/pubring.gpg \
           environment:dev  |  kubectl delete -f -
 ```
+
