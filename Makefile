@@ -206,10 +206,8 @@ test-verify:
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
 .PHONY: install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
 .PHONY: create-ns create-key-ring tag-images-to-local
+.PHONY: test-gpg-annotation
 
-
-#.PHONY: kind-bootstrap-cluster-dev
-#kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-operator
 
 .EXPORT_ALL_VARIABLES:
 TEST_SIGNERS=TestSigner
@@ -294,7 +292,9 @@ e2e-test:
 	@echo run test
 	$(ISHIELD_REPO_ROOT)/build/check_test_results.sh
 
-
+test-gpg-annotation:
+	@echo
+	$(IV_REPO_ROOT)/scripts/unit-test-gpg-annotation.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(TMP_DIR)
 ############################################################
 # setup ishield
 ############################################################
