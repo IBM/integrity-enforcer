@@ -8,7 +8,7 @@ if [ ! -e $3 ]; then
   echo "$3 does not exist"
   exit 1
 fi
-
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
 TARGET_DIR=$1
 PUBRING_KEY=$2
 
@@ -16,6 +16,6 @@ find ${TARGET_DIR} -type f -name "*.yaml" | while read file;
 do
   echo "Verifying signature annotation in ${file}"
 
-  curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-verifier/master/scripts/gpg-annotation-verify.sh | bash -s "$file" ${PUBRING_KEY}
+  $SCRIPT_DIR/../gpg-annotation-verify.sh | bash -s "$file" ${PUBRING_KEY}
 
 done
