@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -87,7 +86,7 @@ func MergeDefaultIntegrityShieldCR(cr *apiv1alpha1.IntegrityShield, srcYamlPath 
 	if srcYamlPath == "" {
 		srcYamlPath = apiv1alpha1.DefaultIShieldCRYamlPath
 	}
-	deafultCRBytes, _ := ioutil.ReadFile(filepath.Clean(srcYamlPath))
+	deafultCRBytes, _ := ioutil.ReadFile(srcYamlPath)
 	defaultCRJsonBytes, err := yaml.YAMLToJSON(deafultCRBytes)
 	if err != nil {
 		fmt.Println("failed to convert yaml2json; " + err.Error())

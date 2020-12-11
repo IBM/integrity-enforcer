@@ -55,7 +55,7 @@ const (
 	DefaultResourceSigningProfileYamlPath     = "./resources/default-rsp.yaml"
 	DefaultKeyringFilename                    = "pubring.gpg"
 	DefaultIShieldWebhookTimeout              = 10
-	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token" //NOSONAR
+	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"golang.org/x/crypto/openpgp"
 )
@@ -93,7 +92,7 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error in creating private keyring file; %s", err.Error()))
 	}
-	defer secfile.Close() //NOSONAR
+	defer secfile.Close()
 
 	for _, ent := range entList {
 		err := ent.SerializePrivate(secfile, nil)
@@ -106,7 +105,7 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error in creating public keyring file; %s", err.Error()))
 	}
-	defer pubfile.Close() //NOSONAR
+	defer pubfile.Close()
 
 	for _, ent := range entList {
 		idt := getFirstIdentity(ent.Identities)
@@ -123,12 +122,12 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 }
 
 func GetKeyringValue(path string) (*Keyring, error) {
-	rawPub, err := ioutil.ReadFile(filepath.Clean(path + defaultPublicKeyringName))
+	rawPub, err := ioutil.ReadFile(path + defaultPublicKeyringName)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error in getting value of public keyring; %s", err.Error()))
 	}
 
-	rawSec, err := ioutil.ReadFile(filepath.Clean(path + defaultPrivateKeyringName))
+	rawSec, err := ioutil.ReadFile(path + defaultPrivateKeyringName)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Error in getting value private keyring; %s", err.Error()))
 	}
