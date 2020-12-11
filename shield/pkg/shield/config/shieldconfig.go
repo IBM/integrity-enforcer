@@ -18,8 +18,7 @@ package config
 
 import (
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	"github.com/jinzhu/copier"
 )
@@ -47,8 +46,8 @@ type ShieldConfig struct {
 	Log   *LoggingScopeConfig `json:"log,omitempty"`
 
 	InScopeNamespaceSelector *common.NamespaceSelector          `json:"inScopeNamespaceSelector,omitempty"`
-	Allow                    []profile.RequestPattern           `json:"allow,omitempty"`
-	Ignore                   []profile.RequestPattern           `json:"ignore,omitempty"`
+	Allow                    []common.RequestPattern            `json:"allow,omitempty"`
+	Ignore                   []common.RequestPattern            `json:"ignore,omitempty"`
 	Mode                     IntegrityShieldMode                `json:"mode,omitempty"`
 	Plugin                   []PluginConfig                     `json:"plugin,omitempty"`
 	CommonProfile            *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`
@@ -112,9 +111,9 @@ func (self *IShieldResourceCondition) IsServerResource(ref *common.ResourceRef) 
 ***********************************************/
 
 type LogScopeConfig struct {
-	Enabled bool                     `json:"enabled,omitempty"`
-	InScope []profile.RequestPattern `json:"inScope,omitempty"`
-	Ignore  []profile.RequestPattern `json:"ignore,omitempty"`
+	Enabled bool                    `json:"enabled,omitempty"`
+	InScope []common.RequestPattern `json:"inScope,omitempty"`
+	Ignore  []common.RequestPattern `json:"ignore,omitempty"`
 }
 
 func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {

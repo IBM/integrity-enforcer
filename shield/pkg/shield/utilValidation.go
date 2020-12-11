@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handlerutil
+package shield
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 )
 
 func ValidateResource(reqc *common.ReqContext, shieldNamespace string) (bool, string) {

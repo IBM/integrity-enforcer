@@ -30,7 +30,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 )
 
 var startTimeInt int64
@@ -205,7 +205,7 @@ func GenerateSignature(msg, prvKeyPemBytes []byte) ([]byte, error) {
 	}
 
 	h := crypto.Hash.New(crypto.SHA256)
-	h.Write([]byte(msg))
+	_, _ = h.Write([]byte(msg))
 	msgHash := h.Sum(nil)
 
 	sig, err := rsa.SignPKCS1v15(rand.Reader, prvKey, crypto.SHA256, msgHash)
@@ -228,7 +228,7 @@ func VerifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
 	}
 
 	h := crypto.Hash.New(crypto.SHA256)
-	h.Write([]byte(msg))
+	_, _ = h.Write([]byte(msg))
 	msgHash := h.Sum(nil)
 	pubKey, err := x509.ParsePKIXPublicKey(pubKeyBytes)
 	if err != nil {

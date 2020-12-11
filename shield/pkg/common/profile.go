@@ -14,14 +14,13 @@
 // limitations under the License.
 //
 
-package profile
+package common
 
 import (
 	"encoding/json"
 	"reflect"
 	"strings"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
 	"github.com/jinzhu/copier"
 )
 
@@ -122,11 +121,11 @@ func (self *RequestPattern) Match(reqFields map[string]string) bool {
 type RulePattern string
 
 func (self *RulePattern) match(value string) bool {
-	return common.MatchPattern(string(*self), value)
+	return MatchPattern(string(*self), value)
 }
 
 func (self *RulePattern) exactMatch(value string) bool {
-	return common.ExactMatch(string(*self), value)
+	return ExactMatch(string(*self), value)
 }
 
 // reverse the string
@@ -138,7 +137,7 @@ func reverse(s string) string {
 	return string(runes)
 }
 
-func (self *KustomizePattern) OverrideName(ref *common.ResourceRef) *common.ResourceRef {
+func (self *KustomizePattern) OverrideName(ref *ResourceRef) *ResourceRef {
 	name := ref.Name
 	if self.NamePrefix == nil && self.NameSuffix == nil {
 		return ref
@@ -212,7 +211,7 @@ func (self *Request) Equal(req *Request) bool {
 	return reflect.DeepEqual(self, req)
 }
 
-func NewRequestFromReqContext(reqc *common.ReqContext) *Request {
+func NewRequestFromReqContext(reqc *ReqContext) *Request {
 	req := &Request{
 		Operation:  reqc.Operation,
 		Namespace:  reqc.Namespace,

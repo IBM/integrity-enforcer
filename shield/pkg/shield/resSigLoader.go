@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package loader
+package shield
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"

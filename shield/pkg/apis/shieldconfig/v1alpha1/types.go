@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	iec "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,7 +57,7 @@ type ShieldConfig struct {
 
 // ShieldConfigSpec is a desired state description of ShieldConfig.
 type ShieldConfigSpec struct {
-	ShieldConfig *iec.ShieldConfig `json:",inline"`
+	ShieldConfig *config.ShieldConfig `json:",inline"`
 }
 
 // ShieldConfig describes the lifecycle status of ShieldConfig.
