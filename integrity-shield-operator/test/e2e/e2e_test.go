@@ -20,7 +20,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	. "github.com/onsi/ginkgo" //nolint:golint
 	. "github.com/onsi/gomega" //nolint:golint
 

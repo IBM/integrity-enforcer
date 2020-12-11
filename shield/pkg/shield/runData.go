@@ -22,8 +22,7 @@ import (
 	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	loader "github.com/IBM/integrity-enforcer/shield/pkg/shield/loader"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -41,8 +40,8 @@ type RunData struct {
 	SignPolicy *spolapi.SignPolicy            `json:"signPolicy,omitempty"`
 	ResSigList *rsigapi.ResourceSignatureList `json:"resSigList,omitempty"`
 
-	loader    *loader.Loader    `json:"-"`
-	ruleTable *loader.RuleTable `json:"-"`
+	loader    *Loader    `json:"-"`
+	ruleTable *RuleTable `json:"-"`
 }
 
 func (self *RunData) GetSignPolicy() *spolapi.SignPolicy {
@@ -74,13 +73,13 @@ func (self *RunData) GetNSList() []v1.Namespace {
 }
 
 func (self *RunData) setRuleTable(shieldNamespace string) {
-	ruleTable := loader.NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
+	ruleTable := NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
 	if ruleTable != nil && !ruleTable.IsEmpty() {
 		self.ruleTable = ruleTable
 	}
 }
 
-func (self *RunData) GetRuleTable(shieldNamespace string) *loader.RuleTable {
+func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 	rspReloaded := false
 	nsReloaded := false
 	if self.loader != nil {

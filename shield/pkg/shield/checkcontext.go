@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )

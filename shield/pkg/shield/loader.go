@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package loader
+package shield
 
 import (
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"

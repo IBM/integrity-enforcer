@@ -27,9 +27,7 @@ import (
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/policy"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
@@ -141,7 +139,7 @@ func updateRSPStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.ReqContext
 		return err
 	}
 
-	req := profile.NewRequestFromReqContext(reqc)
+	req := common.NewRequestFromReqContext(reqc)
 	rspNew := rspOrg.UpdateStatus(req, errMsg)
 
 	_, err = client.ResourceSigningProfiles(rspNamespace).Update(context.Background(), rspNew, metav1.UpdateOptions{})
@@ -214,8 +212,8 @@ func checkIfIShieldOperatorRequest(reqc *common.ReqContext, config *config.Shiel
 	return common.ExactMatch(config.IShieldResourceCondition.OperatorServiceAccount, reqc.UserName) //"service account for integrity-shield-operator"
 }
 
-func getBreakGlassConditions(signPolicy *spolapi.SignPolicy) []policy.BreakGlassCondition {
-	conditions := []policy.BreakGlassCondition{}
+func getBreakGlassConditions(signPolicy *spolapi.SignPolicy) []common.BreakGlassCondition {
+	conditions := []common.BreakGlassCondition{}
 	if signPolicy != nil {
 		conditions = append(conditions, signPolicy.Spec.SignPolicy.BreakGlass...)
 	}
@@ -229,7 +227,7 @@ func checkIfBreakGlassEnabled(reqc *common.ReqContext, signPolicy *spolapi.SignP
 	if reqc.ResourceScope == "Namespaced" {
 		reqNs := reqc.Namespace
 		for _, d := range conditions {
-			if d.Scope == policy.ScopeUndefined || d.Scope == policy.ScopeNamespaced {
+			if d.Scope == common.ScopeUndefined || d.Scope == common.ScopeNamespaced {
 				for _, ns := range d.Namespaces {
 					if reqNs == ns {
 						breakGlassEnabled = true
@@ -243,7 +241,7 @@ func checkIfBreakGlassEnabled(reqc *common.ReqContext, signPolicy *spolapi.SignP
 		}
 	} else {
 		for _, d := range conditions {
-			if d.Scope == policy.ScopeCluster {
+			if d.Scope == common.ScopeCluster {
 				breakGlassEnabled = true
 				break
 			}

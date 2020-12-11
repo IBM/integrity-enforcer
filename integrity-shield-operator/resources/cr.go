@@ -24,8 +24,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	iespol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
-	policy "github.com/IBM/integrity-enforcer/shield/pkg/common/policy"
-	profile "github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	econf "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,9 +85,9 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 		}
 		if operatorSA != "" {
 			// add IShield operator SA to ignoreRules in commonProfile
-			operatorSAPattern := profile.RulePattern(operatorSA)
+			operatorSAPattern := common.RulePattern(operatorSA)
 			ignoreRules := defaultrsp.Spec.IgnoreRules
-			ignoreRules = append(ignoreRules, &profile.Rule{Match: []*profile.RequestPattern{{UserName: &operatorSAPattern}}})
+			ignoreRules = append(ignoreRules, &common.Rule{Match: []*common.RequestPattern{{UserName: &operatorSAPattern}}})
 			defaultrsp.Spec.IgnoreRules = ignoreRules
 		}
 		ecc.Spec.ShieldConfig.CommonProfile = &(defaultrsp.Spec)
@@ -99,22 +98,22 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 
 //sign shield policy cr
 func BuildSignEnforcePolicyForIShield(cr *apiv1alpha1.IntegrityShield) *iespol.SignPolicy {
-	var signPolicy *policy.SignPolicy
+	var signPolicy *common.SignPolicy
 
 	if cr.Spec.SignPolicy != nil {
 		signPolicy = cr.Spec.SignPolicy
 	} else {
-		signPolicy = &policy.SignPolicy{
-			Policies: []policy.SignPolicyCondition{
+		signPolicy = &common.SignPolicy{
+			Policies: []common.SignPolicyCondition{
 				{
 					Namespaces: []string{"sample"},
 					Signers:    []string{"SampleSigner"},
 				},
 			},
-			Signers: []policy.SignerCondition{
+			Signers: []common.SignerCondition{
 				{
 					Name: "SampleSigner",
-					Subjects: []policy.SubjectMatchPattern{
+					Subjects: []common.SubjectMatchPattern{
 						{
 							CommonName: "sample",
 						},

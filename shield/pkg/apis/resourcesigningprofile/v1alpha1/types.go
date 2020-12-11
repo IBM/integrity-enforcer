@@ -19,8 +19,7 @@ package v1alpha1
 import (
 	"time"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,14 +31,14 @@ const maxHistoryLength = 3
 type ResourceSigningProfileSpec struct {
 	Disabled bool `json:"disabled,omitempty"`
 	// `TargetNamespaceSelector` is used only for profile in iShield NS
-	TargetNamespaceSelector *common.NamespaceSelector   `json:"targetNamespaceSelector,omitempty"`
-	ProtectRules            []*profile.Rule             `json:"protectRules,omitempty"`
-	IgnoreRules             []*profile.Rule             `json:"ignoreRules,omitempty"`
-	ForceCheckRules         []*profile.Rule             `json:"forceCheckRules,omitempty"`
-	KustomizePatterns       []*profile.KustomizePattern `json:"kustomizePatterns,omitempty"`
-	ProtectAttrs            []*profile.AttrsPattern     `json:"protectAttrs,omitempty"`
-	UnprotectAttrs          []*profile.AttrsPattern     `json:"unprotectAttrs,omitempty"`
-	IgnoreAttrs             []*profile.AttrsPattern     `json:"ignoreAttrs,omitempty"`
+	TargetNamespaceSelector *common.NamespaceSelector  `json:"targetNamespaceSelector,omitempty"`
+	ProtectRules            []*common.Rule             `json:"protectRules,omitempty"`
+	IgnoreRules             []*common.Rule             `json:"ignoreRules,omitempty"`
+	ForceCheckRules         []*common.Rule             `json:"forceCheckRules,omitempty"`
+	KustomizePatterns       []*common.KustomizePattern `json:"kustomizePatterns,omitempty"`
+	ProtectAttrs            []*common.AttrsPattern     `json:"protectAttrs,omitempty"`
+	UnprotectAttrs          []*common.AttrsPattern     `json:"unprotectAttrs,omitempty"`
+	IgnoreAttrs             []*common.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
 // ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy
@@ -48,9 +47,9 @@ type ResourceSigningProfileStatus struct {
 }
 
 type ProfileStatusDetail struct {
-	Request *profile.Request `json:"request,omitempty"`
-	Count   int              `json:"count,omitempty"`
-	History []profile.Result `json:"history,omitempty"`
+	Request *common.Request `json:"request,omitempty"`
+	Count   int             `json:"count,omitempty"`
+	History []common.Result `json:"history,omitempty"`
 }
 
 // +genclient
@@ -75,7 +74,7 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.ProtectRules) == 0
 }
 
-func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *profile.Rule) {
+func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *common.Rule) {
 	for _, rule := range self.Spec.ForceCheckRules {
 		if rule.MatchWithRequest(reqFields) {
 			return true, rule
@@ -106,8 +105,8 @@ func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) Resourc
 	return newProfile
 }
 
-func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*profile.KustomizePattern {
-	patterns := []*profile.KustomizePattern{}
+func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*common.KustomizePattern {
+	patterns := []*common.KustomizePattern{}
 	for _, kustPattern := range self.Spec.KustomizePatterns {
 		if kustPattern.MatchWith(reqFields) {
 			patterns = append(patterns, kustPattern)
@@ -116,8 +115,8 @@ func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*pro
 	return patterns
 }
 
-func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*profile.AttrsPattern {
-	patterns := []*profile.AttrsPattern{}
+func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
+	patterns := []*common.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.ProtectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
@@ -126,8 +125,8 @@ func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*
 	return patterns
 }
 
-func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) []*profile.AttrsPattern {
-	patterns := []*profile.AttrsPattern{}
+func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) []*common.AttrsPattern {
+	patterns := []*common.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.UnprotectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
@@ -136,8 +135,8 @@ func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) [
 	return patterns
 }
 
-func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*profile.AttrsPattern {
-	patterns := []*profile.AttrsPattern{}
+func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*common.AttrsPattern {
+	patterns := []*common.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.IgnoreAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
@@ -146,7 +145,7 @@ func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*p
 	return patterns
 }
 
-func (self *ResourceSigningProfile) UpdateStatus(request *profile.Request, errMsg string) *ResourceSigningProfile {
+func (self *ResourceSigningProfile) UpdateStatus(request *common.Request, errMsg string) *ResourceSigningProfile {
 	reqId := -1
 	var detail ProfileStatusDetail
 	for i, d := range self.Status.Details {
@@ -159,7 +158,7 @@ func (self *ResourceSigningProfile) UpdateStatus(request *profile.Request, errMs
 		detail = ProfileStatusDetail{
 			Request: request,
 			Count:   1,
-			History: []profile.Result{
+			History: []common.Result{
 				{
 					Message:   errMsg,
 					Timestamp: time.Now().UTC().Format(layout),
@@ -169,7 +168,7 @@ func (self *ResourceSigningProfile) UpdateStatus(request *profile.Request, errMs
 		self.Status.Details = append(self.Status.Details, detail)
 	} else if reqId < len(self.Status.Details) {
 		detail.Count = detail.Count + 1
-		newResult := profile.Result{
+		newResult := common.Result{
 			Message:   errMsg,
 			Timestamp: time.Now().UTC().Format(layout),
 		}

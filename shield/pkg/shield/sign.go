@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package sign
+package shield
 
 import (
 	"encoding/json"
@@ -22,9 +22,7 @@ import (
 
 	vrsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	policy "github.com/IBM/integrity-enforcer/shield/pkg/common/policy"
-	profile "github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
@@ -70,11 +68,11 @@ type SignatureEvaluator interface {
 
 type ConcreteSignatureEvaluator struct {
 	config  *config.ShieldConfig
-	policy  *policy.SignPolicy
+	policy  *common.SignPolicy
 	plugins map[string]bool
 }
 
-func NewSignatureEvaluator(config *config.ShieldConfig, policy *policy.SignPolicy, plugins map[string]bool) (SignatureEvaluator, error) {
+func NewSignatureEvaluator(config *config.ShieldConfig, policy *common.SignPolicy, plugins map[string]bool) (SignatureEvaluator, error) {
 	return &ConcreteSignatureEvaluator{
 		config:  config,
 		policy:  policy,
@@ -266,7 +264,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	}
 }
 
-func findAttrsPattern(reqc *common.ReqContext, attrs []*profile.AttrsPattern) []string {
+func findAttrsPattern(reqc *common.ReqContext, attrs []*common.AttrsPattern) []string {
 	reqFields := reqc.Map()
 	masks := []string{}
 	for _, attr := range attrs {
