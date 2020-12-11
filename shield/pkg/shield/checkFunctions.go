@@ -23,10 +23,8 @@ import (
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	handlerutil "github.com/IBM/integrity-enforcer/shield/pkg/shield/handlerutil"
-	sign "github.com/IBM/integrity-enforcer/shield/pkg/shield/sign"
 )
 
 // check if request is inScope or not
@@ -75,7 +73,7 @@ func inScopeCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *Ru
 }
 
 func formatCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if ok, msg := handlerutil.ValidateResource(reqc, config.Namespace); !ok {
+	if ok, msg := ValidateResource(reqc, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
@@ -220,7 +218,7 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 	var mutResult *common.MutationEvalResult
 	var err error
 	if reqc.IsUpdateRequest() {
-		mutResult, err = handlerutil.NewMutationChecker().Eval(reqc, singleProfile)
+		mutResult, err = NewMutationChecker().Eval(reqc, singleProfile)
 		if err != nil {
 			return false, common.REASON_ERROR, err.Error(), nil, mutResult
 		}
@@ -231,7 +229,7 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 
 	signPolicy := spolRes.Spec.SignPolicy
 	plugins := config.GetEnabledPlugins()
-	evaluator, err := sign.NewSignatureEvaluator(config, signPolicy, plugins)
+	evaluator, err := NewSignatureEvaluator(config, signPolicy, plugins)
 	if err != nil {
 		return false, common.REASON_ERROR, err.Error(), nil, mutResult
 	}

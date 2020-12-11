@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package sign
+package shield
 
 import (
 	"bytes"
@@ -26,8 +26,7 @@ import (
 
 	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	profile "github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
 	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
@@ -234,7 +233,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*profile.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignatureType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignatureType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -458,12 +457,12 @@ func decompress(str string) string {
 		return str
 	}
 	output := bytes.Buffer{}
-	output.ReadFrom(reader)
+	_, _ = output.ReadFrom(reader)
 	s := string(output.Bytes())
 	return s
 }
 
-func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*profile.KustomizePattern) []*mapnode.DiffPattern {
+func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
 	ref := reqc.ResourceRef()
 	name := reqc.Name
 	kustomizedName := name

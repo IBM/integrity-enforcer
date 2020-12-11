@@ -26,8 +26,7 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	policy "github.com/IBM/integrity-enforcer/shield/pkg/common/policy"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	iec "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -85,7 +84,7 @@ type IntegrityShieldSpec struct {
 
 	ShieldConfigCrName      string             `json:"shieldConfigCrName,omitempty"`
 	ShieldConfig            *iec.ShieldConfig  `json:"shieldConfig,omitempty"`
-	SignPolicy              *policy.SignPolicy `json:"signPolicy,omitempty"`
+	SignPolicy              *common.SignPolicy `json:"signPolicy,omitempty"`
 	ResourceSigningProfiles []*ProfileConfig   `json:"resourceSigningProfiles,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`

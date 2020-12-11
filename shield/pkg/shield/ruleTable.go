@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-package loader
+package shield
 
 import (
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	v1 "k8s.io/api/core/v1"
 )
 

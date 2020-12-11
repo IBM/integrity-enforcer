@@ -24,9 +24,8 @@ import (
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	loader "github.com/IBM/integrity-enforcer/shield/pkg/shield/loader"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 )
 
@@ -74,7 +73,7 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 	self.logContext()
 
 	// create Event & update RSP status
-	self.Report(dr.denyRSP)
+	_ = self.Report(dr.denyRSP)
 
 	// clear some cache if needed
 	self.finalize(resp)
@@ -172,7 +171,7 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 	// init ReqContext
 	self.reqc = common.NewReqContext(req)
 
-	runDataLoader := loader.NewLoader(self.config, reqNamespace)
+	runDataLoader := NewLoader(self.config, reqNamespace)
 	self.data.loader = runDataLoader
 	self.data.Init(self.reqc, self.config.Namespace)
 

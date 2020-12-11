@@ -19,7 +19,7 @@ package shield
 import (
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 )
 
 /**********************************************

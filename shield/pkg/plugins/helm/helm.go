@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	hrmclient "github.com/IBM/integrity-enforcer/shield/pkg/client/helmreleasemetadata/clientset/versioned/typed/helmreleasemetadata/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
 	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"

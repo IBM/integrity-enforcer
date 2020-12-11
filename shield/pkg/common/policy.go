@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-package policy
+package common
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
 	"github.com/jinzhu/copier"
 )
 
@@ -99,8 +98,8 @@ func (self *SignPolicy) GetCandidatePubkeys(keyPathList []string, namespace stri
 			}
 		} else {
 			if spc.Scope != ScopeCluster {
-				included = common.MatchWithPatternArray(namespace, spc.Namespaces)
-				excluded = common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+				included = MatchWithPatternArray(namespace, spc.Namespaces)
+				excluded = MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
 			}
 		}
 		if !included || excluded {
@@ -126,7 +125,7 @@ func (self *SignPolicy) GetCandidatePubkeys(keyPathList []string, namespace stri
 	return candidateKeys
 }
 
-func (self *SignPolicy) Match(namespace string, signer *common.SignerInfo) (bool, *SignPolicyCondition) {
+func (self *SignPolicy) Match(namespace string, signer *SignerInfo) (bool, *SignPolicyCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
 		var included, excluded bool
@@ -137,8 +136,8 @@ func (self *SignPolicy) Match(namespace string, signer *common.SignerInfo) (bool
 			}
 		} else {
 			if spc.Scope != ScopeCluster {
-				included = common.MatchWithPatternArray(namespace, spc.Namespaces)
-				excluded = common.MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
+				included = MatchWithPatternArray(namespace, spc.Namespaces)
+				excluded = MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
 			}
 		}
 		signerMatched := false
@@ -202,16 +201,16 @@ type SubjectCondition struct {
 	Subject SubjectMatchPattern `json:"subject"`
 }
 
-func (self *SubjectCondition) Match(signer *common.SignerInfo) bool {
-	return common.MatchPattern(self.Subject.Email, signer.Email) &&
-		common.MatchPattern(self.Subject.Uid, signer.Uid) &&
-		common.MatchPattern(self.Subject.Country, signer.Country) &&
-		common.MatchPattern(self.Subject.Organization, signer.Organization) &&
-		common.MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
-		common.MatchPattern(self.Subject.Locality, signer.Locality) &&
-		common.MatchPattern(self.Subject.Province, signer.Province) &&
-		common.MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
-		common.MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
-		common.MatchPattern(self.Subject.CommonName, signer.CommonName) &&
-		common.MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
+func (self *SubjectCondition) Match(signer *SignerInfo) bool {
+	return MatchPattern(self.Subject.Email, signer.Email) &&
+		MatchPattern(self.Subject.Uid, signer.Uid) &&
+		MatchPattern(self.Subject.Country, signer.Country) &&
+		MatchPattern(self.Subject.Organization, signer.Organization) &&
+		MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
+		MatchPattern(self.Subject.Locality, signer.Locality) &&
+		MatchPattern(self.Subject.Province, signer.Province) &&
+		MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
+		MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
+		MatchPattern(self.Subject.CommonName, signer.CommonName) &&
+		MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
 }

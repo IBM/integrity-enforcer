@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common/common"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	"k8s.io/api/admission/v1beta1"

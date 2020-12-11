@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package loader
+package shield
 
 import (
 	"context"
@@ -23,8 +23,7 @@ import (
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	profile "github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
@@ -156,7 +155,7 @@ func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *co
 		return err
 	}
 
-	req := profile.NewRequestFromReqContext(reqc)
+	req := common.NewRequestFromReqContext(reqc)
 	rspNew := rspOrg.UpdateStatus(req, errMsg)
 
 	_, err = self.Client.ResourceSigningProfiles(rspNamespace).Update(context.Background(), rspNew, metav1.UpdateOptions{})

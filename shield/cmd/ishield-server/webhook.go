@@ -23,7 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	handler "github.com/IBM/integrity-enforcer/shield/pkg/shield/handler"
+	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
@@ -66,7 +66,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 		logger.InitServerLogger(config.ShieldConfig.LoggerConfig())
 	}
 
-	reqHandler := handler.NewHandler(config.ShieldConfig)
+	reqHandler := shield.NewHandler(config.ShieldConfig)
 	admissionRequest := admissionReviewReq.Request
 
 	//process request
@@ -158,7 +158,7 @@ func (server *WebhookServer) Run() {
 
 	serverObj := &http.Server{
 		Addr:      ":8443",
-		TLSConfig: &tls.Config{Certificates: []tls.Certificate{pair}},
+		TLSConfig: &tls.Config{Certificates: []tls.Certificate{pair}, MinVersion: tls.VersionTLS12},
 		Handler:   server.mux,
 	}
 

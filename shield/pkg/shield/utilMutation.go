@@ -14,14 +14,13 @@
 // limitations under the License.
 //
 
-package handlerutil
+package shield
 
 import (
 	"strings"
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
-	profile "github.com/IBM/integrity-enforcer/shield/pkg/common/profile"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
 )
 
@@ -184,7 +183,7 @@ func MutationMessage(resourceName string, diffResult []mapnode.Difference) (msg 
 	return msg
 }
 
-func GetMAResult(ma4kInput *Ma4kInput, rules []*profile.AttrsPattern) (*MAResult, error) {
+func GetMAResult(ma4kInput *Ma4kInput, rules []*common.AttrsPattern) (*MAResult, error) {
 	mr := &MAResult{}
 	oldObject, _ := mapnode.NewFromMap(ma4kInput.Before)
 	newObject, _ := mapnode.NewFromMap(ma4kInput.After)
@@ -231,7 +230,7 @@ func GetMAResult(ma4kInput *Ma4kInput, rules []*profile.AttrsPattern) (*MAResult
 	return mr, nil
 }
 
-func generateMaskKeys(rules []*profile.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
+func generateMaskKeys(rules []*common.AttrsPattern, namespace, name, kind, username string, usergroups []string) []string {
 	reqFields := map[string]string{}
 	reqFields["Namespace"] = namespace
 	reqFields["Name"] = name
