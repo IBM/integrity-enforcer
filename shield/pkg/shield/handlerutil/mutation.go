@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package shield
+package handlerutil
 
 import (
 	"strings"

@@ -25,6 +25,7 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	handlerutil "github.com/IBM/integrity-enforcer/shield/pkg/shield/handlerutil"
 	sign "github.com/IBM/integrity-enforcer/shield/pkg/shield/sign"
 )
 
@@ -74,7 +75,7 @@ func inScopeCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *Ru
 }
 
 func formatCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if ok, msg := ValidateResource(reqc, config.Namespace); !ok {
+	if ok, msg := handlerutil.ValidateResource(reqc, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
@@ -219,7 +220,7 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 	var mutResult *common.MutationEvalResult
 	var err error
 	if reqc.IsUpdateRequest() {
-		mutResult, err = NewMutationChecker().Eval(reqc, singleProfile)
+		mutResult, err = handlerutil.NewMutationChecker().Eval(reqc, singleProfile)
 		if err != nil {
 			return false, common.REASON_ERROR, err.Error(), nil, mutResult
 		}
