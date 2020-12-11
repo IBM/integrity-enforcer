@@ -53,13 +53,13 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		return nil, nil, nil, err
 	}
 	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
+	_ = pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
 
 	caKeyPEM := new(bytes.Buffer)
-	pem.Encode(caKeyPEM, &pem.Block{
+	_ = pem.Encode(caKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caKey),
 	})
@@ -71,7 +71,7 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 	}
 
 	tlsPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(tlsPrivKeyPEM, &pem.Block{
+	_ = pem.Encode(tlsPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(tlsKey),
 	})
@@ -94,7 +94,7 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		return nil, nil, nil, err
 	}
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	_ = pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
