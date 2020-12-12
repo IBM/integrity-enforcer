@@ -27,13 +27,12 @@ import (
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsigclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesignature/clientset/versioned/typed/resourcesignature/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/rest"
 )
 
 // ResourceSignature
@@ -51,7 +50,7 @@ type ResSigLoader struct {
 
 func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader {
 	interval := time.Second * 0
-	config, _ := rest.InClusterConfig()
+	config, _ := kubeutil.GetKubeConfig()
 	client, _ := rsigclient.NewForConfig(config)
 
 	return &ResSigLoader{

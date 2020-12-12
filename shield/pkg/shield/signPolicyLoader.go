@@ -25,10 +25,9 @@ import (
 	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
 	spolclient "github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/rest"
 )
 
 // SignPolicy
@@ -43,7 +42,7 @@ type SignPolicyLoader struct {
 
 func NewSignPolicyLoader(shieldNamespace string) *SignPolicyLoader {
 	interval := time.Second * 10
-	config, _ := rest.InClusterConfig()
+	config, _ := kubeutil.GetKubeConfig()
 	client, _ := spolclient.NewForConfig(config)
 
 	return &SignPolicyLoader{
@@ -87,7 +86,9 @@ func (self *SignPolicyLoader) Load(doK8sApiCall bool) {
 
 	data := &spolapi.SignPolicy{}
 	if list1 != nil && len(list1.Items) > 0 {
-		data = &(list1.Items[0])
+		item := list1.Items[0]
+		data.ObjectMeta = item.ObjectMeta
+		data.Spec = item.Spec
 	}
 	self.Data = data
 	return
