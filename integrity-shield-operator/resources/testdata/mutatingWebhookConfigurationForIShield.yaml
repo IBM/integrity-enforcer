@@ -1,0 +1,35 @@
+metadata:
+  creationTimestamp: null
+  name: ishield-webhook-config
+webhooks:
+- clientConfig:
+    service:
+      name: ishield-server
+      namespace: ""
+      path: /mutate
+  name: ac-server..svc
+  rules:
+  - apiGroups:
+    - '*'
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - DELETE
+    - UPDATE
+    resources:
+    - '*'
+    scope: Namespaced
+  - apiGroups:
+    - '*'
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - DELETE
+    - UPDATE
+    resources:
+    - '*'
+    scope: Cluster
+  sideEffects: None
+  timeoutSeconds: 10

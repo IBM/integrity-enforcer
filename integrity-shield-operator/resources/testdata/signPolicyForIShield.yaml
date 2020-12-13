@@ -1,0 +1,19 @@
+metadata:
+  creationTimestamp: null
+  name: sign-policy
+spec:
+  policy:
+    policies:
+    - namespaces:
+      - '*'
+      signers:
+      - SampleSigner
+    - scope: Cluster
+      signers:
+      - SampleSigner
+    signers:
+    - name: SampleSigner
+      secret: keyring-secret
+      subjects:
+      - email: sample_signer@signer.com
+status: {}

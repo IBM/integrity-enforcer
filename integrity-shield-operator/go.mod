@@ -10,7 +10,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.2.1
 	github.com/go-logr/zapr v0.2.0 // indirect
-	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
+	github.com/google/go-cmp v0.5.2
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/openshift/api v3.9.0+incompatible

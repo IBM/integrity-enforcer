@@ -306,6 +306,11 @@ func (self *IntegrityShield) GetWebhookConfigName() string {
 }
 
 func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {
+
+	if scheme == nil {
+		return []*common.ResourceRef{}, []*common.ResourceRef{}
+	}
+
 	opPodName := os.Getenv("POD_NAME")
 	opPodNamespace := os.Getenv("POD_NAMESPACE")
 	tmpParts := strings.Split(opPodName, "-")
