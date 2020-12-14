@@ -34,20 +34,62 @@ func TestProfile(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	ruleBytes := []byte(`{"match":[{"scope":"Namespaced","kind":"ConfigMap"}]}`)
 	var rule *Rule
+	ruleBytes := []byte(`{"match":[{"kind":"ConfigMap","name":"sample-cm"}]}`)
 	err = json.Unmarshal(ruleBytes, &rule)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	reqFields := reqc.Map()
-	_ = rule.MatchWithRequest(reqFields)
+	ok1 := rule.MatchWithRequest(reqFields)
 	ruleStr := rule.String()
 
-	// TODO: check match result
-	t.Log(reqFields)
-	t.Log(ruleStr)
-	//t.Log("TestProfile() passed")
+	// t.Log(reqFields)
+	// t.Log(ruleStr)
+	if !ok1 {
+		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, reqc.ResourceRef())
+		return
+	}
 
+	reqFields["ResourceScope"] = "Cluster"
+	reqFields["Kind"] = "ClusterRole"
+	reqFields["Name"] = "sample-clusterrole"
+	reqFields["Namespace"] = ""
+	reqFields["ApiGroup"] = "rbac.authorization.k8s.io"
+	reqFields["ApiVersion"] = "v1"
+
+	ruleBytes = []byte(`{"match":[{"kind":"ClusterRole"}]}`)
+	err = json.Unmarshal(ruleBytes, &rule)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	ok2 := rule.MatchWithRequest(reqFields)
+	ruleStr = rule.String()
+
+	// t.Log(reqFields)
+	// t.Log(ruleStr)
+	if ok2 {
+		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, reqc.ResourceRef())
+		return
+	}
+
+	sampleClusterRoleName := RulePattern("sample-clusterrole")
+	rule.Match[0].Name = &sampleClusterRoleName
+	ok3 := rule.MatchWithRequest(reqFields)
+	ruleStr = rule.String()
+	if !ok3 {
+		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, reqc.ResourceRef())
+		return
+	}
+
+	request1 := NewRequestFromReqContext(reqc)
+	request2 := NewRequestFromReqContext(reqc)
+	request1Str := request1.String()
+	request2Str := request2.String()
+	if !request1.Equal(request2) {
+		t.Errorf("Request does not match; Request1: %s, Request2: %s", request1Str, request2Str)
+		return
+	}
 }
