@@ -19,6 +19,7 @@ package pgp
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/crypto/openpgp"
@@ -166,7 +167,8 @@ func EntityListToSlice(keyring openpgp.EntityList) []*openpgp.Entity {
 func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
 	entities := []*openpgp.Entity{}
 	for _, keyPath := range keyPathList {
-		if keyRingReader, err := os.Open(keyPath); err != nil {
+		kpath := filepath.Clean(keyPath)
+		if keyRingReader, err := os.Open(kpath); err != nil {
 			continue
 		} else {
 			tmpList, err := openpgp.ReadKeyRing(keyRingReader)

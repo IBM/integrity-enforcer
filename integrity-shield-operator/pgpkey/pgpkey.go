@@ -128,13 +128,13 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 func GetKeyringValue(path string) (*Keyring, error) {
 
 	rawPubFilePath := filepath.Join(path, filepath.Clean(defaultPublicKeyringName))
-	rawPub, err := ioutil.ReadFile(rawPubFilePath) //NOSONAR
+	rawPub, err := ioutil.ReadFile(rawPubFilePath) // NOSONAR
 	if err != nil {
 		return nil, fmt.Errorf("Error in getting value of public keyring; %s", err.Error())
 	}
 
 	rawSecFilePath := filepath.Join(path, filepath.Clean(defaultPrivateKeyringName))
-	rawSec, err := ioutil.ReadFile(rawSecFilePath) //NOSONAR
+	rawSec, err := ioutil.ReadFile(rawSecFilePath) // NOSONAR
 	if err != nil {
 		return nil, fmt.Errorf("Error in getting value private keyring; %s", err.Error())
 	}
