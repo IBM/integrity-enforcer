@@ -87,7 +87,7 @@ func newLogger(conf LoggerConfig) *log.Logger {
 	logger.SetLevel(logLevel)
 
 	if conf.FileDest != "" {
-		file, err := os.OpenFile(conf.FileDest, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(conf.FileDest, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640) //NOSONAR
 		if err == nil {
 			logger.Out = file
 		} else {

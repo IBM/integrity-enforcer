@@ -17,10 +17,10 @@
 package pgpkey
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/crypto/openpgp"
 )
@@ -51,7 +51,7 @@ func CreateEntities(signers []string) ([]*openpgp.Entity, error) {
 }
 
 func getFirstIdentity(idts map[string]*openpgp.Identity) *openpgp.Identity {
-	for k, _ := range idts {
+	for k := range idts {
 		return idts[k]
 	}
 	return nil
@@ -85,27 +85,31 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 
 	entList, err := CreateEntities(allSigners)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error in creating entities for public keyring; %s", err.Error()))
+		return fmt.Errorf("Error in creating entities for public keyring; %s", err.Error())
 	}
 
 	secfile, err := os.Create(path + defaultPrivateKeyringName)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error in creating private keyring file; %s", err.Error()))
+		return fmt.Errorf("Error in creating private keyring file; %s", err.Error())
 	}
-	defer secfile.Close()
+	defer func() {
+		_ = secfile.Close()
+	}()
 
 	for _, ent := range entList {
 		err := ent.SerializePrivate(secfile, nil)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error in serializing entities for private keyring; %s", err.Error()))
+			return fmt.Errorf("Error in serializing entities for private keyring; %s", err.Error())
 		}
 	}
 
 	pubfile, err := os.Create(path + defaultPublicKeyringName)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error in creating public keyring file; %s", err.Error()))
+		return fmt.Errorf("Error in creating public keyring file; %s", err.Error())
 	}
-	defer pubfile.Close()
+	defer func() {
+		_ = pubfile.Close()
+	}()
 
 	for _, ent := range entList {
 		idt := getFirstIdentity(ent.Identities)
@@ -114,7 +118,7 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 		}
 		err := ent.Serialize(pubfile)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Error in serializing entities for public keyring; %s", err.Error()))
+			return fmt.Errorf("Error in serializing entities for public keyring; %s", err.Error())
 		}
 	}
 
@@ -122,14 +126,17 @@ func CreateKeyringFile(path string, signers []string, invalidSigners []string) e
 }
 
 func GetKeyringValue(path string) (*Keyring, error) {
-	rawPub, err := ioutil.ReadFile(path + defaultPublicKeyringName)
+
+	rawPubFilePath := filepath.Join(path, filepath.Clean(defaultPublicKeyringName))
+	rawPub, err := ioutil.ReadFile(rawPubFilePath)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error in getting value of public keyring; %s", err.Error()))
+		return nil, fmt.Errorf("Error in getting value of public keyring; %s", err.Error())
 	}
 
-	rawSec, err := ioutil.ReadFile(path + defaultPrivateKeyringName)
+	rawSecFilePath := filepath.Join(path, filepath.Clean(defaultPrivateKeyringName))
+	rawSec, err := ioutil.ReadFile(rawSecFilePath)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error in getting value private keyring; %s", err.Error()))
+		return nil, fmt.Errorf("Error in getting value private keyring; %s", err.Error())
 	}
 
 	keyring := &Keyring{

@@ -53,16 +53,22 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		return nil, nil, nil, err
 	}
 	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
+	err = pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	caKeyPEM := new(bytes.Buffer)
-	pem.Encode(caKeyPEM, &pem.Block{
+	err = pem.Encode(caKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caKey),
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	// create tls private key
 	tlsKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -71,10 +77,13 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 	}
 
 	tlsPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(tlsPrivKeyPEM, &pem.Block{
+	err = pem.Encode(tlsPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(tlsKey),
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	cn = svcName + "." + NS + ".svc"
 
 	cert := &x509.Certificate{
@@ -94,10 +103,13 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 		return nil, nil, nil, err
 	}
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	err = pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	//ca.crt, tls.key, tls.crt, error
 	return caPEM.Bytes(), tlsPrivKeyPEM.Bytes(), certPEM.Bytes(), err
