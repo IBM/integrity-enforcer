@@ -252,5 +252,11 @@ var _ = Describe("Test integrity shield", func() {
 	It("Webhook Test", func() {
 		doReconcileTest(r.createOrUpdateWebhook, 10)
 	})
+	It("Util Func isDeploymentAvailable() Test", func() {
+		_ = r.isDeploymentAvailable(iShieldCR)
+	})
+	It("Util Func deleteWebhook() Test", func() {
+		_, _ = r.deleteWebhook(iShieldCR)
+	})
 
 })

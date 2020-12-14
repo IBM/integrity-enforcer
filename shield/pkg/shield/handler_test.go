@@ -100,6 +100,17 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	return reqc, testConfig, data, ctx, dr0, prof, dr
 }
 
+func getChangedRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
+	var newReq *v1beta1.AdmissionRequest
+	reqBytes, _ := json.Marshal(req)
+	_ = json.Unmarshal(reqBytes, &newReq)
+	var cm *v1.ConfigMap
+	_ = json.Unmarshal(newReq.Object.Raw, &cm)
+	cm.Data["key3"] = "val3"
+	newReq.Object.Raw, _ = json.Marshal(cm)
+	return newReq
+}
+
 func TestHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -202,7 +213,7 @@ var _ = AfterSuite(func() {
 })
 
 var _ = Describe("Test integrity shield", func() {
-	It("Handler Run Test", func() {
+	It("Handler Run Test (allow, no-mutation)", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			testHandler := NewHandler(testConfig)
@@ -212,6 +223,22 @@ var _ = Describe("Test integrity shield", func() {
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "no mutation") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (deny, signature-not-identical)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			testHandler := NewHandler(testConfig)
+			changedReq := getChangedRequest(req)
+			resp := testHandler.Run(changedReq)
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[DEBUG] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "not identical") {
 				return fmt.Errorf("Run() returns wrong AdmissionResponse")
 			}
 			return nil

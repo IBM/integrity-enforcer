@@ -135,14 +135,6 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	}
 
 	//Secret
-	// create registry secret if name and value are found in CR
-	if instance.Spec.RegKeySecret.Name != "" && instance.Spec.RegKeySecret.Value != nil {
-		recResult, recErr = r.createOrUpdateRegKeySecret(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
-	}
-
 	recResult, recErr = r.createOrUpdateTlsSecret(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
