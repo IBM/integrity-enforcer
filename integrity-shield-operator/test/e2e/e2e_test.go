@@ -71,7 +71,7 @@ var _ = Describe("Test integrity shield", func() {
 	})
 
 	Describe("Test ishield resources", func() {
-		It("Iv resources should be created properly", func() {
+		It("IShield resources should be created properly", func() {
 			framework := initFrameWork()
 			vc_name := "ishield-config"
 			vc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
@@ -91,7 +91,7 @@ var _ = Describe("Test integrity shield", func() {
 		})
 		It("Deleting ishield resources should be blocked", func() {
 			if skip_default_user_test {
-				Skip("This test should be done by default user")
+				Skip("This test should be executed by default user")
 			}
 			time.Sleep(time.Second * 15)
 			framework := initFrameWork()
@@ -123,7 +123,7 @@ var _ = Describe("Test integrity shield", func() {
 			err = ChangeKubeContextToKubeAdmin()
 			Expect(err).To(BeNil())
 		})
-		It("IShield Resources are changed when IShield CR is updated", func() {
+		It("Updating CR by iShieldAdmin should be allowed and iShield Resources should be changed", func() {
 			if !local_test {
 				Skip("This test is executed only in the local env.")
 			}
@@ -148,14 +148,34 @@ var _ = Describe("Test integrity shield", func() {
 				return nil
 			}, timeout, 1).Should(BeNil())
 		})
+		It("Updating ShieldConfig should be blocked", func() {
+			framework := initFrameWork()
+			var timeout int = 120
+			expected := "ishield-config"
+			cmd_err := Kubectl("apply", "-f", iShield_config_updated, "-n", ishield_namespace)
+			Expect(cmd_err).NotTo(BeNil())
+			Eventually(func() error {
+				return CheckBlockEvent(framework, "block-ishield-resource-operation", ishield_namespace, expected)
+			}, timeout, 1).Should(BeNil())
+		})
 	})
 
 	Describe("Test integrity shield server", func() {
+		It("Invalid format rsp can not be created", func() {
+			framework := initFrameWork()
+			var timeout int = 120
+			expected := "test-rsp-invalid-format"
+			cmd_err := Kubectl("apply", "-f", test_rsp_invalid, "-n", test_namespace)
+			Expect(cmd_err).NotTo(BeNil())
+			Eventually(func() error {
+				return CheckBlockEvent(framework, "validation-fail", test_namespace, expected)
+			}, timeout, 1).Should(BeNil())
+		})
 		Context("RSP in test ns is effective", func() {
 			It("Resources should be unmonitored if rsp does not exist.", func() {
 				framework := initFrameWork()
 				var timeout int = 120
-				expected := "unmonitored-configmap"
+				expected := "test-configmap-unmonitored"
 				server_name := "integrity-shield-server"
 				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
@@ -189,15 +209,48 @@ var _ = Describe("Test integrity shield", func() {
 					return nil
 				}, timeout, 1).Should(BeNil())
 			})
+			It("Request is allowed if filtered by IgnoredKind", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				cm_name := "test-configmap-deny-event"
+				expected := "ishield-deny-create-configmap-test-configmap-deny-event"
+				server_name := "integrity-shield-server"
+				cmd_err := Kubectl("create", "cm", cm_name, "-n", test_namespace)
+				Expect(cmd_err).NotTo(BeNil())
+				server := GetPodName(framework, ishield_namespace, server_name)
+				Eventually(func() error {
+					cmdstr := "kubectl logs " + server + " -c server -n " + ishield_namespace + " | grep " + expected
+					out, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+					if cmd_err != nil {
+						return cmd_err
+					}
+					if len(string(out)) != 0 {
+						return nil
+					}
+					return fmt.Errorf("Fail to check unmonitored resource")
+				}, timeout, 1).Should(BeNil())
+				Eventually(func() error {
+					return GetEvent(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
 			It("Unsigned resouce should be blocked", func() {
 				framework := initFrameWork()
-				time.Sleep(time.Second * 30)
 				var timeout int = 120
 				expected := "test-configmap"
 				cmd_err := Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
 				Expect(cmd_err).NotTo(BeNil())
 				Eventually(func() error {
-					return CheckEventNoSignature(framework, test_namespace, expected)
+					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Signed resource which do not match SignPolicy should be blocked", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap-signer2"
+				cmd_err := Kubectl("apply", "-f", test_configmap_signer2, "-n", test_namespace)
+				Expect(cmd_err).NotTo(BeNil())
+				Eventually(func() error {
+					return CheckBlockEvent(framework, "no-signer-policy", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Signed resouce should be allowed (ResourceSignature) ", func() {
@@ -215,11 +268,21 @@ var _ = Describe("Test integrity shield", func() {
 			It("Signed resouce should be allowed (Annotation) ", func() {
 				framework := initFrameWork()
 				var timeout int = 120
-				expected := "test-configmap2"
-				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
+				expected := "test-configmap-annotation"
+				cmd_err := Kubectl("apply", "-f", test_configmap_annotation, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
 					return CheckConfigMap(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Changing protected rerouce should be blocked", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap"
+				cmd_err := Kubectl("apply", "-f", test_configmap_updated, "-n", test_namespace)
+				Expect(cmd_err).NotTo(BeNil())
+				Eventually(func() error {
+					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Changing whitelisted part should be allowed", func() {
@@ -229,7 +292,7 @@ var _ = Describe("Test integrity shield", func() {
 				server_name := "integrity-shield-server"
 				server := GetPodName(framework, ishield_namespace, server_name)
 				// apply cm
-				cmd_err := Kubectl("apply", "-f", test_configmap_updated, "-n", test_namespace)
+				cmd_err := Kubectl("apply", "-f", test_configmap_ignoreAtters, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
 					// check forwarder log
@@ -244,17 +307,33 @@ var _ = Describe("Test integrity shield", func() {
 					return nil
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Request is allowed if filtered by IgnoredKind", func() {
-			})
-			It("Request is allowed if filtered by IgnoredSA", func() {
-			})
-			It("Request is allowed if error occured", func() {
+			It("Deleting a resource should be allowed even if protected", func() {
+				var timeout int = 120
+				expected := "test-configmap-annotation"
+				cmd_err := Kubectl("delete", "-f", test_configmap_annotation, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					cmd_err = Kubectl("get", "cm", expected, "-n", test_namespace)
+					return cmd_err
+				}, timeout, 1).ShouldNot(BeNil())
 			})
 			It("Unsigned resource can be created if filtered by exclude rule", func() {
 				framework := initFrameWork()
 				var timeout int = 120
-				expected := "test-configmap3"
+				expected := "test-configmap-excluded"
 				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					return CheckConfigMap(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Newly added rule in RSP is effective", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				cmd_err := Kubectl("apply", "-f", test_rsp_update, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				expected := "test-configmap-unprotected"
+				cmd_err = Kubectl("create", "cm", expected, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
 					return CheckConfigMap(framework, test_namespace, expected)
@@ -274,14 +353,14 @@ var _ = Describe("Test integrity shield", func() {
 					return err
 				}, timeout, 1).ShouldNot(BeNil())
 			})
-			It("Unsigned resouce should not be blocked", func() {
+			It("Unsigned resouce should not be blocked after rsp is removed", func() {
 				if !local_test {
 					Skip("This test is executed only in the local env.")
 				}
 				framework := initFrameWork()
 				var timeout int = 120
 				time.Sleep(time.Second * 30)
-				expected := "test-configmap4"
+				expected := "test-configmap-unmonitored2"
 				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
@@ -306,6 +385,7 @@ var _ = Describe("Test integrity shield", func() {
 				Expect(cmd_err).NotTo(BeNil())
 			})
 			It("RSP should be created properly", func() {
+				time.Sleep(time.Second * 30)
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-rsp"
@@ -332,18 +412,29 @@ var _ = Describe("Test integrity shield", func() {
 				cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
 				Expect(cmd_err).NotTo(BeNil())
 				Eventually(func() error {
-					return CheckEventNoSignature(framework, test_namespace, expected)
+					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Signed resource should be allowed in new namespace", func() {
 				framework := initFrameWork()
 				var timeout int = 120
-				expected := "test-configmap2"
+				expected := "test-configmap-annotation"
 				By("Creating test configmap in ns: " + test_namespace)
-				cmd_err := Kubectl("apply", "-f", test_configmap2, "-n", test_namespace)
+				cmd_err := Kubectl("apply", "-f", test_configmap_annotation, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
 					return CheckConfigMap(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Resources in unmonitored ns can be created without signature", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap"
+				By("Creating test configmap in ns: " + test_unprotected_namespace)
+				cmd_err := Kubectl("apply", "-f", test_configmap, "-n", test_unprotected_namespace)
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					return CheckConfigMap(framework, test_unprotected_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 		})
