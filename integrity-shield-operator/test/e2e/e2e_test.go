@@ -243,16 +243,16 @@ var _ = Describe("Test integrity shield", func() {
 					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Signed resource which do not match SignPolicy should be blocked", func() {
-				framework := initFrameWork()
-				var timeout int = 120
-				expected := "test-configmap-signer2"
-				cmd_err := Kubectl("apply", "-f", test_configmap_signer2, "-n", test_namespace)
-				Expect(cmd_err).NotTo(BeNil())
-				Eventually(func() error {
-					return CheckBlockEvent(framework, "no-signer-policy", test_namespace, expected)
-				}, timeout, 1).Should(BeNil())
-			})
+			// It("Signed resource which do not match SignPolicy should be blocked", func() {
+			// 	framework := initFrameWork()
+			// 	var timeout int = 120
+			// 	expected := "test-configmap-signer2"
+			// 	cmd_err := Kubectl("apply", "-f", test_configmap_signer2, "-n", test_namespace)
+			// 	Expect(cmd_err).NotTo(BeNil())
+			// 	Eventually(func() error {
+			// 		return CheckBlockEvent(framework, "no-signer-policy", test_namespace, expected)
+			// 	}, timeout, 1).Should(BeNil())
+			// })
 			It("Signed resouce should be allowed (ResourceSignature) ", func() {
 				framework := initFrameWork()
 				var timeout int = 120

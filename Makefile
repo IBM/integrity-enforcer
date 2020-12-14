@@ -192,16 +192,23 @@ copyright-check:
 test-prereq:
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh && fetch_envtest_tools ${ENVTEST_ASSETS_DIR} && setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
-test-unit: test-prereq test-init test-verify
+test-unit: test-prereq test-init test-verify test-init-op test-verify-op
 
 test-init:
 	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ ) > $(TMP_DIR)results.txt
+
+test-init-op:
+	cd $(SHIELD_OP_DIR) &&  go test -v  $(shell cd $(SHIELD_OP_DIR) && go list ./... | grep -v /test ) > $(TMP_DIR)results_op.txt
 
 test-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results.txt | grep "FAIL:"))
 	cat $(TMP_DIR)results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
+test-verify-op:
+	$(eval FAILURES=$(shell cat $(TMP_DIR)results_op.txt | grep "FAIL:"))
+	cat $(TMP_DIR)results_op.txt
+	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 ############################################################
 # e2e test section
@@ -455,7 +462,7 @@ sonar-go-test-op:
 	fi
 	@echo "-> Starting sonar-go-test"
 	@echo "--> Starting go test"
-	cd $(SHIELD_OP_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
+	cd $(SHIELD_OP_DIR) && go test -coverprofile=coverage.out -json  $(shell cd $(SHIELD_OP_DIR) && go list ./... | grep -v /test/) | tee report.json | grep -v '"Action":"output"'
 	@echo "--> Running gosec"
 	gosec -fmt sonarqube -out gosec.json -no-fail ./...
 	@echo "---> gosec gosec.json"
