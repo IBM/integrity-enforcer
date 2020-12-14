@@ -17,8 +17,6 @@
 package pgp
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -134,36 +132,36 @@ func EntityListToSlice(keyring openpgp.EntityList) []*openpgp.Entity {
 	return entSlice
 }
 
-func DetachSign(keyPathList []string, msg string, signer string) (string, string, error) {
-	if msg == "" {
-		return "", "Message to be signed is empty", nil
-	}
-	sig := ""
-	msgReader := strings.NewReader(msg)
-	sigWriter := bytes.NewBufferString(sig)
+// func DetachSign(keyPathList []string, msg string, signer string) (string, string, error) {
+// 	if msg == "" {
+// 		return "", "Message to be signed is empty", nil
+// 	}
+// 	sig := ""
+// 	msgReader := strings.NewReader(msg)
+// 	sigWriter := bytes.NewBufferString(sig)
 
-	keyRing, err := LoadKeyRing(keyPathList)
-	if err != nil {
-		return "", "Error when loading key ring", err
-	}
-	var signerKey *openpgp.Entity
-	if signer == "" {
-		signerKey = keyRing[0]
-	} else {
-		signerKey = FindSignerKey(keyRing, signer)
-	}
-	if signerKey == nil {
-		reasonFail := fmt.Sprintf("No signer match with the specified signer expression: %s", signer)
-		return "", reasonFail, errors.New(reasonFail)
-	}
+// 	keyRing, err := LoadKeyRing(keyPathList)
+// 	if err != nil {
+// 		return "", "Error when loading key ring", err
+// 	}
+// 	var signerKey *openpgp.Entity
+// 	if signer == "" {
+// 		signerKey = keyRing[0]
+// 	} else {
+// 		signerKey = FindSignerKey(keyRing, signer)
+// 	}
+// 	if signerKey == nil {
+// 		reasonFail := fmt.Sprintf("No signer match with the specified signer expression: %s", signer)
+// 		return "", reasonFail, errors.New(reasonFail)
+// 	}
 
-	err = openpgp.ArmoredDetachSignText(sigWriter, signerKey, msgReader, nil)
-	if err != nil {
-		return "", "Error when signing", err
-	}
+// 	err = openpgp.ArmoredDetachSignText(sigWriter, signerKey, msgReader, nil)
+// 	if err != nil {
+// 		return "", "Error when signing", err
+// 	}
 
-	return sigWriter.String(), "", nil
-}
+// 	return sigWriter.String(), "", nil
+// }
 
 func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
 	entities := []*openpgp.Entity{}
