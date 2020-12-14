@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+SHELL=/bin/bash
+
 # LOAD ENVIRNOMENT SETTINGS (must be done at first)
 ###########################
 ifeq ($(ISHIELD_REPO_ROOT),)
@@ -187,7 +189,10 @@ copyright-check:
 # unit test section
 ############################################################
 
-test-unit: test-init test-verify
+test-prereq:
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh && fetch_envtest_tools ${ENVTEST_ASSETS_DIR} && setup_envtest_env ${ENVTEST_ASSETS_DIR}
+
+test-unit: test-prereq test-init test-verify
 
 test-init:
 	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > $(TMP_DIR)results.txt

@@ -24,49 +24,7 @@ import (
 
 //sign policy crd
 func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-
-	subjectMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"email": {
-				Type: "string",
-			},
-			"uid": {
-				Type: "string",
-			},
-		},
-	}
-
-	requestMatchCondition := &extv1.JSONSchemaProps{
-		Type: "object",
-		Properties: map[string]extv1.JSONSchemaProps{
-			"apiVersion": {
-				Type: "string",
-			},
-			"kind": {
-				Type: "string",
-			},
-			"name": {
-				Type: "string",
-			},
-			"namespace": {
-				Type: "string",
-			},
-			"operation": {
-				Type: "string",
-			},
-			"type": {
-				Type: "string",
-			},
-			"usergroup": {
-				Type: "string",
-			},
-			"username": {
-				Type: "string",
-			},
-		},
-	}
-
+	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -88,57 +46,8 @@ func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDe
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type: "object",
-					Properties: map[string]extv1.JSONSchemaProps{
-						"apiVersion": {
-							Type: "string",
-						},
-						"kind": {
-							Type: "string",
-						},
-						"metadata": {
-							Type: "object",
-						},
-						"spec": {
-							Type: "object",
-							Properties: map[string]extv1.JSONSchemaProps{
-								"signer": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"subject": *subjectMatchCondition,
-												"request": *requestMatchCondition,
-											},
-										},
-									},
-								},
-								"allowUnverified": {
-									Type: "array",
-									Items: &extv1.JSONSchemaPropsOrArray{
-										Schema: &extv1.JSONSchemaProps{
-											Type: "object",
-											Properties: map[string]extv1.JSONSchemaProps{
-												"namespace": {
-													Type: "string",
-												},
-											},
-										},
-									},
-								},
-								"policyType": {
-									Type: "string",
-								},
-								"description": {
-									Type: "string",
-								},
-							},
-						},
-						"status": {
-							Type: "object",
-						},
-					},
+					Type:                   "object",
+					XPreserveUnknownFields: &xPreserve,
 				},
 			},
 			Version: "v1alpha1",
