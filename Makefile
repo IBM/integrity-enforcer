@@ -376,8 +376,6 @@ setup-tmp-cr:
 	@echo setup signer policy
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	# yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[3].namespaces[0] $(TEST_NS)
-	# yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[3].signers[0] $(TEST_SIGNERS2)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)

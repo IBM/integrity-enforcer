@@ -235,7 +235,6 @@ var _ = Describe("Test integrity shield", func() {
 			})
 			It("Unsigned resouce should be blocked", func() {
 				framework := initFrameWork()
-				// time.Sleep(time.Second * 30)
 				var timeout int = 120
 				expected := "test-configmap"
 				cmd_err := Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
