@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	apisv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
+	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	rs "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
@@ -155,67 +156,101 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
+func doReconcileTest(fn func(*apiv1alpha1.IntegrityShield) (ctrl.Result, error), timeout int) {
+	// Reconcile - Create
+	Eventually(func() error {
+		result, err := fn(iShieldCR)
+		if err != nil {
+			r.Log.Info(err.Error())
+			return err
+		}
+		resultBytes, _ := json.Marshal(result)
+		if !result.Requeue {
+			r.Log.Info(fmt.Sprintf("Result: %s", string(resultBytes)))
+			return fmt.Errorf("Reconcile Result: %s", string(resultBytes))
+		}
+		return nil
+	}, timeout, 1).Should(BeNil())
+	// Reconcile - AlreadyExists
+	Eventually(func() error {
+		result, err := fn(iShieldCR)
+		if err != nil {
+			r.Log.Info(err.Error())
+			return err
+		}
+		resultBytes, _ := json.Marshal(result)
+		if result.Requeue {
+			r.Log.Info(fmt.Sprintf("Result: %s", string(resultBytes)))
+			return fmt.Errorf("Reconcile Result: %s", string(resultBytes))
+		}
+		return nil
+	}, timeout, 1).Should(BeNil())
+
+}
+
 var _ = Describe("Test integrity shield", func() {
-	It("ShieldConfig Test", func() {
-		var timeout int = 10
-		// Reconcile - Create
-		Eventually(func() error {
-			result, err := r.createOrUpdateShieldConfigCRD(iShieldCR)
-			if err != nil {
-				r.Log.Info(err.Error())
-				return err
-			}
-			resultBytes, _ := json.Marshal(result)
-			if !result.Requeue {
-				r.Log.Info(fmt.Sprintf("Result: %s", string(resultBytes)))
-				return fmt.Errorf("Reconcile Result: %s", string(resultBytes))
-			}
-			return nil
-		}, timeout, 1).Should(BeNil())
-		// Reconcile - AlreadyExists
-		Eventually(func() error {
-			result, err := r.createOrUpdateShieldConfigCRD(iShieldCR)
-			if err != nil {
-				r.Log.Info(err.Error())
-				return err
-			}
-			resultBytes, _ := json.Marshal(result)
-			if result.Requeue {
-				r.Log.Info(fmt.Sprintf("Result: %s", string(resultBytes)))
-				return fmt.Errorf("Reconcile Result: %s", string(resultBytes))
-			}
-			return nil
-		}, timeout, 1).Should(BeNil())
+	It("ShieldConfigCRD Test", func() {
+		doReconcileTest(r.createOrUpdateShieldConfigCRD, 10)
 	})
-	It("SignPolicy Test", func() {
-		var timeout int = 10
-		// Reconcile - Create
-		Eventually(func() error {
-			result, err := r.createOrUpdateSignPolicyCRD(iShieldCR)
-			if err != nil {
-				r.Log.Info(err.Error())
-				return err
-			}
-			resultBytes, _ := json.Marshal(result)
-			if !result.Requeue {
-				r.Log.Info(fmt.Sprintf("Result: %s", string(resultBytes)))
-				return fmt.Errorf("Reconcile Result: %s", string(resultBytes))
-			}
-			return nil
-		}, timeout, 1).Should(BeNil())
-		// Reconcile - AlreadyExists
-		Eventually(func() error {
-			result, err := r.createOrUpdateSignPolicyCRD(iShieldCR)
-			if err != nil {
-				r.Log.Info(err.Error())
-				return err
-			}
-			resultBytes, _ := json.Marshal(result)
-			if result.Requeue {
-				r.Log.Info(fmt.Sprintf("Result: %s", string(resultBytes)))
-				return fmt.Errorf("Reconcile Result: %s", string(resultBytes))
-			}
-			return nil
-		}, timeout, 1).Should(BeNil())
+	It("SignPolicyCRD Test", func() {
+		doReconcileTest(r.createOrUpdateSignPolicyCRD, 10)
 	})
+	It("ResourceSignatureCRD Test", func() {
+		doReconcileTest(r.createOrUpdateResourceSignatureCRD, 10)
+	})
+	It("HelmReleaseMetadataCRD Test", func() {
+		doReconcileTest(r.createOrUpdateHelmReleaseMetadataCRD, 10)
+	})
+	It("ResourceSigningProfileCRD Test", func() {
+		doReconcileTest(r.createOrUpdateResourceSigningProfileCRD, 10)
+	})
+	// It("ShieldConfigCR Test", func() {
+	// 	doReconcileTest(r.createOrUpdateShieldConfigCR, 10)
+	// })
+	It("SignPolicyCR Test", func() {
+		doReconcileTest(r.createOrUpdateSignPolicyCR, 10)
+	})
+	It("ServiceAccount Test", func() {
+		doReconcileTest(r.createOrUpdateServiceAccount, 10)
+	})
+	It("ClusterRoleBindingForIShieldAdmin Test", func() {
+		doReconcileTest(r.createOrUpdateClusterRoleBindingForIShieldAdmin, 10)
+	})
+	It("RoleBindingForIShieldAdmin Test", func() {
+		doReconcileTest(r.createOrUpdateRoleBindingForIShieldAdmin, 10)
+	})
+	It("RoleForIShieldAdmin Test", func() {
+		doReconcileTest(r.createOrUpdateRoleForIShieldAdmin, 10)
+	})
+	It("ClusterRoleForIShieldAdmin Test", func() {
+		doReconcileTest(r.createOrUpdateClusterRoleForIShieldAdmin, 10)
+	})
+	It("ClusterRoleBindingForIShield Test", func() {
+		doReconcileTest(r.createOrUpdateClusterRoleBindingForIShield, 10)
+	})
+	It("RoleBindingForIShield Test", func() {
+		doReconcileTest(r.createOrUpdateRoleBindingForIShield, 10)
+	})
+	It("RoleForIShield Test", func() {
+		doReconcileTest(r.createOrUpdateRoleForIShield, 10)
+	})
+	It("ClusterRoleForIShield Test", func() {
+		doReconcileTest(r.createOrUpdateClusterRoleForIShield, 10)
+	})
+	It("PodSecurityPolicy Test", func() {
+		doReconcileTest(r.createOrUpdatePodSecurityPolicy, 10)
+	})
+	It("TlsSecret Test", func() {
+		doReconcileTest(r.createOrUpdateTlsSecret, 10)
+	})
+	It("WebhookDeployment Test", func() {
+		doReconcileTest(r.createOrUpdateWebhookDeployment, 10)
+	})
+	It("WebhookService Test", func() {
+		doReconcileTest(r.createOrUpdateWebhookService, 10)
+	})
+	It("Webhook Test", func() {
+		doReconcileTest(r.createOrUpdateWebhook, 10)
+	})
+
 })

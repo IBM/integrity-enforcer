@@ -35,7 +35,8 @@ import (
 var log = logf.Log.WithName("controller_integrityshield")
 
 // shield config cr
-func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtime.Scheme) *ec.ShieldConfig {
+func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtime.Scheme, defaultRspYamlPath string) *ec.ShieldConfig {
+
 	ecc := &ec.ShieldConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.GetShieldConfigCRName(),
@@ -75,7 +76,8 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	}
 	if ecc.Spec.ShieldConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile
-		deafultRspBytes, _ := ioutil.ReadFile(apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+
+		deafultRspBytes, _ := ioutil.ReadFile(defaultRspYamlPath)
 
 		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
 
@@ -97,7 +99,7 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 }
 
 //sign shield policy cr
-func BuildSignEnforcePolicyForIShield(cr *apiv1alpha1.IntegrityShield) *iespol.SignPolicy {
+func BuildSignPolicyForIShield(cr *apiv1alpha1.IntegrityShield) *iespol.SignPolicy {
 	var signPolicy *common.SignPolicy
 
 	if cr.Spec.SignPolicy != nil {

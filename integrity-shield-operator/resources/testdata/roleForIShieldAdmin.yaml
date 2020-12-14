@@ -1,0 +1,23 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    app: integrity-shield-server
+    app.kubernetes.io/managed-by: operator
+    app.kubernetes.io/name: integrity-shield-server
+    role: security
+  name: ishield-admin-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - integrityshields
+  - shieldconfigs
+  - signpolicies
+  verbs:
+  - update
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
