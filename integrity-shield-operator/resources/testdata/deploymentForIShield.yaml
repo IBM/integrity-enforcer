@@ -28,7 +28,7 @@ spec:
           value: "0"
         - name: SHIELD_POLICY_RELOAD_SEC
           value: "10"
-        image: localhost:5000/integrity-shield-server:0.1.0
+        image: quay.io/open-cluster-management/integrity-shield-server:0.1.0
         imagePullPolicy: Always
         name: server
         ports:
@@ -86,7 +86,7 @@ spec:
           value: ac-log
         - name: EVENTS_FILE_PATH
           value: /ishield-app/public/events.txt
-        image: localhost:5000/integrity-shield-logging:0.1.0
+        image: quay.io/open-cluster-management/integrity-shield-logging:0.1.0
         imagePullPolicy: Always
         name: forwarder
         resources:
