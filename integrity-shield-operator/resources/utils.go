@@ -89,7 +89,7 @@ func MergeDefaultIntegrityShieldCR(cr *apiv1alpha1.IntegrityShield, srcYamlPath 
 	}
 
 	fpath := filepath.Clean(srcYamlPath)
-	deafultCRBytes, _ := ioutil.ReadFile(fpath)
+	deafultCRBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
 	defaultCRJsonBytes, err := yaml.YAMLToJSON(deafultCRBytes)
 	if err != nil {
 		fmt.Println("failed to convert yaml2json; " + err.Error())

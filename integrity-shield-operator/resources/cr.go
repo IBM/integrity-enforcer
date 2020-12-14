@@ -79,7 +79,7 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 		var defaultrsp *rsp.ResourceSigningProfile
 
 		fpath := filepath.Clean(defaultRspYamlPath)
-		deafultRspBytes, _ := ioutil.ReadFile(fpath)
+		deafultRspBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
 
 		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
 

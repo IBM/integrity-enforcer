@@ -148,11 +148,11 @@ func getCommonRSPPath() string {
 	}
 
 	// in case of test
-	pwd, err := os.Getwd()
+	currentDir, err := os.Getwd()
 	if err != nil {
-		pwd = "./"
+		currentDir = "./"
 	}
-	testCommonProfilePath := filepath.Join(pwd, "../", apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+	testCommonProfilePath := filepath.Join(currentDir, "../", apiv1alpha1.DefaultResourceSigningProfileYamlPath)
 	_, err = os.Stat(testCommonProfilePath)
 	if err == nil {
 		return testCommonProfilePath
