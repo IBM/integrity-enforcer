@@ -47,49 +47,6 @@ import (
 
 /**********************************************
 
-				Namespace
-
-***********************************************/
-
-func (r *IntegrityShieldReconciler) attachLabelToNamespace(instance *apiv1alpha1.IntegrityShield, expected *v1.Namespace) (ctrl.Result, error) {
-	ctx := context.Background()
-
-	found := &v1.Namespace{}
-
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name,
-		"Namespace.Name", expected.Name)
-
-	// If CRD does not exist, create it and requeue
-	err := r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: ""}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info(fmt.Sprintf("Skip reconcile: namespace \"%s\" does not exist, skip to attach IShield label to this namespace.", expected.Name))
-		return ctrl.Result{}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
-	} else {
-		if !reflect.DeepEqual(expected.ObjectMeta.Labels, found.ObjectMeta.Labels) {
-			labels := expected.ObjectMeta.Labels
-			expected.ObjectMeta = found.ObjectMeta
-			expected.ObjectMeta.Labels = labels
-			err = r.Update(ctx, expected)
-			if err != nil {
-				reqLogger.Error(err, "Failed to update the resource")
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return ctrl.Result{}, nil
-
-}
-
-/**********************************************
-
 				CRD
 
 ***********************************************/
@@ -184,7 +141,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateResourceSigningProfileCRD(
 func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	expected := res.BuildShieldConfigForIShield(instance, r.Scheme)
+	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, apiv1alpha1.DefaultResourceSigningProfileYamlPath)
 	found := &ec.ShieldConfig{}
 
 	reqLogger := r.Log.WithValues(
@@ -237,7 +194,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1
 func (r *IntegrityShieldReconciler) createOrUpdateSignPolicyCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &spol.SignPolicy{}
-	expected := res.BuildSignEnforcePolicyForIShield(instance)
+	expected := res.BuildSignPolicyForIShield(instance)
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
@@ -677,50 +634,6 @@ func (r *IntegrityShieldReconciler) isKeyRingReady(instance *apiv1alpha1.Integri
 	return ok, nonReadyKey
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret) (ctrl.Result, error) {
-	ctx := context.Background()
-	found := &corev1.Secret{}
-
-	reqLogger := r.Log.WithValues(
-		"Secret.Namespace", instance.Namespace,
-		"Instance.Name", instance.Name,
-		"Secret.Name", expected.Name)
-
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return ctrl.Result{}, err
-	}
-
-	// If CRD does not exist, create it and requeue
-	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-
-		reqLogger.Info("Creating a new resource")
-		err = r.Create(ctx, expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return ctrl.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return ctrl.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return ctrl.Result{}, nil
-
-}
-
 func (r *IntegrityShieldReconciler) createOrUpdateCertSecret(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
@@ -790,12 +703,6 @@ func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secre
 	return expected
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateRegKeySecret(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildRegKeySecretForCR(instance)
-	return r.createOrUpdateSecret(instance, expected)
-}
-
 func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildTlsSecretForIShield(instance)
@@ -808,46 +715,46 @@ func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
 
 ***********************************************/
 
-func (r *IntegrityShieldReconciler) createOrUpdateConfigMap(instance *apiv1alpha1.IntegrityShield, expected *v1.ConfigMap) (ctrl.Result, error) {
-	ctx := context.Background()
-	found := &corev1.ConfigMap{}
+// func (r *IntegrityShieldReconciler) createOrUpdateConfigMap(instance *apiv1alpha1.IntegrityShield, expected *v1.ConfigMap) (ctrl.Result, error) {
+// 	ctx := context.Background()
+// 	found := &corev1.ConfigMap{}
 
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name,
-		"ConfigMap.Name", expected.Name)
+// 	reqLogger := r.Log.WithValues(
+// 		"Instance.Name", instance.Name,
+// 		"ConfigMap.Name", expected.Name)
 
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return ctrl.Result{}, err
-	}
+// 	// Set CR instance as the owner and controller
+// 	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
+// 	if err != nil {
+// 		reqLogger.Error(err, "Failed to define expected resource")
+// 		return ctrl.Result{}, err
+// 	}
 
-	// If ConfigMap does not exist, create it and requeue
-	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
+// 	// If ConfigMap does not exist, create it and requeue
+// 	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
 
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.Create(ctx, expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return ctrl.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return ctrl.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
-	}
+// 	if err != nil && errors.IsNotFound(err) {
+// 		reqLogger.Info("Creating a new resource")
+// 		err = r.Create(ctx, expected)
+// 		if err != nil && errors.IsAlreadyExists(err) {
+// 			// Already exists from previous reconcile, requeue.
+// 			reqLogger.Info("Skip reconcile: resource already exists")
+// 			return ctrl.Result{Requeue: true}, nil
+// 		} else if err != nil {
+// 			reqLogger.Error(err, "Failed to create new resource")
+// 			return ctrl.Result{}, err
+// 		}
+// 		// Created successfully - return and requeue
+// 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+// 	} else if err != nil {
+// 		return ctrl.Result{}, err
+// 	}
 
-	// No extra validation
+// 	// No extra validation
 
-	// No reconcile was necessary
-	return ctrl.Result{}, nil
-}
+// 	// No reconcile was necessary
+// 	return ctrl.Result{}, nil
+// }
 
 /**********************************************
 
@@ -910,7 +817,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateDeployment(instance *apiv1alph
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateWebhookDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildDeploymentForCR(instance)
+	expected := res.BuildDeploymentForIShield(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
@@ -963,7 +870,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateService(instance *apiv1alpha1.
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildServiceForCR(instance)
+	expected := res.BuildServiceForIShield(instance)
 	return r.createOrUpdateService(instance, expected)
 }
 

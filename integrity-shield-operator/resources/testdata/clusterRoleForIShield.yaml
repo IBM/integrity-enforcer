@@ -1,0 +1,42 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    app: integrity-shield-server
+    app.kubernetes.io/managed-by: operator
+    app.kubernetes.io/name: integrity-shield-server
+    role: security
+  name: ishield-cluster-role
+rules:
+- apiGroups:
+  - extensions
+  - ""
+  - apis.integrityshield.io
+  resources:
+  - secrets
+  - namespaces
+  - resourcesignatures
+  - shieldconfigs
+  - signpolicies
+  - signpolicies
+  - resourcesigningprofiles
+  - resourcesignatures
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - update
+  - get
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - get

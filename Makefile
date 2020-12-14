@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+SHELL=/bin/bash
+
 # LOAD ENVIRNOMENT SETTINGS (must be done at first)
 ###########################
 ifeq ($(ISHIELD_REPO_ROOT),)
@@ -66,8 +68,6 @@ GIT_HOST ?= github.com/IBM
 
 PWD := $(shell pwd)
 BASE_DIR := $(shell basename $(PWD))
-SHIELD_BASE_DIR=$(TRAVIS_BUILD_DIR)/shield
-SHIELD_OP_BASE_DIR=$(TRAVIS_BUILD_DIR)/integrity-shield-operator
 
 # Keep an existing GOPATH, make a private one if it is undefined
 GOPATH_DEFAULT := $(PWD)/.go
@@ -189,10 +189,13 @@ copyright-check:
 # unit test section
 ############################################################
 
-test-unit: test-init test-verify
+test-prereq:
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh && fetch_envtest_tools ${ENVTEST_ASSETS_DIR} && setup_envtest_env ${ENVTEST_ASSETS_DIR}
+
+test-unit: test-prereq test-init test-verify
 
 test-init:
-	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ | grep -v /pkg/util/kubeutil | grep -v /pkg/util/sign/pgp) > $(TMP_DIR)results.txt
+	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ ) > $(TMP_DIR)results.txt
 
 test-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results.txt | grep "FAIL:"))
@@ -208,10 +211,8 @@ test-verify:
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
 .PHONY: install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
 .PHONY: create-ns create-key-ring tag-images-to-local
+.PHONY: test-gpg-annotation
 
-
-#.PHONY: kind-bootstrap-cluster-dev
-#kind-bootstrap-cluster-dev: kind-create-cluster install-crds install-operator
 
 .EXPORT_ALL_VARIABLES:
 TEST_SIGNERS=TestSigner
@@ -301,7 +302,9 @@ e2e-test:
 	@echo run test
 	$(ISHIELD_REPO_ROOT)/build/check_test_results.sh
 
-
+test-gpg-annotation:
+	@echo
+	$(ISHIELD_REPO_ROOT)/build/unit-test-gpg-annotation.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(ISHIELD_REPO_ROOT)/build
 ############################################################
 # setup ishield
 ############################################################
@@ -436,7 +439,7 @@ sonar-go-test-ishield:
 	fi
 	@echo "-> Starting sonar-go-test"
 	@echo "--> Starting go test"
-	cd $(SHIELD_DIR) && go test -coverprofile=$(SHIELD_BASE_DIR)/coverage.out -json ./... | tee $(SHIELD_BASE_DIR)/report.json | grep -v '"Action":"output"'
+	cd $(SHIELD_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
 	@echo "--> Running gosec"
 	gosec -fmt sonarqube -out gosec.json -no-fail ./...
 	@echo "---> gosec gosec.json"
@@ -452,7 +455,7 @@ sonar-go-test-op:
 	fi
 	@echo "-> Starting sonar-go-test"
 	@echo "--> Starting go test"
-	cd $(SHIELD_OP_DIR) && go test -coverprofile=$(SHIELD_OP_BASE_DIR)/coverage.out -json ./... | tee $(SHIELD_OP_BASE_DIR)/report.json | grep -v '"Action":"output"'
+	cd $(SHIELD_OP_DIR) && go test -coverprofile=coverage.out -json ./... | tee report.json | grep -v '"Action":"output"'
 	@echo "--> Running gosec"
 	gosec -fmt sonarqube -out gosec.json -no-fail ./...
 	@echo "---> gosec gosec.json"

@@ -17,13 +17,13 @@
 package v1alpha1
 
 import (
-	policy "github.com/IBM/integrity-enforcer/shield/pkg/common/policy"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SignPolicySpec defines the desired state of SignPolicy
 type SignPolicySpec struct {
-	SignPolicy *policy.SignPolicy `json:"policy,omitempty"`
+	SignPolicy *common.SignPolicy `json:"policy,omitempty"`
 }
 
 // SignPolicyStatus defines the observed state of SignPolicy

@@ -23,7 +23,7 @@ import (
 )
 
 //regkey.yaml
-func BuildRegKeySecretForCR(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+func BuildRegKeySecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.GetRegKeySecretName(),

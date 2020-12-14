@@ -29,7 +29,7 @@ import (
 )
 
 //deployment
-func BuildDeploymentForCR(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
 
 	var volumemounts []v1.VolumeMount
@@ -301,15 +301,9 @@ func EqualContainers(expected v1.Container, found v1.Container) bool {
 }
 
 func EqualLabels(found map[string]string, expected map[string]string) bool {
-	if !reflect.DeepEqual(found, expected) {
-		return false
-	}
-	return true
+	return reflect.DeepEqual(found, expected)
 }
 
 func EqualAnnotations(found map[string]string, expected map[string]string) bool {
-	if !reflect.DeepEqual(found, expected) {
-		return false
-	}
-	return true
+	return reflect.DeepEqual(found, expected)
 }

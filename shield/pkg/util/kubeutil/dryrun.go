@@ -23,29 +23,21 @@ import (
 	// "context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 
 	"github.com/ghodss/yaml"
-	"github.com/jonboulle/clockwork"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
-	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/cli-runtime/pkg/resource"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	oapi "k8s.io/kube-openapi/pkg/util/proto"
-	"k8s.io/kubectl/pkg/cmd/apply"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/scheme"
 	"k8s.io/kubectl/pkg/util"
+	"k8s.io/kubectl/pkg/util/openapi"
 )
 
 var (
@@ -91,62 +83,6 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 		return nil, fmt.Errorf("Error in converting ojb to yaml; %s", err.Error())
 	}
 	return simObjBytes, nil
-}
-
-func strategicMergePatch(objBytes []byte, namespace string) ([]byte, []byte, error) {
-	config, err := GetKubeConfig()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in getting K8s config; %s", err.Error())
-	}
-	dyClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in createging DynamicClient; %s", err.Error())
-	}
-
-	obj := &unstructured.Unstructured{}
-	objJsonBytes, err := yaml.YAMLToJSON(objBytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in converting YamlToJson; %s", err.Error())
-	}
-	err = obj.UnmarshalJSON(objJsonBytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in Unmarshal into unstructured obj; %s", err.Error())
-	}
-	gvk := obj.GroupVersionKind()
-	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-	gvClient := dyClient.Resource(gvr)
-	claimedNamespace := obj.GetNamespace()
-	claimedName := obj.GetName()
-	if namespace != "" && claimedNamespace != "" && namespace != claimedNamespace {
-		return nil, nil, fmt.Errorf("namespace is not identical, requested: %s, defined in yaml: %s", namespace, claimedNamespace)
-	}
-	if namespace == "" && claimedNamespace != "" {
-		namespace = claimedNamespace
-	}
-
-	var currentObj *unstructured.Unstructured
-	if namespace == "" {
-		currentObj, err = gvClient.Get(context.Background(), claimedName, metav1.GetOptions{})
-	} else {
-		currentObj, err = gvClient.Namespace(namespace).Get(context.Background(), claimedName, metav1.GetOptions{})
-	}
-	if err != nil && !errors.IsNotFound(err) {
-		return nil, nil, fmt.Errorf("Error in getting current obj; %s", err.Error())
-	}
-	currentObjBytes, err := json.Marshal(currentObj)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in converting current obj to json; %s", err.Error())
-	}
-	creator := scheme.Scheme
-	mocObj, err := creator.New(gvk)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in getting moc obj; %s", err.Error())
-	}
-	patchedBytes, err := strategicpatch.StrategicMergePatch(currentObjBytes, objJsonBytes, mocObj)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Error in getting patched obj bytes; %s", err.Error())
-	}
-	return patchedBytes, currentObjBytes, nil
 }
 
 func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte, error) {
@@ -206,12 +142,28 @@ func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte,
 }
 
 func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, error) {
-	obj := &unstructured.Unstructured{}
-	objFileName := "/tmp/obj.yaml"
-	err := ioutil.WriteFile(objFileName, objBytes, 0644)
+	config, err := GetKubeConfig()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in creating objFile; %s", err.Error())
+		return nil, nil, fmt.Errorf("Error in getting K8s config; %s", err.Error())
 	}
+	dyClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error in createging DynamicClient; %s", err.Error())
+	}
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error in createging DiscoveryClient; %s", err.Error())
+	}
+	openAPISchemaDoc, err := discoveryClient.OpenAPISchema()
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to get OpenAPISchema Document; %s", err.Error())
+	}
+	openAPISchema, err := openapi.NewOpenAPIData(openAPISchemaDoc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to get OpenAPISchema; %s", err.Error())
+	}
+
+	obj := &unstructured.Unstructured{}
 	objJsonBytes, err := yaml.YAMLToJSON(objBytes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in converting YamlToJson; %s", err.Error())
@@ -220,173 +172,80 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in Unmarshal into unstructured obj; %s", err.Error())
 	}
-
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
-	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
-
-	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
-	validator, err := f.Validator(false)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to create Validator; %s", err)
+	gvk := obj.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	gvClient := dyClient.Resource(gvr)
+	claimedNamespace := obj.GetNamespace()
+	claimedName := obj.GetName()
+	if namespace != "" && claimedNamespace != "" && namespace != claimedNamespace {
+		return nil, nil, fmt.Errorf("namespace is not identical, requested: %s, defined in yaml: %s", namespace, claimedNamespace)
 	}
-	dynamicClient, err := f.DynamicClient()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to create dynamicClient; %s", err)
-	}
-	openApiSchema, err := f.OpenAPISchema()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to create OpenAPISchema; %s", err)
-	}
-	filenameOptions := resource.FilenameOptions{
-		Filenames: []string{objFileName},
-	}
-	builder := f.NewBuilder()
-	r := builder.
-		Unstructured().
-		Schema(validator).
-		ContinueOnError().
-		NamespaceParam(namespace).DefaultNamespace().
-		FilenameParam(true, &filenameOptions).
-		LabelSelectorParam("").
-		Flatten().
-		Do()
-	infos, err := r.Infos()
-	if err != nil {
-		return nil, nil, err
-	}
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to get resource Infos; %s", err)
-	}
-	if len(infos) == 0 {
-		return nil, nil, fmt.Errorf("No resource.Info is found")
+	if namespace == "" && claimedNamespace != "" {
+		namespace = claimedNamespace
 	}
 
-	info := infos[0]
-
-	// helper := resource.NewHelper(info.Client, info.Mapping).DryRun(true)
-	modified, err := util.GetModifiedConfiguration(info.Object, true, unstructured.UnstructuredJSONScheme)
-	if err != nil {
-		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("retrieving modified configuration from:\n%s\nfor:", info.String()), info.Source, err)
+	var currentObj *unstructured.Unstructured
+	if namespace == "" {
+		currentObj, err = gvClient.Get(context.Background(), claimedName, metav1.GetOptions{})
+	} else {
+		currentObj, err = gvClient.Namespace(namespace).Get(context.Background(), claimedName, metav1.GetOptions{})
 	}
-
-	if err := info.Get(); err != nil {
-		if errors.IsNotFound(err) {
-			// creating a new resource by apply command.
-			// pass
-		} else {
-			return nil, nil, fmt.Errorf("Failed to get object from server; %s", err)
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, nil, fmt.Errorf("Error in getting current obj; %s", err.Error())
+	}
+	currentObjBytes, err := json.Marshal(currentObj)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error in converting current obj to json; %s", err.Error())
+	}
+	sourceFileName := "/tmp/obj.yaml"
+	var originalObjBytes []byte
+	if currentObj != nil {
+		originalObjBytes, err = util.GetOriginalConfiguration(currentObj)
+		if err != nil {
+			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("retrieving original configuration from:\n%v\nfor:", obj), sourceFileName, err)
 		}
 	}
-
-	errout := bytes.NewBufferString("")
-
-	metadata, _ := meta.Accessor(info.Object)
-	annotationMap := metadata.GetAnnotations()
-	if _, ok := annotationMap[corev1.LastAppliedConfigAnnotation]; !ok {
-		fmt.Fprintf(errout, warningNoLastAppliedConfigAnnotation, "kubectl")
-	}
-
-	maxPatchRetry := 5
-	patcher := &apply.Patcher{
-		Mapping:       info.Mapping,
-		Helper:        resource.NewHelper(info.Client, info.Mapping),
-		DynamicClient: dynamicClient,
-		Overwrite:     true,
-		BackOff:       clockwork.NewRealClock(),
-		Force:         true,
-		Cascade:       true,
-		Timeout:       0,
-		GracePeriod:   0,
-		OpenapiSchema: openApiSchema,
-		Retries:       maxPatchRetry,
-		ServerDryRun:  true,
-	}
-
-	//patchBytes, patchedObject, err := patcher.Patch(info.Object, modified, info.Source, namespace, info.Name, errout)
-	patchBytes, patchedObject, err := patchSimple(patcher, info.Object, modified, info.Source, namespace, info.Name, errout)
+	modifiedBytes, err := util.GetModifiedConfiguration(obj, true, unstructured.UnstructuredJSONScheme)
 	if err != nil {
-		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("applying patch:\n%s\nto:\n%v\nfor:", patchBytes, info), info.Source, err)
-	}
-	info.Refresh(patchedObject, true)
-	patched, _ := json.Marshal(patchedObject)
-	//fmt.Println("debug 2: ", string(patched))
-
-	return patchBytes, patched, nil
-}
-
-func patchSimple(p *apply.Patcher, obj runtime.Object, modified []byte, source, namespace, name string, errOut io.Writer) ([]byte, runtime.Object, error) {
-	current, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
-	if err != nil {
-		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("serializing current configuration from:\n%v\nfor:", obj), source, err)
-	}
-
-	original, err := util.GetOriginalConfiguration(obj)
-	if err != nil {
-		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("retrieving original configuration from:\n%v\nfor:", obj), source, err)
+		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("retrieving modified configuration from:\n%s\nfor:", claimedName), sourceFileName, err)
 	}
 
 	var patch []byte
 	var lookupPatchMeta strategicpatch.LookupPatchMeta
 	var schema oapi.Schema
+	overwrite := true
+	errout := bytes.NewBufferString("")
 	createPatchErrFormat := "creating patch with:\noriginal:\n%s\nmodified:\n%s\ncurrent:\n%s\nfor:"
+	versionedObject, err := scheme.Scheme.New(obj.GroupVersionKind())
 
-	versionedObject, err := scheme.Scheme.New(p.Mapping.GroupVersionKind)
-	switch {
-	case runtime.IsNotRegisteredError(err):
-		preconditions := []mergepatch.PreconditionFunc{mergepatch.RequireKeyUnchanged("apiVersion"),
-			mergepatch.RequireKeyUnchanged("kind"), mergepatch.RequireMetadataKeyUnchanged("name")}
-		patch, err = jsonmergepatch.CreateThreeWayJSONMergePatch(original, modified, current, preconditions...)
-		if err != nil {
-			if mergepatch.IsPreconditionFailed(err) {
-				return nil, nil, fmt.Errorf("%s", "At least one of apiVersion, kind and name was changed")
-			}
-			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, original, modified, current), source, err)
-		}
-	case err != nil:
-		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("getting instance of versioned object for %v:", p.Mapping.GroupVersionKind), source, err)
-	case err == nil:
-		if p.OpenapiSchema != nil {
-			if schema = p.OpenapiSchema.LookupResource(p.Mapping.GroupVersionKind); schema != nil {
-				lookupPatchMeta = strategicpatch.PatchMetaFromOpenAPI{Schema: schema}
-				if openapiPatch, err := strategicpatch.CreateThreeWayMergePatch(original, modified, current, lookupPatchMeta, p.Overwrite); err != nil {
-					fmt.Fprintf(errOut, "warning: error calculating patch from openapi spec: %v\n", err)
-				} else {
-					patch = openapiPatch
-				}
-			}
-		}
-
-		if patch == nil {
-			lookupPatchMeta, err = strategicpatch.NewPatchMetaFromStruct(versionedObject)
-			if err != nil {
-				return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, original, modified, current), source, err)
-			}
-			patch, err = strategicpatch.CreateThreeWayMergePatch(original, modified, current, lookupPatchMeta, p.Overwrite)
-			if err != nil {
-				return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, original, modified, current), source, err)
+	if openAPISchema != nil {
+		if schema = openAPISchema.LookupResource(obj.GroupVersionKind()); schema != nil {
+			lookupPatchMeta = strategicpatch.PatchMetaFromOpenAPI{Schema: schema}
+			if openapiPatch, err := strategicpatch.CreateThreeWayMergePatch(originalObjBytes, modifiedBytes, currentObjBytes, lookupPatchMeta, overwrite); err != nil {
+				fmt.Fprintf(errout, "warning: error calculating patch from openapi spec: %v\n", err)
+			} else {
+				patch = openapiPatch
 			}
 		}
 	}
 
-	if string(patch) == "{}" {
-		return patch, obj, nil
-	}
-
-	if p.ResourceVersion != nil {
-		patch, err = addResourceVersion(patch, *p.ResourceVersion)
+	if patch == nil {
+		lookupPatchMeta, err = strategicpatch.NewPatchMetaFromStruct(versionedObject)
 		if err != nil {
-			return nil, nil, cmdutil.AddSourceToErr("Failed to insert resourceVersion in patch", source, err)
+			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, originalObjBytes, modifiedBytes, currentObjBytes), sourceFileName, err)
+		}
+		patch, err = strategicpatch.CreateThreeWayMergePatch(originalObjBytes, modifiedBytes, currentObjBytes, lookupPatchMeta, overwrite)
+		if err != nil {
+			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, originalObjBytes, modifiedBytes, currentObjBytes), sourceFileName, err)
 		}
 	}
 
 	creator := scheme.Scheme
-	gvk := obj.GetObjectKind().GroupVersionKind()
 	mocObj, err := creator.New(gvk)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in getting moc obj; %s", err.Error())
 	}
-	// patchedObj, err := p.Helper.DryRun(p.ServerDryRun).Patch(namespace, name, patchType, patch, nil)
-	patched, err := strategicpatch.StrategicMergePatch(current, patch, mocObj)
+	patched, err := strategicpatch.StrategicMergePatch(currentObjBytes, patch, mocObj)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in patching to obj; %s", err.Error())
 	}
@@ -395,22 +254,6 @@ func patchSimple(p *apply.Patcher, obj runtime.Object, modified []byte, source, 
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in Unmarshal into unstructured obj; %s", err.Error())
 	}
-
-	return patch, patchedObj, nil
-}
-
-func addResourceVersion(patch []byte, rv string) ([]byte, error) {
-	var patchMap map[string]interface{}
-	err := json.Unmarshal(patch, &patchMap)
-	if err != nil {
-		return nil, err
-	}
-	u := unstructured.Unstructured{Object: patchMap}
-	a, err := meta.Accessor(&u)
-	if err != nil {
-		return nil, err
-	}
-	a.SetResourceVersion(rv)
-
-	return json.Marshal(patchMap)
+	patchedObjBytes, _ := json.Marshal(patchedObj)
+	return patch, patchedObjBytes, nil
 }
