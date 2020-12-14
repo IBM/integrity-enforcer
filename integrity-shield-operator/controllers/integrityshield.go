@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 
@@ -138,10 +140,30 @@ func (r *IntegrityShieldReconciler) createOrUpdateResourceSigningProfileCRD(
 
 ***********************************************/
 
+func getCommonRSPPath() string {
+	// normal case
+	_, err := os.Stat(apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+	if err == nil {
+		return apiv1alpha1.DefaultResourceSigningProfileYamlPath
+	}
+
+	// in case of test
+	pwd, err := os.Getwd()
+	if err != nil {
+		pwd = "./"
+	}
+	testCommonProfilePath := filepath.Join(pwd, "../", apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+	_, err = os.Stat(testCommonProfilePath)
+	if err == nil {
+		return testCommonProfilePath
+	}
+	return apiv1alpha1.DefaultResourceSigningProfileYamlPath
+}
+
 func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, getCommonRSPPath())
 	found := &ec.ShieldConfig{}
 
 	reqLogger := r.Log.WithValues(

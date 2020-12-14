@@ -21,13 +21,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	apisv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
@@ -77,6 +81,14 @@ func Kubectl(args ...string) error {
 	}
 	err_w := cmd.Wait()
 	return err_w
+}
+
+func getTestIShieldCRPath() string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		pwd = "./"
+	}
+	return filepath.Join(pwd, testIShieldCRPath)
 }
 
 func TestAPIs(t *testing.T) {
@@ -139,14 +151,62 @@ var _ = BeforeSuite(func(done Done) {
 	err = k8sClient.Get(ctx, types.NamespacedName{Name: defaultCR.Name, Namespace: defaultCR.Namespace}, iShieldCR)
 	Expect(err).Should(BeNil())
 
+	// mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	// 	Scheme:             scheme,
+	// 	MetricsBindAddress: ":8080",
+	// 	Port:               9443,
+	// 	LeaderElection:     false,
+	// 	LeaderElectionID:   "b67154b9.integrityshield.io",
+	// 	Namespace:          defaultCR.Namespace, // namespaced-scope when the value is not an empty string
+	// })
+	// Expect(err).Should(BeNil())
+
 	r = &IntegrityShieldReconciler{
 		Client: k8sClient,
 		Log:    ctrl.Log.WithName("controllers").WithName("IntegrityShield"),
 		Scheme: scheme,
 	}
 
-	Expect(err).Should(BeNil())
+	// err = r.SetupWithManager(mgr)
+	// Expect(err).Should(BeNil())
 
+	emptyKeyring := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: iShieldCR.Namespace, Name: iShieldCR.Spec.KeyRings[0].Name}, Data: map[string][]byte{}}
+	_ = k8sClient.Create(ctx, emptyKeyring)
+
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: iShieldCR.Namespace, Name: iShieldCR.Name},
+	}
+
+	i := 0
+	deployFound := &appsv1.Deployment{}
+	for {
+		_, err = r.Reconcile(req)
+		Expect(err).Should(BeNil())
+		i++
+
+		if i%10 == 0 {
+			fmt.Println("[DEBUG] reconcile iteration: ", i)
+			tmpErr := k8sClient.Get(ctx, types.NamespacedName{Name: iShieldCR.GetIShieldServerDeploymentName(), Namespace: iShieldNamespace}, deployFound)
+			if tmpErr == nil {
+
+				break
+			}
+		}
+	}
+	fmt.Println("[DEBUG] reconcile finished: ", i)
+
+	_ = k8sClient.Delete(ctx, iShieldCR)
+	time.Sleep(time.Second * 10)
+
+	var newIShieldCR *apiv1alpha1.IntegrityShield
+	err = yaml.Unmarshal(crBytes, &newIShieldCR)
+	Expect(err).Should(BeNil())
+	newIShieldCR.SetNamespace(iShieldNamespace)
+	err = k8sClient.Create(ctx, newIShieldCR)
+	Expect(err).Should(BeNil())
+	iShieldCR = &apisv1alpha1.IntegrityShield{}
+	err = k8sClient.Get(ctx, types.NamespacedName{Name: newIShieldCR.Name, Namespace: newIShieldCR.Namespace}, iShieldCR)
+	Expect(err).Should(BeNil())
 	close(done)
 }, 60)
 
@@ -189,69 +249,7 @@ func doReconcileTest(fn func(*apiv1alpha1.IntegrityShield) (ctrl.Result, error),
 }
 
 var _ = Describe("Test integrity shield", func() {
-	It("ShieldConfigCRD Test", func() {
-		doReconcileTest(r.createOrUpdateShieldConfigCRD, 10)
-	})
-	It("SignPolicyCRD Test", func() {
-		doReconcileTest(r.createOrUpdateSignPolicyCRD, 10)
-	})
-	It("ResourceSignatureCRD Test", func() {
-		doReconcileTest(r.createOrUpdateResourceSignatureCRD, 10)
-	})
-	It("HelmReleaseMetadataCRD Test", func() {
-		doReconcileTest(r.createOrUpdateHelmReleaseMetadataCRD, 10)
-	})
-	It("ResourceSigningProfileCRD Test", func() {
-		doReconcileTest(r.createOrUpdateResourceSigningProfileCRD, 10)
-	})
-	// It("ShieldConfigCR Test", func() {
-	// 	doReconcileTest(r.createOrUpdateShieldConfigCR, 10)
-	// })
-	It("SignPolicyCR Test", func() {
-		doReconcileTest(r.createOrUpdateSignPolicyCR, 10)
-	})
-	It("ServiceAccount Test", func() {
-		doReconcileTest(r.createOrUpdateServiceAccount, 10)
-	})
-	It("ClusterRoleBindingForIShieldAdmin Test", func() {
-		doReconcileTest(r.createOrUpdateClusterRoleBindingForIShieldAdmin, 10)
-	})
-	It("RoleBindingForIShieldAdmin Test", func() {
-		doReconcileTest(r.createOrUpdateRoleBindingForIShieldAdmin, 10)
-	})
-	It("RoleForIShieldAdmin Test", func() {
-		doReconcileTest(r.createOrUpdateRoleForIShieldAdmin, 10)
-	})
-	It("ClusterRoleForIShieldAdmin Test", func() {
-		doReconcileTest(r.createOrUpdateClusterRoleForIShieldAdmin, 10)
-	})
-	It("ClusterRoleBindingForIShield Test", func() {
-		doReconcileTest(r.createOrUpdateClusterRoleBindingForIShield, 10)
-	})
-	It("RoleBindingForIShield Test", func() {
-		doReconcileTest(r.createOrUpdateRoleBindingForIShield, 10)
-	})
-	It("RoleForIShield Test", func() {
-		doReconcileTest(r.createOrUpdateRoleForIShield, 10)
-	})
-	It("ClusterRoleForIShield Test", func() {
-		doReconcileTest(r.createOrUpdateClusterRoleForIShield, 10)
-	})
-	It("PodSecurityPolicy Test", func() {
-		doReconcileTest(r.createOrUpdatePodSecurityPolicy, 10)
-	})
-	It("TlsSecret Test", func() {
-		doReconcileTest(r.createOrUpdateTlsSecret, 10)
-	})
-	It("WebhookDeployment Test", func() {
-		doReconcileTest(r.createOrUpdateWebhookDeployment, 10)
-	})
-	It("WebhookService Test", func() {
-		doReconcileTest(r.createOrUpdateWebhookService, 10)
-	})
-	It("Webhook Test", func() {
-		doReconcileTest(r.createOrUpdateWebhook, 10)
-	})
+
 	It("Util Func isDeploymentAvailable() Test", func() {
 		_ = r.isDeploymentAvailable(iShieldCR)
 	})
