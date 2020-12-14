@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -128,7 +129,8 @@ func PEMDecode(pemBytes []byte, mode string) []byte {
 }
 
 func loadPrivateKey(fpath string) (*rsa.PrivateKey, error) {
-	keyPemBytes, err := ioutil.ReadFile(fpath)
+	kpath := filepath.Clean(fpath)
+	keyPemBytes, err := ioutil.ReadFile(kpath)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +143,8 @@ func loadPrivateKey(fpath string) (*rsa.PrivateKey, error) {
 }
 
 func loadPublicKey(fpath string) (*rsa.PublicKey, error) {
-	keyPemBytes, err := ioutil.ReadFile(fpath)
+	kpath := filepath.Clean(fpath)
+	keyPemBytes, err := ioutil.ReadFile(kpath)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +157,8 @@ func loadPublicKey(fpath string) (*rsa.PublicKey, error) {
 }
 
 func loadCertificate(fpath string) (*x509.Certificate, error) {
-	certPemBytes, err := ioutil.ReadFile(fpath)
+	cpath := filepath.Clean(fpath)
+	certPemBytes, err := ioutil.ReadFile(cpath)
 	if err != nil {
 		return nil, err
 	}
