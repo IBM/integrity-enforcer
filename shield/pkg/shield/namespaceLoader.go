@@ -22,12 +22,12 @@ import (
 	"time"
 
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "k8s.io/api/core/v1"
 	v1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 )
 
 // Namespace
@@ -40,7 +40,7 @@ type NamespaceLoader struct {
 
 func NewNamespaceLoader() *NamespaceLoader {
 	interval := time.Second * 30
-	config, _ := rest.InClusterConfig()
+	config, _ := kubeutil.GetKubeConfig()
 	client, _ := v1client.NewForConfig(config)
 
 	return &NamespaceLoader{

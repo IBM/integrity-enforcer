@@ -93,7 +93,8 @@ func (self *RuleTable) CheckIfProtected(reqFields map[string]string) (bool, bool
 func matchNamespaceListWithSelector(namespaces []v1.Namespace, nsSelector *common.NamespaceSelector) []string {
 	matched := []string{}
 	for _, ns := range namespaces {
-		if nsSelector.MatchNamespace(&ns) {
+		ok := nsSelector.MatchNamespace(&ns)
+		if ok {
 			matched = append(matched, (&ns).GetName())
 		}
 	}

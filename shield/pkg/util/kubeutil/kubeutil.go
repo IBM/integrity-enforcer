@@ -27,6 +27,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var cfg *rest.Config
+
 func GetInClusterConfig() (*rest.Config, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -51,6 +53,9 @@ func GetOutOfClusterConfig() (*rest.Config, error) {
 }
 
 func GetKubeConfig() (*rest.Config, error) {
+	if cfg != nil {
+		return cfg, nil
+	}
 	config, err := GetInClusterConfig()
 	if err != nil || config == nil {
 		config, err = GetOutOfClusterConfig()
@@ -59,6 +64,13 @@ func GetKubeConfig() (*rest.Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+func SetKubeConfig(conf *rest.Config) {
+	if conf != nil {
+		cfg = conf
+	}
+	return
 }
 
 func MatchLabels(obj metav1.Object, labelSelector *metav1.LabelSelector) (bool, error) {

@@ -1,0 +1,19 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    app: integrity-shield-server
+    app.kubernetes.io/managed-by: operator
+    app.kubernetes.io/name: integrity-shield-server
+    role: security
+  name: ishield-admin-clusterrolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ishield-admin-clusterrole
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:masters
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:cluster-admins

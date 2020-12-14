@@ -17,59 +17,57 @@
 package shield
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"reflect"
-	"strconv"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	v1beta1 "k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	rs "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
+	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common"
-	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
-	"k8s.io/api/admission/v1beta1"
+	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
+	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	scc "github.com/openshift/api/security/v1"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	// +kubebuilder:scaffold:imports
 )
 
-const (
-	testReqcFile   = "testdata/reqc_NUM.json"
-	testConfigFile = "testdata/config_NUM.json"
-	testDataFile   = "testdata/data_NUM.json"
-	testCtxFile    = "testdata/ctx_NUM.json"
-	//testDrFile     = "testdata/dr.json"
-	testProfFile = "testdata/prof_NUM.json"
-	testDrFile   = "testdata/dr_NUM.json"
-)
+// These tests use Ginkgo (BDD-style Go testing framework). Refer to
+// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-const MaxCaseNum = 2
+var k8sClient client.Client
+var testEnv *envtest.Environment
+var schemes *runtime.Scheme
 
-func TestHandlerCheck(t *testing.T) {
-	for i := 0; i < MaxCaseNum; i++ {
-		testInScopeCheck(t, i)
-		testFormatCheck(t, i)
-		testIShieldResourceCheck(t, i)
-		testDeleteCheck(t, i)
-		testProtectedCheck(t, i)
-		testRSPCheck(t, i)
-	}
-}
-
-func init() {
-	var config *config.ShieldConfig
-	configBytes, _ := ioutil.ReadFile(testFileName(testConfigFile, 0))
-	_ = json.Unmarshal(configBytes, &config)
-	logger.InitContextLogger(config.ContextLoggerConfig())
-	logger.InitServerLogger(config.LoggerConfig())
-}
-
-func testFileName(fname string, num int) string {
-	return strings.Replace(fname, "NUM", strconv.Itoa(num), 1)
-}
+var req *v1beta1.AdmissionRequest
+var testConfig *config.ShieldConfig
 
 func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
 
 	var reqc *common.ReqContext
-	var config *config.ShieldConfig
+
 	var data *RunData
 	var ctx *CheckContext
 	var dr0 *DecisionResult
@@ -84,7 +82,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	profBytes, _ := ioutil.ReadFile(testFileName(testProfFile, num))
 	drBytes, _ := ioutil.ReadFile(testFileName(testDrFile, num))
 	_ = json.Unmarshal(reqcBytes, &reqc)
-	_ = json.Unmarshal(configBytes, &config)
+	_ = json.Unmarshal(configBytes, &testConfig)
 	_ = json.Unmarshal(dataBytes, &data)
 	_ = json.Unmarshal(ctxBytes, &ctx)
 	//_ = json.Unmarshal(drBytes, &dr)
@@ -99,89 +97,125 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 		reqc.RawObject = req.Object.Raw
 		reqc.RawOldObject = req.OldObject.Raw
 	}
-	return reqc, config, data, ctx, dr0, prof, dr
+	return reqc, testConfig, data, ctx, dr0, prof, dr
 }
 
-func testInScopeCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := inScopeCheck(reqc, config, data, ctx)
+func TestHandler(t *testing.T) {
+	RegisterFailHandler(Fail)
 
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for inScopeCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
-	} else {
-		t.Logf("[Case %s] Test for inScopeCheck() passed.", strconv.Itoa(caseNum))
-	}
+	RunSpecsWithDefaultAndCustomReporters(t,
+		"Controller Suite",
+		[]Reporter{printer.NewlineReporter{}})
 }
 
-func testFormatCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := formatCheck(reqc, config, data, ctx)
+var _ = BeforeSuite(func(done Done) {
+	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for formatCheck()\nexpected:\n  %s\nactual\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
-	} else {
-		t.Logf("[Case %s] Test for formatCheck() passed.", strconv.Itoa(caseNum))
+	By("bootstrapping test environment")
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths: []string{filepath.Join(".", "testdata", "crds")},
 	}
-}
 
-func testIShieldResourceCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := iShieldResourceCheck(reqc, config, data, ctx)
+	var err error
+	cfg, err := testEnv.Start()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(cfg).ToNot(BeNil())
 
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for iShieldResourceCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
-	} else {
-		t.Logf("[Case %s] Test for iShieldResourceCheck() passed.", strconv.Itoa(caseNum))
+	schemes = runtime.NewScheme()
+	err = clientgoscheme.AddToScheme(schemes)
+	err = apiextensionsv1.AddToScheme(schemes)
+	err = apiextensionsv1beta1.AddToScheme(schemes)
+
+	err = scc.AddToScheme(schemes)
+	err = ec.AddToScheme(schemes)
+	err = rsp.AddToScheme(schemes)
+	err = rs.AddToScheme(schemes)
+	err = spol.AddToScheme(schemes)
+
+	Expect(err).NotTo(HaveOccurred())
+
+	// +kubebuilder:scaffold:scheme
+
+	kubeutil.SetKubeConfig(cfg)
+
+	k8sClient, err = client.New(cfg, client.Options{Scheme: schemes})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(k8sClient).ToNot(BeNil())
+
+	reqc, testConfig, data, _, _, _, _ := getTestData(1)
+	reqBytes := []byte(reqc.RequestJsonStr)
+	err = json.Unmarshal(reqBytes, &req)
+	Expect(err).Should(BeNil())
+	Expect(req).ToNot(BeNil())
+
+	logger.InitServerLogger(testConfig.LoggerConfig())
+	logger.InitContextLogger(testConfig.ContextLoggerConfig())
+
+	err = k8sClient.Create(context.Background(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testConfig.Namespace}})
+	Expect(err).Should(BeNil())
+
+	// create namespaces in test data
+	for _, nsData := range data.NSList {
+		ns := &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: nsData.Name},
+		}
+		_ = k8sClient.Create(context.Background(), ns)
 	}
-}
 
-func testDeleteCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := deleteCheck(reqc, config, data, ctx)
-
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for deleteCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
-	} else {
-		t.Logf("[Case %s] Test for deleteCheck() passed.", strconv.Itoa(caseNum))
+	// create ShieldConfig in test data
+	sconf := &ec.ShieldConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "ishield-config", Namespace: testConfig.Namespace},
+		Spec:       ec.ShieldConfigSpec{ShieldConfig: testConfig},
 	}
-}
+	err = k8sClient.Create(context.Background(), sconf)
+	Expect(err).Should(BeNil())
 
-func testProtectedCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
-	actualDr, actualMatchedProfiles := protectedCheck(reqc, config, data, ctx)
-
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+	// create SignPolicy in test data
+	sigpol := &spol.SignPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: data.SignPolicy.Name, Namespace: data.SignPolicy.Namespace},
+		Spec:       spol.SignPolicySpec{SignPolicy: data.SignPolicy.Spec.SignPolicy.DeepCopy()},
 	}
-	if len(actualMatchedProfiles) != 1 || !reflect.DeepEqual(actualMatchedProfiles[0], expectedMatchedProf) {
-		actProfBytes, _ := json.Marshal(actualMatchedProfiles[0])
-		expProfBytes, _ := json.Marshal(expectedMatchedProf)
-		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected :\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actProfBytes), string(expProfBytes))
-	} else {
-		t.Logf("[Case %s] Test for protectedCheck() passed.", strconv.Itoa(caseNum))
-	}
-}
+	err = k8sClient.Create(context.Background(), sigpol)
+	Expect(err).Should(BeNil())
 
-func testRSPCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
-	actualDr := resourceSigningProfileCheck(prof, reqc, config, data, ctx)
-	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
-
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
-	} else {
-		t.Logf("[Case %s] Test for resourceSigningProfileCheck() passed.", strconv.Itoa(caseNum))
+	// create rsps in test data
+	for _, rsp := range data.RSPList {
+		rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
+		err = k8sClient.Create(context.Background(), &rsp)
+		Expect(err).Should(BeNil())
 	}
-}
+
+	// create ressigs in test data
+	for _, rsig := range data.ResSigList.Items {
+		rsig.ObjectMeta = metav1.ObjectMeta{Name: rsig.Name, Namespace: rsig.Namespace}
+		err = k8sClient.Create(context.Background(), rsig)
+		Expect(err).Should(BeNil())
+	}
+
+	close(done)
+}, 60)
+
+var _ = AfterSuite(func() {
+	By("tearing down the test environment")
+	err := testEnv.Stop()
+	Expect(err).ToNot(HaveOccurred())
+})
+
+var _ = Describe("Test integrity shield", func() {
+	It("Handler Run Test", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			testHandler := NewHandler(testConfig)
+			resp := testHandler.Run(req)
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[DEBUG] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "no mutation") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+
+})

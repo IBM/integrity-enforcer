@@ -1,4 +1,5 @@
 build/_output/
+testbin/bin/
 
 # Binaries for programs and plugins
 *.exe

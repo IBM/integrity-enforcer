@@ -27,7 +27,7 @@ import (
 )
 
 //service
-func BuildServiceForCR(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
+func BuildServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
 	var targetport intstr.IntOrString
 	targetport.Type = intstr.String
 	targetport.StrVal = "ac-api"

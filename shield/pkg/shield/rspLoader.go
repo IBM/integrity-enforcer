@@ -25,12 +25,11 @@ import (
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	cache "github.com/IBM/integrity-enforcer/shield/pkg/util/cache"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/rest"
 )
 
 // ResourceSigningProfile
@@ -48,7 +47,7 @@ type RSPLoader struct {
 
 func NewRSPLoader(shieldNamespace, profileNamespace, requestNamespace string, commonProfile *rspapi.ResourceSigningProfileSpec) *RSPLoader {
 	defaultProfileInterval := time.Second * 60
-	config, _ := rest.InClusterConfig()
+	config, _ := kubeutil.GetKubeConfig()
 	client, _ := rspclient.NewForConfig(config)
 
 	return &RSPLoader{

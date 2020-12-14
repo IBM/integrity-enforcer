@@ -1,0 +1,34 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    app: integrity-shield-server
+  name: ishield-psp
+spec:
+  allowedCapabilities:
+  - '*'
+  allowedHostPaths:
+  - pathPrefix: /
+  fsGroup:
+    ranges:
+    - max: 65535
+      min: 1
+    rule: MustRunAs
+  hostIPC: true
+  hostNetwork: true
+  hostPID: true
+  privileged: true
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    ranges:
+    - max: 65535
+      min: 1
+    rule: MustRunAs
+  volumes:
+  - configMap
+  - hostPath
+  - emptyDir
+  - secret
+  - persistentVolumeClaim
