@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -77,7 +78,8 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	if ecc.Spec.ShieldConfig.CommonProfile == nil {
 		var defaultrsp *rsp.ResourceSigningProfile
 
-		deafultRspBytes, _ := ioutil.ReadFile(defaultRspYamlPath)
+		fpath := filepath.Clean(defaultRspYamlPath)
+		deafultRspBytes, _ := ioutil.ReadFile(fpath)
 
 		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
 
