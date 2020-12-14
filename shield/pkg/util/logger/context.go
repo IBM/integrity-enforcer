@@ -50,11 +50,14 @@ func InitContextLogger(config ContextLoggerConfig) {
 }
 
 func (cxLogger *ContextLogger) sizeCheckAndRotate() error {
-	f, err := os.OpenFile(cxLogger.file, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(cxLogger.file, os.O_CREATE|os.O_WRONLY, 0640) //NOSONAR
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
+
 	fi, err := f.Stat()
 	if err != nil {
 		return err
@@ -74,11 +77,13 @@ func (cxLogger *ContextLogger) writeToFile(logBytes []byte) error {
 		return err
 	}
 
-	f, err := os.OpenFile(cxLogger.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(cxLogger.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640) //NOSONAR
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	line := fmt.Sprintf("%s\n", string(logBytes))
 	if _, err := f.WriteString(line); err != nil {

@@ -95,7 +95,8 @@ func (dr *DiffResult) Size() int {
 
 func (dr *DiffResult) Remove(patterns []*DiffPattern) *DiffResult {
 	items := []Difference{}
-	for _, d := range dr.Items {
+	for i := range dr.Items {
+		d := dr.Items[i]
 		d0 := &d
 		patternMatched := false
 		for _, p := range patterns {
