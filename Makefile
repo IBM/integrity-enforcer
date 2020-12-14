@@ -218,7 +218,10 @@ test-verify:
 TEST_SIGNERS=TestSigner
 TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
 TEST_SAMPLE_SIGNER_SUBJECT_EMAIL=test@enterprise.com
-TEST_SECRET=keyring_secret
+TEST_SECRET=keyring-secret
+TEST_SIGNERS2=TestSigner2
+TEST_SIGNER_SUBJECT_EMAIL2=signer2@enterprise.com
+TEST_SECRET2=keyring-secret-signer2
 TMP_CR_FILE=$(TMP_DIR)apis_v1alpha1_integrityshield.yaml
 TMP_CR_UPDATED_FILE=$(TMP_DIR)apis_v1alpha1_integrityshield_update.yaml
 # export KUBE_CONTEXT_USERNAME=kind-test-managed
@@ -280,11 +283,13 @@ setup-test-env:
 	@echo
 	@echo creating test namespace
 	kubectl create ns $(TEST_NS)
+	kubectl create ns $(TEST_UNPROTECTED_NS)
 
 delete-test-env:
 	@echo
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
+	kubectl delete ns $(TEST_UNPROTECTED_NS)
 
 setup-test-resources:
 	@echo
@@ -322,6 +327,7 @@ create-ns:
 create-key-ring:
 	@echo creating keyring-secret
 	kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
 
 install-crds:
 	@echo installing crds
@@ -335,6 +341,7 @@ delete-keyring-secret:
 	@echo
 	@echo deleting keyring-secret
 	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
 
 install-operator:
 	@echo
@@ -367,12 +374,17 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
 	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
+	@echo setup keyring configs
+	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
 	@echo setup signer policy
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
 	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].name $(TEST_SIGNERS2)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].secret $(TEST_SECRET2)
+	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL2)
 	@if [ "$(TEST_LOCAL)" ]; then \
 		echo enable logAllResponse ; \
 		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logLevel trace ;\

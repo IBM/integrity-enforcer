@@ -6,6 +6,7 @@ spec:
   protectRules:
   - match:
     - kind: ConfigMap
+      name: new-configmap
     exclude:
     - name: test-configmap-excluded
   ignoreAttrs:

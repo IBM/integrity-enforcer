@@ -1,11 +1,11 @@
 apiVersion: apis.integrityshield.io/v1alpha1
 kind: ResourceSigningProfile
 metadata:
-  name: test-rsp
+  name: test-rsp-invalid-format
 spec:
   protectRules:
   - match:
-    - kind: ConfigMap
+      kind: ConfigMap
     exclude:
     - name: test-configmap-excluded
   ignoreAttrs:
