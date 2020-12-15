@@ -51,6 +51,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	scc "github.com/openshift/api/security/v1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -97,6 +98,30 @@ func TestAPIs(t *testing.T) {
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
 		[]Reporter{printer.NewlineReporter{}})
+}
+
+func embedRSP(cr *apisv1alpha1.IntegrityShield) *apisv1alpha1.IntegrityShield {
+	secretPattern := common.RulePattern("Secret")
+	cr.Spec.ResourceSigningProfiles = []*apiv1alpha1.ProfileConfig{
+		{
+			Name: "sample-rsp",
+			ResourceSigningProfileSpec: &rsp.ResourceSigningProfileSpec{
+				TargetNamespaceSelector: &common.NamespaceSelector{
+					Include: []string{"test-other-ns"},
+				},
+				ProtectRules: []*common.Rule{
+					{
+						Match: []*common.RequestPattern{
+							{
+								Kind: &secretPattern,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	return cr
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -146,6 +171,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = yaml.Unmarshal(crBytes, &defaultCR)
 	Expect(err).Should(BeNil())
 	defaultCR.SetNamespace(iShieldNamespace)
+	defaultCR = embedRSP(defaultCR)
 	_ = k8sClient.Create(ctx, defaultCR)
 	iShieldCR = &apisv1alpha1.IntegrityShield{}
 	err = k8sClient.Get(ctx, types.NamespacedName{Name: defaultCR.Name, Namespace: defaultCR.Namespace}, iShieldCR)
@@ -202,6 +228,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = yaml.Unmarshal(crBytes, &newIShieldCR)
 	Expect(err).Should(BeNil())
 	newIShieldCR.SetNamespace(iShieldNamespace)
+	newIShieldCR = embedRSP(newIShieldCR)
 	err = k8sClient.Create(ctx, newIShieldCR)
 	Expect(err).Should(BeNil())
 	iShieldCR = &apisv1alpha1.IntegrityShield{}
@@ -252,6 +279,9 @@ var _ = Describe("Test integrity shield", func() {
 
 	It("Util Func isDeploymentAvailable() Test", func() {
 		_ = r.isDeploymentAvailable(iShieldCR)
+	})
+	It("Reconcile func createOrUpdateWebhook() Test", func() {
+		_, _ = r.createOrUpdateWebhook(iShieldCR)
 	})
 	It("Util Func deleteWebhook() Test", func() {
 		_, _ = r.deleteWebhook(iShieldCR)
