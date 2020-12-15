@@ -20,7 +20,7 @@ $ export KUBECONFIG=~/kube/config/minikube
 $ export ISHIELD_REPO_ROOT=/repo/integrity-enforcer
 ```
 
-## Make commands∂
+## Make commands
 
 
 ### Build
