@@ -49,7 +49,7 @@ Three images are built.
 
 The following command pushes the built IShield images to local container image registry setup above.
 ```
-$ push-images-to-local
+$ make push-images-to-local
 ```
 
 Alternatively, you can push images to other container image registry as below.
