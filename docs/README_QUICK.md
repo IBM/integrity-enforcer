@@ -4,8 +4,6 @@
 ​
 The following prerequisites must be satisfied to deploy Integrity Shield on a cluster.
 - A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
-- Prepare a namespace to deploy Integrity Shield. (We will use `integrity-shield-operator-system` namespace in this document.)
-- A secret resource (keyring-secret) which contains public key and certificates should be setup for enabling signature verification by Integrity Shield.
 
 ---
 
@@ -101,6 +99,7 @@ spec:
 ### Install Integrity Shield to a cluster
 
 Integrity Shield can be installed to a cluster using a series of steps which are bundled in a script called [`install_shield.sh`](../scripts/install_shield.sh). Before executing the script `install_shield.sh`, setup local environment as follows:
+- `ISHIELD_ENV <local: means that we deploy IShield to a local cluster like Minikube>`
 - `ISHIELD_REPO_ROOT=<set absolute path of the root directory of cloned integrity-shield source repository`
 - `KUBECONFIG=~/kube/config/minikube`  (for deploying IShield on minikube cluster)
 
@@ -108,15 +107,24 @@ Integrity Shield can be installed to a cluster using a series of steps which are
 
 Example:
 ```
-$ export KUBECONFIG=~/kube/config/minikube
+$ export ISHIELD_ENV=local
 $ export ISHIELD_REPO_ROOT=/home/repo/integrity-enforcer
+$ export KUBECONFIG=~/kube/config/minikube
+```
+
+Prepare a private registry for hosting IShield container images, if not already exist.
+The following example create a private local container image registry to host the IShield container images.
+
+```
+$ cd integrity-shield
+$ make create-private-registry
 ```
 
 Execute the following make commands to build Integrity Shield images.
 ```
 $ cd integrity-shield
 $ make build-images
-$ make tag-images-to-local
+$ make push-images-to-local
 ```
 
 Then, execute the following script to deploy Integrity Shield in a cluster.
@@ -124,6 +132,8 @@ Then, execute the following script to deploy Integrity Shield in a cluster.
 ```
 $ make install-crds
 $ make install-operator
+$ make make setup-tmp-cr
+$ make create-tmp-cr
 ```
 
 After successful installation, you should see two pods are running in the namespace `integrity-shield-operator-system`.
