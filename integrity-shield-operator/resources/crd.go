@@ -22,8 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//sign policy crd
-func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNames) *extv1.CustomResourceDefinition {
 	xPreserve := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
@@ -31,18 +30,13 @@ func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDe
 			APIVersion: "apiextensions.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetSignPolicyCRDName(),
-			Namespace: cr.Namespace,
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: extv1.CustomResourceDefinitionSpec{
 			Group: "apis.integrityshield.io",
 			//Version: "v1beta1",
-			Names: extv1.CustomResourceDefinitionNames{
-				Kind:     "SignPolicy",
-				Plural:   "signpolicies",
-				ListKind: "SignPolicyList",
-				Singular: "signpolicy",
-			},
+			Names: crdNames,
 			Scope: "Namespaced",
 			Validation: &extv1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1.JSONSchemaProps{
@@ -50,7 +44,6 @@ func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDe
 					XPreserveUnknownFields: &xPreserve,
 				},
 			},
-			Version: "v1alpha1",
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
 					Name:    "v1alpha1",
@@ -61,168 +54,64 @@ func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDe
 		},
 	}
 	return newCRD
+}
+
+//sign policy crd
+func BuildSignPolicyCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:     "SignPolicy",
+		Plural:   "signpolicies",
+		ListKind: "SignPolicyList",
+		Singular: "signpolicy",
+	}
+	return buildCRD(cr.GetSignPolicyCRDName(), cr.Namespace, crdNames)
 }
 
 //shield config crd
 func BuildShieldConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	xPreserve := true
-	newCRD := &extv1.CustomResourceDefinition{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetShieldConfigCRDName(),
-			Namespace: cr.Namespace,
-		},
-		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "apis.integrityshield.io",
-			//Version: "v1beta1",
-			Names: extv1.CustomResourceDefinitionNames{
-				Kind:       "ShieldConfig",
-				Plural:     "shieldconfigs",
-				ListKind:   "ShieldConfigList",
-				Singular:   "shieldconfig",
-				ShortNames: []string{"econf", "econfs"},
-			},
-			Scope: "Namespaced",
-			Validation: &extv1.CustomResourceValidation{
-				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type:                   "object",
-					XPreserveUnknownFields: &xPreserve,
-				},
-			},
-			Versions: []extv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1alpha1",
-					Served:  true,
-					Storage: true,
-				},
-			},
-		},
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:       "ShieldConfig",
+		Plural:     "shieldconfigs",
+		ListKind:   "ShieldConfigList",
+		Singular:   "shieldconfig",
+		ShortNames: []string{"econf", "econfs"},
 	}
-	return newCRD
+	return buildCRD(cr.GetShieldConfigCRDName(), cr.Namespace, crdNames)
 }
 
 //resource signature crd
 func BuildResourceSignatureCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	xPreserve := true
-	newCRD := &extv1.CustomResourceDefinition{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetResourceSignatureCRDName(),
-			Namespace: cr.Namespace,
-		},
-		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "apis.integrityshield.io",
-			//Version: "v1beta1",
-			Names: extv1.CustomResourceDefinitionNames{
-				Kind:       "ResourceSignature",
-				Plural:     "resourcesignatures",
-				ListKind:   "ResourceSignatureList",
-				Singular:   "resourcesignature",
-				ShortNames: []string{"rsig", "rsigs"},
-			},
-			Scope: "Namespaced",
-			Validation: &extv1.CustomResourceValidation{
-				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type:                   "object",
-					XPreserveUnknownFields: &xPreserve,
-				},
-			},
-			Versions: []extv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1alpha1",
-					Served:  true,
-					Storage: true,
-				},
-			},
-		},
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:       "ResourceSignature",
+		Plural:     "resourcesignatures",
+		ListKind:   "ResourceSignatureList",
+		Singular:   "resourcesignature",
+		ShortNames: []string{"rsig", "rsigs"},
 	}
-	return newCRD
+	return buildCRD(cr.GetResourceSignatureCRDName(), cr.Namespace, crdNames)
 }
 
 // helm release metadata crd
 func BuildHelmReleaseMetadataCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	xPreserve := true
-	newCRD := &extv1.CustomResourceDefinition{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetHelmReleaseMetadataCRDName(),
-			Namespace: cr.Namespace,
-		},
-		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "apis.integrityshield.io",
-			//Version: "v1beta1",
-			Names: extv1.CustomResourceDefinitionNames{
-				Kind:       "HelmReleaseMetadata",
-				Plural:     "helmreleasemetadatas",
-				ListKind:   "HelmReleaseMetadataList",
-				Singular:   "helmreleasemetadata",
-				ShortNames: []string{"hrm", "hrms"},
-			},
-			Scope: "Namespaced",
-			Validation: &extv1.CustomResourceValidation{
-				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type:                   "object",
-					XPreserveUnknownFields: &xPreserve,
-				},
-			},
-			Versions: []extv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1alpha1",
-					Served:  true,
-					Storage: true,
-				},
-			},
-		},
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:       "HelmReleaseMetadata",
+		Plural:     "helmreleasemetadatas",
+		ListKind:   "HelmReleaseMetadataList",
+		Singular:   "helmreleasemetadata",
+		ShortNames: []string{"hrm", "hrms"},
 	}
-	return newCRD
+	return buildCRD(cr.GetHelmReleaseMetadataCRDName(), cr.Namespace, crdNames)
 }
 
 // resourcesigningprofile crd
 func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	xPreserve := true
-	newCRD := &extv1.CustomResourceDefinition{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CustomResourceDefinition",
-			APIVersion: "apiextensions.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetResourceSigningProfileCRDName(),
-			Namespace: cr.Namespace,
-		},
-		Spec: extv1.CustomResourceDefinitionSpec{
-			Group: "apis.integrityshield.io",
-			//Version: "v1beta1",
-			Names: extv1.CustomResourceDefinitionNames{
-				Kind:       "ResourceSigningProfile",
-				Plural:     "resourcesigningprofiles",
-				ListKind:   "ResourceSigningProfileList",
-				Singular:   "resourcesigningprofile",
-				ShortNames: []string{"rsp", "rsps"},
-			},
-			Scope: "Namespaced",
-			Validation: &extv1.CustomResourceValidation{
-				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type:                   "object",
-					XPreserveUnknownFields: &xPreserve,
-				},
-			},
-			Versions: []extv1.CustomResourceDefinitionVersion{
-				{
-					Name:    "v1alpha1",
-					Served:  true,
-					Storage: true,
-				},
-			},
-		},
+
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:       "ResourceSigningProfile",
+		Plural:     "resourcesigningprofiles",
+		ListKind:   "ResourceSigningProfileList",
+		Singular:   "resourcesigningprofile",
+		ShortNames: []string{"rsp", "rsps"},
 	}
-	return newCRD
+	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames)
 }
