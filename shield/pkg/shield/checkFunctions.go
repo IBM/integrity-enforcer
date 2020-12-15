@@ -145,6 +145,18 @@ func deleteCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *Run
 func protectedCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := reqc.Map()
 	ruleTable := data.GetRuleTable(config.Namespace)
+	if ruleTable == nil {
+		ctx.Allow = true
+		ctx.Verified = true
+		ctx.Protected = false
+		ctx.ReasonCode = common.REASON_NOT_PROTECTED
+		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
+		return &DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_NOT_PROTECTED,
+			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+		}, nil
+	}
 	protected, ignoreMatched, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
 	if !protected {
 		ctx.Allow = true
@@ -247,6 +259,8 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 		message = sigResult.Error.MakeMessage()
 		if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
 			reasonCode = common.REASON_INVALID_SIG
+		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
+			reasonCode = common.REASON_NO_VALID_KEYRING
 		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
 			reasonCode = common.REASON_NO_POLICY
 		} else if message == common.ReasonCodeMap[common.REASON_NO_SIG].Message {

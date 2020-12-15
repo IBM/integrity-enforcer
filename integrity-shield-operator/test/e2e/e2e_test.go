@@ -17,6 +17,7 @@ package e2e
 import (
 	goctx "context"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"time"
 
@@ -243,16 +244,16 @@ var _ = Describe("Test integrity shield", func() {
 					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			// It("Signed resource which do not match SignPolicy should be blocked", func() {
-			// 	framework := initFrameWork()
-			// 	var timeout int = 120
-			// 	expected := "test-configmap-signer2"
-			// 	cmd_err := Kubectl("apply", "-f", test_configmap_signer2, "-n", test_namespace)
-			// 	Expect(cmd_err).NotTo(BeNil())
-			// 	Eventually(func() error {
-			// 		return CheckBlockEvent(framework, "no-signer-policy", test_namespace, expected)
-			// 	}, timeout, 1).Should(BeNil())
-			// })
+			It("Signed resource which do not match SignPolicy should be blocked", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-configmap-signer2"
+				cmd_err := Kubectl("apply", "-f", test_configmap_signer2, "-n", test_namespace)
+				Expect(cmd_err).NotTo(BeNil())
+				Eventually(func() error {
+					return CheckBlockEvent(framework, "no-valid-keyring", test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
 			It("Signed resouce should be allowed (ResourceSignature) ", func() {
 				framework := initFrameWork()
 				var timeout int = 120
@@ -446,6 +447,16 @@ var _ = Describe("Test integrity shield", func() {
 				Skip("This test is executed only in the local env.")
 			}
 			framework := initFrameWork()
+			server_name := "integrity-shield-server"
+			server := GetPodName(framework, ishield_namespace, server_name)
+			err, serverLog := KubectlOut("logs", "-n", ishield_namespace, server, "-c", "server")
+			Expect(err).To(BeNil())
+			_ = ioutil.WriteFile("./e2etest-server.log", []byte(serverLog), 0640) // NO SONAR
+
+			err, forwarderLog := KubectlOut("logs", "-n", ishield_namespace, server, "-c", "forwarder")
+			Expect(err).To(BeNil())
+			_ = ioutil.WriteFile("./e2etest-forwarder.log", []byte(forwarderLog), 0640) // NO SONAR
+
 			vc_name := "ishield-config"
 			By("Load ishield resource list")
 			vc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
