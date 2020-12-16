@@ -759,16 +759,16 @@ func (t *Node) FindUpdatedAndCreated(t2 *Node) *DiffResult {
 // separate inconsistent type key & values from maps
 func extractComparableMap(m1, m2 map[string]interface{}, findType map[string]bool) (map[string]interface{}, map[string]interface{}, []Difference) {
 	keys := map[string]bool{}
-	for k, _ := range m1 {
+	for k := range m1 {
 		keys[k] = true
 	}
-	for k, _ := range m2 {
+	for k := range m2 {
 		keys[k] = true
 	}
 	nm1 := map[string]interface{}{}
 	nm2 := map[string]interface{}{}
 	typeDiffs := []Difference{}
-	for k, _ := range keys {
+	for k := range keys {
 		v1, ok1 := m1[k]
 		v2, ok2 := m2[k]
 
