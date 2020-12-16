@@ -18,7 +18,13 @@ package mapnode
 import (
 	"encoding/json"
 	"testing"
+
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
+
+func init() {
+	logger.InitServerLogger(logger.LoggerConfig{Level: "trace", Format: "json"})
+}
 
 func TestNode(t *testing.T) {
 	testMapBytes := []byte(`{
@@ -509,6 +515,10 @@ func TestNode(t *testing.T) {
 		t.Log(err)
 	}
 
+	nodeWrongType1, _ := NewFromBytes([]byte(`{"testdata":{"key1":"val1","key2":"val2"}}`))
+	nodeWrongType2, _ := NewFromBytes([]byte(`{"testdata":{"key1":"val1","key2":123}}`))
+	drWrongType := nodeWrongType1.Diff(nodeWrongType2)
+
 	e := make(map[int]interface{})
 	e[1] = string(`[{"command":["sample-go-operator"],"env":[{"name":"WATCH_NAMESPACE","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.namespace"}}},{"name":"POD_NAME","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.name"}}},{"name":"OPERATOR_NAME","value":"sample-go-operator"}],"image":"sample-go-operator:local","imagePullPolicy":"IfNotPresent","name":"sample-go-operator","resources":{},"terminationMessagePath":"/dev/termination-log","terminationMessagePolicy":"File","volumeMounts":[{"mountPath":"/var/run/secrets/kubernetes.io/serviceaccount","name":"sample-go-operator-token-lxn92","readOnly":true}]}]`)
 	e[2] = string(`{"creationTimestamp":"2020-03-09T05:19:11Z","generateName":"sample-go-operator-b8bb6c748-","name":"sample-go-operator-b8bb6c748-vz2m8","namespace":"test-go-operator"}`)
@@ -543,6 +553,7 @@ spec:
 `)
 	e[14] = string(`null`)
 	e[15] = string(`{"metadata":{"name":"test-resource","namespace":"test-ns"}}`)
+	e[16] = string(`{"items":[{"key":"testdata.key2","values":{"after":"(type: float64) %!s(float64=123)","before":"(type: string) val2"}}]}`)
 
 	a := make(map[int]interface{})
 	a[1] = string(containersJSON)
@@ -560,6 +571,7 @@ spec:
 	a[13] = string(maskedEnvNode.ToYaml())
 	a[14] = string(nodeWithNilJson)
 	a[15] = string(mergedNode.ToJson())
+	a[16] = string(drWrongType.String())
 
 	for i := range e {
 		if a[i] != e[i] {
