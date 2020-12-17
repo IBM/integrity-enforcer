@@ -757,7 +757,7 @@ func (t *Node) FindUpdatedAndCreated(t2 *Node) *DiffResult {
 }
 
 // separate inconsistent type key & values from maps
-func extractComparableMap(m1, m2 map[string]interface{}, findType map[string]bool) (map[string]interface{}, map[string]interface{}, []Difference) {
+func extractComparableMap(m1, m2 map[string]interface{}) (map[string]interface{}, map[string]interface{}, []Difference) {
 	keys := map[string]bool{}
 	for k := range m1 {
 		keys[k] = true
@@ -808,7 +808,7 @@ func FindDiffBetweenNodes(t1, t2 *Node, findType map[string]bool) *DiffResult {
 		return nil
 	}
 
-	nm1, nm2, typeDiffs := extractComparableMap(m1, m2, findType)
+	nm1, nm2, typeDiffs := extractComparableMap(m1, m2)
 
 	changelog, err := diff.Diff(nm1, nm2)
 	if err != nil {
