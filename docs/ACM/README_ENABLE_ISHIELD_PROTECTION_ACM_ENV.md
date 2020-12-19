@@ -20,7 +20,7 @@ The following prerequisites must be satisfied to enable Integrity Shield protect
 Enabling Integrity Shield on an ACM managed cluster requires the following steps:
 - Step 1: Prepare a namespace in an ACM hub cluster. 
 - Step 2: Deploy a verification key to an ACM managed cluster(s).
-- Step 3: Create the ACM policy called `policy-integrity` in the ACM hub cluster.
+- Step 3: Create the ACM policy called `policy-integrity-shield` in the ACM hub cluster.
 
 ### Step 1: Prepare a namespace in an ACM hub cluster. 
 Connect to the ACM Hub cluster and execute the following command:
@@ -44,11 +44,11 @@ oc create ns <custom namespace>
     
 
 
-### Step 3: Create the ACM policy called `policy-integrity` in the ACM hub cluster.
+### Step 3: Create the ACM policy called `policy-integrity-shield` in the ACM hub cluster.
    
-   You will use the ACM policy called `policy-integrity`, which is specified in [policy-integrity.yaml](https://github.com/open-cluster-management/policy-collection/blob/master/community/CM-Configuration-Management/policy-integrity.yaml), to enable Integrity Shield protection in an ACM managed cluster(s).
+   You will use the ACM policy called `policy-integrity-shield`, which is specified in [policy-integrity-shield.yaml](https://github.com/open-cluster-management/policy-collection/blob/master/community/CM-Configuration-Management/policy-integrity-shield.yaml), to enable Integrity Shield protection in an ACM managed cluster(s).
 
-   The following steps shows how to retrive `policy-integrity` and configure it. 
+   The following steps shows how to retrive `policy-integrity-shield` and configure it.
    
  1. Retrive the source from [policy-collection](https://github.com/open-cluster-management/policy-collection) Git repository.
    
@@ -62,14 +62,14 @@ oc create ns <custom namespace>
         $ git clone https://github.com/<YOUR-ORG-NAME>/  policy-collection.git
         $ cd policy-collection
       ```
-  2. Configure `policy-integrity.yaml`, which is an ACM policy for enabling Integrity Shield protection in an ACM managed cluster(s)
+  2. Configure `policy-integrity-shield.yaml`, which is an ACM policy for enabling Integrity Shield protection in an ACM managed cluster(s)
 
-      You can find `policy-integrity.yaml` in the directory `policy-collection/community/CM-Configuration-Management/` of the cloned GitHub repository.
+      You can find `policy-integrity-shield.yaml` in the directory `policy-collection/community/CM-Configuration-Management/` of the cloned GitHub repository.
 
       a) Configure the namespace to deploy Integrity Shield in an ACM managed cluster(s)
 
 
-      By default, `policy-integrity.yaml` specifies a namespace called `integrity-shield-operator-system` to be created in an ACM managed cluster(s).
+      By default, `policy-integrity-shield.yaml` specifies a namespace called `integrity-shield-operator-system` to be created in an ACM managed cluster(s).
 
         ```
           - objectDefinition:
@@ -92,11 +92,11 @@ oc create ns <custom namespace>
                     name: integrity-shield-operator-system
         ```
 
-        If you use your custom namespace in Step 1, change all instances of  `integrity-shield-operator-system` to your custom namespace in `policy-integrity.yaml`.
+        If you use your custom namespace in Step 1, change all instances of  `integrity-shield-operator-system` to your custom namespace in `policy-integrity-shield.yaml`.
 
       b)  Configure a signer's email
 
-        By default, `policy-integrity.yaml` includes a signer (`signer@enterprise.com`) as shown in following example.
+        By default, `policy-integrity-shield.yaml` includes a signer (`signer@enterprise.com`) as shown in following example.
       
         ``` 
             signPolicy:
@@ -118,9 +118,9 @@ oc create ns <custom namespace>
 
      c)  Configure the placement rule 
 
-      The [placement rule](https://github.com/open-cluster-management/policy-collection) in `policy-integrity.yaml` determines which ACM managed clusters Integrity Shield should be deployed.  
+      The [placement rule](https://github.com/open-cluster-management/policy-collection) in `policy-integrity-shield.yaml` determines which ACM managed clusters Integrity Shield should be deployed.  
 
-      By default, `policy-integrity.yaml` includes a `placement rule` as shown in the following example. 
+      By default, `policy-integrity-shield.yaml` includes a `placement rule` as shown in the following example. 
 
       ```
          apiVersion: apps.open-cluster-management.io/v1
@@ -141,21 +141,21 @@ oc create ns <custom namespace>
 
       If you would like to use your own tags for selecting ACM managed clusters as target for deploying IShield, change the above tags to your own.
 
-  3. Enable `policy-integrity` on an ACM managed cluster (GitOps).
+  3. Enable `policy-integrity-shield` on an ACM managed cluster (GitOps).
   
-      a)  Commit your changed configuration in `policy-integrity.yaml` to the `policy-collection` GitHub repository that you cloned earlier, if you have customized as described above.
+      a)  Commit your changed configuration in `policy-integrity-shield.yaml` to the `policy-collection` GitHub repository that you cloned earlier, if you have customized as described above.
 
-      If you have not customized `policy-integrity.yaml`, skip this step.
+      If you have not customized `policy-integrity-shield.yaml`, skip this step.
       
-      b)  Create a new namespace (e.g. `policy-community`) in the ACM hub cluster to deploy `policy-integrity`. 
+      b)  Create a new namespace (e.g. `policy-community`) in the ACM hub cluster to deploy `policy-integrity-shield`. 
       ```
       oc create ns policy-community
       ```
-      c)  Create `policy-integrity` in the ACM hub cluster in newly created namespace.
+      c)  Create `policy-integrity-shield` in the ACM hub cluster in newly created namespace.
 
       Connect to the ACM Hub cluster and execute the following script with the following parameters:
         - https://github.com/YOUR-ORG-NAME/policy-collection.git -  The URL for the forked `policy-collection` GitHub reposiory. 
-        - `community` - The directory where `policy-integrity.yaml` is located.
+        - `community` - The directory where `policy-integrity-shield.yaml` is located.
         -  `policy-community` - The namespace for creating policy   
 
       ```
@@ -165,17 +165,17 @@ oc create ns <custom namespace>
     
       Refer to general instructions to deploy ACM policies to an ACM hub cluster as well as ACM managed cluster(s) using GitOps in [doc](https://github.com/open-cluster-management/policy-collection).
 
-      After ACM hub cluster syncs the polices in the GitHub repository, an ACM policy called `policy-integrity`  will be created in the ACM hub cluster and in an ACM managed cluster(s) which are selected based on the placement rule in the policy. 
+      After ACM hub cluster syncs the polices in the GitHub repository, an ACM policy called `policy-integrity-shield`  will be created in the ACM hub cluster and in an ACM managed cluster(s) which are selected based on the placement rule in the policy. 
       
       Wait for few mintutes for policies to be setup in the ACM hub cluster and managed cluster(s)
 
-      Confirm the status (i.e. Compliance) of `policy-integrity` in the ACM hub cluster. You can find `policy-integrity` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity` means that `policy-integrity` is also created in an ACM managed cluster(s). This will trigger the deployment of Integrity Shield operator to an ACM managed cluster(s), in the target namespace specified in the `policy-integrity`.
+      Confirm the status (i.e. Compliance) of `policy-integrity-shield` in the ACM hub cluster. You can find `policy-integrity-shield` in the ACM Multicloud webconsole (Governace and Risk). Compliance status of `policy-integrity-shield` means that `policy-integrity-shield` is also created in an ACM managed cluster(s). This will trigger the deployment of Integrity Shield operator to an ACM managed cluster(s), in the target namespace specified in the `policy-integrity-shield`.
 
       c) Enable Integrity Verifiier protection in an ACM managed cluster (GitOps).
 
-      After confirming compliance status of `policy-integrity` in the ACM hub cluster, you can enable Integrity Shield protection in an ACM managed cluster(s) as follows.
+      After confirming compliance status of `policy-integrity-shield` in the ACM hub cluster, you can enable Integrity Shield protection in an ACM managed cluster(s) as follows.
 
-      Change the `complianceType` configuration for `integrity-cr-policy` from `mustnothave` to `musthave` in `policy-integrity.yaml` in the directory `policy-collection/community/CM-Configuration-Management/` of the cloned GitHub repository.
+      Change the `complianceType` configuration for `integrity-cr-policy` from `mustnothave` to `musthave` in `policy-integrity-shield.yaml` in the directory `policy-collection/community/CM-Configuration-Management/` of the cloned GitHub repository.
 
       The following example shows the `complianceType` configuration for `integrity-cr-policy` changed from `mustnothave` to `musthave`.
 
@@ -204,9 +204,9 @@ oc create ns <custom namespace>
                   server:
                     image: quay.io/open-cluster-management/integrity-shield-server:0.1.0
       ```
-      Commit the above configuration change in `policy-integrity.yaml` to `policy-collection` GitHub repository.
+      Commit the above configuration change in `policy-integrity-shield.yaml` to `policy-collection` GitHub repository.
 
-      Once the updated `policy-integrity` in the GitHub repository is synced by ACM hub cluster, Integrity Shield protection in an ACM managed cluster(s) will be enabled. You can confirm this by the compliance status of `policy-integrity` in the ACM hub cluster.
+      Once the updated `policy-integrity-shield` in the GitHub repository is synced by ACM hub cluster, Integrity Shield protection in an ACM managed cluster(s) will be enabled. You can confirm this by the compliance status of `policy-integrity-shield` in the ACM hub cluster.
       
       After enabling Integrity Shield protection, if you need to make changes to any ACM policy deployed in an ACM managed cluster(s), you will need to follow the steps describe below.
 

@@ -40,8 +40,10 @@ oc create secret generic --save-config keyring-secret  -n integrity-shield-opera
 You can run `scripts/gpg-annotation-sign.sh` script to generate signature annotations in YAML file which appends a signature for a Yaml file as annotations. For example,
 
 ```
-$ ./scripts/gpg-annotation-sign.sh signer@enterprise.com /tmp/test-cm.yaml /tmp/test-cm-with-signature.yaml
+$ ./scripts/gpg-annotation-sign.sh signer@enterprise.com /tmp/test-cm.yaml
 ```
+
+Note:  `gpg-annotation-sign.sh` would append the signature annotation to the original input file (e.g.  /tmp/test-cm.yaml), please back up the original file if needed.
 
 You can run `scripts/gpg-rs-sign.sh` script to generate ResourceSignature YAML file which includes signature for a Yaml file. For example,
 

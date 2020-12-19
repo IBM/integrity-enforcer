@@ -477,3 +477,11 @@ sonar-go-test-op:
 publish:
 	$(ISHIELD_REPO_ROOT)/build/publish_images.sh
 	$(ISHIELD_REPO_ROOT)/build/publish_bundle_ocm.sh
+
+.PHONY: create-private-registry
+
+create-private-registry:
+	$(ISHIELD_REPO_ROOT)/build/create-private-registry.sh
+
+delete-private-registry:
+	$(ISHIELD_REPO_ROOT)/build/delete-private-registry.sh

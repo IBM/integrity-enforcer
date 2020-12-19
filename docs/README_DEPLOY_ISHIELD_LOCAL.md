@@ -23,8 +23,14 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     ```
     oc project integrity-shield-operator-system
     ```
-    
-3. Define a public key secret for verifying signature by Integrity Shield.
+3.  Prepare a private registry for hosting IShield container images, if not already exist.
+
+    The following example create a private local container image registry to host the IShield container images.
+    ```
+    $ make create-private-registry
+`   ```
+
+4. Define a public key secret for verifying signature by Integrity Shield.
 
     Integrity Shield requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  Integrity Shield supports X509 or PGP key for signing resources.
 
@@ -55,7 +61,7 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     $ oc create -f  /tmp/keyring-secret.yaml -n `integrity-shield-operator-system`
     ```
 
-4. Define which signers (identified by email) should sign the resources in a specific namespace.
+5. Define which signers (identified by email) should sign the resources in a specific namespace.
 
     If you use default key setup, the following command setup signers. 
     ```
@@ -86,11 +92,12 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     ```
 
 
-5. Install Integrit Shield to a cluster
+6. Install Integrit Shield to a cluster
 
     Integrity Shield can be installed to cluster using a series of steps which are bundled in make commands.
     
     Before execute the make command, setup local environment as follows:
+    - `ISHIELD_ENV` <local: means that we deploy IShield to a local cluster like Minikube>
     - `ISHIELD_REPO_ROOT=<set absolute path of the root directory of cloned integrity-shield source repository>`
     - `KUBECONFIG=~/kube/config/minikube`  (for deploying IShield on minikube cluster)
 
@@ -99,16 +106,17 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     The following example shows how to set up a local envionement.  
 
     ```
-    $ export KUBECONFIG=~/kube/config/minikube
+    $ export ISHIELD_ENV=local
     $ export ISHIELD_REPO_ROOT=/home/repo/integrity-enforcer
+    $ export KUBECONFIG=~/kube/config/minikube
     ``` 
     In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-    Execute the following make commands to build Integrity Shield images.
+    Execute the following make commands to build Integrity Shield container images and pushes them to a local private container image registry..
     ```
     $ cd integrity-shield
     $ make build-images
-    $ make tag-images-to-local
+    $ make push-images-to-local
     ```
 
     Execute the following make commands to deploy Integrity Shield in a cluster.
@@ -128,7 +136,7 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     $ make create-cr
     ```
 
-6. Confirm if `integrity-shield` is running successfully in a cluster.
+7. Confirm if `integrity-shield` is running successfully in a cluster.
     
     Check if there are two pods running in the namespace `integrity-shield-operator-system`: 
         
@@ -138,7 +146,7 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     integrity-shield-server-85c787bf8c-h5bnj    2/2     Running   0          82m
     ```
 
-7. Clean up `integrity-shield` from a cluster
+8. Clean up `integrity-shield` from a cluster
 
     Execute the following script to remove all resources related to IShield deployment from cluster.
     ```
