@@ -151,6 +151,9 @@ func updateRSPStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.ReqContext
 
 func checkIfProfileTargetNamespace(reqNamespace, shieldNamespace string, data *RunData) bool {
 	ruleTable := data.GetRuleTable(shieldNamespace)
+	if ruleTable == nil {
+		return false
+	}
 	return ruleTable.CheckIfTargetNamespace(reqNamespace)
 }
 

@@ -52,14 +52,15 @@ type VerifierInterface interface {
 ***********************************************/
 
 type ResourceVerifier struct {
-	VerifyType  VerifyType
-	Namespace   string
-	KeyPathList []string
+	VerifyType     VerifyType
+	Namespace      string
+	KeyPathList    []string
+	AllKeyPathList []string
 }
 
-func NewVerifier(verifyType VerifyType, signType SignatureType, shieldNamespace string, keyPathList []string) VerifierInterface {
+func NewVerifier(verifyType VerifyType, signType SignatureType, shieldNamespace string, keyPathList, allKeyPathList []string) VerifierInterface {
 	if signType == SignatureTypeResource || signType == SignatureTypeApplyingResource || signType == SignatureTypePatch {
-		return &ResourceVerifier{Namespace: shieldNamespace, VerifyType: verifyType, KeyPathList: keyPathList}
+		return &ResourceVerifier{Namespace: shieldNamespace, VerifyType: verifyType, KeyPathList: keyPathList, AllKeyPathList: allKeyPathList}
 	} else if signType == SignatureTypeHelm {
 		return &HelmVerifier{Namespace: shieldNamespace, VerifyType: verifyType, KeyPathList: keyPathList}
 	}
@@ -153,6 +154,14 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			}
 			retErr = nil
 		} else {
+			if ok2, _, signer2, _ := pgp.VerifySignature(self.AllKeyPathList, message, signature); ok2 && signer2 != nil {
+				signer2Name := (&common.SignerInfo{
+					Email:   signer2.Email,
+					Name:    signer2.Name,
+					Comment: signer2.Comment,
+				}).GetName()
+				reasonFail = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s, signer: %s). Please check SignPolicy.", reqc.Namespace, reqc.Kind, signer2Name)
+			}
 			vcerr = &common.CheckError{
 				Msg:    "Failed to verify signature",
 				Reason: reasonFail,

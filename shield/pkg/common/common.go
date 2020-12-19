@@ -366,6 +366,7 @@ const (
 	REASON_DETECTION
 	REASON_INVALID_SIG
 	REASON_NO_SIG
+	REASON_NO_VALID_KEYRING
 	REASON_NO_POLICY
 	REASON_UNEXPECTED
 	REASON_ERROR
@@ -447,6 +448,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_NO_SIG: {
 		Message: "No signature found",
 		Code:    "no-signature",
+	},
+	REASON_NO_VALID_KEYRING: {
+		Message: "No valid keyring secret",
+		Code:    "no-valid-keyring",
 	},
 	REASON_NO_POLICY: {
 		Message: "No signer policies",

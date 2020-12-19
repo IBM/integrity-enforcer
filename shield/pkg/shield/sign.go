@@ -19,6 +19,7 @@ package shield
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	vrsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -200,10 +201,17 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	}
 
 	verifyType := VerifyType(self.config.VerifyType)
+
+	noValidKeyring := false
+	noValidKeyringMsg := ""
 	candidatePubkeys := self.policy.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
+	if len(candidatePubkeys) == 0 {
+		noValidKeyring = true
+		noValidKeyringMsg = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s). Please check SignPolicy.", reqc.Namespace, reqc.Kind)
+	}
 
 	// create verifier
-	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, candidatePubkeys)
+	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, candidatePubkeys, self.config.KeyPathList)
 
 	// verify signature
 	sigVerifyResult, err := verifier.Verify(rsig, reqc, signingProfile)
@@ -214,6 +222,24 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			Error: &common.CheckError{
 				Error:  err,
 				Reason: "Error during signature verification",
+			},
+		}, nil
+	}
+
+	if sigVerifyResult != nil && sigVerifyResult.Error != nil {
+		if strings.HasPrefix(sigVerifyResult.Error.Reason, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
+			noValidKeyring = true
+			noValidKeyringMsg = sigVerifyResult.Error.Reason
+		}
+	}
+	logger.Debug("[DEBUG] noValidKeyring: ", noValidKeyring)
+
+	if noValidKeyring {
+		return &common.SignatureEvalResult{
+			Allow:   false,
+			Checked: true,
+			Error: &common.CheckError{
+				Reason: noValidKeyringMsg,
 			},
 		}, nil
 	}

@@ -141,8 +141,17 @@ func (self *Handler) Check() *DecisionResult {
 }
 
 func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
-	// report only for denying request or for IShield resource request
-	if self.ctx.Allow && !self.ctx.IShieldResource {
+	// report only for denying request or for IShield resource request by IShield Admin
+	shouldReport := false
+	if !self.ctx.Allow {
+		shouldReport = true
+	}
+	iShieldAdmin := checkIfIShieldAdminRequest(self.reqc, self.config)
+	if self.ctx.IShieldResource && iShieldAdmin {
+		shouldReport = true
+	}
+
+	if !shouldReport {
 		return nil
 	}
 

@@ -17,6 +17,8 @@
 package shield
 
 import (
+	"encoding/json"
+
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
@@ -97,8 +99,11 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 	if self.ruleTable == nil || self.ruleTable.IsEmpty() || rspReloaded || nsReloaded {
 		self.setRuleTable(shieldNamespace)
 	}
-	// rtBytes, _ := json.Marshal(self.ruleTable)
-	// logger.Trace("GetRuleTable(): ", string(rtBytes))
+
+	if self.ruleTable == nil {
+		rspBytes, _ := json.Marshal(self.RSPList)
+		logger.Trace("RuleTable is nil; RunData.RSPList: ", string(rspBytes))
+	}
 	return self.ruleTable
 }
 
