@@ -756,6 +756,43 @@ func (t *Node) FindUpdatedAndCreated(t2 *Node) *DiffResult {
 	return dr
 }
 
+// separate inconsistent type key & values from maps
+func extractComparableMap(m1, m2 map[string]interface{}) (map[string]interface{}, map[string]interface{}, []Difference) {
+	keys := map[string]bool{}
+	for k := range m1 {
+		keys[k] = true
+	}
+	for k := range m2 {
+		keys[k] = true
+	}
+	nm1 := map[string]interface{}{}
+	nm2 := map[string]interface{}{}
+	typeDiffs := []Difference{}
+	for k := range keys {
+		v1, ok1 := m1[k]
+		v2, ok2 := m2[k]
+
+		if v1 != nil && v2 != nil && reflect.TypeOf(v1) != reflect.TypeOf(v2) {
+			d := Difference{
+				Key: k,
+				Values: map[string]interface{}{
+					"before": fmt.Sprintf("(type: %T) %s", v1, v1),
+					"after":  fmt.Sprintf("(type: %T) %s", v2, v2),
+				},
+			}
+			typeDiffs = append(typeDiffs, d)
+			continue
+		}
+		if ok1 {
+			nm1[k] = v1
+		}
+		if ok2 {
+			nm2[k] = v2
+		}
+	}
+	return nm1, nm2, typeDiffs
+}
+
 func FindDiffBetweenNodes(t1, t2 *Node, findType map[string]bool) *DiffResult {
 	if findType == nil {
 		findType = map[string]bool{
@@ -771,12 +808,14 @@ func FindDiffBetweenNodes(t1, t2 *Node, findType map[string]bool) *DiffResult {
 		return nil
 	}
 
-	changelog, err := diff.Diff(m1, m2)
+	nm1, nm2, typeDiffs := extractComparableMap(m1, m2)
+
+	changelog, err := diff.Diff(nm1, nm2)
 	if err != nil {
 		logger.Error(err)
 	}
 
-	if len(changelog) == 0 {
+	if len(changelog) == 0 && len(typeDiffs) == 0 {
 		return nil
 	}
 	items := []Difference{}
@@ -793,6 +832,8 @@ func FindDiffBetweenNodes(t1, t2 *Node, findType map[string]bool) *DiffResult {
 		}
 		items = append(items, d)
 	}
+
+	items = append(items, typeDiffs...)
 	sort.SliceStable(items, func(i, j int) bool {
 		return items[i].Key < items[j].Key
 	})
