@@ -1,4 +1,4 @@
-## Sign Policy
+## Signer Configuration
 
 ### This CR should not be edited directly.
 Usually, SignPolicy CR is automatically created/updated using `signPolicy` config in IntegrityShield CR.
@@ -123,7 +123,7 @@ spec:
 During break glass mode on, the request without signature will be allowed even if protected by RSP, and the label `integrityshield.io/resourceIntegrity: unverified` will be attached to the resource.
 
 
-### Example of Sign Policy
+### Example of Signer Configuration
 
 ```yaml
 spec:

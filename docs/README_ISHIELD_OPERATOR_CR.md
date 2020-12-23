@@ -35,14 +35,14 @@ spec:
         enabled: false
 ``` -->
 
-## Verification Key and Sign Policy Configuration
+## Verification Key and signer configuration
 
 The list of verification key names should be set as `keyRingConfigs` in this CR.
 The operator will start installing Integrity Shield when all key secrets listed here are ready.
 
-Also, you can set SignPolicy here.
-This policy defines signers that are allowed to create/update resources with their signature in some namespaces.
-(see [How to configure SignPolicy](README_CONFIG_SIGNER_POLICY.md) for detail.)
+Also, you can set signer configuration here.
+This configuration defines signers that are allowed to create/update resources with their signature in some namespaces.
+(see [How to configure signer](README_SIGNER_CONFIG.md) for detail.)
 
 ```yaml
 spec:
