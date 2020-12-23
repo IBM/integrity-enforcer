@@ -111,9 +111,9 @@ func (self *IShieldResourceCondition) IsServerResource(ref *common.ResourceRef) 
 ***********************************************/
 
 type LogScopeConfig struct {
-	Enabled bool                                 `json:"enabled,omitempty"`
-	InScope []common.RequestPatternWithNamespace `json:"inScope,omitempty"`
-	Ignore  []common.RequestPatternWithNamespace `json:"ignore,omitempty"`
+	Enabled bool                    `json:"enabled,omitempty"`
+	InScope []common.RequestPattern `json:"inScope,omitempty"`
+	Ignore  []common.RequestPattern `json:"ignore,omitempty"`
 }
 
 func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
