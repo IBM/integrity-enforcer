@@ -27,7 +27,7 @@ Integrity Shield can be deployed with operator. We have verified the feasibility
 - [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
 
 ## How Integrity Shield works
-- Resources to be protected in each namespace can be defined in the custom resource called `ResourceSigningProfile`. For example, the following snippet shows an example definition of protected resources in a namespace. This `ResourceSigningProfile` resource includes the matching rule for specifiying resources to such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by Integrity Shield, so any matched request to create/update those resources are verified with signature.  (see [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md))
+- Resources to be protected in each namespace can be defined in the custom resource called `ResourceSigningProfile`. For example, the following snippet shows an example definition of protected resources in a namespace. This `ResourceSigningProfile` resource includes the matching rule for specifiying resources to such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by Integrity Shield, so any matched request to create/update those resources are verified with signature.  (see [Define Protected Resources](README_FOR_RESOURCE_SIGNING_PROFILE.md))
 ​
   ```yaml
   apiVersion: apis.integrityshield.io/v1alpha1
@@ -48,7 +48,7 @@ Integrity Shield can be deployed with operator. We have verified the feasibility
   ```
   
 - Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
-- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [Sign Policy](README_CONFIG_SIGNER_POLICY.md).)
+- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [Signer Configuration](README_SIGNER_CONFIG.md).)
 - Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [How to Sign Resources](README_RESOURCE_SIGNATURE.md))
 - Integrity Shield admission controller is installed in a dedicated namespace (e.g. `integrity-shield-operator-system` in this document). It can be installed by operator. (see [Integrity Shield Custom Resource](README_ISHIELD_OPERATOR_CR.md) for detail install options.)
 ​

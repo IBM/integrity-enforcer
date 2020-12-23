@@ -35,14 +35,14 @@ spec:
         enabled: false
 ``` -->
 
-## Verification Key and Sign Policy Configuration
+## Verification Key and signer configuration
 
 The list of verification key names should be set as `keyRingConfigs` in this CR.
 The operator will start installing Integrity Shield when all key secrets listed here are ready.
 
-Also, you can set SignPolicy here.
-This policy defines signers that are allowed to create/update resources with their signature in some namespaces.
-(see [How to configure SignPolicy](README_CONFIG_SIGNER_POLICY.md) for detail.)
+Also, you can set signer configuration here.
+This configuration defines signers that are allowed to create/update resources with their signature in some namespaces.
+(see [How to configure signer](README_SIGNER_CONFIG.md) for detail.)
 
 ```yaml
 spec:
@@ -67,7 +67,7 @@ spec:
 ## Resource Signing Profile Configuration
 You can define one or more ResourceSigningProfiles that are installed by this operator.
 This configuration is not set by default.
-(see [How to configure ResourceSigningProfile](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail.)
+(see [How to configure ResourceSigningProfile](README_FOR_RESOURCE_SIGNING_PROFILE.md) for detail.)
 
 ```yaml
 spec:
@@ -133,12 +133,14 @@ spec:
 
 ## IShield admin
 
-Specify user group for IShield admin with comma separated strings like the following. This value is empty by default.
+Specify user group for IShield admin with comma separated strings like the following. The following `iShieldAdminUserGroup` is the default value.
+`iShieldAdminUserName` can be used in almost same way, but this is for concrete username such as service account name. By default, this value is empty.
 
 ```yaml
 spec:
   shieldConfig:
     iShieldAdminUserGroup: "system:masters,system:cluster-admins"
+    iShieldAdminUserName: "system:serviceaccount:sample-namespace:admin-sa"
 ```
 
 Also, you can define IShield admin role. This role will be created automatically during installation when `autoIShieldAdminRoleCreationDisabled` is `false` (default).
@@ -175,7 +177,7 @@ spec:
 
 ## Logging
 
-Console log includes stdout logging from IShield server. Context log includes admission control results. Both are enabled as default. You can specify namespaces in scope. `'*'` is wildcard. `'-'` is empty stiring, which implies cluster-scope resource.
+Console log includes stdout logging from IShield server. Context log includes admission control results. Both are enabled as default. You can define conditions to output logs here. For example, you can specify namespaces in scope. `'*'` is wildcard. `'-'` is empty stiring, which implies cluster-scope resource. You can also specify what Kind of resource should be logged like an example below.
 ```yaml
 spec:
   shieldConfig:
@@ -188,8 +190,9 @@ spec:
       contextLog:
         enabled: true
         inScope:
-        - namespace: '*'
-        - namespace: '-'
+        - kind: 'ConfigMap'
+        - kind: 'Secret'
+          namespace: 'namespace-1'
       logLevel: info
 ```
 

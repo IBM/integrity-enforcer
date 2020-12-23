@@ -175,7 +175,7 @@ EOF
 resourcesigningprofile.apis.integrityshield.io/sample-rsp created
 ```
 
-See [Define Protected Resources](README_FOR_RESOURCE_PROTECTION_PROFILE.md) for detail specs.
+See [Define Protected Resources](README_FOR_RESOURCE_SIGNING_PROFILE.md) for detail specs.
 
 ### Create a resource with signature
 
