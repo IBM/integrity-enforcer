@@ -354,11 +354,7 @@ install-operator:
 	@echo
 	@echo setting image
 	cp $(SHIELD_OP_DIR)config/manager/kustomization.yaml $(TMP_DIR)kustomization.yaml  #copy original file to tmp dir.
-	@if [ -z "$(DEMO_ISHIELD_OP_IMAGE_NAME)" ]; then \
-		cd $(SHIELD_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION); \
-	else \
-		cd $(SHIELD_OP_DIR)config/manager && kustomize edit set image controller=$(DEMO_ISHIELD_OP_IMAGE_NAME); \
-	fi
+	cd $(SHIELD_OP_DIR)config/manager && kustomize edit set image controller=$(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 	@echo installing operator
 	kustomize build $(SHIELD_OP_DIR)config/default | kubectl apply --validate=false -f -
 	cp $(TMP_DIR)kustomization.yaml $(SHIELD_OP_DIR)config/manager/kustomization.yaml  #put back the original file from tmp dir.
@@ -381,17 +377,9 @@ setup-tmp-cr:
 	@echo copy cr into tmp dir
 	cp $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_local.yaml $(TMP_CR_FILE)
 	@echo insert image
-	@if [ -z "$(DEMO_ISHIELD_LOGGING_IMAGE_NAME)" ]; then \
-		yq write -i $(TMP_CR_FILE) spec.logger.image $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION); \
-	else \
-		yq write -i $(TMP_CR_FILE) spec.logger.image $(DEMO_ISHIELD_LOGGING_IMAGE_NAME); \
-	fi
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
-	@if [ -z "$(DEMO_ISHIELD_SERVER_IMAGE_NAME)" ]; then \
-		yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION); \
-	else \
-		yq write -i $(TMP_CR_FILE) spec.server.image $(DEMO_ISHIELD_SERVER_IMAGE_NAME); \
-	fi
+	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
 	@echo setup keyring configs
 	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
@@ -489,3 +477,24 @@ sonar-go-test-op:
 publish:
 	$(ISHIELD_REPO_ROOT)/build/publish_images.sh
 	$(ISHIELD_REPO_ROOT)/build/publish_bundle_ocm.sh
+
+setup-demo:
+	@echo
+	@echo setting image
+	cp $(SHIELD_OP_DIR)config/manager/kustomization.yaml $(TMP_DIR)kustomization.yaml  #copy original file to tmp dir.
+	cd $(SHIELD_OP_DIR)config/manager && kustomize edit set image controller=$(DEMO_ISHIELD_OP_IMAGE_NAME)
+	@echo installing operator
+	kustomize build $(SHIELD_OP_DIR)config/default | kubectl apply --validate=false -f -
+	cp $(TMP_DIR)kustomization.yaml $(SHIELD_OP_DIR)config/manager/kustomization.yaml
+	@echo prepare cr
+	@echo copy cr into tmp dir
+	cp $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_local.yaml $(TMP_CR_FILE)
+	@echo insert image
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(DEMO_ISHIELD_LOGGING_IMAGE_NAME)
+	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
+	yq write -i $(TMP_CR_FILE) spec.server.image $(DEMO_ISHIELD_SERVER_IMAGE_NAME)
+	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
+	@echo setup keyring configs
+	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
+	@echo setup signer policy
+	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
