@@ -1104,7 +1104,7 @@ spec:
                     type: array
                   targetNamespaceSelector:
                     description: '`TargetNamespaceSelector` is used only for profile
-                      in IShield NS'
+                      in iShield NS'
                     properties:
                       exclude:
                         items:
@@ -1543,116 +1543,6 @@ spec:
                   format: int32
                   type: integer
               type: object
-            signerConfig:
-              properties:
-                breakGlass:
-                  items:
-                    properties:
-                      namespaces:
-                        items:
-                          type: string
-                        type: array
-                      scope:
-                        type: string
-                    type: object
-                  type: array
-                description:
-                  type: string
-                policies:
-                  items:
-                    properties:
-                      excludeNamespaces:
-                        items:
-                          type: string
-                        type: array
-                      namespaces:
-                        items:
-                          type: string
-                        type: array
-                      scope:
-                        type: string
-                      signers:
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  type: array
-                signers:
-                  items:
-                    properties:
-                      name:
-                        type: string
-                      secret:
-                        type: string
-                      subjects:
-                        items:
-                          properties:
-                            commonName:
-                              type: string
-                            country:
-                              type: string
-                            email:
-                              type: string
-                            locality:
-                              type: string
-                            organization:
-                              type: string
-                            organizationalUnit:
-                              type: string
-                            postalCode:
-                              type: string
-                            province:
-                              type: string
-                            serialNumber:
-                              type: string
-                            streetAddress:
-                              type: string
-                            uid:
-                              type: string
-                          type: object
-                        type: array
-                    type: object
-                  type: array
-              type: object
-            tolerations:
-              items:
-                description: The pod this Toleration is attached to tolerates any
-                  taint that matches the triple <key,value,effect> using the matching
-                  operator <operator>.
-                properties:
-                  effect:
-                    description: Effect indicates the taint effect to match. Empty
-                      means match all taint effects. When specified, allowed values
-                      are NoSchedule, PreferNoSchedule and NoExecute.
-                    type: string
-                  key:
-                    description: Key is the taint key that the toleration applies
-                      to. Empty means match all taint keys. If the key is empty, operator
-                      must be Exists; this combination means to match all values and
-                      all keys.
-                    type: string
-                  operator:
-                    description: Operator represents a key's relationship to the value.
-                      Valid operators are Exists and Equal. Defaults to Equal. Exists
-                      is equivalent to wildcard for value, so that a pod can tolerate
-                      all taints of a particular category.
-                    type: string
-                  tolerationSeconds:
-                    description: TolerationSeconds represents the period of time the
-                      toleration (which must be of effect NoExecute, otherwise this
-                      field is ignored) tolerates the taint. By default, it is not
-                      set, which means tolerate the taint forever (do not evict).
-                      Zero and negative values will be treated as 0 (evict immediately)
-                      by the system.
-                    format: int64
-                    type: integer
-                  value:
-                    description: Value is the taint value the toleration matches to.
-                      If the operator is Exists, the value should be empty, otherwise
-                      just a regular string.
-                    type: string
-                type: object
-              type: array
             shieldConfig:
               properties:
                 allow:
@@ -1929,7 +1819,7 @@ spec:
                       type: array
                     targetNamespaceSelector:
                       description: '`TargetNamespaceSelector` is used only for profile
-                        in IShield NS'
+                        in iShield NS'
                       properties:
                         exclude:
                           items:
@@ -2020,6 +1910,55 @@ spec:
                         type: object
                       type: array
                   type: object
+                iShieldAdminUserGroup:
+                  type: string
+                iShieldAdminUserName:
+                  type: string
+                iShieldResource:
+                  type: string
+                iShieldResourceCondition:
+                  properties:
+                    operatorResources:
+                      items:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - apiVersion
+                        - kind
+                        - name
+                        - namespace
+                        type: object
+                      type: array
+                    operatorServiceAccount:
+                      type: string
+                    serverResources:
+                      items:
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - apiVersion
+                        - kind
+                        - name
+                        - namespace
+                        type: object
+                      type: array
+                  type: object
+                iShieldServerUserName:
+                  type: string
                 ignore:
                   items:
                     properties:
@@ -2100,55 +2039,6 @@ spec:
                           type: object
                       type: object
                   type: object
-                iShieldAdminUserGroup:
-                  type: string
-                iShieldAdminUserName:
-                  type: string
-                iShieldResource:
-                  type: string
-                iShieldResourceCondition:
-                  properties:
-                    operatorResources:
-                      items:
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                        required:
-                        - apiVersion
-                        - kind
-                        - name
-                        - namespace
-                        type: object
-                      type: array
-                    operatorServiceAccount:
-                      type: string
-                    serverResources:
-                      items:
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                        required:
-                        - apiVersion
-                        - kind
-                        - name
-                        - namespace
-                        type: object
-                      type: array
-                  type: object
-                iShieldServerUserName:
-                  type: string
                 keyPathList:
                   items:
                     type: string
@@ -2169,7 +2059,11 @@ spec:
                                 type: string
                               kind:
                                 type: string
+                              logLevel:
+                                type: string
                               name:
+                                type: string
+                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -2191,7 +2085,11 @@ spec:
                                 type: string
                               kind:
                                 type: string
+                              logLevel:
+                                type: string
                               name:
+                                type: string
+                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -2222,7 +2120,11 @@ spec:
                                 type: string
                               kind:
                                 type: string
+                              logLevel:
+                                type: string
                               name:
+                                type: string
+                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -2244,7 +2146,11 @@ spec:
                                 type: string
                               kind:
                                 type: string
+                              logLevel:
+                                type: string
                               name:
+                                type: string
+                              namespace:
                                 type: string
                               operation:
                                 type: string
@@ -2304,6 +2210,116 @@ spec:
               type: object
             shieldConfigCrName:
               type: string
+            signerConfig:
+              properties:
+                breakGlass:
+                  items:
+                    properties:
+                      namespaces:
+                        items:
+                          type: string
+                        type: array
+                      scope:
+                        type: string
+                    type: object
+                  type: array
+                description:
+                  type: string
+                policies:
+                  items:
+                    properties:
+                      excludeNamespaces:
+                        items:
+                          type: string
+                        type: array
+                      namespaces:
+                        items:
+                          type: string
+                        type: array
+                      scope:
+                        type: string
+                      signers:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  type: array
+                signers:
+                  items:
+                    properties:
+                      name:
+                        type: string
+                      secret:
+                        type: string
+                      subjects:
+                        items:
+                          properties:
+                            commonName:
+                              type: string
+                            country:
+                              type: string
+                            email:
+                              type: string
+                            locality:
+                              type: string
+                            organization:
+                              type: string
+                            organizationalUnit:
+                              type: string
+                            postalCode:
+                              type: string
+                            province:
+                              type: string
+                            serialNumber:
+                              type: string
+                            streetAddress:
+                              type: string
+                            uid:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  type: array
+              type: object
+            tolerations:
+              items:
+                description: The pod this Toleration is attached to tolerates any
+                  taint that matches the triple <key,value,effect> using the matching
+                  operator <operator>.
+                properties:
+                  effect:
+                    description: Effect indicates the taint effect to match. Empty
+                      means match all taint effects. When specified, allowed values
+                      are NoSchedule, PreferNoSchedule and NoExecute.
+                    type: string
+                  key:
+                    description: Key is the taint key that the toleration applies
+                      to. Empty means match all taint keys. If the key is empty, operator
+                      must be Exists; this combination means to match all values and
+                      all keys.
+                    type: string
+                  operator:
+                    description: Operator represents a key's relationship to the value.
+                      Valid operators are Exists and Equal. Defaults to Equal. Exists
+                      is equivalent to wildcard for value, so that a pod can tolerate
+                      all taints of a particular category.
+                    type: string
+                  tolerationSeconds:
+                    description: TolerationSeconds represents the period of time the
+                      toleration (which must be of effect NoExecute, otherwise this
+                      field is ignored) tolerates the taint. By default, it is not
+                      set, which means tolerate the taint forever (do not evict).
+                      Zero and negative values will be treated as 0 (evict immediately)
+                      by the system.
+                    format: int64
+                    type: integer
+                  value:
+                    description: Value is the taint value the toleration matches to.
+                      If the operator is Exists, the value should be empty, otherwise
+                      just a regular string.
+                    type: string
+                type: object
+              type: array
             webhookClusterResource:
               description: Rule is a tuple of APIGroups, APIVersion, and Resources.It
                 is recommended to make sure that all the tuple expansions are valid.
