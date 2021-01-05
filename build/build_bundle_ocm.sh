@@ -44,6 +44,10 @@ echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} VERSION=${VERSION}
 
+tmpcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshieldren.yaml"
+if [ -f $tmpcrd ]; then
+  rm $tmpcrd
+fi
 
 csvfile="bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
@@ -55,6 +59,11 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
+
+docker pull ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
+if [ "$pull_status" = "failed" ]; then
+  sed -i '/ replaces: /d' ${SHIELD_OP_DIR}/bundle/manifests/*.clusterserviceversion.yaml
+fi
 
 make bundle-build BUNDLE_IMG=${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
 
@@ -77,8 +86,6 @@ make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 # Prepare ishield-operator bundle index
 echo -----------------------------
 echo [3/4] Adding bundle to index
-
-docker pull ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
         sudo /usr/local/bin/opm index add -c docker --generate --bundles ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION} \
