@@ -184,7 +184,7 @@ func (self *ResourceSigningProfile) UpdateStatus(request *common.Request, errMsg
 			singleSummary = s
 		}
 	}
-	if sumId < 0 {
+	if sumId < 0 || singleSummary == nil {
 		singleSummary = &ProfileStatusSummary{
 			GroupVersionKind: request.GroupVersionKind(),
 			Count:            1,
