@@ -302,7 +302,7 @@ setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
 	cp $(TMP_CR_FILE) $(TMP_CR_UPDATED_FILE)
-	yq write -i $(TMP_CR_UPDATED_FILE) spec.signPolicy.signers[1].subjects[1].email $(TEST_SAMPLE_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_UPDATED_FILE) spec.signerConfig.signers[1].subjects[1].email $(TEST_SAMPLE_SIGNER_SUBJECT_EMAIL)
 
 e2e-test:
 	@echo
@@ -383,15 +383,15 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
 	@echo setup keyring configs
 	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
-	@echo setup signer policy
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].name $(TEST_SIGNERS2)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].secret $(TEST_SECRET2)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL2)
+	@echo setup signer config
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].secret $(TEST_SECRET)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].name $(TEST_SIGNERS2)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].secret $(TEST_SECRET2)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL2)
 	@if [ "$(TEST_LOCAL)" ]; then \
 		echo enable logAllResponse ; \
 		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logLevel trace ;\
@@ -477,3 +477,32 @@ sonar-go-test-op:
 publish:
 	$(ISHIELD_REPO_ROOT)/build/publish_images.sh
 	$(ISHIELD_REPO_ROOT)/build/publish_bundle_ocm.sh
+
+setup-demo:
+	@echo
+	@echo setting image
+	cp $(SHIELD_OP_DIR)config/manager/kustomization.yaml $(TMP_DIR)kustomization.yaml  #copy original file to tmp dir.
+	cd $(SHIELD_OP_DIR)config/manager && kustomize edit set image controller=$(DEMO_ISHIELD_OP_IMAGE_NAME)
+	@echo installing operator
+	kustomize build $(SHIELD_OP_DIR)config/default | kubectl apply --validate=false -f -
+	cp $(TMP_DIR)kustomization.yaml $(SHIELD_OP_DIR)config/manager/kustomization.yaml
+	@echo prepare cr
+	@echo copy cr into tmp dir
+	cp $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_local.yaml $(TMP_CR_FILE)
+	@echo insert image
+	yq write -i $(TMP_CR_FILE) spec.logger.image $(DEMO_ISHIELD_LOGGING_IMAGE_NAME)
+	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
+	yq write -i $(TMP_CR_FILE) spec.server.image $(DEMO_ISHIELD_SERVER_IMAGE_NAME)
+	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
+	@echo setup keyring configs
+	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
+	@echo setup signer policy
+	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
+
+.PHONY: create-private-registry
+
+create-private-registry:
+	$(ISHIELD_REPO_ROOT)/build/create-private-registry.sh
+
+delete-private-registry:
+	$(ISHIELD_REPO_ROOT)/build/delete-private-registry.sh

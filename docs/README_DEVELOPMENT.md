@@ -18,12 +18,19 @@ For example
 ```
 $ export KUBECONFIG=~/kube/config/minikube
 $ export ISHIELD_REPO_ROOT=/repo/integrity-enforcer
+$ export ISHIELD_ENV=local
 ```
 
-## Make commands∂
+## Make commands
 
+### Create private registry for hosting IShield container images
 
-### Build
+The following example create a private local container image registry to host the IShield container images.
+```
+$ make create-private-registry
+```
+
+### Build IShield container images
 ```
 $ make build-images
 $ make tag-images-to-local
@@ -39,6 +46,14 @@ Three images are built.
 - `integrity-shield-logging` is image for IShield logging side car
 
 ### Push images
+
+The following command pushes the built IShield images to local container image registry setup above.
+```
+$ make push-images-to-local
+```
+
+Alternatively, you can push images to other container image registry as below.
+
 ```
 $ make push-images
 ```
@@ -52,7 +67,15 @@ $ export DOCKER_USER=integrityshield
 $ export DOCKER_PASS=<password>
 ```
 
-### Install IShield to cluster
+### Install IShield to a cluster
+
+Create verification key as a secret.
+
+The following creates default key-ring secret required by IShield server.
+```
+make create-key-ring
+```
+
 ```
 $ make install-crds
 $ make install-operator
@@ -69,11 +92,13 @@ The make commands refer the steps for
 ### Uninstall IShield from cluster
 ```
 $ make delete-tmp-cr
+$ make delete-keyring-secret
 $ make delete-operator
 ```
 
 The make command refers to the steps for
 - Delete Integrity Shield custom resource (operator installs IShield server automatically)
+- Delete Key-ring secret
 - Delete Integrity Shield operator
 - Delete CRDs
 

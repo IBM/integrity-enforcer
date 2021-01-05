@@ -36,8 +36,8 @@ const (
 	ShieldConfigCustomResourceAPIVersion = "apis.integrityshield.io/v1alpha1"
 	ShieldConfigCustomResourceKind       = "ShieldConfig"
 
-	SignPolicyCustomResourceAPIVersion = "apis.integrityshield.io/v1alpha1"
-	SignPolicyCustomResourceKind       = "SignPolicy"
+	SignerConfigCustomResourceAPIVersion = "apis.integrityshield.io/v1alpha1"
+	SignerConfigCustomResourceKind       = "SignerConfig"
 
 	ProfileCustomResourceAPIVersion = "apis.integrityshield.io/v1alpha1"
 	ProfileCustomResourceKind       = "ResourceSigningProfile"
@@ -285,12 +285,12 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 ***********************************************/
 
 type SignatureEvalResult struct {
-	Signer        *SignerInfo `json:"signer"`
-	SignerName    string      `json:"signerName"`
-	Checked       bool        `json:"checked"`
-	Allow         bool        `json:"allow"`
-	MatchedPolicy string      `json:"matchedPolicy"`
-	Error         *CheckError `json:"error"`
+	Signer              *SignerInfo `json:"signer"`
+	SignerName          string      `json:"signerName"`
+	Checked             bool        `json:"checked"`
+	Allow               bool        `json:"allow"`
+	MatchedSignerConfig string      `json:"matchedSignerConfig"`
+	Error               *CheckError `json:"error"`
 }
 
 func (self *SignatureEvalResult) GetSignerName() string {
@@ -366,6 +366,7 @@ const (
 	REASON_DETECTION
 	REASON_INVALID_SIG
 	REASON_NO_SIG
+	REASON_NO_VALID_KEYRING
 	REASON_NO_POLICY
 	REASON_UNEXPECTED
 	REASON_ERROR
@@ -447,6 +448,10 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_NO_SIG: {
 		Message: "No signature found",
 		Code:    "no-signature",
+	},
+	REASON_NO_VALID_KEYRING: {
+		Message: "No valid keyring secret",
+		Code:    "no-valid-keyring",
 	},
 	REASON_NO_POLICY: {
 		Message: "No signer policies",

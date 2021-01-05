@@ -1,0 +1,137 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: IntegrityShield
+metadata:
+  creationTimestamp: null
+  name: integrity-shield-server
+spec:
+  affinity: {}
+  keyRingConfigs:
+  - name: keyring-secret
+  - name: keyring-secret-signer2
+  labels:
+    app: ishield-server
+  logger:
+    enabled: true
+    es:
+      host: 10.200.10.10
+      indexPrefix: ac-log
+      port: 9200
+      scheme: http
+    esSecretName: es-tls-certs
+    http:
+      endpoint: http://sample-http-server:8093/api
+    image: localhost:5000/integrity-shield-logging:0.1.0
+    imagePullPolicy: Always
+    name: forwarder
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    stdOutput: true
+  regKeySecret: {}
+  replicaCount: 1
+  security:
+    clusterRole: ishield-cluster-role
+    clusterRoleBinding: ishield-cluster-role-binding
+    iShieldAdminSubjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:masters
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:cluster-admins
+    podSecurityPolicyName: ishield-psp
+    securityContextConstraintsName: ishield-scc
+    serviceAccountName: ishield-sa
+  selector:
+    app: ishield-server
+  server:
+    chartBaseUrl: http://sample-chart-repo-server/charts
+    contextLogEnabled: true
+    image: localhost:5000/integrity-shield-server:0.1.0
+    imagePullPolicy: Always
+    name: server
+    port: 8443
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    securityContext: {}
+    shieldPolicyReloadSec: 10
+  shieldConfig:
+    iShieldAdminUserGroup: system:masters,system:cluster-admins
+    ignore:
+    - kind: Event
+    - kind: Lease
+    - kind: Endpoints
+    - kind: TokenReview
+    - kind: SubjectAccessReview
+    - kind: SelfSubjectAccessReview
+    inScopeNamespaceSelector:
+      exclude:
+      - kube-*
+      - openshift-*
+      include:
+      - '*'
+    log:
+      consoleLog:
+        enabled: true
+        inScope:
+        - kind: '*'
+      contextLog:
+        enabled: true
+        inScope:
+        - kind: '*'
+      logLevel: info
+    patch:
+      enabled: true
+    plugin:
+    - name: helm
+    verifyType: pgp
+  shieldConfigCrName: ishield-config
+  signerConfig:
+    policies:
+    - namespaces:
+      - '*'
+      signers:
+      - SampleSigner
+    - scope: Cluster
+      signers:
+      - SampleSigner
+    signers:
+    - name: SampleSigner
+      secret: keyring-secret
+      subjects:
+      - email: hirokuni.kitahara1@ibm.com
+    - name: TestSigner
+      secret: keyring-secret
+      subjects:
+      - email: gajan@jp.ibm.com
+    - name: TestSigner2
+      secret: keyring-secret-signer2
+      subjects:
+      - email: dummy@dummy.com
+  webhookClusterResource:
+    apiGroups:
+    - '*'
+    apiVersions:
+    - '*'
+    resources:
+    - '*'
+  webhookConfigName: ishield-webhook-config
+  webhookNamespacedResource:
+    apiGroups:
+    - '*'
+    apiVersions:
+    - '*'
+    resources:
+    - '*'
+  webhookServerTlsSecretName: ishield-server-tls
+  webhookServiceName: ishield-server
+status: {}

@@ -24,7 +24,7 @@ To see how to create a verification key,  refer to [doc](../README_VERIFICATION_
 First connect to an ACM hub cluster and execute the [acm-verification-key-setup.sh](https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/ACM/acm-verification-key-setup.sh) script to setup a verification key on an ACM managed cluster(s) connected to the ACM hub cluster with the following parameters:
 
 - `integrity-shield-operator-system` - The namespace where verification key would be created in the ACM hub cluster. This should be the namespace created in Step 1 in [doc](README_ENABLE_ISHIELD_PROTECTION_ACM_ENV.md)
-- `keyring-secret` - The name of secret resource which would include the verification key. The name should match with signer in `policy-integrity.yaml` (see Step 3.b in [doc](README_ENABLE_ISHIELD_PROTECTION_ACM_ENV.md))
+- `keyring-secret` - The name of secret resource which would include the verification key. The name should match with signer in `policy-integrity-shield.yaml` (see Step 3.b in [doc](README_ENABLE_ISHIELD_PROTECTION_ACM_ENV.md))
 - `/tmp/pubring.gpg` - The file path of the verification key exported as described in [doc](../README_VERIFICATION_KEY_SETUP.md)
 - `environment:dev` - The placement rule flags which are the labels/tags that idetifies a managed cluster(s). Use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)
 

@@ -94,7 +94,7 @@ spec:
     - name: helm
     verifyType: pgp
   shieldConfigCrName: ishield-config
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
       - '*'

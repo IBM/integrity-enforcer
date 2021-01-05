@@ -62,7 +62,7 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 					"extensions", "", "apis.integrityshield.io",
 				},
 				Resources: []string{
-					"secrets", "namespaces", "resourcesignatures", "shieldconfigs", "signpolicies", "signpolicies", "resourcesigningprofiles", "resourcesignatures",
+					"secrets", "namespaces", "resourcesignatures", "shieldconfigs", "signerconfigs", "signerconfigs", "resourcesigningprofiles", "resourcesignatures",
 				},
 				Verbs: []string{
 					"get", "list", "watch", "patch", "update",
@@ -222,7 +222,7 @@ func BuildRoleForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
 				Resources: []string{
 					"integrityshields",
 					"shieldconfigs",
-					"signpolicies",
+					"signerconfigs",
 				},
 				Verbs: []string{
 					"update", "create", "delete", "get", "list", "watch", "patch",
