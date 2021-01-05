@@ -48,7 +48,7 @@ type IntegrityShieldReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments/finalizers,resourceNames=integrity-shield-operator,verbs=update
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get
 // +kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=get
-// +kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshields/finalizers;shieldconfigs;signpolicies;resourcesigningprofiles;resourcesignatures;helmreleasemetadatas,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshields/finalizers;shieldconfigs;signerconfigs;resourcesigningprofiles;resourcesignatures;helmreleasemetadatas,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
 // +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;list;watch;create;update;patch;delete
@@ -91,7 +91,7 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateSignPolicyCRD(instance)
+	recResult, recErr = r.createOrUpdateSignerConfigCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -120,7 +120,7 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateSignPolicyCR(instance)
+	recResult, recErr = r.createOrUpdateSignerConfigCR(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}

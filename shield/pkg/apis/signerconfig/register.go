@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package signpolicy
+package signerconfig
 
 const (
 	GroupName = "apis.integrityshield.io"

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
@@ -215,17 +215,17 @@ func checkIfIShieldOperatorRequest(reqc *common.ReqContext, config *config.Shiel
 	return common.ExactMatch(config.IShieldResourceCondition.OperatorServiceAccount, reqc.UserName) //"service account for integrity-shield-operator"
 }
 
-func getBreakGlassConditions(signPolicy *spolapi.SignPolicy) []common.BreakGlassCondition {
+func getBreakGlassConditions(signerConfig *sigconfapi.SignerConfig) []common.BreakGlassCondition {
 	conditions := []common.BreakGlassCondition{}
-	if signPolicy != nil {
-		conditions = append(conditions, signPolicy.Spec.SignPolicy.BreakGlass...)
+	if signerConfig != nil {
+		conditions = append(conditions, signerConfig.Spec.Config.BreakGlass...)
 	}
 	return conditions
 }
 
-func checkIfBreakGlassEnabled(reqc *common.ReqContext, signPolicy *spolapi.SignPolicy) bool {
+func checkIfBreakGlassEnabled(reqc *common.ReqContext, signerConfig *sigconfapi.SignerConfig) bool {
 
-	conditions := getBreakGlassConditions(signPolicy)
+	conditions := getBreakGlassConditions(signerConfig)
 	breakGlassEnabled := false
 	if reqc.ResourceScope == "Namespaced" {
 		reqNs := reqc.Namespace

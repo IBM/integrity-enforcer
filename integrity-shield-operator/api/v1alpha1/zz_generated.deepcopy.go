@@ -208,8 +208,8 @@ func (in *IntegrityShieldSpec) DeepCopyInto(out *IntegrityShieldSpec) {
 		in, out := &in.ShieldConfig, &out.ShieldConfig
 		*out = (*in).DeepCopy()
 	}
-	if in.SignPolicy != nil {
-		in, out := &in.SignPolicy, &out.SignPolicy
+	if in.SignerConfig != nil {
+		in, out := &in.SignerConfig, &out.SignerConfig
 		*out = (*in).DeepCopy()
 	}
 	if in.ResourceSigningProfiles != nil {

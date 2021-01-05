@@ -36,7 +36,7 @@ import (
 	rs "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -59,7 +59,7 @@ func init() {
 	utilruntime.Must(ec.AddToScheme(scheme))
 	utilruntime.Must(rsp.AddToScheme(scheme))
 	utilruntime.Must(rs.AddToScheme(scheme))
-	utilruntime.Must(spol.AddToScheme(scheme))
+	utilruntime.Must(sigconf.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

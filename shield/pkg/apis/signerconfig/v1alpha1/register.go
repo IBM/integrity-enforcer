@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	spl "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,7 +25,7 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: spl.GroupName, Version: "v1alpha1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: sigconf.GroupName, Version: "v1alpha1"}
 )
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind
@@ -46,8 +46,8 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&SignPolicy{},
-		&SignPolicyList{},
+		&SignerConfig{},
+		&SignerConfigList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

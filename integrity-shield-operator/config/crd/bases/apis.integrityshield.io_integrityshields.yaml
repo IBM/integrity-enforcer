@@ -1543,7 +1543,7 @@ spec:
                   format: int32
                   type: integer
               type: object
-            signPolicy:
+            signerConfig:
               properties:
                 breakGlass:
                   items:
