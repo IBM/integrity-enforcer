@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/jinzhu/copier"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Rule struct {
@@ -48,8 +49,8 @@ type KustomizePattern struct {
 }
 
 type RequestPatternWithNamespace struct {
-	RequestPattern
-	Namespace *RulePattern `json:"namespace,omitempty"`
+	RequestPattern `json:""`
+	Namespace      *RulePattern `json:"namespace,omitempty"`
 }
 
 func (self *Rule) String() string {
@@ -78,7 +79,38 @@ func (self *Rule) MatchWithRequest(reqFields map[string]string) bool {
 	return matched && !excluded
 }
 
+func (self *Rule) StrictMatchWithRequest(reqFields map[string]string) bool {
+	matched := false
+	for _, m := range self.Match {
+		if m.StrictMatch(reqFields) {
+			matched = true
+			break
+		}
+	}
+	excluded := false
+	if matched {
+		for _, ex := range self.Exclude {
+			if ex.StrictMatch(reqFields) {
+				excluded = true
+				break
+			}
+		}
+	}
+
+	return matched && !excluded
+}
+
+// match the input request with pattern, allow wildcard for resource name
 func (self *RequestPattern) Match(reqFields map[string]string) bool {
+	return self.match(reqFields, false)
+}
+
+// match the input request with pattern, exact match for resource name
+func (self *RequestPattern) StrictMatch(reqFields map[string]string) bool {
+	return self.match(reqFields, true)
+}
+
+func (self *RequestPattern) match(reqFields map[string]string, exactMatchForName bool) bool {
 	scope := "Namespaced"
 	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {
 		scope = reqScope
@@ -105,8 +137,8 @@ func (self *RequestPattern) Match(reqFields map[string]string) bool {
 				pattern := value
 				reqValue := reqFields[fieldName]
 				patternCount += 1
-				if scope == "Cluster" && fieldName == "Name" {
-					matched = matched && pattern.exactMatch(reqValue) // "*" is not allowed for Name pattern of cluster scope object
+				if fieldName == "Name" && exactMatchForName {
+					matched = matched && pattern.exactMatch(reqValue)
 				} else {
 					matched = matched && pattern.match(reqValue)
 				}
@@ -205,6 +237,15 @@ type Request struct {
 func (self *Request) String() string {
 	rB, _ := json.Marshal(self)
 	return string(rB)
+}
+
+func (self *Request) GroupVersionKind() string {
+	gvk := schema.GroupVersionKind{
+		Group:   self.ApiGroup,
+		Version: self.ApiVersion,
+		Kind:    self.Kind,
+	}
+	return gvk.String()
 }
 
 func (self *Request) Equal(req *Request) bool {

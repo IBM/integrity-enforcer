@@ -136,7 +136,7 @@ type ServerContainer struct {
 }
 
 type LoggerContainer struct {
-	Enabled         bool                    `json:"enabled,omitempty"`
+	Enabled         *bool                   `json:"enabled,omitempty"`
 	Name            string                  `json:"name,omitempty"`
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`

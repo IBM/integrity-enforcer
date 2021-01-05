@@ -43,13 +43,19 @@ type ResourceSigningProfileSpec struct {
 
 // ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy
 type ResourceSigningProfileStatus struct {
-	Details []ProfileStatusDetail `json:"deniedRequests,omitempty"`
+	DenyCount int                     `json:"denyCount,omitempty"`
+	Summary   []*ProfileStatusSummary `json:"denySummary,omitempty"`
+	Latest    []*ProfileStatusDetail  `json:"latestDeniedEvents,omitempty"`
+}
+
+type ProfileStatusSummary struct {
+	GroupVersionKind string `json:"groupVersionKind,omitempty"`
+	Count            int    `json:"count,omitempty"`
 }
 
 type ProfileStatusDetail struct {
 	Request *common.Request `json:"request,omitempty"`
-	Count   int             `json:"count,omitempty"`
-	History []common.Result `json:"history,omitempty"`
+	Result  *common.Result  `json:"result,omitempty"`
 }
 
 // +genclient
@@ -74,19 +80,38 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.ProtectRules) == 0
 }
 
-func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *common.Rule) {
+func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS string) (bool, *common.Rule) {
+
+	rspNS := self.ObjectMeta.Namespace
+
+	scope := "Namespaced"
+	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {
+		scope = reqScope
+	}
+
+	strictMatch := false
+	if scope == "Cluster" && rspNS != iShieldNS {
+		strictMatch = true
+	}
+
 	for _, rule := range self.Spec.ForceCheckRules {
-		if rule.MatchWithRequest(reqFields) {
+		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
+			return true, rule
+		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
 			return true, rule
 		}
 	}
 	for _, rule := range self.Spec.IgnoreRules {
-		if rule.MatchWithRequest(reqFields) {
+		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
+			return false, rule
+		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
 			return false, rule
 		}
 	}
 	for _, rule := range self.Spec.ProtectRules {
-		if rule.MatchWithRequest(reqFields) {
+		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
+			return true, rule
+		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
 			return true, rule
 		}
 	}
@@ -146,40 +171,43 @@ func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*c
 }
 
 func (self *ResourceSigningProfile) UpdateStatus(request *common.Request, errMsg string) *ResourceSigningProfile {
-	reqId := -1
-	var detail ProfileStatusDetail
-	for i, d := range self.Status.Details {
-		if request.Equal(d.Request) {
-			reqId = i
-			detail = d
+
+	// Increment DenyCount
+	self.Status.DenyCount = self.Status.DenyCount + 1
+
+	// Update Summary
+	sumId := -1
+	var singleSummary *ProfileStatusSummary
+	for i, s := range self.Status.Summary {
+		if request.GroupVersionKind() == s.GroupVersionKind {
+			sumId = i
+			singleSummary = s
 		}
 	}
-	if reqId < 0 {
-		detail = ProfileStatusDetail{
-			Request: request,
-			Count:   1,
-			History: []common.Result{
-				{
-					Message:   errMsg,
-					Timestamp: time.Now().UTC().Format(layout),
-				},
-			},
+	if sumId < 0 {
+		singleSummary = &ProfileStatusSummary{
+			GroupVersionKind: request.GroupVersionKind(),
+			Count:            1,
 		}
-		self.Status.Details = append(self.Status.Details, detail)
-	} else if reqId < len(self.Status.Details) {
-		detail.Count = detail.Count + 1
-		newResult := common.Result{
-			Message:   errMsg,
-			Timestamp: time.Now().UTC().Format(layout),
-		}
-		detail.History = append(detail.History, newResult)
-		currentLen := len(detail.History)
-		if currentLen > maxHistoryLength {
-			tmpHistory := detail.History[currentLen-3:]
-			detail.History = tmpHistory
-		}
-		self.Status.Details[reqId] = detail
+		self.Status.Summary = append(self.Status.Summary, singleSummary)
+	} else if sumId < len(self.Status.Summary) {
+		singleSummary.Count = singleSummary.Count + 1
+		self.Status.Summary[sumId] = singleSummary
 	}
+
+	// Update Latest events
+	result := &common.Result{
+		Message:   errMsg,
+		Timestamp: time.Now().UTC().Format(layout),
+	}
+	newLatestEvents := []*ProfileStatusDetail{}
+	newSingleEvent := &ProfileStatusDetail{Request: request, Result: result}
+	newLatestEvents = append(newLatestEvents, newSingleEvent)
+	newLatestEvents = append(newLatestEvents, self.Status.Latest...)
+	if len(newLatestEvents) > maxHistoryLength {
+		newLatestEvents = newLatestEvents[:maxHistoryLength]
+	}
+	self.Status.Latest = newLatestEvents
 	return self
 }
 

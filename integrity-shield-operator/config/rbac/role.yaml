@@ -26,8 +26,8 @@ rules:
   - integrityshields/finalizers
   - resourcesignatures
   - resourcesigningprofiles
-  - signpolicies
   - shieldconfigs
+  - signpolicies
   verbs:
   - create
   - delete
