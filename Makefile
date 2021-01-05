@@ -485,3 +485,6 @@ create-private-registry:
 
 delete-private-registry:
 	$(ISHIELD_REPO_ROOT)/build/delete-private-registry.sh
+
+all-in-one-yaml:
+	$(ISHIELD_REPO_ROOT)/build/generate_all_in_one_yaml.sh
