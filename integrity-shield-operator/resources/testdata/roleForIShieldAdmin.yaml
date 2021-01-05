@@ -12,7 +12,7 @@ rules:
   resources:
   - integrityshields
   - shieldconfigs
-  - signpolicies
+  - signerconfigs
   verbs:
   - update
   - create

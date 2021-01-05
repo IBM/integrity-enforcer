@@ -191,8 +191,8 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 }
 
 func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
-	signPolicy := self.data.GetSignPolicy()
-	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, signPolicy)
+	sigConf := self.data.GetSignerConfig()
+	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, sigConf)
 	isDetectMode := checkIfDetectOnly(self.config)
 
 	if !isBreakGlass && !isDetectMode {

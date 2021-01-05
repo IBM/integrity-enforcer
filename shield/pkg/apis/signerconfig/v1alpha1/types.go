@@ -21,13 +21,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// SignPolicySpec defines the desired state of SignPolicy
-type SignPolicySpec struct {
-	SignPolicy *common.SignPolicy `json:"policy,omitempty"`
+// SignerConfigSpec defines the desired state of SignerConfig
+type SignerConfigSpec struct {
+	Config *common.SignerConfig `json:"config,omitempty"`
 }
 
-// SignPolicyStatus defines the observed state of SignPolicy
-type SignPolicyStatus struct {
+// SignerConfigStatus defines the observed state of SignerConfig
+type SignerConfigStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 }
 
@@ -41,19 +41,19 @@ type SignPolicyStatus struct {
 // For more details of code-generator, please visit https://github.com/kubernetes/code-generator
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // EnforcePolicy is the CRD. Use this command to generate deepcopy for it:
-type SignPolicy struct {
+type SignerConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SignPolicySpec   `json:"spec,omitempty"`
-	Status SignPolicyStatus `json:"status,omitempty"`
+	Spec   SignerConfigSpec   `json:"spec,omitempty"`
+	Status SignerConfigStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SignPolicyList contains a list of EnforcePolicy
-type SignPolicyList struct {
+// SignerConfigList contains a list of EnforcePolicy
+type SignerConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SignPolicy `json:"items"`
+	Items           []SignerConfig `json:"items"`
 }

@@ -27,7 +27,7 @@ rules:
   - resourcesignatures
   - resourcesigningprofiles
   - shieldconfigs
-  - signpolicies
+  - signerconfigs
   verbs:
   - create
   - delete

@@ -7,6 +7,7 @@ spec:
   affinity: {}
   keyRingConfigs:
   - name: keyring-secret
+  - name: keyring-secret-signer2
   labels:
     app: ishield-server
   logger:
@@ -19,7 +20,7 @@ spec:
     esSecretName: es-tls-certs
     http:
       endpoint: http://sample-http-server:8093/api
-    image: quay.io/open-cluster-management/integrity-shield-logging:0.1.0
+    image: localhost:5000/integrity-shield-logging:0.1.0
     imagePullPolicy: Always
     name: forwarder
     resources:
@@ -50,7 +51,7 @@ spec:
   server:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
-    image: quay.io/open-cluster-management/integrity-shield-server:0.1.0
+    image: localhost:5000/integrity-shield-server:0.1.0
     imagePullPolicy: Always
     name: server
     port: 8443
@@ -107,7 +108,15 @@ spec:
     - name: SampleSigner
       secret: keyring-secret
       subjects:
-      - email: sample_signer@signer.com
+      - email: hirokuni.kitahara1@ibm.com
+    - name: TestSigner
+      secret: keyring-secret
+      subjects:
+      - email: gajan@jp.ibm.com
+    - name: TestSigner2
+      secret: keyring-secret-signer2
+      subjects:
+      - email: dummy@dummy.com
   webhookClusterResource:
     apiGroups:
     - '*'

@@ -145,8 +145,8 @@ func CheckIShieldResources(framework *Framework, kind, namespace, expected strin
 		_, err := framework.ShieldConfigClient.ShieldConfigs(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
 		return err
 	}
-	if kind == "SignPolicy" {
-		_, err := framework.SignPolicyClient.SignPolicies(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+	if kind == "SignerConfig" {
+		_, err := framework.SignerConfigClient.SignerConfigs(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
 		return err
 	}
 	if kind == "Secret" {
