@@ -68,16 +68,16 @@ type SignatureEvaluator interface {
 }
 
 type ConcreteSignatureEvaluator struct {
-	config  *config.ShieldConfig
-	policy  *common.SignPolicy
-	plugins map[string]bool
+	config       *config.ShieldConfig
+	signerConfig *common.SignerConfig
+	plugins      map[string]bool
 }
 
-func NewSignatureEvaluator(config *config.ShieldConfig, policy *common.SignPolicy, plugins map[string]bool) (SignatureEvaluator, error) {
+func NewSignatureEvaluator(config *config.ShieldConfig, signerConfig *common.SignerConfig, plugins map[string]bool) (SignatureEvaluator, error) {
 	return &ConcreteSignatureEvaluator{
-		config:  config,
-		policy:  policy,
-		plugins: plugins,
+		config:       config,
+		signerConfig: signerConfig,
+		plugins:      plugins,
 	}, nil
 }
 
@@ -204,10 +204,10 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 
 	noValidKeyring := false
 	noValidKeyringMsg := ""
-	candidatePubkeys := self.policy.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
+	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
 	if len(candidatePubkeys) == 0 {
 		noValidKeyring = true
-		noValidKeyringMsg = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s). Please check SignPolicy.", reqc.Namespace, reqc.Kind)
+		noValidKeyringMsg = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s). Please check SignerConfig.", reqc.Namespace, reqc.Kind)
 	}
 
 	// create verifier
@@ -261,21 +261,21 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	// signer
 	signer := sigVerifyResult.Signer
 
-	// check signer policy
-	signerMatched, matchedPolicy := self.policy.Match(reqc.Namespace, signer)
+	// check signer config
+	signerMatched, matchedSignerConfig := self.signerConfig.Match(reqc.Namespace, signer)
 	if signerMatched {
-		matchedPolicyStr := ""
-		if matchedPolicy != nil {
-			tmpMatchedPolicy, _ := json.Marshal(matchedPolicy)
-			matchedPolicyStr = string(tmpMatchedPolicy)
+		matchedSignerConfigStr := ""
+		if matchedSignerConfig != nil {
+			tmpMatchedConfig, _ := json.Marshal(matchedSignerConfig)
+			matchedSignerConfigStr = string(tmpMatchedConfig)
 		}
 		return &common.SignatureEvalResult{
-			Signer:        signer,
-			SignerName:    signer.GetName(),
-			Allow:         true,
-			Checked:       true,
-			MatchedPolicy: matchedPolicyStr,
-			Error:         nil,
+			Signer:              signer,
+			SignerName:          signer.GetName(),
+			Allow:               true,
+			Checked:             true,
+			MatchedSignerConfig: matchedSignerConfigStr,
+			Error:               nil,
 		}, nil
 	} else {
 		return &common.SignatureEvalResult{

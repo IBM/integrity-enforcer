@@ -104,6 +104,11 @@ func (self *IShieldResourceCondition) IsServerResource(ref *common.ResourceRef) 
 	return false
 }
 
+type LogRequestPattern struct {
+	common.RequestPatternWithNamespace `json:""`
+	LogLevel                           string `json:"logLevel,omitempty"`
+}
+
 /**********************************************
 
 				LogScopeConfig
@@ -111,21 +116,23 @@ func (self *IShieldResourceCondition) IsServerResource(ref *common.ResourceRef) 
 ***********************************************/
 
 type LogScopeConfig struct {
-	Enabled bool                    `json:"enabled,omitempty"`
-	InScope []common.RequestPattern `json:"inScope,omitempty"`
-	Ignore  []common.RequestPattern `json:"ignore,omitempty"`
+	Enabled bool                `json:"enabled,omitempty"`
+	InScope []LogRequestPattern `json:"inScope,omitempty"`
+	Ignore  []LogRequestPattern `json:"ignore,omitempty"`
 }
 
-func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
+func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) (bool, string) {
 	if !sc.Enabled {
-		return false
+		return false, ""
 	}
 	reqFields := reqc.Map()
 	isInScope := false
+	level := ""
 	if sc.InScope != nil {
 		for _, v := range sc.InScope {
 			if v.Match(reqFields) {
 				isInScope = true
+				level = logger.GetGreaterLevel(level, v.LogLevel)
 				break
 			}
 		}
@@ -140,7 +147,7 @@ func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) bool {
 			}
 		}
 	}
-	return isInScope && !isIgnored
+	return (isInScope && !isIgnored), level
 }
 
 func (ec *ShieldConfig) PatchEnabled() bool {
@@ -218,12 +225,15 @@ func (ec *ShieldConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
 }
 
-func (ec *ShieldConfig) ConsoleLogEnabled(reqc *common.ReqContext) bool {
-	return ec.Log.ConsoleLog.IsInScope(reqc)
+func (ec *ShieldConfig) ConsoleLogEnabled(reqc *common.ReqContext) (bool, string) {
+	enabled, level := ec.Log.ConsoleLog.IsInScope(reqc)
+	level = logger.GetGreaterLevel(ec.Log.LogLevel, level)
+	return enabled, level
 }
 
 func (ec *ShieldConfig) ContextLogEnabled(reqc *common.ReqContext) bool {
-	return ec.Log.ContextLog.IsInScope(reqc)
+	enabled, _ := ec.Log.ContextLog.IsInScope(reqc)
+	return enabled
 }
 
 func (ec *ShieldConfig) GetEnabledPlugins() map[string]bool {

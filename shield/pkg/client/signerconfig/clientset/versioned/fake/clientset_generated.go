@@ -19,9 +19,9 @@
 package fake
 
 import (
-	clientset "github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned"
-	apisv1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
-	fakeapisv1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1/fake"
+	clientset "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned"
+	apisv1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/typed/signerconfig/v1alpha1"
+	fakeapisv1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/typed/signerconfig/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

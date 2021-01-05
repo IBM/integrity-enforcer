@@ -21,7 +21,7 @@ package versioned
 import (
 	"fmt"
 
-	apisv1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
+	apisv1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/typed/signerconfig/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
