@@ -141,8 +141,17 @@ func (self *Handler) Check() *DecisionResult {
 }
 
 func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
-	// report only for denying request or for IShield resource request
-	if self.ctx.Allow && !self.ctx.IShieldResource {
+	// report only for denying request or for IShield resource request by IShield Admin
+	shouldReport := false
+	if !self.ctx.Allow {
+		shouldReport = true
+	}
+	iShieldAdmin := checkIfIShieldAdminRequest(self.reqc, self.config)
+	if self.ctx.IShieldResource && iShieldAdmin {
+		shouldReport = true
+	}
+
+	if !shouldReport {
 		return nil
 	}
 
@@ -182,8 +191,8 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 }
 
 func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
-	signPolicy := self.data.GetSignPolicy()
-	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, signPolicy)
+	sigConf := self.data.GetSignerConfig()
+	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, sigConf)
 	isDetectMode := checkIfDetectOnly(self.config)
 
 	if !isBreakGlass && !isDetectMode {
@@ -232,7 +241,8 @@ func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
 }
 
 func (self *Handler) logEntry() {
-	if self.config.ConsoleLogEnabled(self.reqc) {
+	if ok, level := self.config.ConsoleLogEnabled(self.reqc); ok {
+		logger.SetLogLevel(level) // set custom log level for this request
 		sLogger := logger.GetSessionLogger()
 		sLogger.Trace("New Admission Request Received")
 	}
@@ -257,12 +267,13 @@ func (self *Handler) logContext() {
 }
 
 func (self *Handler) logExit() {
-	if self.config.ConsoleLogEnabled(self.reqc) {
+	if ok, _ := self.config.ConsoleLogEnabled(self.reqc); ok {
 		sLogger := logger.GetSessionLogger()
 		sLogger.WithFields(log.Fields{
 			"allowed": self.ctx.Allow,
 			"aborted": self.ctx.Aborted,
 		}).Trace("New Admission Request Sent")
+		logger.SetLogLevel(self.config.Log.LogLevel) // set default log level again
 	}
 }
 

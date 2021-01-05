@@ -31,8 +31,6 @@ if [ -z "$ISHIELD_REPO_ROOT" ]; then
     exit 1
 fi
 
-#source $ISHIELD_REPO_ROOT/ishield-build.conf
-
 cd $ISHIELD_REPO_ROOT/integrity-shield-operator
 
 
@@ -41,6 +39,15 @@ echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
+# Temporary workarround for dealing with CRD generation issue
+
+tmpcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshieldren.yaml"
+targetcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshields.yaml"
+
+if [ -f $tmpcrd ]; then
+  sed -i 's/integrityshieldren/integrityshields/g' $tmpcrd
+  mv $tmpcrd $targetcrd
+fi
 
 csvfile="bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
@@ -52,6 +59,12 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
+
+docker pull ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
+
+if [ "$pull_status" = "failed" ]; then
+   sed -i '/ replaces: /d' ${SHIELD_OP_DIR}/bundle/manifests/*.clusterserviceversion.yaml
+fi
 
 make bundle-build BUNDLE_IMG=${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
@@ -65,7 +78,6 @@ echo -----------------------------
 echo [3/4] Adding bundle to index
 
 
-docker pull ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
         sudo /usr/local/bin/opm index add -c docker --generate --bundles ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \

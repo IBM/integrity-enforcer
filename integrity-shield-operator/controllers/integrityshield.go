@@ -38,7 +38,7 @@ import (
 	cert "github.com/IBM/integrity-enforcer/integrity-shield-operator/cert"
 
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,9 +111,9 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateSignPolicyCRD(
+func (r *IntegrityShieldReconciler) createOrUpdateSignerConfigCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildSignPolicyCRD(instance)
+	expected := res.BuildSignerConfigCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 func (r *IntegrityShieldReconciler) createOrUpdateResourceSignatureCRD(
@@ -213,14 +213,14 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateSignPolicyCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateSignerConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
-	found := &spol.SignPolicy{}
-	expected := res.BuildSignPolicyForIShield(instance)
+	found := &sigconf.SignerConfig{}
+	expected := res.BuildSignerConfigForIShield(instance)
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
-		"SignPolicy.Name", expected.Name)
+		"SignerConfig.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)

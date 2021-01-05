@@ -24,7 +24,7 @@ import (
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	iespol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	econf "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	"github.com/ghodss/yaml"
@@ -100,15 +100,15 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	return ecc
 }
 
-//sign shield policy cr
-func BuildSignPolicyForIShield(cr *apiv1alpha1.IntegrityShield) *iespol.SignPolicy {
-	var signPolicy *common.SignPolicy
+//signer config cr
+func BuildSignerConfigForIShield(cr *apiv1alpha1.IntegrityShield) *sigconf.SignerConfig {
+	var signerConfig *common.SignerConfig
 
-	if cr.Spec.SignPolicy != nil {
-		signPolicy = cr.Spec.SignPolicy
+	if cr.Spec.SignerConfig != nil {
+		signerConfig = cr.Spec.SignerConfig
 	} else {
-		signPolicy = &common.SignPolicy{
-			Policies: []common.SignPolicyCondition{
+		signerConfig = &common.SignerConfig{
+			Policies: []common.SignerConfigCondition{
 				{
 					Namespaces: []string{"sample"},
 					Signers:    []string{"SampleSigner"},
@@ -126,13 +126,13 @@ func BuildSignPolicyForIShield(cr *apiv1alpha1.IntegrityShield) *iespol.SignPoli
 			},
 		}
 	}
-	epcr := &iespol.SignPolicy{
+	epcr := &sigconf.SignerConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetSignPolicyCRName(),
+			Name:      cr.GetSignerConfigCRName(),
 			Namespace: cr.Namespace,
 		},
-		Spec: iespol.SignPolicySpec{
-			SignPolicy: signPolicy,
+		Spec: sigconf.SignerConfigSpec{
+			Config: signerConfig,
 		},
 	}
 	return epcr

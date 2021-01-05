@@ -25,7 +25,7 @@ import (
 	rsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 )
 
@@ -52,8 +52,8 @@ func ValidateResource(reqc *common.ReqContext, shieldNamespace string) (bool, st
 			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
 		return ok, ""
-	} else if reqc.Kind == common.SignPolicyCustomResourceKind {
-		ok, err := ValidateSignPolicy(reqc)
+	} else if reqc.Kind == common.SignerConfigCustomResourceKind {
+		ok, err := ValidateSignerConfig(reqc)
 		if err != nil {
 			return false, fmt.Sprintf("Validation error; %s", err.Error())
 		}
@@ -116,8 +116,8 @@ func ValidateShieldConfig(reqc *common.ReqContext) (bool, error) {
 	return true, nil
 }
 
-func ValidateSignPolicy(reqc *common.ReqContext) (bool, error) {
-	var data *spol.SignPolicy
+func ValidateSignerConfig(reqc *common.ReqContext) (bool, error) {
+	var data *sigconf.SignerConfig
 	err := json.Unmarshal(reqc.RawObject, &data)
 	if err != nil {
 		return false, err

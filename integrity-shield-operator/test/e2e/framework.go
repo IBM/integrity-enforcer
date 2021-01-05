@@ -26,7 +26,7 @@ import (
 
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	vcclient "github.com/IBM/integrity-enforcer/shield/pkg/client/shieldconfig/clientset/versioned/typed/shieldconfig/v1alpha1"
-	spclient "github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned/typed/signpolicy/v1alpha1"
+	sigconfclient "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/typed/signerconfig/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +66,7 @@ var (
 	test_configmap_ignoreAtters       = deploy_dir + "test-configmap-update-ignoreAtters.yaml"
 	test_configmap_annotation         = deploy_dir + "test-configmap-annotation.yaml"
 	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
-	DefaultSignPolicyCRName           = "sign-policy"
+	DefaultSignerConfigCRName         = "signer-config"
 	ishield_op_sa                     = "integrity-shield-operator-manager"
 	ishield_op_role                   = "integrity-shield-operator-leader-election-role"
 	ishield_op_rb                     = "integrity-shield-operator-leader-election-rolebinding"
@@ -86,7 +86,7 @@ type Framework struct {
 	KubeClientSet          kubernetes.Interface
 	APIExtensionsClientSet apiextcs.Interface
 	RSPClient              rspclient.ApisV1alpha1Interface
-	SignPolicyClient       spclient.ApisV1alpha1Interface
+	SignerConfigClient     sigconfclient.ApisV1alpha1Interface
 	ShieldConfigClient     vcclient.ApisV1alpha1Interface
 
 	// Namespace in which all test resources should reside
@@ -114,9 +114,9 @@ func initFrameWork() *Framework {
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set RSPClient"))
 	}
-	framework.SignPolicyClient, err = spclient.NewForConfig(kubeConfig)
+	framework.SignerConfigClient, err = sigconfclient.NewForConfig(kubeConfig)
 	if err != nil {
-		Fail(fmt.Sprintf("fail to set SingPolicyClient"))
+		Fail(fmt.Sprintf("fail to set SignerConfigClient"))
 	}
 
 	framework.ShieldConfigClient, err = vcclient.NewForConfig(kubeConfig)

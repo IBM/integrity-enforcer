@@ -16,8 +16,8 @@ rules:
   - namespaces
   - resourcesignatures
   - shieldconfigs
-  - signpolicies
-  - signpolicies
+  - signerconfigs
+  - signerconfigs
   - resourcesigningprofiles
   - resourcesignatures
   verbs:

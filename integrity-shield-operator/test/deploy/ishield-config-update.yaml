@@ -182,7 +182,7 @@ spec:
         namespace: ""
       - apiVersion: ""
         kind: CustomResourceDefinition
-        name: signpolicies.apis.integrityshield.io
+        name: signerconfigs.apis.integrityshield.io
         namespace: ""
       - apiVersion: ""
         kind: CustomResourceDefinition
@@ -201,8 +201,8 @@ spec:
         name: ishield-config
         namespace: integrity-shield-operator-system
       - apiVersion: ""
-        kind: SignPolicy
-        name: sign-policy
+        kind: SignerConfig
+        name: signer-config
         namespace: integrity-shield-operator-system
       - apiVersion: ""
         kind: Secret

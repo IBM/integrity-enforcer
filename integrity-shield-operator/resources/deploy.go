@@ -199,7 +199,11 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		serverContainer,
 	}
 
-	if cr.Spec.Logger.Enabled {
+	loggerEnabled := false
+	if cr.Spec.Logger.Enabled != nil {
+		loggerEnabled = *(cr.Spec.Logger.Enabled)
+	}
+	if loggerEnabled {
 		containers = append(containers, loggerContainer)
 	}
 

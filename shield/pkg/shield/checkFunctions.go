@@ -21,7 +21,7 @@ import (
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
@@ -145,6 +145,18 @@ func deleteCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *Run
 func protectedCheck(reqc *common.ReqContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := reqc.Map()
 	ruleTable := data.GetRuleTable(config.Namespace)
+	if ruleTable == nil {
+		ctx.Allow = true
+		ctx.Verified = true
+		ctx.Protected = false
+		ctx.ReasonCode = common.REASON_NOT_PROTECTED
+		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
+		return &DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_NOT_PROTECTED,
+			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+		}, nil
+	}
 	protected, ignoreMatched, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
 	if !protected {
 		ctx.Allow = true
@@ -180,10 +192,10 @@ func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, re
 	var sigResult *common.SignatureEvalResult
 	var mutResult *common.MutationEvalResult
 
-	signPolicy := data.GetSignPolicy()
+	sigConf := data.GetSignerConfig()
 	rsigList := data.GetResSigList(reqc)
 
-	allowed, evalReason, evalMessage, sigResult, mutResult = singleProfileCheck(singleProfile, reqc, config, signPolicy, rsigList)
+	allowed, evalReason, evalMessage, sigResult, mutResult = singleProfileCheck(singleProfile, reqc, config, sigConf, rsigList)
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -213,7 +225,7 @@ func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, re
 	}
 }
 
-func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.ReqContext, config *config.ShieldConfig, spolRes *spolapi.SignPolicy, rsigList *rsigapi.ResourceSignatureList) (bool, int, string, *common.SignatureEvalResult, *common.MutationEvalResult) {
+func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.ReqContext, config *config.ShieldConfig, sigConfRes *sigconfapi.SignerConfig, rsigList *rsigapi.ResourceSignatureList) (bool, int, string, *common.SignatureEvalResult, *common.MutationEvalResult) {
 	var sigResult *common.SignatureEvalResult
 	var mutResult *common.MutationEvalResult
 	var err error
@@ -227,9 +239,9 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 		}
 	}
 
-	signPolicy := spolRes.Spec.SignPolicy
+	signerConfig := sigConfRes.Spec.Config
 	plugins := config.GetEnabledPlugins()
-	evaluator, err := NewSignatureEvaluator(config, signPolicy, plugins)
+	evaluator, err := NewSignatureEvaluator(config, signerConfig, plugins)
 	if err != nil {
 		return false, common.REASON_ERROR, err.Error(), nil, mutResult
 	}
@@ -247,6 +259,8 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 		message = sigResult.Error.MakeMessage()
 		if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
 			reasonCode = common.REASON_INVALID_SIG
+		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
+			reasonCode = common.REASON_NO_VALID_KEYRING
 		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
 			reasonCode = common.REASON_NO_POLICY
 		} else if message == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
