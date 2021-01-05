@@ -21,7 +21,7 @@ import (
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	spolapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -39,18 +39,18 @@ type RunData struct {
 	NSList  []v1.Namespace                  `json:"nsList,omitempty"`
 
 	// for test
-	SignPolicy *spolapi.SignPolicy            `json:"signPolicy,omitempty"`
-	ResSigList *rsigapi.ResourceSignatureList `json:"resSigList,omitempty"`
+	SignerConfig *sigconfapi.SignerConfig       `json:"signerConfig,omitempty"`
+	ResSigList   *rsigapi.ResourceSignatureList `json:"resSigList,omitempty"`
 
 	loader    *Loader    `json:"-"`
 	ruleTable *RuleTable `json:"-"`
 }
 
-func (self *RunData) GetSignPolicy() *spolapi.SignPolicy {
-	if self.SignPolicy == nil && self.loader != nil {
-		self.SignPolicy = self.loader.SignPolicy.GetData(true)
+func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
+	if self.SignerConfig == nil && self.loader != nil {
+		self.SignerConfig = self.loader.SignerConfig.GetData(true)
 	}
-	return self.SignPolicy
+	return self.SignerConfig
 }
 
 func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSignatureList {
@@ -108,7 +108,7 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 }
 
 func (self *RunData) Init(reqc *common.ReqContext, shieldNamespace string) {
-	// self.GetSignPolicy()
+	// self.GetSignerConfig()
 	// self.GetResSigList(reqc)
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)

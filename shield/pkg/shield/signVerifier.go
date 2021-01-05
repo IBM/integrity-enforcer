@@ -160,7 +160,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 					Name:    signer2.Name,
 					Comment: signer2.Comment,
 				}).GetName()
-				reasonFail = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s, signer: %s). Please check SignPolicy.", reqc.Namespace, reqc.Kind, signer2Name)
+				reasonFail = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s, signer: %s). Please check SignerConfig.", reqc.Namespace, reqc.Kind, signer2Name)
 			}
 			vcerr = &common.CheckError{
 				Msg:    "Failed to verify signature",

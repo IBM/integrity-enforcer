@@ -42,7 +42,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
@@ -141,7 +141,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = ec.AddToScheme(schemes)
 	err = rsp.AddToScheme(schemes)
 	err = rs.AddToScheme(schemes)
-	err = spol.AddToScheme(schemes)
+	err = sigconf.AddToScheme(schemes)
 
 	Expect(err).NotTo(HaveOccurred())
 
@@ -181,12 +181,12 @@ var _ = BeforeSuite(func(done Done) {
 	err = k8sClient.Create(context.Background(), sconf)
 	Expect(err).Should(BeNil())
 
-	// create SignPolicy in test data
-	sigpol := &spol.SignPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: data.SignPolicy.Name, Namespace: data.SignPolicy.Namespace},
-		Spec:       spol.SignPolicySpec{SignPolicy: data.SignPolicy.Spec.SignPolicy.DeepCopy()},
+	// create SignerConfig in test data
+	sigconfres := &sigconf.SignerConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: data.SignerConfig.Name, Namespace: data.SignerConfig.Namespace},
+		Spec:       sigconf.SignerConfigSpec{Config: data.SignerConfig.Spec.Config.DeepCopy()},
 	}
-	err = k8sClient.Create(context.Background(), sigpol)
+	err = k8sClient.Create(context.Background(), sigconfres)
 	Expect(err).Should(BeNil())
 
 	// create rsps in test data

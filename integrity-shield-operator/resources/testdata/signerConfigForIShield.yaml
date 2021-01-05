@@ -1,8 +1,8 @@
 metadata:
   creationTimestamp: null
-  name: sign-policy
+  name: signer-config
 spec:
-  policy:
+  config:
     policies:
     - namespaces:
       - '*'

@@ -138,10 +138,10 @@ func TestShieldConfigCRD(t *testing.T) {
 	yamlPath := "./testdata/shieldConfigCRD.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }
-func TestSignPolicyCRD(t *testing.T) {
+func TestSignerConfigCRD(t *testing.T) {
 	instance := loadTestInstance(t)
-	obj := BuildSignPolicyCRD(instance)
-	yamlPath := "./testdata/signPolicyCRD.yaml"
+	obj := BuildSignerConfigCRD(instance)
+	yamlPath := "./testdata/signerConfigCRD.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }
 func TestResourceSignatureCRD(t *testing.T) {
@@ -162,10 +162,10 @@ func TestShieldConfigCR(t *testing.T) {
 	yamlPath := "./testdata/shieldConfigForIShield.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }
-func TestSignPolicyCR(t *testing.T) {
+func TestSignerConfigCR(t *testing.T) {
 	instance := loadTestInstance(t)
-	obj := BuildSignPolicyForIShield(instance)
-	yamlPath := "./testdata/signPolicyForIShield.yaml"
+	obj := BuildSignerConfigForIShield(instance)
+	yamlPath := "./testdata/signerConfigForIShield.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }
 func TestResourceSigningProfileCR(t *testing.T) {

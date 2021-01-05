@@ -17,7 +17,7 @@ metadata:
               }
             ],
             "namespace": "integrity-shield-operator-system",
-            "signPolicy": {
+            "signerConfig": {
               "policies": [
                 {
                   "namespaces": [
@@ -104,7 +104,7 @@ spec:
                 - integrityshields/finalizers
                 - resourcesignatures
                 - resourcesigningprofiles
-                - signpolicies
+                - signerconfigs
                 - shieldconfigs
               verbs:
                 - create

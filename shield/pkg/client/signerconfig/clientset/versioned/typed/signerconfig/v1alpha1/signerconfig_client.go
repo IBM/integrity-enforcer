@@ -19,14 +19,14 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/client/signpolicy/clientset/versioned/scheme"
+	v1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
 type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	SignPoliciesGetter
+	SignerConfigsGetter
 }
 
 // ApisV1alpha1Client is used to interact with features provided by the apis.integrityshield.io group.
@@ -34,8 +34,8 @@ type ApisV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ApisV1alpha1Client) SignPolicies(namespace string) SignPolicyInterface {
-	return newSignPolicies(c, namespace)
+func (c *ApisV1alpha1Client) SignerConfigs(namespace string) SignerConfigInterface {
+	return newSignerConfigs(c, namespace)
 }
 
 // NewForConfig creates a new ApisV1alpha1Client for the given config.

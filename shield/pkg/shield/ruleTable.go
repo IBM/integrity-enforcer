@@ -80,7 +80,7 @@ func (self *RuleTable) CheckIfProtected(reqFields map[string]string) (bool, bool
 		if reqScope == "Namespaced" && !common.ExactMatchWithPatternArray(reqNs, item.TargetNamespaces) {
 			continue
 		}
-		if tmpProtected, matchedRule := item.Profile.Match(reqFields); tmpProtected {
+		if tmpProtected, matchedRule := item.Profile.Match(reqFields, self.ShieldNamespace); tmpProtected {
 			protected = true
 			matchedProfiles = append(matchedProfiles, item.Profile)
 		} else if !tmpProtected && matchedRule != nil {

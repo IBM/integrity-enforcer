@@ -302,7 +302,7 @@ setup-test-resources:
 	@echo
 	@echo prepare cr for updating test
 	cp $(TMP_CR_FILE) $(TMP_CR_UPDATED_FILE)
-	yq write -i $(TMP_CR_UPDATED_FILE) spec.signPolicy.signers[1].subjects[1].email $(TEST_SAMPLE_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_UPDATED_FILE) spec.signerConfig.signers[1].subjects[1].email $(TEST_SAMPLE_SIGNER_SUBJECT_EMAIL)
 
 e2e-test:
 	@echo
@@ -383,15 +383,15 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
 	@echo setup keyring configs
 	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
-	@echo setup signer policy
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].namespaces[0] $(TEST_NS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.policies[2].signers[0] $(TEST_SIGNERS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].name $(TEST_SIGNERS)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].secret $(TEST_SECRET)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].name $(TEST_SIGNERS2)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].secret $(TEST_SECRET2)
-	yq write -i $(TMP_CR_FILE) spec.signPolicy.signers[2].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL2)
+	@echo setup signer config
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].secret $(TEST_SECRET)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].name $(TEST_SIGNERS2)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].secret $(TEST_SECRET2)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL2)
 	@if [ "$(TEST_LOCAL)" ]; then \
 		echo enable logAllResponse ; \
 		yq write -i $(TMP_CR_FILE) spec.shieldConfig.log.logLevel trace ;\
