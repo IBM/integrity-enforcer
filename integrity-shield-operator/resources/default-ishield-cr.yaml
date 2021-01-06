@@ -6,9 +6,8 @@ spec:
   namespace: integrity-shield-operator-system
   affinity: {}
   resourceSigningProfiles: []
-  signPolicy: {}
+  signerConfig: {}
   shieldConfig:
-    verifyType: pgp # x509
     plugin:
     - name: helm
       enabled: false
@@ -41,10 +40,7 @@ spec:
   - createIfNotExist: false
     keyValue: test
     name: ishield-certpool-secret
-  keyRingConfigs:
-  - createIfNotExist: false
-    keyValue: test
-    name: keyring-secret
+  keyConfig: []
   labels:
     app: ishield-server
   logger:

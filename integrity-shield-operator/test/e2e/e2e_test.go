@@ -130,21 +130,21 @@ var _ = Describe("Test integrity shield", func() {
 			}
 			framework := initFrameWork()
 			var timeout int = 120
-			expected := DefaultSignPolicyCRName
+			expected := DefaultSignerConfigCRName
 			var generation int64
-			sp, err := framework.SignPolicyClient.SignPolicies(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+			sp, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			generation = sp.Generation
 			cmd_err := Kubectl("apply", "-f", integrityShieldOperatorCR_updated, "-n", ishield_namespace)
 			Expect(cmd_err).To(BeNil())
 			time.Sleep(time.Second * 15)
 			Eventually(func() error {
-				sp, err := framework.SignPolicyClient.SignPolicies(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+				sp, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
 				if sp.Generation == generation {
-					return fmt.Errorf("SignPolicy is not changed: %v", expected)
+					return fmt.Errorf("SignerConfig is not changed: %v", expected)
 				}
 				return nil
 			}, timeout, 1).Should(BeNil())
@@ -244,7 +244,7 @@ var _ = Describe("Test integrity shield", func() {
 					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
-			It("Signed resource which do not match SignPolicy should be blocked", func() {
+			It("Signed resource which do not match SignerConfig should be blocked", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap-signer2"

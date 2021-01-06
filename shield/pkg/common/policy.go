@@ -41,28 +41,28 @@ const (
 
 /**********************************************
 
-					SignPolicy
+					SignerConfig
 
 ***********************************************/
 
-type SignPolicy struct {
-	Policies    []SignPolicyCondition `json:"policies,omitempty"`
-	Signers     []SignerCondition     `json:"signers,omitempty"`
-	BreakGlass  []BreakGlassCondition `json:"breakGlass,omitempty"`
-	Description string                `json:"description,omitempty"`
+type SignerConfig struct {
+	Policies    []SignerConfigCondition `json:"policies,omitempty"`
+	Signers     []SignerCondition       `json:"signers,omitempty"`
+	BreakGlass  []BreakGlassCondition   `json:"breakGlass,omitempty"`
+	Description string                  `json:"description,omitempty"`
 }
 
-func (p *SignPolicy) DeepCopyInto(p2 *SignPolicy) {
+func (p *SignerConfig) DeepCopyInto(p2 *SignerConfig) {
 	copier.Copy(&p2, &p)
 }
 
-func (p *SignPolicy) DeepCopy() *SignPolicy {
-	p2 := &SignPolicy{}
+func (p *SignerConfig) DeepCopy() *SignerConfig {
+	p2 := &SignerConfig{}
 	p.DeepCopyInto(p2)
 	return p2
 }
 
-func (self *SignPolicy) GetSignerMap() map[string][]SubjectCondition {
+func (self *SignerConfig) GetSignerMap() map[string][]SubjectCondition {
 	signerMap := map[string][]SubjectCondition{}
 	for _, si := range self.Signers {
 		tmpSC := []SubjectCondition{}
@@ -78,8 +78,8 @@ func (self *SignPolicy) GetSignerMap() map[string][]SubjectCondition {
 	return signerMap
 }
 
-func (self *SignPolicy) Merge(data *SignPolicy) *SignPolicy {
-	merged := &SignPolicy{}
+func (self *SignerConfig) Merge(data *SignerConfig) *SignerConfig {
+	merged := &SignerConfig{}
 	merged.Policies = append(self.Policies, data.Policies...)
 	merged.Signers = append(self.Signers, data.Signers...)
 	merged.BreakGlass = append(self.BreakGlass, data.BreakGlass...)
@@ -87,7 +87,7 @@ func (self *SignPolicy) Merge(data *SignPolicy) *SignPolicy {
 	return merged
 }
 
-func (self *SignPolicy) GetCandidatePubkeys(keyPathList []string, namespace string) []string {
+func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace string) map[SignatureType][]string {
 	candidates := []string{}
 	for _, spc := range self.Policies {
 		var included, excluded bool
@@ -108,16 +108,24 @@ func (self *SignPolicy) GetCandidatePubkeys(keyPathList []string, namespace stri
 		for _, signerName := range spc.Signers {
 			for _, signerCondition := range self.Signers {
 				if signerCondition.Name == signerName {
-					candidates = append(candidates, signerCondition.Secret)
+					candidates = append(candidates, signerCondition.KeyConfig)
 				}
 			}
 		}
 	}
-	candidateKeys := []string{}
+	candidateKeys := map[SignatureType][]string{
+		SignatureTypePGP:  {},
+		SignatureTypeX509: {},
+	}
 	for _, keyPath := range keyPathList {
-		for _, secretName := range candidates {
-			if strings.HasPrefix(keyPath, fmt.Sprintf("/%s/", secretName)) {
-				candidateKeys = append(candidateKeys, keyPath)
+		for _, keyConfName := range candidates {
+			pgpPattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypePGP))
+			x509Pattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypeX509))
+			if strings.Contains(keyPath, pgpPattern) {
+				candidateKeys[SignatureTypePGP] = append(candidateKeys[SignatureTypePGP], keyPath)
+				break
+			} else if strings.Contains(keyPath, x509Pattern) {
+				candidateKeys[SignatureTypeX509] = append(candidateKeys[SignatureTypeX509], keyPath)
 				break
 			}
 		}
@@ -125,7 +133,7 @@ func (self *SignPolicy) GetCandidatePubkeys(keyPathList []string, namespace stri
 	return candidateKeys
 }
 
-func (self *SignPolicy) Match(namespace string, signer *SignerInfo) (bool, *SignPolicyCondition) {
+func (self *SignerConfig) Match(namespace string, signer *SignerInfo) (bool, *SignerConfigCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
 		var included, excluded bool
@@ -164,7 +172,7 @@ func (self *SignPolicy) Match(namespace string, signer *SignerInfo) (bool, *Sign
 	return false, nil
 }
 
-type SignPolicyCondition struct {
+type SignerConfigCondition struct {
 	Scope             ScopeType `json:"scope,omitempty"`
 	Namespaces        []string  `json:"namespaces,omitempty"`
 	ExcludeNamespaces []string  `json:"excludeNamespaces,omitempty"`
@@ -172,9 +180,9 @@ type SignPolicyCondition struct {
 }
 
 type SignerCondition struct {
-	Name     string                `json:"name,omitempty"`
-	Secret   string                `json:"secret,omitempty"`
-	Subjects []SubjectMatchPattern `json:"subjects,omitempty"`
+	Name      string                `json:"name,omitempty"`
+	KeyConfig string                `json:"keyConfig,omitempty"`
+	Subjects  []SubjectMatchPattern `json:"subjects,omitempty"`
 }
 
 type BreakGlassCondition struct {

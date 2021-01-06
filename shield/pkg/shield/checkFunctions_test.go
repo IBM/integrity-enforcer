@@ -41,7 +41,7 @@ const (
 const MaxCaseNum = 2
 
 func TestCheckFunctions(t *testing.T) {
-	for i := 0; i < MaxCaseNum; i++ {
+	for i := 0; i <= MaxCaseNum; i++ {
 		testInScopeCheck(t, i)
 		testFormatCheck(t, i)
 		testIShieldResourceCheck(t, i)
@@ -70,7 +70,7 @@ func testInScopeCheck(t *testing.T, caseNum int) {
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for inScopeCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+		t.Errorf("[Case %s] Test failed for inScopeCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
 		t.Logf("[Case %s] Test for inScopeCheck() passed.", strconv.Itoa(caseNum))
 	}
@@ -83,7 +83,7 @@ func testFormatCheck(t *testing.T, caseNum int) {
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for formatCheck()\nexpected:\n  %s\nactual\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+		t.Errorf("[Case %s] Test failed for formatCheck()\nexpected:\n  %s\nactual\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
 		t.Logf("[Case %s] Test for formatCheck() passed.", strconv.Itoa(caseNum))
 	}
@@ -96,7 +96,7 @@ func testIShieldResourceCheck(t *testing.T, caseNum int) {
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for iShieldResourceCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+		t.Errorf("[Case %s] Test failed for iShieldResourceCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
 		t.Logf("[Case %s] Test for iShieldResourceCheck() passed.", strconv.Itoa(caseNum))
 	}
@@ -109,7 +109,7 @@ func testDeleteCheck(t *testing.T, caseNum int) {
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for deleteCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+		t.Errorf("[Case %s] Test failed for deleteCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
 		t.Logf("[Case %s] Test for deleteCheck() passed.", strconv.Itoa(caseNum))
 	}
@@ -122,12 +122,12 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	}
 	if len(actualMatchedProfiles) != 1 || !reflect.DeepEqual(actualMatchedProfiles[0], expectedMatchedProf) {
 		actProfBytes, _ := json.Marshal(actualMatchedProfiles[0])
 		expProfBytes, _ := json.Marshal(expectedMatchedProf)
-		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected :\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actProfBytes), string(expProfBytes))
+		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected :\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expProfBytes), string(actProfBytes))
 	} else {
 		t.Logf("[Case %s] Test for protectedCheck() passed.", strconv.Itoa(caseNum))
 	}
@@ -141,7 +141,7 @@ func testRSPCheck(t *testing.T, caseNum int) {
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(actDrBytes), string(expDrBytes))
+		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
 		t.Logf("[Case %s] Test for resourceSigningProfileCheck() passed.", strconv.Itoa(caseNum))
 	}

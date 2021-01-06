@@ -73,19 +73,9 @@ echo
 NO_WAIT=true
 p "Now, we are ready to install IntegrityShield. Please enter."
 read
-pe "make install-operator"
+pe "make setup-demo DEMO_ISHIELD_OP_IMAGE_NAME=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} DEMO_ISHIELD_SERVER_IMAGE_NAME=${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} DEMO_ISHIELD_LOGGING_IMAGE_NAME=${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION}"
 echo
-echo "===== Integrtity Shield operator is being deployed in cluster. ====="
-echo
-echo "Then, we set up IntegrityShield custome resource (CR)."
-make setup-tmp-cr
-echo
-echo "===== Integrity Shield CR is set up. ====="
-echo
-echo "After setting up Integrity Shield CR,  Let's now deploy Integrity Shield CR in the cluster."
-make create-cr
-echo
-echo "===== Integrity Shield CR is created in cluster. ====="
+echo "===== Integrtity Shield operator is being deployed and IntegrityShield custome resource (CR) is created in cluster. ====="
 echo
 NO_WAIT=false
 

@@ -38,7 +38,7 @@ import (
 	cert "github.com/IBM/integrity-enforcer/integrity-shield-operator/cert"
 
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,9 +111,9 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateSignPolicyCRD(
+func (r *IntegrityShieldReconciler) createOrUpdateSignerConfigCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildSignPolicyCRD(instance)
+	expected := res.BuildSignerConfigCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 func (r *IntegrityShieldReconciler) createOrUpdateResourceSignatureCRD(
@@ -213,14 +213,14 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateSignPolicyCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateSignerConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
-	found := &spol.SignPolicy{}
-	expected := res.BuildSignPolicyForIShield(instance)
+	found := &sigconf.SignerConfig{}
+	expected := res.BuildSignerConfigForIShield(instance)
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
-		"SignPolicy.Name", expected.Name)
+		"SignerConfig.Name", expected.Name)
 
 	// Set CR instance as the owner and controller
 	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
@@ -639,20 +639,16 @@ func (r *IntegrityShieldReconciler) isKeyRingReady(instance *apiv1alpha1.Integri
 	found := &corev1.Secret{}
 	okCount := 0
 	nonReadyKey := ""
-	for _, keyConf := range instance.Spec.KeyRings {
-		if keyConf.CreateIfNotExist {
-			okCount += 1
-			continue
-		}
-		err := r.Get(ctx, types.NamespacedName{Name: keyConf.Name, Namespace: instance.Namespace}, found)
+	for _, keyConf := range instance.Spec.KeyConfig {
+		err := r.Get(ctx, types.NamespacedName{Name: keyConf.SecretName, Namespace: instance.Namespace}, found)
 		if err == nil {
 			okCount += 1
 		} else {
-			nonReadyKey = keyConf.Name
+			nonReadyKey = keyConf.SecretName
 			break
 		}
 	}
-	ok := (okCount == len(instance.Spec.KeyRings))
+	ok := (okCount == len(instance.Spec.KeyConfig))
 	return ok, nonReadyKey
 }
 

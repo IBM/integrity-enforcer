@@ -50,7 +50,7 @@ import (
 	rs "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	scc "github.com/openshift/api/security/v1"
 
@@ -148,7 +148,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = ec.AddToScheme(scheme)
 	err = rsp.AddToScheme(scheme)
 	err = rs.AddToScheme(scheme)
-	err = spol.AddToScheme(scheme)
+	err = sigconf.AddToScheme(scheme)
 
 	Expect(err).NotTo(HaveOccurred())
 
@@ -196,7 +196,8 @@ var _ = BeforeSuite(func(done Done) {
 	// err = r.SetupWithManager(mgr)
 	// Expect(err).Should(BeNil())
 
-	emptyKeyring := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: iShieldCR.Namespace, Name: iShieldCR.Spec.KeyRings[0].Name}, Data: map[string][]byte{}}
+	keyringSecretName := "keyring-secret"
+	emptyKeyring := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: iShieldCR.Namespace, Name: keyringSecretName}, Data: map[string][]byte{}}
 	_ = k8sClient.Create(ctx, emptyKeyring)
 
 	req := reconcile.Request{

@@ -32,6 +32,7 @@ type LoggerConfig struct {
 	FileDest string
 }
 
+var ServerLoggerLogger *log.Logger
 var ServerLogger *log.Entry
 var SessionTrace *SessionTraceHook
 var SessionLogger *log.Entry
@@ -49,7 +50,7 @@ func GetSessionTraceString() string {
 }
 
 func InitServerLogger(config LoggerConfig) {
-	ServerLoggerLogger := newLogger(config)
+	ServerLoggerLogger = newLogger(config)
 	sessionTraceHook := NewSessionTraceHook(logrus.TraceLevel, &log.TextFormatter{})
 	SessionTrace = sessionTraceHook
 	ServerLoggerLogger.AddHook(sessionTraceHook)
@@ -98,6 +99,37 @@ func newLogger(conf LoggerConfig) *log.Logger {
 	}
 
 	return logger
+}
+
+func GetGreaterLevel(lvStr1, lvStr2 string) string {
+	// "error" is the minimum level without fatal crash, so this function returns it in case of no custom level
+	if lvStr1 == "" {
+		lvStr1 = "error"
+	}
+	if lvStr2 == "" {
+		lvStr2 = "error"
+	}
+	lv1, err1 := log.ParseLevel(lvStr1)
+	lv2, err2 := log.ParseLevel(lvStr2)
+	if err1 != nil && err2 != nil {
+		return "error"
+	}
+	if lv1 > lv2 {
+		return lv1.String()
+	} else {
+		return lv2.String()
+	}
+}
+
+func SetLogLevel(levelString string) {
+	if levelString != "" {
+		level, err := log.ParseLevel(levelString)
+		if err != nil {
+			ServerLogger.Info("Failed to parse log level, using info level")
+		} else {
+			ServerLoggerLogger.SetLevel(level)
+		}
+	}
 }
 
 /*

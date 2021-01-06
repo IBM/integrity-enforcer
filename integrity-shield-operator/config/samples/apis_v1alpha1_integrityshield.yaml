@@ -5,14 +5,13 @@ metadata:
 spec:
   namespace: integrity-shield-operator-system
   shieldConfig:
-    verifyType: pgp # x509
     inScopeNamespaceSelector:
       include:
       - "*"
       exclude:
       - "kube-*"
       - "openshift-*"
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
       - "*"
@@ -23,8 +22,9 @@ spec:
       - "SampleSigner"
     signers:
     - name: "SampleSigner"
-      secret: keyring-secret
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: "sample_signer@signer.com"
-  keyRingConfigs:
-  - name: keyring-secret
+  keyConfig:
+  - name: sample-signer-keyconfig
+    secretName: keyring-secret

@@ -35,17 +35,17 @@ import (
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	spol "github.com/IBM/integrity-enforcer/shield/pkg/apis/signpolicy/v1alpha1"
+	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 )
 
 const (
 	DefaultIntegrityShieldCRDName             = "integrityshields.apis.integrityshield.io"
 	DefaultShieldConfigCRDName                = "shieldconfigs.apis.integrityshield.io"
-	DefaultSignPolicyCRDName                  = "signpolicies.apis.integrityshield.io"
+	DefaultSignerConfigCRDName                = "signerconfigs.apis.integrityshield.io"
 	DefaultResourceSignatureCRDName           = "resourcesignatures.apis.integrityshield.io"
 	DefaultResourceSigningProfileCRDName      = "resourcesigningprofiles.apis.integrityshield.io"
 	DefaultHelmReleaseMetadataCRDName         = "helmreleasemetadatas.apis.integrityshield.io"
-	DefaultSignPolicyCRName                   = "sign-policy"
+	DefaultSignerConfigCRName                 = "signer-config"
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
@@ -77,15 +77,15 @@ type IntegrityShieldSpec struct {
 
 	IgnoreDefaultIShieldCR bool            `json:"ignoreDefaultIShieldCR,omitempty"`
 	Security               SecurityConfig  `json:"security,omitempty"`
-	KeyRings               []KeyRingConfig `json:"keyRingConfigs,omitempty"`
+	KeyConfig              []KeyConfig     `json:"keyConfig,omitempty"`
 	Server                 ServerContainer `json:"server,omitempty"`
 	Logger                 LoggerContainer `json:"logger,omitempty"`
 	RegKeySecret           RegKeySecret    `json:"regKeySecret,omitempty"`
 
-	ShieldConfigCrName      string             `json:"shieldConfigCrName,omitempty"`
-	ShieldConfig            *iec.ShieldConfig  `json:"shieldConfig,omitempty"`
-	SignPolicy              *common.SignPolicy `json:"signPolicy,omitempty"`
-	ResourceSigningProfiles []*ProfileConfig   `json:"resourceSigningProfiles,omitempty"`
+	ShieldConfigCrName      string               `json:"shieldConfigCrName,omitempty"`
+	ShieldConfig            *iec.ShieldConfig    `json:"shieldConfig,omitempty"`
+	SignerConfig            *common.SignerConfig `json:"signerConfig,omitempty"`
+	ResourceSigningProfiles []*ProfileConfig     `json:"resourceSigningProfiles,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
@@ -116,10 +116,11 @@ type CertPoolConfig struct {
 	KeyValue         []byte `json:"keyValue,omitempty"`
 }
 
-type KeyRingConfig struct {
-	Name             string `json:"name,omitempty"`
-	CreateIfNotExist bool   `json:"createIfNotExist,omitempty"`
-	KeyValue         []byte `json:"keyValue,omitempty"`
+type KeyConfig struct {
+	Name          string               `json:"name,omitempty"`
+	FileName      string               `json:"fileName,omitempty"`
+	SecretName    string               `json:"secretName,omitempty"`
+	SignatureType common.SignatureType `json:"signatureType,omitempty"`
 }
 
 type ServerContainer struct {
@@ -136,7 +137,7 @@ type ServerContainer struct {
 }
 
 type LoggerContainer struct {
-	Enabled         bool                    `json:"enabled,omitempty"`
+	Enabled         *bool                   `json:"enabled,omitempty"`
 	Name            string                  `json:"name,omitempty"`
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
@@ -221,8 +222,8 @@ func (self *IntegrityShield) GetShieldConfigCRDName() string {
 	return DefaultShieldConfigCRDName
 }
 
-func (self *IntegrityShield) GetSignPolicyCRDName() string {
-	return DefaultSignPolicyCRDName
+func (self *IntegrityShield) GetSignerConfigCRDName() string {
+	return DefaultSignerConfigCRDName
 }
 
 func (self *IntegrityShield) GetResourceSignatureCRDName() string {
@@ -241,8 +242,8 @@ func (self *IntegrityShield) GetShieldConfigCRName() string {
 	return self.Spec.ShieldConfigCrName
 }
 
-func (self *IntegrityShield) GetSignPolicyCRName() string {
-	return DefaultSignPolicyCRName
+func (self *IntegrityShield) GetSignerConfigCRName() string {
+	return DefaultSignerConfigCRName
 }
 
 func (self *IntegrityShield) GetRegKeySecretName() string {
@@ -325,7 +326,7 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 	_deployType := getTypeFromObj(&appsv1.Deployment{}, scheme)
 	_crdType := getTypeFromObj(&extv1.CustomResourceDefinition{}, scheme)
 	_ecType := getTypeFromObj(&ec.ShieldConfig{}, scheme)
-	_spolType := getTypeFromObj(&spol.SignPolicy{}, scheme)
+	_sigconfType := getTypeFromObj(&sigconf.SignerConfig{}, scheme)
 	_rspType := getTypeFromObj(&rsp.ResourceSigningProfile{}, scheme)
 	_secretType := getTypeFromObj(&v1.Secret{}, scheme)
 	_saType := getTypeFromObj(&v1.ServiceAccount{}, scheme)
@@ -359,7 +360,7 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 		},
 		{
 			Kind: _crdType.Kind,
-			Name: self.GetSignPolicyCRDName(),
+			Name: self.GetSignerConfigCRDName(),
 		},
 		{
 			Kind: _crdType.Kind,
@@ -379,8 +380,8 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 			Namespace: self.Namespace,
 		},
 		{
-			Kind:      _spolType.Kind,
-			Name:      self.GetSignPolicyCRName(),
+			Kind:      _sigconfType.Kind,
+			Name:      self.GetSignerConfigCRName(),
 			Namespace: self.Namespace,
 		},
 		{

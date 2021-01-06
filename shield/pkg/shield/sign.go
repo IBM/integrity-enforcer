@@ -29,20 +29,14 @@ import (
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
-type VerifyType string
-type SignatureType string
+type SignedResourceType string
 
 const (
-	VerifyTypeX509 VerifyType = "x509"
-	VerifyTypePGP  VerifyType = "pgp"
-)
-
-const (
-	SignatureTypeUnknown          SignatureType = ""
-	SignatureTypeResource         SignatureType = "Resource"
-	SignatureTypeApplyingResource SignatureType = "ApplyingResource"
-	SignatureTypePatch            SignatureType = "Patch"
-	SignatureTypeHelm             SignatureType = "Helm"
+	SignedResourceTypeUnknown          SignedResourceType = ""
+	SignedResourceTypeResource         SignedResourceType = "Resource"
+	SignedResourceTypeApplyingResource SignedResourceType = "ApplyingResource"
+	SignedResourceTypePatch            SignedResourceType = "Patch"
+	SignedResourceTypeHelm             SignedResourceType = "Helm"
 )
 
 /**********************************************
@@ -52,7 +46,7 @@ const (
 ***********************************************/
 
 type GeneralSignature struct {
-	SignType SignatureType
+	SignType SignedResourceType
 	data     map[string]string
 	option   map[string]bool
 }
@@ -68,16 +62,16 @@ type SignatureEvaluator interface {
 }
 
 type ConcreteSignatureEvaluator struct {
-	config  *config.ShieldConfig
-	policy  *common.SignPolicy
-	plugins map[string]bool
+	config       *config.ShieldConfig
+	signerConfig *common.SignerConfig
+	plugins      map[string]bool
 }
 
-func NewSignatureEvaluator(config *config.ShieldConfig, policy *common.SignPolicy, plugins map[string]bool) (SignatureEvaluator, error) {
+func NewSignatureEvaluator(config *config.ShieldConfig, signerConfig *common.SignerConfig, plugins map[string]bool) (SignatureEvaluator, error) {
 	return &ConcreteSignatureEvaluator{
-		config:  config,
-		policy:  policy,
-		plugins: plugins,
+		config:       config,
+		signerConfig: signerConfig,
+		plugins:      plugins,
 	}, nil
 }
 
@@ -100,11 +94,11 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		}
 		signature := base64decode(sigAnnotations.Signature)
 		certificate := base64decode(sigAnnotations.Certificate)
-		signType := SignatureTypeResource
+		signType := SignedResourceTypeResource
 		if sigAnnotations.SignatureType == vrsig.SignatureTypeApplyingResource {
-			signType = SignatureTypeApplyingResource
+			signType = SignedResourceTypeApplyingResource
 		} else if sigAnnotations.SignatureType == vrsig.SignatureTypePatch {
-			signType = SignatureTypePatch
+			signType = SignedResourceTypePatch
 		}
 		return &GeneralSignature{
 			SignType: signType,
@@ -129,11 +123,11 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 				matchRequired = false  // skip matching because the message is generated from Requested Object
 				scopedSignature = true // enable checking if the signature is for patch
 			}
-			signType := SignatureTypeResource
+			signType := SignedResourceTypeResource
 			if si.Type == vrsig.SignatureTypeApplyingResource {
-				signType = SignatureTypeApplyingResource
+				signType = SignedResourceTypeApplyingResource
 			} else if si.Type == vrsig.SignatureTypePatch {
-				signType = SignatureTypePatch
+				signType = SignedResourceTypePatch
 			}
 			return &GeneralSignature{
 				SignType: signType,
@@ -160,7 +154,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 				eCfg := true
 
 				return &GeneralSignature{
-					SignType: SignatureTypeHelm,
+					SignType: SignedResourceTypeHelm,
 					data:     map[string]string{"releaseSecret": rls, "helmReleaseMetadata": hrm},
 					option:   map[string]bool{"emptyConfig": eCfg, "matchRequired": true},
 				}
@@ -200,18 +194,19 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 		}, nil
 	}
 
-	verifyType := VerifyType(self.config.VerifyType)
-
 	noValidKeyring := false
 	noValidKeyringMsg := ""
-	candidatePubkeys := self.policy.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
-	if len(candidatePubkeys) == 0 {
+	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
+	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
+	x509Pubkeys := candidatePubkeys[common.SignatureTypeX509]
+	candidateCount := len(pgpPubkeys) + len(x509Pubkeys)
+	if candidateCount == 0 {
 		noValidKeyring = true
-		noValidKeyringMsg = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s). Please check SignPolicy.", reqc.Namespace, reqc.Kind)
+		noValidKeyringMsg = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s). Please check SignerConfig.", reqc.Namespace, reqc.Kind)
 	}
 
 	// create verifier
-	verifier := NewVerifier(verifyType, rsig.SignType, self.config.Namespace, candidatePubkeys, self.config.KeyPathList)
+	verifier := NewVerifier(rsig.SignType, self.config.Namespace, pgpPubkeys, x509Pubkeys, self.config.KeyPathList)
 
 	// verify signature
 	sigVerifyResult, err := verifier.Verify(rsig, reqc, signingProfile)
@@ -232,7 +227,6 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			noValidKeyringMsg = sigVerifyResult.Error.Reason
 		}
 	}
-	logger.Debug("[DEBUG] noValidKeyring: ", noValidKeyring)
 
 	if noValidKeyring {
 		return &common.SignatureEvalResult{
@@ -261,21 +255,21 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	// signer
 	signer := sigVerifyResult.Signer
 
-	// check signer policy
-	signerMatched, matchedPolicy := self.policy.Match(reqc.Namespace, signer)
+	// check signer config
+	signerMatched, matchedSignerConfig := self.signerConfig.Match(reqc.Namespace, signer)
 	if signerMatched {
-		matchedPolicyStr := ""
-		if matchedPolicy != nil {
-			tmpMatchedPolicy, _ := json.Marshal(matchedPolicy)
-			matchedPolicyStr = string(tmpMatchedPolicy)
+		matchedSignerConfigStr := ""
+		if matchedSignerConfig != nil {
+			tmpMatchedConfig, _ := json.Marshal(matchedSignerConfig)
+			matchedSignerConfigStr = string(tmpMatchedConfig)
 		}
 		return &common.SignatureEvalResult{
-			Signer:        signer,
-			SignerName:    signer.GetName(),
-			Allow:         true,
-			Checked:       true,
-			MatchedPolicy: matchedPolicyStr,
-			Error:         nil,
+			Signer:              signer,
+			SignerName:          signer.GetName(),
+			Allow:               true,
+			Checked:             true,
+			MatchedSignerConfig: matchedSignerConfigStr,
+			Error:               nil,
 		}, nil
 	} else {
 		return &common.SignatureEvalResult{

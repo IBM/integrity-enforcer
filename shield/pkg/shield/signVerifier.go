@@ -52,17 +52,17 @@ type VerifierInterface interface {
 ***********************************************/
 
 type ResourceVerifier struct {
-	VerifyType     VerifyType
-	Namespace      string
-	KeyPathList    []string
-	AllKeyPathList []string
+	Namespace             string
+	PGPKeyPathList        []string
+	X509KeyPathList       []string
+	AllMountedKeyPathList []string
 }
 
-func NewVerifier(verifyType VerifyType, signType SignatureType, shieldNamespace string, keyPathList, allKeyPathList []string) VerifierInterface {
-	if signType == SignatureTypeResource || signType == SignatureTypeApplyingResource || signType == SignatureTypePatch {
-		return &ResourceVerifier{Namespace: shieldNamespace, VerifyType: verifyType, KeyPathList: keyPathList, AllKeyPathList: allKeyPathList}
-	} else if signType == SignatureTypeHelm {
-		return &HelmVerifier{Namespace: shieldNamespace, VerifyType: verifyType, KeyPathList: keyPathList}
+func NewVerifier(signType SignedResourceType, shieldNamespace string, pgpKeyPathList, x509KeyPathList, allKeyPathList []string) VerifierInterface {
+	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
+		return &ResourceVerifier{Namespace: shieldNamespace, PGPKeyPathList: pgpKeyPathList, X509KeyPathList: x509KeyPathList, AllMountedKeyPathList: allKeyPathList}
+	} else if signType == SignedResourceTypeHelm {
+		return &HelmVerifier{Namespace: shieldNamespace, KeyPathList: pgpKeyPathList}
 	}
 	return nil
 }
@@ -133,10 +133,12 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		}
 	}
 
-	if self.VerifyType == VerifyTypePGP {
-		message := sig.data["message"]
-		signature := sig.data["signature"]
-		ok, reasonFail, signer, err := pgp.VerifySignature(self.KeyPathList, message, signature)
+	message := sig.data["message"]
+	signature := sig.data["signature"]
+	certificateStr, certFound := sig.data["certificate"]
+	if len(self.PGPKeyPathList) > 0 {
+
+		ok, reasonFail, signer, err := pgp.VerifySignature(self.PGPKeyPathList, message, signature)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in signature verification",
@@ -154,13 +156,13 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			}
 			retErr = nil
 		} else {
-			if ok2, _, signer2, _ := pgp.VerifySignature(self.AllKeyPathList, message, signature); ok2 && signer2 != nil {
+			if ok2, _, signer2, _ := pgp.VerifySignature(self.AllMountedKeyPathList, message, signature); ok2 && signer2 != nil {
 				signer2Name := (&common.SignerInfo{
 					Email:   signer2.Email,
 					Name:    signer2.Name,
 					Comment: signer2.Comment,
 				}).GetName()
-				reasonFail = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s, signer: %s). Please check SignPolicy.", reqc.Namespace, reqc.Kind, signer2Name)
+				reasonFail = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s, signer: %s). Please check SignerConfig.", reqc.Namespace, reqc.Kind, signer2Name)
 			}
 			vcerr = &common.CheckError{
 				Msg:    "Failed to verify signature",
@@ -171,9 +173,10 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			retErr = nil
 		}
 
-	} else if self.VerifyType == VerifyTypeX509 {
-		certificate := []byte(sig.data["certificate"])
-		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.KeyPathList)
+	}
+	if len(self.X509KeyPathList) > 0 && certFound {
+		certificate := []byte(certificateStr)
+		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.X509KeyPathList)
 		if err != nil {
 			vcerr = &common.CheckError{
 				Msg:    "Error occured in certificate verification",
@@ -224,15 +227,6 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 				retErr = nil
 			}
 		}
-	} else {
-		errMsg := fmt.Sprintf("Unknown VerifyType is specified; VerifyType: %s", string(self.VerifyType))
-		vcerr = &common.CheckError{
-			Msg:    errMsg,
-			Reason: errMsg,
-			Error:  nil,
-		}
-		vsinfo = nil
-		retErr = nil
 	}
 
 	svresult := &SigVerifyResult{
@@ -242,7 +236,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignatureType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -279,7 +273,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		return matched, diffStr
 	}
 
-	if !matched && signType == SignatureTypeResource {
+	if !matched && signType == SignedResourceTypeResource {
 
 		nsMaskedOrgBytes := orgNode.Mask([]string{"metadata.namespace"}).ToYaml()
 		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), self.Namespace)
@@ -297,7 +291,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 			logger.Debug("matched by DryRunCreate()")
 		}
 	}
-	if !matched && signType == SignatureTypeApplyingResource {
+	if !matched && signType == SignedResourceTypeApplyingResource {
 
 		reqNode, _ := mapnode.NewFromBytes(reqObj)
 		reqNamespace := reqNode.GetString("metadata.namespace")
@@ -322,7 +316,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
 	}
-	if !matched && signType == SignatureTypePatch {
+	if !matched && signType == SignedResourceTypePatch {
 		patchedBytes, err := kubeutil.StrategicMergePatch(reqObj, orgObj, "")
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
@@ -507,7 +501,6 @@ type SigVerifyResult struct {
 ***********************************************/
 
 type HelmVerifier struct {
-	VerifyType  VerifyType
 	Namespace   string
 	KeyPathList []string
 }
@@ -536,58 +529,47 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 
 	// verify helm chart with prov in HelmReleaseMetadata.
 	// helm provenance supports only PGP Verification.
-	if self.VerifyType == VerifyTypePGP || self.VerifyType == VerifyTypeX509 {
-		var hrmObj *hrm.HelmReleaseMetadata
-		err := json.Unmarshal([]byte(hrmStr), &hrmObj)
+	var hrmObj *hrm.HelmReleaseMetadata
+	err := json.Unmarshal([]byte(hrmStr), &hrmObj)
+	if err != nil {
+		msg := fmt.Sprintf("Error occured in helm chart verification; %s", err.Error())
+		vcerr = &common.CheckError{
+			Msg:    msg,
+			Reason: msg,
+			Error:  fmt.Errorf("%s", msg),
+		}
+		vsinfo = nil
+		retErr = err
+	} else {
+
+		helmChart := hrmObj.Spec.Chart
+		helmProv := hrmObj.Spec.Prov
+		ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyPathList)
 		if err != nil {
-			msg := fmt.Sprintf("Error occured in helm chart verification; %s", err.Error())
 			vcerr = &common.CheckError{
-				Msg:    msg,
-				Reason: msg,
-				Error:  fmt.Errorf("%s", msg),
+				Msg:    "Error occured in helm chart verification",
+				Reason: reasonFail,
+				Error:  err,
 			}
 			vsinfo = nil
 			retErr = err
-		} else {
-
-			helmChart := hrmObj.Spec.Chart
-			helmProv := hrmObj.Spec.Prov
-			ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyPathList)
-			if err != nil {
-				vcerr = &common.CheckError{
-					Msg:    "Error occured in helm chart verification",
-					Reason: reasonFail,
-					Error:  err,
-				}
-				vsinfo = nil
-				retErr = err
-			} else if ok {
-				vcerr = nil
-				vsinfo = &common.SignerInfo{
-					Email:   signer.Email,
-					Name:    signer.Name,
-					Comment: signer.Comment,
-				}
-				retErr = nil
-			} else {
-				vcerr = &common.CheckError{
-					Msg:    "Failed to verify helm chart and its provenance",
-					Reason: reasonFail,
-					Error:  nil,
-				}
-				vsinfo = nil
-				retErr = nil
+		} else if ok {
+			vcerr = nil
+			vsinfo = &common.SignerInfo{
+				Email:   signer.Email,
+				Name:    signer.Name,
+				Comment: signer.Comment,
 			}
+			retErr = nil
+		} else {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify helm chart and its provenance",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
 		}
-	} else {
-		errMsg := fmt.Sprintf("Unknown VerifyType is specified; VerifyType: %s", string(self.VerifyType))
-		vcerr = &common.CheckError{
-			Msg:    errMsg,
-			Reason: errMsg,
-			Error:  nil,
-		}
-		vsinfo = nil
-		retErr = nil
 	}
 
 	svresult := &SigVerifyResult{

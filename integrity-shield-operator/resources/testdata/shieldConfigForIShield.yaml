@@ -171,7 +171,7 @@ spec:
       include:
       - '*'
     keyPathList:
-    - /keyring-secret/pubring.gpg
+    - /sample-signer-keyconfig/pgp/pubring.gpg
     log:
       consoleLog:
         enabled: true
@@ -186,7 +186,6 @@ spec:
       enabled: true
     plugin:
     - name: helm
-    verifyType: pgp
 status:
   message: ""
   state: ""
