@@ -196,7 +196,8 @@ var _ = BeforeSuite(func(done Done) {
 	// err = r.SetupWithManager(mgr)
 	// Expect(err).Should(BeNil())
 
-	emptyKeyring := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: iShieldCR.Namespace, Name: iShieldCR.Spec.KeyRings[0].Name}, Data: map[string][]byte{}}
+	keyringSecretName := "keyring-secret"
+	emptyKeyring := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: iShieldCR.Namespace, Name: keyringSecretName}, Data: map[string][]byte{}}
 	_ = k8sClient.Create(ctx, emptyKeyring)
 
 	req := reconcile.Request{

@@ -87,7 +87,7 @@ func (self *SignerConfig) Merge(data *SignerConfig) *SignerConfig {
 	return merged
 }
 
-func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace string) []string {
+func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace string) map[SignatureType][]string {
 	candidates := []string{}
 	for _, spc := range self.Policies {
 		var included, excluded bool
@@ -108,16 +108,24 @@ func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace st
 		for _, signerName := range spc.Signers {
 			for _, signerCondition := range self.Signers {
 				if signerCondition.Name == signerName {
-					candidates = append(candidates, signerCondition.Secret)
+					candidates = append(candidates, signerCondition.KeyConfig)
 				}
 			}
 		}
 	}
-	candidateKeys := []string{}
+	candidateKeys := map[SignatureType][]string{
+		SignatureTypePGP:  {},
+		SignatureTypeX509: {},
+	}
 	for _, keyPath := range keyPathList {
-		for _, secretName := range candidates {
-			if strings.HasPrefix(keyPath, fmt.Sprintf("/%s/", secretName)) {
-				candidateKeys = append(candidateKeys, keyPath)
+		for _, keyConfName := range candidates {
+			pgpPattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypePGP))
+			x509Pattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypeX509))
+			if strings.Contains(keyPath, pgpPattern) {
+				candidateKeys[SignatureTypePGP] = append(candidateKeys[SignatureTypePGP], keyPath)
+				break
+			} else if strings.Contains(keyPath, x509Pattern) {
+				candidateKeys[SignatureTypeX509] = append(candidateKeys[SignatureTypeX509], keyPath)
 				break
 			}
 		}
@@ -172,9 +180,9 @@ type SignerConfigCondition struct {
 }
 
 type SignerCondition struct {
-	Name     string                `json:"name,omitempty"`
-	Secret   string                `json:"secret,omitempty"`
-	Subjects []SubjectMatchPattern `json:"subjects,omitempty"`
+	Name      string                `json:"name,omitempty"`
+	KeyConfig string                `json:"keyConfig,omitempty"`
+	Subjects  []SubjectMatchPattern `json:"subjects,omitempty"`
 }
 
 type BreakGlassCondition struct {

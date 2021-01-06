@@ -3,6 +3,7 @@ nohup.out
 docs/node_modules/
 docs/_book/
 *.gpg
+*.log
 cover.out
 kubeconfig_managed
 .build-harness-bootstrap
