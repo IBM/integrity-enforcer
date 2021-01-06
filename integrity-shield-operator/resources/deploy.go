@@ -23,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -97,10 +98,10 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 			InitialDelaySeconds: 10,
 			PeriodSeconds:       10,
 			Handler: v1.Handler{
-				Exec: &v1.ExecAction{
-					Command: []string{
-						"ls",
-					},
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/health/readiness",
+					Port:   intstr.IntOrString{IntVal: 8443},
+					Scheme: v1.URISchemeHTTPS,
 				},
 			},
 		},

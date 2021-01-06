@@ -56,6 +56,9 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	if ecc.Spec.ShieldConfig.ProfileNamespace == "" {
 		ecc.Spec.ShieldConfig.ProfileNamespace = cr.Namespace
 	}
+	if ecc.Spec.ShieldConfig.IShieldCRName == "" {
+		ecc.Spec.ShieldConfig.IShieldCRName = cr.Name
+	}
 	if ecc.Spec.ShieldConfig.IShieldServerUserName == "" {
 		ecc.Spec.ShieldConfig.IShieldServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.GetServiceAccountName())
 	}
