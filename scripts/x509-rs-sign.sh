@@ -93,6 +93,6 @@ rsigname="rsig-${reskind}-${resname}"
 yq w -i $OUTPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $rsigsig
 yq w -i $OUTPUT_FILE 'metadata.annotations."integrityshield.io/certificate"' $crt
 yq w -i $OUTPUT_FILE metadata.name $rsigname
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigsubject-apiversion"' $resApiVer
-yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigsubject-kind"' $resKind
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigobject-apiversion"' $resApiVer
+yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigobject-kind"' $resKind
 yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigtime"' $sigtime

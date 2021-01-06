@@ -639,20 +639,16 @@ func (r *IntegrityShieldReconciler) isKeyRingReady(instance *apiv1alpha1.Integri
 	found := &corev1.Secret{}
 	okCount := 0
 	nonReadyKey := ""
-	for _, keyConf := range instance.Spec.KeyRings {
-		if keyConf.CreateIfNotExist {
-			okCount += 1
-			continue
-		}
-		err := r.Get(ctx, types.NamespacedName{Name: keyConf.Name, Namespace: instance.Namespace}, found)
+	for _, keyConf := range instance.Spec.KeyConfig {
+		err := r.Get(ctx, types.NamespacedName{Name: keyConf.SecretName, Namespace: instance.Namespace}, found)
 		if err == nil {
 			okCount += 1
 		} else {
-			nonReadyKey = keyConf.Name
+			nonReadyKey = keyConf.SecretName
 			break
 		}
 	}
-	ok := (okCount == len(instance.Spec.KeyRings))
+	ok := (okCount == len(instance.Spec.KeyConfig))
 	return ok, nonReadyKey
 }
 

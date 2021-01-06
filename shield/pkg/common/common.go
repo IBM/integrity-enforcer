@@ -65,6 +65,14 @@ const (
 	LabelValueUnverified = "unverified"
 )
 
+type SignatureType string
+
+const (
+	SignatureTypeDefault = ""
+	SignatureTypePGP     = "pgp"
+	SignatureTypeX509    = "x509"
+)
+
 type DecisionType string
 
 const (

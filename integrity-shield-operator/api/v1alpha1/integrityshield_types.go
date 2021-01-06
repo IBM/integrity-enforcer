@@ -77,7 +77,7 @@ type IntegrityShieldSpec struct {
 
 	IgnoreDefaultIShieldCR bool            `json:"ignoreDefaultIShieldCR,omitempty"`
 	Security               SecurityConfig  `json:"security,omitempty"`
-	KeyRings               []KeyRingConfig `json:"keyRingConfigs,omitempty"`
+	KeyConfig              []KeyConfig     `json:"keyConfig,omitempty"`
 	Server                 ServerContainer `json:"server,omitempty"`
 	Logger                 LoggerContainer `json:"logger,omitempty"`
 	RegKeySecret           RegKeySecret    `json:"regKeySecret,omitempty"`
@@ -116,10 +116,11 @@ type CertPoolConfig struct {
 	KeyValue         []byte `json:"keyValue,omitempty"`
 }
 
-type KeyRingConfig struct {
-	Name             string `json:"name,omitempty"`
-	CreateIfNotExist bool   `json:"createIfNotExist,omitempty"`
-	KeyValue         []byte `json:"keyValue,omitempty"`
+type KeyConfig struct {
+	Name          string               `json:"name,omitempty"`
+	FileName      string               `json:"fileName,omitempty"`
+	SecretName    string               `json:"secretName,omitempty"`
+	SignatureType common.SignatureType `json:"signatureType,omitempty"`
 }
 
 type ServerContainer struct {

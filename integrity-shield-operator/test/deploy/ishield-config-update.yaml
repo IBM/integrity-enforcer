@@ -271,8 +271,8 @@ spec:
       include:
       - '*'
     keyPathList:
-    - /keyring-secret/pubring.gpg
-    - /keyring-secret-signer2/pubring.gpg
+    - /keyring-secret/pgp/pubring.gpg
+    - /keyring-secret-signer2/pgp/pubring.gpg
     log:
       consoleLog:
         enabled: true
@@ -291,7 +291,6 @@ spec:
     - name: helm
     profileNamespace: integrity-shield-operator-system
     signatureNamespace: integrity-shield-operator-system
-    verifyType: pgp
 status:
   message: ""
   state: ""
