@@ -305,6 +305,7 @@ setup-test-resources:
 	@echo prepare cr for updating test
 	cp $(TMP_CR_FILE) $(TMP_CR_UPDATED_FILE)
 	yq write -i $(TMP_CR_UPDATED_FILE) spec.signerConfig.signers[1].subjects[1].email $(TEST_SAMPLE_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_UPDATED_FILE) spec.shieldConfig.iShieldAdminUserName e2eTestUser
 
 e2e-test:
 	@echo
