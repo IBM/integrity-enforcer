@@ -621,15 +621,16 @@ spec:
                     type: string
                 type: object
               type: array
-            keyRingConfigs:
+            keyConfig:
               items:
                 properties:
-                  createIfNotExist:
-                    type: boolean
-                  keyValue:
-                    format: byte
+                  fileName:
                     type: string
                   name:
+                    type: string
+                  secretName:
+                    type: string
+                  signatureType:
                     type: string
                 type: object
               type: array
@@ -2203,10 +2204,6 @@ spec:
                   type: string
                 signatureNamespace:
                   type: string
-                verifyType:
-                  type: string
-              required:
-              - verifyType
               type: object
             shieldConfigCrName:
               type: string
@@ -2247,9 +2244,9 @@ spec:
                 signers:
                   items:
                     properties:
-                      name:
+                      keyConfig:
                         type: string
-                      secret:
+                      name:
                         type: string
                       subjects:
                         items:

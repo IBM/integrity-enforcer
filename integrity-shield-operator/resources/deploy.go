@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -48,8 +49,8 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		EmptyDirVolume("log-volume"),
 		EmptyDirVolume("tmp"),
 	}
-	for _, keyConf := range cr.Spec.KeyRings {
-		tmpSecretVolume := SecretVolume(keyConf.Name, keyConf.Name)
+	for _, keyConf := range cr.Spec.KeyConfig {
+		tmpSecretVolume := SecretVolume(keyConf.Name, keyConf.SecretName)
 		volumes = append(volumes, tmpSecretVolume)
 	}
 
@@ -68,8 +69,12 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 			Name:      "log-volume",
 		},
 	}
-	for _, keyConf := range cr.Spec.KeyRings {
-		tmpVolumeMount := v1.VolumeMount{MountPath: "/" + keyConf.Name, Name: keyConf.Name}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		sigType := keyConf.SignatureType
+		if sigType == common.SignatureTypeDefault {
+			sigType = common.SignatureTypePGP
+		}
+		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/", keyConf.Name, sigType), Name: keyConf.Name}
 		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
 	}
 

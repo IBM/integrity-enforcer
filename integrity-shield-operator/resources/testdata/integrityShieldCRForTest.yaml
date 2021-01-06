@@ -5,9 +5,13 @@ metadata:
   name: integrity-shield-server
 spec:
   affinity: {}
-  keyRingConfigs:
-  - name: keyring-secret
-  - name: keyring-secret-signer2
+  keyConfig:
+  - name: sample-signer-keyconfig
+    secretName: keyring-secret
+    signatureType: pgp
+  - name: test-signer2-keyconfig
+    secretName: keyring-secret-signer2
+    signatureType: pgp
   labels:
     app: ishield-server
   logger:
@@ -93,7 +97,6 @@ spec:
       enabled: true
     plugin:
     - name: helm
-    verifyType: pgp
   shieldConfigCrName: ishield-config
   signerConfig:
     policies:
@@ -106,15 +109,15 @@ spec:
       - SampleSigner
     signers:
     - name: SampleSigner
-      secret: keyring-secret
+      keyConfig: keyring-secret
       subjects:
       - email: hirokuni.kitahara1@ibm.com
     - name: TestSigner
-      secret: keyring-secret
+      keyConfig: keyring-secret
       subjects:
       - email: gajan@jp.ibm.com
     - name: TestSigner2
-      secret: keyring-secret-signer2
+      keyConfig: keyring-secret-signer2
       subjects:
       - email: dummy@dummy.com
   webhookClusterResource:

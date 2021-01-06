@@ -61,8 +61,25 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	}
 	if len(ecc.Spec.ShieldConfig.KeyPathList) == 0 {
 		keyPathList := []string{}
-		for _, keyConf := range cr.Spec.KeyRings {
-			keyPathList = append(keyPathList, fmt.Sprintf("/%s/%s", keyConf.Name, apiv1alpha1.DefaultKeyringFilename))
+		for _, keyConf := range cr.Spec.KeyConfig {
+			sigType := keyConf.SignatureType
+			if sigType == common.SignatureTypeDefault {
+				sigType = common.SignatureTypePGP
+			}
+			if sigType == common.SignatureTypePGP {
+				fileName := keyConf.FileName
+				if fileName == "" {
+					fileName = apiv1alpha1.DefaultKeyringFilename
+				}
+				// specify .gpg file name in case of pgp --> change to dir name?
+				keyPath := fmt.Sprintf("/%s/%s/%s", keyConf.Name, sigType, fileName)
+				keyPathList = append(keyPathList, keyPath)
+			} else if sigType == common.SignatureTypeX509 {
+				// specify only mounted dir name in case of x509
+				keyPath := fmt.Sprintf("/%s/%s/", keyConf.Name, sigType)
+				keyPathList = append(keyPathList, keyPath)
+			}
+
 		}
 		ecc.Spec.ShieldConfig.KeyPathList = keyPathList
 	}

@@ -55,7 +55,6 @@ type ShieldConfig struct {
 	Namespace          string   `json:"namespace,omitempty"`
 	SignatureNamespace string   `json:"signatureNamespace,omitempty"`
 	ProfileNamespace   string   `json:"profileNamespace,omitempty"`
-	VerifyType         string   `json:"verifyType"`
 	KeyPathList        []string `json:"keyPathList,omitempty"`
 	ChartDir           string   `json:"chartPath,omitempty"`
 	ChartRepo          string   `json:"chartRepo,omitempty"`

@@ -13,7 +13,7 @@ spec:
       - SampleSigner
     signers:
     - name: SampleSigner
-      secret: keyring-secret
+      keyConfig: sample-signer-keyconfig
       subjects:
-      - email: sample_signer@signer.com
+      - email: "sample_signer@signer.com"
 status: {}

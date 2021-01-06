@@ -57,8 +57,8 @@ spec:
           name: tmp
         - mountPath: /ishield-app/public
           name: log-volume
-        - mountPath: /keyring-secret
-          name: keyring-secret
+        - mountPath: /sample-signer-keyconfig/pgp/
+          name: sample-signer-keyconfig
       - env:
         - name: STDOUT_ENABLED
           value: "true"
@@ -109,7 +109,7 @@ spec:
         name: log-volume
       - emptyDir: {}
         name: tmp
-      - name: keyring-secret
+      - name: sample-signer-keyconfig
         secret:
           defaultMode: 420
           secretName: keyring-secret
