@@ -21,12 +21,26 @@ if [ -z "$ISHIELD_REPO_ROOT" ]; then
     exit 1
 fi
 
+CMDNAME=`basename $0`
+if [ $# -ne 1 ]; then
+  echo "Usage: $CMDNAME <public-key-file-path> " 1>&2
+  exit 1
+fi
+
+PUBLIC_KEY_FILE_PATH=$1
+
 
 OUTPUT_FILE=${TMP_DIR}/all_in_one.yaml
 CRD_FILE=${TMP_DIR}/ishield_crds.yaml
 OPERATOR_FILE=${TMP_DIR}/ishield_operator.yaml
 KEYRING_FILE=${TMP_DIR}/key-ring.yaml
 TMP_CR_FILE=${TMP_DIR}/ishield_cr.yaml
+
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    base='base64 -w 0'
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    base='base64'
+fi
 
 cat <<EOF > $OUTPUT_FILE
 apiVersion: v1
@@ -35,12 +49,23 @@ metadata:
   name: ${ISHIELD_OP_NS}
 EOF
 
-cat ${SHIELD_OP_DIR}/test/deploy/keyring_secret.yaml >> ${KEYRING_FILE}
-yq write -i ${KEYRING_FILE} metadata.namespace ${ISHIELD_OP_NS}
+ENCODED_PUBKEY=$(cat ${PUBLIC_KEY_FILE_PATH} | ${base})
 
-# Generate crds
+cat <<EOF > ${KEYRING_FILE}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keyring-secret
+  namespace: ${ISHIELD_OP_NS}
+type: Opaque
+data:
+  pubring.gpg: ${ENCODED_PUBKEY}
+EOF
+
+
+# Generate ishield-crds
 echo -----------------------------
-echo [1/4] Generating crds
+echo [1/4] Generating ishield-crds
 kustomize build ${SHIELD_OP_DIR}/config/crd > ${CRD_FILE}
 
 
@@ -94,3 +119,8 @@ if [ -f ${TMP_CR_FILE} ]; then
   rm ${TMP_CR_FILE}
 fi
 
+echo
+echo
+echo "all-in-one.yaml for deploying IShield is generated !!"
+echo
+echo

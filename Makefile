@@ -486,5 +486,11 @@ create-private-registry:
 delete-private-registry:
 	$(ISHIELD_REPO_ROOT)/build/delete-private-registry.sh
 
-all-in-one-yaml:
-	$(ISHIELD_REPO_ROOT)/build/generate_all_in_one_yaml.sh
+check-pubring:
+ifndef PUBRING_KEY_FILE
+	$(error PUBRING_KEY_FILE is undefined, pass it as an argument)
+endif
+
+all-in-one-yaml: check-pubring $(PUBRING_KEY_FILE)
+	@echo $(PUBRING_KEY_FILE)
+	$(ISHIELD_REPO_ROOT)/build/generate_all_in_one_yaml.sh $(PUBRING_KEY_FILE)
