@@ -17,15 +17,9 @@
 package v1alpha1
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
 	"fmt"
-	"strings"
 
-	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
-	yaml "gopkg.in/yaml.v2"
-	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
+	ishieldyaml "github.com/IBM/integrity-enforcer/shield/pkg/util/yaml"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -94,8 +88,8 @@ func (ss *ResourceSignature) FindSignature(apiVersion, kind, name, namespace str
 func (ss *ResourceSignature) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
 	signItem := &SignItem{}
 	for _, si := range ss.Spec.Data {
-		if matched, yamlBytes := si.match(apiVersion, kind, name, namespace); matched {
-			return si, yamlBytes, true
+		if found, singleYamlBytes := ishieldyaml.FindSingleYaml([]byte(si.Message), apiVersion, kind, name, namespace); found {
+			return si, singleYamlBytes, true
 		}
 	}
 	return signItem, nil, false
@@ -173,74 +167,6 @@ type ResourceInfo struct {
 	Name       string `json:"name,omitempty"`
 	Namespace  string `json:"namespace,omitempty"`
 	raw        []byte // raw yaml of single resource
-}
-
-func (si *SignItem) match(apiVersion, kind, name, namespace string) (bool, []byte) {
-	for _, ri := range si.parseMessage() {
-		if ri.ApiVersion == apiVersion &&
-			ri.Kind == kind &&
-			ri.Name == name &&
-			(ri.Namespace == namespace || ri.Namespace == "") {
-			return true, ri.raw
-		}
-	}
-	return false, nil
-}
-
-func (si *SignItem) parseMessage() []ResourceInfo {
-	msg := base64decode(si.Message)
-	msg = decompress(msg)
-	r := bytes.NewReader([]byte(msg))
-	dec := k8syaml.NewYAMLToJSONDecoder(r)
-	var t interface{}
-	resources := []ResourceInfo{}
-	for dec.Decode(&t) == nil {
-		tB, err := yaml.Marshal(t)
-		if err != nil {
-			continue
-		}
-		n, err := mapnode.NewFromYamlBytes(tB)
-		if err != nil {
-			continue
-		}
-		apiVersion := n.GetString("apiVersion")
-		kind := n.GetString("kind")
-		name := n.GetString("metadata.name")
-		namespace := n.GetString("metadata.namespace")
-		tmp := ResourceInfo{
-			ApiVersion: apiVersion,
-			Kind:       kind,
-			Name:       name,
-			Namespace:  namespace,
-			raw:        tB,
-		}
-		resources = append(resources, tmp)
-	}
-	return resources
-}
-
-func base64decode(str string) string {
-	decBytes, err := base64.StdEncoding.DecodeString(str)
-	if err != nil {
-		return ""
-	}
-	dec := string(decBytes)
-	return dec
-}
-
-func decompress(str string) string {
-	if str == "" {
-		return str
-	}
-	buffer := strings.NewReader(str)
-	reader, err := gzip.NewReader(buffer)
-	if err != nil {
-		return str
-	}
-	output := bytes.Buffer{}
-	output.ReadFrom(reader)
-	s := string(output.Bytes())
-	return s
 }
 
 func convert(m map[interface{}]interface{}) map[string]interface{} {
