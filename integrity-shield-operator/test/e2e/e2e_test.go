@@ -74,12 +74,12 @@ var _ = Describe("Test integrity shield", func() {
 	Describe("Test ishield resources", func() {
 		It("IShield resources should be created properly", func() {
 			framework := initFrameWork()
-			vc_name := "ishield-config"
-			vc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
+			isc_name := "ishield-config"
+			isc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), isc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			ishield_resource_list := []*common.ResourceRef{}
-			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
-			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
+			ishield_resource_list = append(ishield_resource_list, isc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
+			ishield_resource_list = append(ishield_resource_list, isc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
 			By("Check created ishield resources...")
 			for _, iShieldRes := range ishield_resource_list {
 				fmt.Print(iShieldRes.Kind, " : ", iShieldRes.Name, "\n")
@@ -100,12 +100,12 @@ var _ = Describe("Test integrity shield", func() {
 			err := ChangeKubeContextToDefaultUser(framework, test_namespace, "default-token-")
 			Expect(err).To(BeNil())
 			// load ishield resource lists
-			vc_name := "ishield-config"
-			vc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
+			isc_name := "ishield-config"
+			isc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), isc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			ishield_resource_list := []*common.ResourceRef{}
-			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
-			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
+			ishield_resource_list = append(ishield_resource_list, isc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
+			ishield_resource_list = append(ishield_resource_list, isc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
 			By("Try to Delete ishield resources...")
 			for _, iShieldRes := range ishield_resource_list {
 				fmt.Print(iShieldRes.Kind, " : ", iShieldRes.Name, "\n")
@@ -130,21 +130,34 @@ var _ = Describe("Test integrity shield", func() {
 			}
 			framework := initFrameWork()
 			var timeout int = 120
-			expected := DefaultSignerConfigCRName
-			var generation int64
-			sp, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+			// signer config
+			sc, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), DefaultSignerConfigName, metav1.GetOptions{})
 			Expect(err).To(BeNil())
-			generation = sp.Generation
+			generation_signerconfig := sc.Generation
+			// shield config
+			shc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), DefaultShieldConfigName, metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			generation_shieldconfig := shc.Generation
+			// update cr
 			cmd_err := Kubectl("apply", "-f", integrityShieldOperatorCR_updated, "-n", ishield_namespace)
 			Expect(cmd_err).To(BeNil())
-			time.Sleep(time.Second * 15)
 			Eventually(func() error {
-				sp, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+				sc, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), DefaultSignerConfigName, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
-				if sp.Generation == generation {
-					return fmt.Errorf("SignerConfig is not changed: %v", expected)
+				if sc.Generation == generation_signerconfig {
+					return fmt.Errorf("SignerConfig is not changed: %v", DefaultSignerConfigName)
+				}
+				return nil
+			}, timeout, 1).Should(BeNil())
+			Eventually(func() error {
+				shc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), DefaultShieldConfigName, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				if shc.Generation == generation_shieldconfig {
+					return fmt.Errorf("ShieldConfig is not changed: %v", DefaultShieldConfigName)
 				}
 				return nil
 			}, timeout, 1).Should(BeNil())
@@ -360,7 +373,6 @@ var _ = Describe("Test integrity shield", func() {
 				}
 				framework := initFrameWork()
 				var timeout int = 120
-				time.Sleep(time.Second * 30)
 				expected := "test-configmap-unmonitored2"
 				cmd_err := Kubectl("create", "cm", expected, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
@@ -386,7 +398,7 @@ var _ = Describe("Test integrity shield", func() {
 				Expect(cmd_err).NotTo(BeNil())
 			})
 			It("RSP should be created properly", func() {
-				time.Sleep(time.Second * 30)
+				// time.Sleep(time.Second * 30)
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-rsp"
@@ -457,13 +469,13 @@ var _ = Describe("Test integrity shield", func() {
 			Expect(err).To(BeNil())
 			_ = ioutil.WriteFile("./e2etest-forwarder.log", []byte(forwarderLog), 0640) // NO SONAR
 
-			vc_name := "ishield-config"
+			isc_name := "ishield-config"
 			By("Load ishield resource list")
-			vc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), vc_name, metav1.GetOptions{})
+			isc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), isc_name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			ishield_resource_list := []*common.ResourceRef{}
-			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
-			ishield_resource_list = append(ishield_resource_list, vc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
+			ishield_resource_list = append(ishield_resource_list, isc.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources...)
+			ishield_resource_list = append(ishield_resource_list, isc.Spec.ShieldConfig.IShieldResourceCondition.ServerResources...)
 			By("Server should be deleted properly")
 			var timeout int = 300
 			expected := "integrity-shield-server"
