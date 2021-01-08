@@ -92,4 +92,40 @@ func TestProfile(t *testing.T) {
 		t.Errorf("Request does not match; Request1: %s, Request2: %s", request1Str, request2Str)
 		return
 	}
+
+}
+
+func TestKustomizePattern(t *testing.T) {
+	reqcBytes, err := ioutil.ReadFile(reqcPath)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var reqc *ReqContext
+	err = json.Unmarshal(reqcBytes, &reqc)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	originalName := reqc.Name
+	reqc.Name = "prefix." + reqc.Name
+
+	var kust *KustomizePattern
+	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*."}`)
+	err = json.Unmarshal(kustBytes, &kust)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	reqFields := reqc.Map()
+	if ok := kust.MatchWith(reqFields); !ok {
+		t.Errorf("ReqContext does not match with KustomizePattern: %s", string(kustBytes))
+		return
+	}
+	rawRef := reqc.ResourceRef()
+	kustRef := kust.OverrideName(rawRef)
+	if kustRef.Name != originalName {
+		t.Errorf("OverrideName() returns wrong result; expected: %s, actual: %s", originalName, kustRef.Name)
+		return
+	}
 }
