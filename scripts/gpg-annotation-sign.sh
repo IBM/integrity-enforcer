@@ -35,25 +35,24 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base='base64'
 fi
 
-YQ_VERSION=$(yq --version |  awk '{print $3}')
-if [[ $YQ_VERSION == "3."* ]]; then
+YQ_VERSION=$(yq --version 2>&1)
+if [[ $YQ_VERSION == *"3."* ]]; then
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' -i
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' -i
-else
+elif [[ $YQ_VERSION == *"4."* ]]; then
    yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i $INPUT_FILE
    yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i $INPUT_FILE
 fi
-
 # message
 msg=`cat $INPUT_FILE | $base`
 
 # signature
 sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
 
-if [[ $YQ_VERSION == "3."* ]]; then
+if [[ $YQ_VERSION == *"3."* ]]; then
    yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
    yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $sig
-elif [[ $YQ_VERSION == "4."* ]]; then
+elif [[ $YQ_VERSION == *"4."* ]]; then
    yq eval ".metadata.annotations.\"integrityshield.io/message\" = \"$msg\"" -i $INPUT_FILE
    yq eval ".metadata.annotations.\"integrityshield.io/signature\" = \"$sig\""  -i $INPUT_FILE
 fi
