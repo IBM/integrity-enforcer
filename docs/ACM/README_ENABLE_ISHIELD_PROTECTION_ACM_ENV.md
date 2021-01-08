@@ -168,13 +168,13 @@ oc create ns <custom namespace>
       c)  Create `policy-integrity-shield` in the ACM hub cluster in newly created namespace.
 
       Connect to the ACM Hub cluster and execute the following script with the following parameters:
-        - https://github.com/YOUR-ORG-NAME/policy-collection.git -  The URL for the forked `policy-collection` GitHub reposiory. 
+        - `https://github.com/YOUR-ORG-NAME/policy-collection.git` -  The URL for the forked `policy-collection` GitHub reposiory.
         - `community` - The directory where `policy-integrity-shield.yaml` is located.
-        -  `policy-community` - The namespace for creating policy   
+        - `policy-community` - The namespace for creating policy
 
       ```
         $ cd policy-collection/deploy
-        $ bash ./deploy.sh  https://github.com/<YOUR-ORG-NAME>/policy-collection.git community policy-community
+        $ bash ./deploy.sh -u https://github.com/<YOUR-ORG-NAME>/policy-collection.git -p community -n policy-community
       ``` 
     
       Refer to general instructions to deploy ACM policies to an ACM hub cluster as well as ACM managed cluster(s) using GitOps in [doc](https://github.com/open-cluster-management/policy-collection).
