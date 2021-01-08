@@ -27,6 +27,7 @@ import (
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	ishieldyaml "github.com/IBM/integrity-enforcer/shield/pkg/util/yaml"
 )
 
 type SignedResourceType string
@@ -81,29 +82,32 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 
 	//1. pick ResourceSignature from metadata.annotation if available
 	if sigAnnotations.Signature != "" {
-		message := base64decode(sigAnnotations.Message)
-		message = decompress(message)
-		messageScope := sigAnnotations.MessageScope
-		mutableAttrs := sigAnnotations.MutableAttrs
-		matchRequired := true
-		scopedSignature := false
-		if message == "" && messageScope != "" {
-			message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, mutableAttrs)
-			matchRequired = false  // skip matching because the message is generated from Requested Object
-			scopedSignature = true // enable checking if the signature is for patch
-		}
-		signature := base64decode(sigAnnotations.Signature)
-		certificate := base64decode(sigAnnotations.Certificate)
-		signType := SignedResourceTypeResource
-		if sigAnnotations.SignatureType == vrsig.SignatureTypeApplyingResource {
-			signType = SignedResourceTypeApplyingResource
-		} else if sigAnnotations.SignatureType == vrsig.SignatureTypePatch {
-			signType = SignedResourceTypePatch
-		}
-		return &GeneralSignature{
-			SignType: signType,
-			data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "scope": messageScope},
-			option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
+		found, yamlBytes := ishieldyaml.FindSingleYaml([]byte(sigAnnotations.Message), ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
+		if found {
+			message := ishieldyaml.Base64decode(sigAnnotations.Message)
+			message = ishieldyaml.Decompress(message)
+			messageScope := sigAnnotations.MessageScope
+			mutableAttrs := sigAnnotations.MutableAttrs
+			matchRequired := true
+			scopedSignature := false
+			if message == "" && messageScope != "" {
+				message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, mutableAttrs)
+				matchRequired = false  // skip matching because the message is generated from Requested Object
+				scopedSignature = true // enable checking if the signature is for patch
+			}
+			signature := ishieldyaml.Base64decode(sigAnnotations.Signature)
+			certificate := ishieldyaml.Base64decode(sigAnnotations.Certificate)
+			signType := SignedResourceTypeResource
+			if sigAnnotations.SignatureType == vrsig.SignatureTypeApplyingResource {
+				signType = SignedResourceTypeApplyingResource
+			} else if sigAnnotations.SignatureType == vrsig.SignatureTypePatch {
+				signType = SignedResourceTypePatch
+			}
+			return &GeneralSignature{
+				SignType: signType,
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": messageScope},
+				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
+			}
 		}
 	}
 
@@ -111,10 +115,10 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	if resSigList != nil && len(resSigList.Items) > 0 {
 		si, yamlBytes, found := resSigList.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
 		if found {
-			signature := base64decode(si.Signature)
-			certificate := base64decode(si.Certificate)
-			message := base64decode(si.Message)
-			message = decompress(message)
+			signature := ishieldyaml.Base64decode(si.Signature)
+			certificate := ishieldyaml.Base64decode(si.Certificate)
+			message := ishieldyaml.Base64decode(si.Message)
+			message = ishieldyaml.Decompress(message)
 			mutableAttrs := si.MutableAttrs
 			matchRequired := true
 			scopedSignature := false
