@@ -17,9 +17,6 @@
 package shield
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -439,30 +436,6 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 		}
 	}
 	return message
-}
-
-func base64decode(str string) string {
-	decBytes, err := base64.StdEncoding.DecodeString(str)
-	if err != nil {
-		return ""
-	}
-	dec := string(decBytes)
-	return dec
-}
-
-func decompress(str string) string {
-	if str == "" {
-		return str
-	}
-	buffer := strings.NewReader(str)
-	reader, err := gzip.NewReader(buffer)
-	if err != nil {
-		return str
-	}
-	output := bytes.Buffer{}
-	_, _ = output.ReadFrom(reader)
-	s := string(output.Bytes())
-	return s
 }
 
 func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {

@@ -19,6 +19,7 @@ package common
 import (
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/jinzhu/copier"
@@ -178,6 +179,17 @@ func (self *KustomizePattern) OverrideName(ref *ResourceRef) *ResourceRef {
 		namePrefix := string(*self.NamePrefix)
 		if strings.HasPrefix(name, namePrefix) {
 			name = strings.Replace(name, namePrefix, "", 1)
+		} else if strings.Contains(namePrefix, "*") {
+			// strings.HasPrefix can not match with wildcard, so use reqexp here
+			if strings.Contains(namePrefix, ".") {
+				namePrefix = strings.Replace(namePrefix, ".", "\\.", -1)
+			}
+			namePrefix = strings.Replace(namePrefix, "*", ".*", -1)
+			if ok, _ := regexp.Match(namePrefix, []byte(name)); ok {
+				if rep, err := regexp.Compile(namePrefix); err == nil {
+					name = rep.ReplaceAllString(name, "")
+				}
+			}
 		}
 	}
 
@@ -188,6 +200,17 @@ func (self *KustomizePattern) OverrideName(ref *ResourceRef) *ResourceRef {
 			revSuffix := reverse(nameSuffix)
 			revName = strings.Replace(revName, revSuffix, "", 1)
 			name = reverse(revName)
+		} else if strings.Contains(nameSuffix, "*") {
+			// strings.HasSuffix can not match with wildcard, so use reqexp here
+			if strings.Contains(nameSuffix, ".") {
+				nameSuffix = strings.Replace(nameSuffix, ".", "\\.", -1)
+			}
+			nameSuffix = strings.Replace(nameSuffix, "*", ".*", -1)
+			if ok, _ := regexp.Match(nameSuffix, []byte(name)); ok {
+				if rep, err := regexp.Compile(nameSuffix); err == nil {
+					name = rep.ReplaceAllString(name, "")
+				}
+			}
 		}
 	}
 	ref.Name = name
