@@ -386,7 +386,7 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Code:    "internal",
 	},
 	REASON_VALIDATION_FAIL: {
-		Message: "Validation failed; format is wrong",
+		Message: "Format validation failed", // detail follows
 		Code:    "validation-fail",
 	},
 	REASON_RULE_MATCH: {

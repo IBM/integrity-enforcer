@@ -37,31 +37,31 @@ func ValidateResource(reqc *common.ReqContext, shieldNamespace string) (bool, st
 	if reqc.Kind == common.ProfileCustomResourceKind {
 		ok, err := ValidateResourceSigningProfile(reqc, shieldNamespace)
 		if err != nil {
-			return false, fmt.Sprintf("Validation error; %s", err.Error())
+			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.SignatureCustomResourceKind {
 		ok, err := ValidateResourceSignature(reqc)
 		if err != nil {
-			return false, fmt.Sprintf("Validation error; %s", err.Error())
+			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.ShieldConfigCustomResourceAPIVersion {
 		ok, err := ValidateShieldConfig(reqc)
 		if err != nil {
-			return false, fmt.Sprintf("Validation error; %s", err.Error())
+			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.SignerConfigCustomResourceKind {
 		ok, err := ValidateSignerConfig(reqc)
 		if err != nil {
-			return false, fmt.Sprintf("Validation error; %s", err.Error())
+			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.HelmReleaseMetadataCustomResourceAPIVersion {
 		ok, err := ValidateHelmReleaseMetadata(reqc)
 		if err != nil {
-			return false, fmt.Sprintf("Validation error; %s", err.Error())
+			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	}

@@ -18,7 +18,6 @@ package shield
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -71,15 +70,10 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 	}
 
 	summary := map[string]string{
-		"result":    resultStr,
-		"reason":    ctx.Message,
-		"operation": reqc.Operation,
-		"kind":      reqc.Kind,
-		"namespace": reqc.Namespace,
-		"name":      reqc.Name,
-		"userName":  reqc.UserName,
+		"result": resultStr,
+		"reason": ctx.Message,
 	}
-	summaryBytes, _ := json.Marshal(summary)
+	summaryStr := reqc.Info(summary)
 
 	now := time.Now()
 	evt := &v1.Event{
@@ -101,7 +95,7 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 		evt = current
 	}
 
-	evt.Message = fmt.Sprintf("[IntegrityShieldEvent] %s", string(summaryBytes))
+	evt.Message = fmt.Sprintf("[IntegrityShieldEvent] %s", summaryStr)
 	evt.Reason = common.ReasonCodeMap[ctx.ReasonCode].Code
 	evt.Count = evt.Count + 1
 	evt.EventTime = metav1.NewMicroTime(now)
