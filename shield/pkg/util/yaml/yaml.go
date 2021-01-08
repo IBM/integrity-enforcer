@@ -98,7 +98,10 @@ func Decompress(str string) string {
 		return str
 	}
 	output := bytes.Buffer{}
-	output.ReadFrom(reader)
+	_, err = output.ReadFrom(reader)
+	if err != nil {
+		return str
+	}
 	s := string(output.Bytes())
 	return s
 }
