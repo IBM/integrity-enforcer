@@ -54,3 +54,7 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shi
           environment:dev  |  kubectl delete -f -
 ```
 
+## Changing the verification key
+
+If you need to change the verification key that can be accomplished by completing the "Remove verification key" procedure followed by completing the "Setup verification key" procedure above.  After following this procedure only the new keys can be used for signing and verification.
+
