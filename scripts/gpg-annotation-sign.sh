@@ -39,6 +39,9 @@ YQ_VERSION=$(yq --version |  awk '{print $3}')
 if [[ $YQ_VERSION == "3."* ]]; then
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' -i
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' -i
+else
+   yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i $INPUT_FILE
+   yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i $INPUT_FILE
 fi
 
 # message
