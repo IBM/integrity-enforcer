@@ -26,7 +26,7 @@ For matching signer, you can use the following attributes: `email`, `uid`, `coun
       signers:
       - "signer-a"
     signers:
-    - name: "signer-s"
+    - name: "signer-a"
       keyConfig: sample-signer-keyconfig
       subjects:
       - email: "signer@enterprise.com"
