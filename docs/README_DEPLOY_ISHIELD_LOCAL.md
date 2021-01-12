@@ -75,23 +75,23 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     Example below shows a signer `SampleSigner` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
     ```yaml
-	  signerConfig:
-	    policies:
-	    - namespaces:
-	      - "*"
-	      signers:
-	      - "SampleSigner"
-	    - scope: "Cluster"
-	      signers:
-	      - "SampleSigner"
-	    signers:
-	    - name: "SampleSigner"
-	      keyConfig: sample-signer-keyconfig
-	      subjects:
-	      - email: "sample_signer@signer.com"
-          keyConfig:
-          - name: sample-signer-keyconfig
-            secretName: keyring-secret
+    signerConfig:
+      policies:
+      - namespaces:
+        - "*"
+        signers:
+        - "SampleSigner"
+      - scope: "Cluster"
+        signers:
+        - "SampleSigner"
+      signers:
+      - name: "SampleSigner"
+        keyConfig: sample-signer-keyconfig
+        subjects:
+        - email: "sample_signer@signer.com"
+    keyConfig:
+    - name: sample-signer-keyconfig
+      secretName: keyring-secret
     ```
 
 
