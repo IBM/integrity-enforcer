@@ -169,7 +169,7 @@ var _ = Describe("Test integrity shield", func() {
 			cmd_err := Kubectl("apply", "-f", iShield_config_updated, "-n", ishield_namespace)
 			Expect(cmd_err).NotTo(BeNil())
 			Eventually(func() error {
-				return CheckBlockEvent(framework, "block-ishield-resource-operation", ishield_namespace, expected)
+				return CheckBlockEvent(framework, "direct-access-prohibited", ishield_namespace, expected)
 			}, timeout, 1).Should(BeNil())
 		})
 	})
@@ -264,7 +264,7 @@ var _ = Describe("Test integrity shield", func() {
 				cmd_err := Kubectl("apply", "-f", test_configmap_signer2, "-n", test_namespace)
 				Expect(cmd_err).NotTo(BeNil())
 				Eventually(func() error {
-					return CheckBlockEvent(framework, "no-valid-keyring", test_namespace, expected)
+					return CheckBlockEvent(framework, "no-match-signer-config", test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Signed resouce should be allowed (ResourceSignature) ", func() {

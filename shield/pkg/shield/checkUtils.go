@@ -35,11 +35,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext) *v1beta1.AdmissionResponse {
+	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	return &v1beta1.AdmissionResponse{
 		Allowed: allowed,
 		Result: &metav1.Status{
-			Message: msg,
+			Message: responseMessage,
 		},
 	}
 }
@@ -61,19 +62,23 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 
 	sourceName := "IntegrityShield"
 	evtName := fmt.Sprintf("ishield-%s-%s-%s-%s", resultStr, strings.ToLower(reqc.Operation), strings.ToLower(reqc.Kind), reqc.Name)
-	evtNamespace := sconfig.Namespace
-	involvedObject := v1.ObjectReference{
-		Namespace:  sconfig.Namespace,
-		APIVersion: common.IShieldCustomResourceAPIVersion,
-		Kind:       common.IShieldCustomResourceKind,
-		Name:       sconfig.IShieldCRName,
-	}
 
-	summary := map[string]string{
-		"result": resultStr,
-		"reason": ctx.Message,
+	evtNamespace := reqc.Namespace
+	involvedObject := v1.ObjectReference{
+		Namespace:  reqc.Namespace,
+		APIVersion: reqc.GroupVersion(),
+		Kind:       reqc.Kind,
+		Name:       reqc.Name,
 	}
-	summaryStr := reqc.Info(summary)
+	if reqc.ResourceScope == "Cluster" {
+		evtNamespace = sconfig.Namespace
+		involvedObject = v1.ObjectReference{
+			Namespace:  sconfig.Namespace,
+			APIVersion: common.IShieldCustomResourceAPIVersion,
+			Kind:       common.IShieldCustomResourceKind,
+			Name:       sconfig.IShieldCRName,
+		}
+	}
 
 	now := time.Now()
 	evt := &v1.Event{
@@ -95,7 +100,8 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 		evt = current
 	}
 
-	evt.Message = fmt.Sprintf("[IntegrityShieldEvent] %s", summaryStr)
+	responseMessage := fmt.Sprintf("Result: %s, Reason: \"%s\", Request: %s", resultStr, ctx.Message, reqc.Info(nil))
+	evt.Message = fmt.Sprintf("[IntegrityShieldEvent] %s", responseMessage)
 	evt.Reason = common.ReasonCodeMap[ctx.ReasonCode].Code
 	evt.Count = evt.Count + 1
 	evt.EventTime = metav1.NewMicroTime(now)

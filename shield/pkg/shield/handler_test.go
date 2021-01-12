@@ -219,7 +219,7 @@ var _ = Describe("Test integrity shield", func() {
 			testHandler := NewHandler(testConfig)
 			resp := testHandler.Run(req)
 			respBytes, _ := json.Marshal(resp)
-			fmt.Printf("[DEBUG] respBytes: %s", string(respBytes))
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "no mutation") {
@@ -235,7 +235,7 @@ var _ = Describe("Test integrity shield", func() {
 			changedReq := getChangedRequest(req)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
-			fmt.Printf("[DEBUG] respBytes: %s", string(respBytes))
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "not identical") {

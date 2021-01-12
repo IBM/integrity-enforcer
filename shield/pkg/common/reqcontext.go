@@ -95,6 +95,7 @@ func (reqc *ReqContext) Info(m map[string]string) string {
 	}
 	m["operation"] = reqc.Operation
 	m["kind"] = reqc.Kind
+	m["scope"] = reqc.ResourceScope
 	m["namespace"] = reqc.Namespace
 	m["name"] = reqc.Name
 	m["userName"] = reqc.UserName

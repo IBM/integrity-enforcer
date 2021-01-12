@@ -154,22 +154,24 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			retErr = nil
 		} else {
 			if ok2, _, signer2, _ := pgp.VerifySignature(self.AllMountedKeyPathList, message, signature); ok2 && signer2 != nil {
-				signer2Name := (&common.SignerInfo{
+				signerAlt := &common.SignerInfo{
 					Email:   signer2.Email,
 					Name:    signer2.Name,
 					Comment: signer2.Comment,
-				}).GetName()
-				reasonFail = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s, signer: %s). Please check SignerConfig.", reqc.Namespace, reqc.Kind, signer2Name)
+				}
+				vcerr = nil
+				vsinfo = signerAlt
+				retErr = nil
+			} else {
+				vcerr = &common.CheckError{
+					Msg:    "Failed to verify signature",
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
+				retErr = nil
 			}
-			vcerr = &common.CheckError{
-				Msg:    "Failed to verify signature",
-				Reason: reasonFail,
-				Error:  nil,
-			}
-			vsinfo = nil
-			retErr = nil
 		}
-
 	}
 	if len(self.X509KeyPathList) > 0 && certFound {
 		certificate := []byte(certificateStr)

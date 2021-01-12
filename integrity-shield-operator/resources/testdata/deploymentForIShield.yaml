@@ -36,9 +36,10 @@ spec:
           name: ac-api
           protocol: TCP
         readinessProbe:
-          exec:
-            command:
-            - ls
+          httpGet:
+            path: "/health/readiness"
+            port: 8443
+            scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 10
         resources:

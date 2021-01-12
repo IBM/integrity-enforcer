@@ -375,7 +375,7 @@ const (
 	REASON_INVALID_SIG
 	REASON_NO_SIG
 	REASON_NO_VALID_KEYRING
-	REASON_NO_POLICY
+	REASON_NO_MATCH_SIGNER_CONFIG
 	REASON_UNEXPECTED
 	REASON_ERROR
 )
@@ -430,8 +430,8 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Code:    "ignore-rule-matched",
 	},
 	REASON_BLOCK_ISHIELD_RESOURCE_OPERATION: {
-		Message: "block oprations for ishield resouce",
-		Code:    "block-ishield-resource-operation",
+		Message: "Direct access to Integrity Shield resource is prohibited. To update them, please update configurations in Integrity Shield CR.",
+		Code:    "direct-access-prohibited",
 	},
 	REASON_SKIP_DELETE: {
 		Message: "skip delete request",
@@ -450,20 +450,20 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Code:    "detection",
 	},
 	REASON_INVALID_SIG: {
-		Message: "Failed to verify signature",
+		Message: "Signature verification is required for this request, but failed to verify signature",
 		Code:    "invalid-signature",
 	},
 	REASON_NO_SIG: {
-		Message: "No signature found",
+		Message: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.",
 		Code:    "no-signature",
 	},
 	REASON_NO_VALID_KEYRING: {
-		Message: "No valid keyring secret",
+		Message: "Signature verification is required for this request, but no verification keys are correctly loaded. Please set valid key secrets for verification or contact Integrity Shield admins.",
 		Code:    "no-valid-keyring",
 	},
-	REASON_NO_POLICY: {
-		Message: "No signer policies",
-		Code:    "no-signer-policy",
+	REASON_NO_MATCH_SIGNER_CONFIG: {
+		Message: "Signature verification is required for this request, but no signer config matches with this resource. Please configure SignerConfig for this resource or contact Integrity Shield admins.",
+		Code:    "no-match-signer-config",
 	},
 	REASON_UNEXPECTED: {
 		Message: "unexpected",
