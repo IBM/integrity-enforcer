@@ -1,15 +1,15 @@
 ## Signer Configuration
 
 ### This CR should not be edited directly.
-Usually, SignPolicy CR is automatically created/updated using `signPolicy` config in IntegrityShield CR.
+Usually, SignConfig CR is automatically created/updated using `signConfig` config in IntegrityShield CR.
 Please note that operator would reconcile the resource with the original one and it might remove your direct changes.
 
 ### Define signer for each namespaces
 
-SignPolicy is a custom resource to define who can be a valid signer for resources in a namespace or for cluster scope resources.
-Only a SignPolicy which is created in IShield namespace (`integrity-shield-operator-system` in this doc) by operator is valid and all other instances are not used by IShield.
+SignConfig is a custom resource to define who can be a valid signer for resources in a namespace or for cluster scope resources.
+Only a SignConfig which is created in IShield namespace (`integrity-shield-operator-system` in this doc) by operator is valid and all other instances are not used by IShield.
 
-To update SignPolicy after IShield deployment, please update the `signPolicy` in IntegrityShield CR.
+To update SignConfig after IShield deployment, please update the `signConfig` in IntegrityShield CR.
 
 Example below is to define
 - signer `signer-a` is identified when email of subject of signature is `signer@enterprise.com` and the verification key for this subject is included in `sample-keyring` secret
@@ -19,21 +19,21 @@ For matching signer, you can use the following attributes: `email`, `uid`, `coun
 
 
 ```yaml
-spec:
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
-      - secure-ns
+      - "secure-ns"
       signers:
-      - signer-a
+      - "signer-a"
     signers:
-    - name: signer-a
-      secret: sample-keyring
+    - name: "signer-s"
+      keyConfig: sample-signer-keyconfig
       subjects:
-      - email: signer@enterprise.com
+      - email: "signer@enterprise.com"
+
 ```
 
-Updating IShield CR with the above block, the operator will update the SignPolicy resource.
+Updating IShield CR with the above block, the operator will update the signConfig resource.
 
 You can define namespace matcher by using `excludeNamespaces`.
 For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`.
@@ -107,7 +107,7 @@ When you need to disable blocking by signature verification in a certain namespa
 
 ```yaml
 spec:
-  signPolicy:
+  signConfig:
     breakGlass:
       - namespaces:
         - secure-ns
@@ -115,7 +115,7 @@ spec:
 Break glass on cluster-scope resources can be set on by
 ```yaml
 spec:
-  signPolicy:
+  signConfig:
     breakGlass:
       - scope: Cluster
 ```
@@ -129,7 +129,7 @@ During break glass mode on, the request without signature will be allowed even i
 spec:
   keyRingConfigs:
   - sample-keyring
-  signPolicy:
+  signConfig:
     policies:
     - namespaces:
       - secure-ns
@@ -147,11 +147,11 @@ spec:
       - signer-b
     signers:
     - name: signer-a
-      secret: sample-keyring
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: secure-ns-signer@enterprise.com
     - name: signer-b
-      secret: sample-keyring
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: default-signer@enterprise.com
 ```

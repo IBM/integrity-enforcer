@@ -68,27 +68,27 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
     make setup-tmp-cr
     ```
 
-    If you use your own key setup, configure signPolicy in the following `integrity-shield` Custom Resource file:
+    If you use your own key setup, configure signConfig in the following `integrity-shield` Custom Resource file:
 
     Edit [`config/samples/apis_v1alpha1_integrityshield.yaml`](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml) to specify a signer for a namespace `secure-ns`.
 
     Example below shows a signer `SampleSigner` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
     ```yaml
-    signPolicy:
-      policies:
-      - namespaces:
-        - "*"
-        signers:
-        - "SampleSigner"
-      - scope: "Cluster"
-        signers:
-        - "SampleSigner"
-      signers:
-      - name: "SampleSigner"
-        secret: keyring-secret
-        subjects:
-        - email: "signer@enterprise.com"
+	  signerConfig:
+	    policies:
+	    - namespaces:
+	      - "*"
+	      signers:
+	      - "SampleSigner"
+	    - scope: "Cluster"
+	      signers:
+	      - "SampleSigner"
+	    signers:
+	    - name: "SampleSigner"
+	      keyConfig: sample-signer-keyconfig
+	      subjects:
+	      - email: "sample_signer@signer.com"
     ```
 
 

@@ -46,9 +46,7 @@ This configuration defines signers that are allowed to create/update resources w
 
 ```yaml
 spec:
-  keyRingConfigs:
-  - name: keyring-secret
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
       - "*"
@@ -59,9 +57,13 @@ spec:
       - "SampleSigner"
     signers:
     - name: "SampleSigner"
-      secret: keyring-secret
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: "sample_signer@signer.com"
+  keyConfig:
+  - name: sample-signer-keyconfig
+    secretName: keyring-secret
+
 ```
 
 ## Resource Signing Profile Configuration

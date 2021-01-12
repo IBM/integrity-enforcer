@@ -56,7 +56,7 @@ oc create secret generic --save-config keyring-secret  -n integrity-shield-opera
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signPolicy in the following Integrity Shield Custom Resource [file](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signerConfig in the following Integrity Shield Custom Resource [file](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
 ```yaml
 # Edit integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml
@@ -74,7 +74,7 @@ spec:
       exclude:
       - "kube-*"
       - "openshift-*"
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
       - "*"
@@ -85,11 +85,12 @@ spec:
       - "SampleSigner"
     signers:
     - name: "SampleSigner"
-      secret: keyring-secret
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: "signer@enterprise.com"
-  keyRingConfigs:
-  - name: keyring-secret
+  keyConfig:
+  - name: sample-signer-keyconfig
+    secretName: keyring-secret
 
 
 ```
