@@ -61,11 +61,11 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 	// make AdmissionResponse based on DecisionResult
 	resp := &v1beta1.AdmissionResponse{}
 	if dr.isUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request")
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc)
 	} else if dr.isErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message)
+		resp = createAdmissionResponse(false, dr.Message, self.reqc)
 	} else {
-		resp = createAdmissionResponse(dr.isAllowed(), dr.Message)
+		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc)
 	}
 
 	// log results
@@ -157,8 +157,9 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 	var err error
 	// create/update Event
-	err = createOrUpdateEvent(self.reqc, self.ctx, self.config.Namespace)
+	err = createOrUpdateEvent(self.reqc, self.ctx, self.config)
 	if err != nil {
+		logger.Error("Failed to create event; ", err)
 		return err
 	}
 

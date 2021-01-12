@@ -35,16 +35,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string) *v1beta1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext) *v1beta1.AdmissionResponse {
+	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	return &v1beta1.AdmissionResponse{
 		Allowed: allowed,
 		Result: &metav1.Status{
-			Message: msg,
+			Message: responseMessage,
 		},
 	}
 }
 
-func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, shieldNamespace string) error {
+func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *config.ShieldConfig) error {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return err
@@ -61,6 +62,7 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, shieldNames
 
 	sourceName := "IntegrityShield"
 	evtName := fmt.Sprintf("ishield-%s-%s-%s-%s", resultStr, strings.ToLower(reqc.Operation), strings.ToLower(reqc.Kind), reqc.Name)
+
 	evtNamespace := reqc.Namespace
 	involvedObject := v1.ObjectReference{
 		Namespace:  reqc.Namespace,
@@ -68,16 +70,13 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, shieldNames
 		Kind:       reqc.Kind,
 		Name:       reqc.Name,
 	}
-	resource := involvedObject.String()
-
-	// report cluster scope object events as event of IShield itself
 	if reqc.ResourceScope == "Cluster" {
-		evtNamespace = shieldNamespace
+		evtNamespace = sconfig.Namespace
 		involvedObject = v1.ObjectReference{
-			Namespace:  shieldNamespace,
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Name:       "ishield-server",
+			Namespace:  sconfig.Namespace,
+			APIVersion: common.IShieldCustomResourceAPIVersion,
+			Kind:       common.IShieldCustomResourceKind,
+			Name:       sconfig.IShieldCRName,
 		}
 	}
 
@@ -101,7 +100,8 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, shieldNames
 		evt = current
 	}
 
-	evt.Message = fmt.Sprintf("%s, Resource: %s", ctx.Message, resource)
+	responseMessage := fmt.Sprintf("Result: %s, Reason: \"%s\", Request: %s", resultStr, ctx.Message, reqc.Info(nil))
+	evt.Message = fmt.Sprintf("[IntegrityShieldEvent] %s", responseMessage)
 	evt.Reason = common.ReasonCodeMap[ctx.ReasonCode].Code
 	evt.Count = evt.Count + 1
 	evt.EventTime = metav1.NewMicroTime(now)

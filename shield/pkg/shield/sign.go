@@ -19,7 +19,6 @@ package shield
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	vrsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -27,6 +26,8 @@ import (
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
+	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 	ishieldyaml "github.com/IBM/integrity-enforcer/shield/pkg/util/yaml"
 )
 
@@ -193,20 +194,33 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			Allow:   false,
 			Checked: true,
 			Error: &common.CheckError{
-				Reason: "No signature found",
+				Reason: common.ReasonCodeMap[common.REASON_NO_SIG].Message,
 			},
 		}, nil
 	}
 
-	noValidKeyring := false
-	noValidKeyringMsg := ""
 	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Pubkeys := candidatePubkeys[common.SignatureTypeX509]
-	candidateCount := len(pgpPubkeys) + len(x509Pubkeys)
-	if candidateCount == 0 {
-		noValidKeyring = true
-		noValidKeyringMsg = fmt.Sprintf("No valid keyring secret for this request (namespace: %s, kind: %s). Please check SignerConfig.", reqc.Namespace, reqc.Kind)
+
+	keyLoadingError := false
+	candidateKeyCount := len(pgpPubkeys) + len(x509Pubkeys)
+	if candidateKeyCount > 0 {
+		validKeyCount := 0
+		for _, keyPath := range pgpPubkeys {
+			if loaded, _ := pgp.LoadKeyRing([]string{keyPath}); len(loaded) > 0 {
+				validKeyCount += 1
+			}
+		}
+
+		for _, certDir := range x509Pubkeys {
+			if loaded, _ := x509.LoadCertDir(certDir); len(loaded) > 0 {
+				validKeyCount += 1
+			}
+		}
+		if validKeyCount == 0 {
+			keyLoadingError = true
+		}
 	}
 
 	// create verifier
@@ -225,33 +239,27 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 		}, nil
 	}
 
-	if sigVerifyResult != nil && sigVerifyResult.Error != nil {
-		if strings.HasPrefix(sigVerifyResult.Error.Reason, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
-			noValidKeyring = true
-			noValidKeyringMsg = sigVerifyResult.Error.Reason
-		}
-	}
-
-	if noValidKeyring {
+	if keyLoadingError {
+		reasonFail := common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message
 		return &common.SignatureEvalResult{
 			Allow:   false,
 			Checked: true,
 			Error: &common.CheckError{
-				Reason: noValidKeyringMsg,
+				Reason: reasonFail,
 			},
 		}, nil
 	}
 
 	if sigVerifyResult == nil || sigVerifyResult.Signer == nil {
-		msg := ""
+		reasonFail := common.ReasonCodeMap[common.REASON_INVALID_SIG].Message
 		if sigVerifyResult != nil && sigVerifyResult.Error != nil {
-			msg = sigVerifyResult.Error.Reason
+			reasonFail = fmt.Sprintf("%s; %s", reasonFail, sigVerifyResult.Error.Reason)
 		}
 		return &common.SignatureEvalResult{
 			Allow:   false,
 			Checked: true,
 			Error: &common.CheckError{
-				Reason: fmt.Sprintf("Failed to verify signature; %s", msg),
+				Reason: reasonFail,
 			},
 		}, nil
 	}
@@ -276,13 +284,17 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			Error:               nil,
 		}, nil
 	} else {
+		reasonFail := common.ReasonCodeMap[common.REASON_NO_MATCH_SIGNER_CONFIG].Message
+		if signer != nil {
+			reasonFail = fmt.Sprintf("%s; This resource is signed by %s", reasonFail, signer.GetName())
+		}
 		return &common.SignatureEvalResult{
 			Signer:     signer,
 			SignerName: signer.GetName(),
 			Allow:      false,
 			Checked:    true,
 			Error: &common.CheckError{
-				Reason: fmt.Sprintf("No signer policies met this resource. this resource is signed by %s", signer.GetName()),
+				Reason: reasonFail,
 			},
 		}, nil
 	}

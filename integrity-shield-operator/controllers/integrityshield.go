@@ -1016,7 +1016,8 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookEvent(instance *apiv1al
 	}
 	now := time.Now()
 	evtSourceName := "IntegrityShield"
-	msg := fmt.Sprintf("IntegrityShield reconciled MutatingWebhookConfiguration \"%s\"", webhookName)
+	reason := "webhook-reconciled"
+	msg := fmt.Sprintf("[IntegrityShieldEvent] IntegrityShield reconciled MutatingWebhookConfiguration \"%s\"", webhookName)
 	expected := &v1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      evtName,
@@ -1032,7 +1033,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookEvent(instance *apiv1al
 		LastTimestamp:       metav1.NewTime(now),
 		EventTime:           metav1.NewMicroTime(now),
 		Message:             msg,
-		Reason:              msg,
+		Reason:              reason,
 		Count:               1,
 	}
 	found := &v1.Event{}

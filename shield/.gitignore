@@ -1,4 +1,5 @@
 
+test-events.txt
 cert/
 ./image/admission-control-server
 # Binaries for programs and plugins

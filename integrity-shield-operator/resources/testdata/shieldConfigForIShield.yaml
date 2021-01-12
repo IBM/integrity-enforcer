@@ -156,6 +156,7 @@ spec:
         - kind: '*'
     iShieldAdminUserGroup: system:masters,system:cluster-admins
     iShieldResourceCondition: {}
+    iShieldCRName: integrity-shield-server
     iShieldServerUserName: system:serviceaccount::ishield-sa
     ignore:
     - kind: Event

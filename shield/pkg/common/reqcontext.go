@@ -89,6 +89,21 @@ func (reqc *ReqContext) Map() map[string]string {
 	return m
 }
 
+func (reqc *ReqContext) Info(m map[string]string) string {
+	if m == nil {
+		m = map[string]string{}
+	}
+	m["operation"] = reqc.Operation
+	m["kind"] = reqc.Kind
+	m["scope"] = reqc.ResourceScope
+	m["namespace"] = reqc.Namespace
+	m["name"] = reqc.Name
+	m["userName"] = reqc.UserName
+	m["request.uid"] = reqc.RequestUid
+	infoBytes, _ := json.Marshal(m)
+	return string(infoBytes)
+}
+
 func (reqc *ReqContext) GroupVersion() string {
 	return schema.GroupVersion{Group: reqc.ApiGroup, Version: reqc.ApiVersion}.String()
 }
