@@ -99,23 +99,23 @@ oc create ns <custom namespace>
         By default, `policy-integrity-shield.yaml` includes a signer (`signer@enterprise.com`) as shown in following example.
       
         ``` 
-              signerConfig:
-		    policies:
-		    - namespaces:
-		      - "*"
-		      signers:
-		      - "SampleSigner"
-		    - scope: "Cluster"
-		      signers:
-		      - "SampleSigner"
-		    signers:
-		    - name: "SampleSigner"
-		      keyConfig: sample-signer-keyconfig
-		      subjects:
-		      - email: "sample_signer@signer.com"
-              keyConfig:
-              - name: sample-signer-keyconfig
-                secretName: keyring-secret
+        signerConfig:
+	   policies:
+           - namespaces:
+	     - "*"
+	     signers:
+	     - "SampleSigner"
+	   - scope: "Cluster"
+	     signers:
+	     - "SampleSigner"
+	   signers:
+	   - name: "SampleSigner"
+	     keyConfig: sample-signer-keyconfig
+	     subjects:
+	     - email: "sample_signer@signer.com"
+        keyConfig:
+        - name: sample-signer-keyconfig
+          secretName: keyring-secret
         ```
         If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own signer's email in `signerConfig` and refer to the verification key under `keyConfig`.
 

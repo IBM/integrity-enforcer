@@ -36,7 +36,7 @@ For matching signer, you can use the following attributes: `email`, `uid`, `coun
 
 ```
 
-Updating IShield CR with the above block, the operator will update the signerConfig resource.
+Updating IShield CR with the above block, the operator will update the SignerConfig resource.
 
 You can define namespace matcher by using `excludeNamespaces`.
 For example below, signer `signer-a` can sign resource in `secure-ns` namespace, and another signer `signer-b` can sign resource in all other namespaces except `secure-ns`.
