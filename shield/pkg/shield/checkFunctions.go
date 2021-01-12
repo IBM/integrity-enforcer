@@ -261,8 +261,8 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *commo
 			reasonCode = common.REASON_INVALID_SIG
 		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
 			reasonCode = common.REASON_NO_VALID_KEYRING
-		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_POLICY].Message) {
-			reasonCode = common.REASON_NO_POLICY
+		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_MATCH_SIGNER_CONFIG].Message) {
+			reasonCode = common.REASON_NO_MATCH_SIGNER_CONFIG
 		} else if message == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
 			reasonCode = common.REASON_NO_SIG
 		} else {

@@ -76,6 +76,16 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.
 
 }
 
+func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Request) {
+	msg := "liveness ok"
+	_, _ = w.Write([]byte(msg))
+}
+
+func (server *WebhookServer) checkReadiness(w http.ResponseWriter, r *http.Request) {
+	msg := "readiness ok"
+	_, _ = w.Write([]byte(msg))
+}
+
 func (server *WebhookServer) serveRequest(w http.ResponseWriter, r *http.Request) {
 
 	var body []byte
@@ -155,6 +165,8 @@ func (server *WebhookServer) Run() {
 	}
 
 	server.mux.HandleFunc("/mutate", server.serveRequest)
+	server.mux.HandleFunc("/health/liveness", server.checkLiveness)
+	server.mux.HandleFunc("/health/readiness", server.checkReadiness)
 
 	serverObj := &http.Server{
 		Addr:      ":8443",

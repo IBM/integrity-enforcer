@@ -17,11 +17,11 @@
 package pgp
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/packet"
 )
@@ -77,10 +77,10 @@ func VerifySignature(keyPathList []string, msg, sig string) (bool, string, *Sign
 	if keyRing, err := LoadKeyRing(keyPathList); err != nil {
 		return false, "Error when loading key ring", nil, err
 	} else if signer, err := openpgp.CheckArmoredDetachedSignature(keyRing, cfgReader, sigReader); signer == nil {
-		fmt.Println("[DEBUG] msg:", msg)
-		fmt.Println("[DEBUG] sig:", sig)
+		logger.Debug("msg:", msg)
+		logger.Debug("sig:", sig)
 		if err != nil {
-			fmt.Println("[DEBUG] err:", err.Error())
+			logger.Error("Signature verification error:", err.Error())
 		}
 		return false, "Signed by unauthrized subject (signer is not in public key), or invalid format signature", nil, nil
 	} else {
@@ -166,13 +166,16 @@ func EntityListToSlice(keyring openpgp.EntityList) []*openpgp.Entity {
 
 func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
 	entities := []*openpgp.Entity{}
+	var retErr error
 	for _, keyPath := range keyPathList {
 		kpath := filepath.Clean(keyPath)
 		if keyRingReader, err := os.Open(kpath); err != nil {
+			retErr = err
 			continue
 		} else {
 			tmpList, err := openpgp.ReadKeyRing(keyRingReader)
 			if err != nil {
+				retErr = err
 				continue
 			}
 			for _, tmp := range tmpList {
@@ -180,5 +183,5 @@ func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
 			}
 		}
 	}
-	return openpgp.EntityList(entities), nil
+	return openpgp.EntityList(entities), retErr
 }

@@ -247,7 +247,7 @@ func VerifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
 	return true, "", nil
 }
 
-func loadCertDir(certDir string) ([]*x509.Certificate, error) {
+func LoadCertDir(certDir string) ([]*x509.Certificate, error) {
 	var certs []*x509.Certificate
 	files, err := ioutil.ReadDir(certDir)
 	if err != nil {
@@ -279,7 +279,7 @@ func VerifyCertificate(certPemBytes []byte, certPathList []string) (bool, string
 	roots := x509.NewCertPool()
 	poolCerts := []*x509.Certificate{}
 	for _, certPath := range certPathList {
-		tmpCerts, err := loadCertDir(certPath)
+		tmpCerts, err := LoadCertDir(certPath)
 		if err != nil {
 			continue
 		}

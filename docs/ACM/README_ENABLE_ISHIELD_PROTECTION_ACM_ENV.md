@@ -94,27 +94,30 @@ oc create ns <custom namespace>
 
         If you use your custom namespace in Step 1, change all instances of  `integrity-shield-operator-system` to your custom namespace in `policy-integrity-shield.yaml`.
 
-      b)  Configure a signer's email
+      b)  Configure a signer's email and verfication key
 
         By default, `policy-integrity-shield.yaml` includes a signer (`signer@enterprise.com`) as shown in following example.
       
         ``` 
-            signPolicy:
-                policies:
-                - namespaces:
-                  - "*"
-                  signers:
-                  - "SampleSigner"
-                - scope: "Cluster"
-                  signers:
-                  - "SampleSigner"
-                signers:
-                - name: "SampleSigner"
-                  secret: keyring-secret
-                  subjects:
-                  - email: "signer@enterprise.com"
+        signerConfig:
+	   policies:
+           - namespaces:
+	     - "*"
+	     signers:
+	     - "SampleSigner"
+	   - scope: "Cluster"
+	     signers:
+	     - "SampleSigner"
+	   signers:
+	   - name: "SampleSigner"
+	     keyConfig: sample-signer-keyconfig
+	     subjects:
+	     - email: "sample_signer@signer.com"
+        keyConfig:
+        - name: sample-signer-keyconfig
+          secretName: keyring-secret
         ```
-        If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own signer's email.
+        If you use your own `signer` for setting up signing and verification keys as described in [doc](../README_VERIFICATION_KEY_SETUP.md), change `signer@enterprise.com` to your own signer's email in `signerConfig` and refer to the verification key under `keyConfig`.
 
      c)  Configure the placement rule 
 

@@ -22,7 +22,7 @@ $ pwd /home/repo/integrity-enforcer
 ```
 In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-### Prepape namespace for installing Integrity Shield
+### Prepare namespace for installing Integrity Shield
 
 You can deploy Integrity Shield to any namespace. In this document, we will use `integrity-shield-operator-system` to deploy Integrity Shield.
 ```
@@ -56,7 +56,7 @@ oc create secret generic --save-config keyring-secret  -n integrity-shield-opera
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signPolicy in the following Integrity Shield Custom Resource [file](../operator/config/samples/apis.integrityshield.io_v1alpha1_integrityshield_cr.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signerConfig in the following Integrity Shield Custom Resource [file](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace and the corresponding verification key (i.e. keyring-secret) under `keyConfig`
 
 ```yaml
 # Edit integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml
@@ -74,7 +74,7 @@ spec:
       exclude:
       - "kube-*"
       - "openshift-*"
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
       - "*"
@@ -85,11 +85,12 @@ spec:
       - "SampleSigner"
     signers:
     - name: "SampleSigner"
-      secret: keyring-secret
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: "signer@enterprise.com"
-  keyRingConfigs:
-  - name: keyring-secret
+  keyConfig:
+  - name: sample-signer-keyconfig
+    secretName: keyring-secret
 
 
 ```
@@ -246,9 +247,9 @@ configmap/test-cm created
 ```
 
 
-Integrity Shield generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
+Integrity Shield generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
 
-If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
+If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../scripts/log_logging.sh).
 ```json
 {
   "abortReason": "",

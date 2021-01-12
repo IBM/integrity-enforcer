@@ -63,6 +63,7 @@ type ShieldConfig struct {
 	IShieldResourceCondition *IShieldResourceCondition `json:"iShieldResourceCondition,omitempty"`
 	IShieldAdminUserGroup    string                    `json:"iShieldAdminUserGroup,omitempty"`
 	IShieldAdminUserName     string                    `json:"iShieldAdminUserName,omitempty"`
+	IShieldCRName            string                    `json:"iShieldCRName,omitempty"`
 	IShieldServerUserName    string                    `json:"iShieldServerUserName,omitempty"`
 	Options                  []string                  `json:"options,omitempty"`
 }

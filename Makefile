@@ -502,8 +502,19 @@ setup-demo:
 	yq write -i $(TMP_CR_FILE) spec.server.image $(DEMO_ISHIELD_SERVER_IMAGE_NAME)
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
 	@echo setup keyring configs
-	yq write -i $(TMP_CR_FILE) spec.keyRingConfigs[1].name $(TEST_SECRET2)
-	@echo setup signer policy
+	yq write -i $(TMP_CR_FILE) spec.keyConfig[0].name $(TEST_KEYCONFIG)
+	yq write -i $(TMP_CR_FILE) spec.keyConfig[0].secretName $(TEST_SECRET)
+	yq write -i $(TMP_CR_FILE) spec.keyConfig[1].name $(TEST_KEYCONFIG2)
+	yq write -i $(TMP_CR_FILE) spec.keyConfig[1].secretName $(TEST_SECRET2)
+	@echo setup signer config
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].signers[0] $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].name $(TEST_SIGNERS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].keyConfig $(TEST_KEYCONFIG)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].name $(TEST_SIGNERS2)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].keyConfig $(TEST_KEYCONFIG2)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[2].subjects[0].email $(TEST_SIGNER_SUBJECT_EMAIL2)
 	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
 
 .PHONY: create-private-registry
