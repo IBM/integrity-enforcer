@@ -21,8 +21,8 @@ IShield can be deployed with operator. We have verified the feasibility on the f
 
 ## Prerequisites
 ​
-The following prerequisites must be satisfied to deploy Integrity Shield on a cluster.
-- A Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
+The following prerequisites must be satisfied to deploy Integrity Shield on a cluster via OLM/OperatorHub.
+- An OLM enabled Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
 
 ---
 
@@ -41,11 +41,11 @@ $ pwd /home/repo/integrity-enforcer
 ```
 In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-### Prepare namespace for installing Integrity Shield
+### Prepare namespace for installing Integrity Shield in a cluster.
 
 You can deploy Integrity Shield to any namespace. In this document, we will use `integrity-shield-operator-system` to deploy Integrity Shield.
 ```
-make create-ns
+oc create ns integrity-shield-operator-system
 
 ```
 We switch to `integrity-shield-operator-system` namespace.
@@ -72,13 +72,36 @@ Then, create a secret that includes a pubkey ring for verifying signatures of re
 oc create secret generic --save-config keyring-secret  -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
 ```
 
-### Define signers for each namespace
+### Install Integrity Shield to a cluster Using OLM 
 
+We describe the  `Integrity Shield` installation steps for an OpenShift cluster where OLM is enabled already.
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signerConfig in the following Integrity Shield Custom Resource [file](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace and the corresponding verification key (i.e. keyring-secret) under `keyConfig`
+Step 1. Install Integrity Shield Operator from OperatorHub in an OLM-enabled OpenShift cluster.
+
+Select `Integrity Shield Operator` from OperatorHub and install with the following options.
+
+- `Installed Namespace`- Select the namespace created above. We use `integrity-shield-operator-system` namespace in this documentation.
+- `Approval Strategy` - Select `Automatic`
+  
+After successful installation, you should see a pod that is running in the namespace `integrity-shield-operator-system`.
+
+```
+$ oc get pod -n integrity-shield-operator-system
+integrity-shield-operator-controller-manager-684f54655b-p227g   1/1     Running   0          5m
+```
+
+Step 2. Install Integrity Shield Server
+
+From the list of installed operators (select `integrity-shield-operator-system` namespace), click to  `Integrity Shield Operator`.
+
+Then click `Create IntegrityShield` and select `YAML View`
+
+Define signers in IntegrityShield CR as below and click create.
+
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signerConfig in the following Integrity Shield Custom Resource [file](https://github.com/open-cluster-management/integrity-shield/tree/master/integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace and the corresponding verification key (i.e. keyring-secret) under `keyConfig`
+
 
 ```yaml
-# Edit integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml
 apiVersion: apis.integrityshield.io/v1alpha1
 kind: IntegrityShield
 metadata:
@@ -111,50 +134,9 @@ spec:
   - name: sample-signer-keyconfig
     secretName: keyring-secret
 
-
 ```
 
-### Install Integrity Shield to a cluster
-
-Integrity Shield can be installed to a cluster using a series of steps which are bundled in a script called [`install_shield.sh`](../scripts/install_shield.sh). Before executing the script `install_shield.sh`, setup local environment as follows:
-- `ISHIELD_ENV <local: means that we deploy IShield to a local cluster like Minikube>`
-- `ISHIELD_REPO_ROOT=<set absolute path of the root directory of cloned integrity-shield source repository`
-- `KUBECONFIG=~/kube/config/minikube`  (for deploying IShield on minikube cluster)
-
-`~/kube/config/minikube` is the Kuebernetes config file with credentials for accessing a cluster via `kubectl`.
-
-Example:
-```
-$ export ISHIELD_ENV=local
-$ export ISHIELD_REPO_ROOT=/home/repo/integrity-enforcer
-$ export KUBECONFIG=~/kube/config/minikube
-```
-
-Prepare a private registry for hosting IShield container images, if not already exist.
-The following example create a private local container image registry to host the IShield container images.
-
-```
-$ cd integrity-shield
-$ make create-private-registry
-```
-
-Execute the following make commands to build Integrity Shield images.
-```
-$ cd integrity-shield
-$ make build-images
-$ make push-images-to-local
-```
-
-Then, execute the following script to deploy Integrity Shield in a cluster.
-
-```
-$ make install-crds
-$ make install-operator
-$ make make setup-tmp-cr
-$ make create-tmp-cr
-```
-
-After successful installation, you should see two pods are running in the namespace `integrity-shield-operator-system`.
+After successful installation, you should now see two pods are running in the namespace `integrity-shield-operator-system`.
 
 ```
 $ oc get pod -n integrity-shield-operator-system
@@ -166,16 +148,8 @@ integrity-shield-server-85c787bf8c-h5bnj    2/2     Running   0          82m
 
 ## Protect Resources with Integrity Shield
 
-To see how to protect resources in cluster with Integrity Shield,  please check this [doc] (https://github.com/open-cluster-management/integrity-shield/blob/master/docs/README_QUICK.md)
+To see how to protect resources in cluster with Integrity Shield,  please check this [doc](https://github.com/open-cluster-management/integrity-shield/blob/master/docs/README_QUICK.md)
 
 
-### Clean up Integrity Shield from the cluster
-
-When you want to remove Integrity Shield from a cluster, run the uninstaller script [`delete_shield.sh`](../scripts/delete_shield.sh).
-```
-$ cd integrity-shield
-$ make delete-tmp-cr
-$ make delete-operator
-```
-
+For additional configuration options, samples and more information on using the operator, consult the [Integrity Shield documentation](https://github.com/open-cluster-management/integrity-shield/tree/master/docs).
 
