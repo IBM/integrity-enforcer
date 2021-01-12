@@ -9,6 +9,151 @@ Integrity Shield's capabilities are
 - Perform all integrity verification on cluster (admission controller, not in client side)
 - Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 
+## Requirements
+
+### Prepare namespace for installing Integrity Shield in a cluster.
+
+You can deploy Integrity Shield to any namespace. In this document, we will use `integrity-shield-operator-system` to deploy Integrity Shield.
+```
+oc create ns integrity-shield-operator-system
+```
+
+### Define public key secret in Integrity Shield
+
+Integrity Shield requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected. 
+
+Export public key to a file as shown below. 
+
+```
+$ gpg --export signer@enterprise.com > /tmp/pubring.gpg
+```
+
+Then, create a secret that includes a pubkey ring for verifying signatures of resources
+
+```
+oc create secret generic --save-config keyring-secret  -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
+```
+
+## Install Integrity Shield
+
+Install `Integrity Shield` Operator and Server (`Custom Resource`) from OperatorHub.
+
+## Protect Resources with Integrity Shield
+
+Once Integrity Shield is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection.
+
+
+To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. secure-ns) on your cluster.
+
+The steps for protecting resources include:
+
+The steps for protecting resources include:
+- Define which reource(s) should be protected.
+- Create a resource with signature.
+
+### Define which reource(s) should be protected
+
+You can define which resources should be protected with signature in a cluster by Integrity Shield. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
+
+```
+$ cat <<EOF | oc apply -n secure-ns -f -
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ResourceSigningProfile
+metadata:
+  name: sample-rsp
+spec:
+  rules:
+  - match:
+    - kind: ConfigMap
+    - kind: Deployment
+    - kind: Service
+EOF
+
+resourcesigningprofile.apis.integrityshield.io/sample-rsp created
+```
+
+See [Define Protected Resources](https://github.com/open-cluster-management/integrity-shield/blob/master/docs/README_FOR_RESOURCE_SIGNING_PROFILE.md) for detail specs.
+
+
+### Create a resource with signature
+
+Any configmap cannot be created without signature in `secure-ns` namespace. Run the following command to create a sample configmap.
+
+```
+cat << EOF > /tmp/test-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-cm
+data:
+  key1: val1
+  key2: val2
+  key4: val4
+EOF
+```
+
+
+run the command below for trying to create the configmap in `secure-ns` namespace without signature. You will see it is blocked because no signature for this resource is stored in the cluster.
+
+
+```
+$ oc apply -f /tmp/test-cm.yaml -n secure-ns
+Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: No signature found
+```
+
+
+To generate a signature for a resource, you can use a [utility script](../scripts/gpg-rs-sign.sh) (Use [yq](https://github.com/mikefarah/yq) in the script)
+
+Run the following script to generate a signature
+
+```
+$ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-rs-sign.sh | bash -s \
+  signer@enterprise.com \
+  /tmp/test-cm.yaml \
+  /tmp/test-cm-rs.yaml
+```
+
+Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature` which includes signature of the input yaml.
+
+
+```yaml
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ResourceSignature
+metadata:
+  annotations:
+    integrityshield.io/messageScope: spec
+    integrityshield.io/signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t
+  name: rsig-configmap-test-cm
+  labels:
+    integrityshield.io/sigobject-apiversion: v1
+    integrityshield.io/sigobject-kind: ConfigMap
+    integrityshield.io/sigtime: "1610442484"
+spec:
+  data:
+    - message: YXBpVmVyc2lvbjogdjEKa2luZDogQ29u
+      signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t
+      type: resource
+```
+
+
+Create this resource.
+```
+$ oc create -f /tmp/test-cm-rs.yaml -n secure-ns
+resourcesignature.apis.integrityshield.io/rsig-configmap-test-cm created
+```
+
+
+Then, run the same command again to create ConfigMap. It should be successful this time because a corresponding ResourceSignature is available in the cluster.
+
+```
+$ oc create -f /tmp/test-cm.yaml -n secure-ns
+configmap/test-cm created
+```
+
+
+For detail configuration, consult the [Integrity Shield documentation](https://github.com/open-cluster-management/integrity-shield/tree/master/docs).
+
+
 ## Supported Platforms
 
 Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
@@ -18,138 +163,3 @@ Integrity Shield  can be deployed with operator. We have verified the feasibilit
 - [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
 - [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.14
 - [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
-
-## Prerequisites
-​
-The following prerequisites must be satisfied to deploy Integrity Shield on a cluster via OLM/OperatorHub.
-- An OLM enabled Kubernetes cluster and cluster admin access to the cluster to use `oc` or `kubectl` command
-
----
-
-## Install Integrity Shield
-​
-This section describe the steps for deploying Integrity Shield  on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
-
-### Retrive the source from `integrity-enforcer` Git repository.
-
-git clone this repository and moved to `integrity-enforcer` directory
-
-```
-$ git clone https://github.com/IBM/integrity-enforcer.git
-$ cd integrity-shield
-$ pwd /home/repo/integrity-enforcer
-```
-In this document, we clone the code in `/home/repo/integrity-enforcer`.
-
-### Prepare namespace for installing Integrity Shield in a cluster.
-
-You can deploy Integrity Shield to any namespace. In this document, we will use `integrity-shield-operator-system` to deploy Integrity Shield.
-```
-oc create ns integrity-shield-operator-system
-
-```
-We switch to `integrity-shield-operator-system` namespace.
-```
-oc project integrity-shield-operator-system
-```
-All the commands are executed on the `integrity-shield-operator-system` namespace unless mentioned explicitly.
-
-### Define public key secret in Integrity Shield
-
-Integrity Shield requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected.  Integrity Shield supports X509 or PGP key for signing resources. The following steps show how you can import your signature verification key to Integrity Shield.
-
-First, you need to export public key to a file. The following example shows a pubkey for a signer identified by an email `sample_signer@enterprise.com` is exported and stored in `/tmp/pubring.gpg`. (Use the filename `pubring.gpg`.)
-
-```
-$ gpg --export sample_signer@enterprise.com > /tmp/pubring.gpg
-```
-
-If you do not have any PGP key or you want to use new key, generate new one and export it to a file. See [this GitHub document](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/generating-a-new-gpg-key).
-
-Then, create a secret that includes a pubkey ring for verifying signatures of resources
-
-```
-oc create secret generic --save-config keyring-secret  -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
-```
-
-### Install Integrity Shield to a cluster Using OLM 
-
-We describe the  `Integrity Shield` installation steps for an OpenShift cluster where OLM is enabled already.
-
-Step 1. Install Integrity Shield Operator from OperatorHub in an OLM-enabled OpenShift cluster.
-
-Select `Integrity Shield Operator` from OperatorHub and install with the following options.
-
-- `Installed Namespace`- Select the namespace created above. We use `integrity-shield-operator-system` namespace in this documentation.
-- `Approval Strategy` - Select `Automatic`
-  
-After successful installation, you should see a pod that is running in the namespace `integrity-shield-operator-system`.
-
-```
-$ oc get pod -n integrity-shield-operator-system
-integrity-shield-operator-controller-manager-684f54655b-p227g   1/1     Running   0          5m
-```
-
-Step 2. Install Integrity Shield Server
-
-From the list of installed operators (select `integrity-shield-operator-system` namespace), click to  `Integrity Shield Operator`.
-
-Then click `Create IntegrityShield` and select `YAML View`
-
-Define signers in IntegrityShield CR as below and click create.
-
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signerConfig in the following Integrity Shield Custom Resource [file](https://github.com/open-cluster-management/integrity-shield/tree/master/integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace and the corresponding verification key (i.e. keyring-secret) under `keyConfig`
-
-
-```yaml
-apiVersion: apis.integrityshield.io/v1alpha1
-kind: IntegrityShield
-metadata:
-  name: integrity-shield-server
-spec:
-  namespace: integrity-shield-operator-system
-  shieldConfig:
-    verifyType: pgp # x509
-    inScopeNamespaceSelector:
-      include:
-      - "*"
-      exclude:
-      - "kube-*"
-      - "openshift-*"
-  signerConfig:
-    policies:
-    - namespaces:
-      - "*"
-      signers:
-      - "SampleSigner"
-    - scope: "Cluster"
-      signers:
-      - "SampleSigner"
-    signers:
-    - name: "SampleSigner"
-      keyConfig: sample-signer-keyconfig
-      subjects:
-      - email: "signer@enterprise.com"
-  keyConfig:
-  - name: sample-signer-keyconfig
-    secretName: keyring-secret
-
-```
-
-After successful installation, you should now see two pods are running in the namespace `integrity-shield-operator-system`.
-
-```
-$ oc get pod -n integrity-shield-operator-system
-integrity-shield-operator-c4699c95c-4p8wp   1/1     Running   0          5m
-integrity-shield-server-85c787bf8c-h5bnj    2/2     Running   0          82m
-```
-
----
-
-## Protect Resources with Integrity Shield
-
-To see how to protect resources in cluster with Integrity Shield,  please check this [doc](https://github.com/open-cluster-management/integrity-shield/blob/master/docs/README_QUICK.md)
-
-
-For additional configuration options, samples and more information on using the operator, consult the [Integrity Shield documentation](https://github.com/open-cluster-management/integrity-shield/tree/master/docs).
-
