@@ -22,7 +22,7 @@ $ pwd /home/repo/integrity-enforcer
 ```
 In this document, we clone the code in `/home/repo/integrity-enforcer`.
 
-### Prepape namespace for installing Integrity Shield
+### Prepare namespace for installing Integrity Shield
 
 You can deploy Integrity Shield to any namespace. In this document, we will use `integrity-shield-operator-system` to deploy Integrity Shield.
 ```
@@ -56,7 +56,7 @@ oc create secret generic --save-config keyring-secret  -n integrity-shield-opera
 ### Define signers for each namespace
 
 
-You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signPolicy in the following Integrity Shield Custom Resource [file](../operator/config/samples/apis.integrityshield.io_v1alpha1_integrityshield_cr.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
+You can define signer who can provide signature for resources on each namespace. It can be configured when deploying the Integrity Shield. For that, configure signPolicy in the following Integrity Shield Custom Resource [file](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml). Example below shows a signer `SampleSigner` identified by email `sample_signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
 
 ```yaml
 # Edit integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml
