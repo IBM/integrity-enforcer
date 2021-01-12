@@ -37,18 +37,16 @@ spec:
 
 ## Verification Key and signer configuration
 
-The list of verification key names should be set as `keyRingConfigs` in this CR.
+The list of verification key names should be set as `keyConfig` in this CR.
 The operator will start installing Integrity Shield when all key secrets listed here are ready.
 
 Also, you can set signer configuration here.
-This configuration defines signers that are allowed to create/update resources with their signature in some namespaces.
+This configuration defines signers that are allowed to create/update resources with their signature in some namespaces and the corresponding verification key (i.e. keyring-secret) under `keyConfig`.
 (see [How to configure signer](README_SIGNER_CONFIG.md) for detail.)
 
 ```yaml
 spec:
-  keyRingConfigs:
-  - name: keyring-secret
-  signPolicy:
+  signerConfig:
     policies:
     - namespaces:
       - "*"
@@ -59,9 +57,13 @@ spec:
       - "SampleSigner"
     signers:
     - name: "SampleSigner"
-      secret: keyring-secret
+      keyConfig: sample-signer-keyconfig
       subjects:
       - email: "sample_signer@signer.com"
+  keyConfig:
+  - name: sample-signer-keyconfig
+    secretName: keyring-secret
+
 ```
 
 ## Resource Signing Profile Configuration
