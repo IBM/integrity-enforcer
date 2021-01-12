@@ -3,11 +3,11 @@ Integrity Shield is a tool for built-in preventive integrity control for regulat
 
 Integrity Shield's capabilities are
 
-    Allow to deploy authorized application pakcages only
-    Allow to use signed deployment params only
-    Zero-drift in resource configuration unless whitelisted
-    Perform all integrity verification on cluster (admission controller, not in client side)
-    Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
+- Allow to deploy authorized application pakcages only
+- Allow to use signed deployment params only
+- Zero-drift in resource configuration unless whitelisted
+- Perform all integrity verification on cluster (admission controller, not in client side)
+- Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 
 ## Supported Platforms
 
@@ -114,8 +114,6 @@ spec:
 
 ```
 
-
-
 ### Install Integrity Shield to a cluster
 
 Integrity Shield can be installed to a cluster using a series of steps which are bundled in a script called [`install_shield.sh`](../scripts/install_shield.sh). Before executing the script `install_shield.sh`, setup local environment as follows:
@@ -167,102 +165,8 @@ integrity-shield-server-85c787bf8c-h5bnj    2/2     Running   0          82m
 ---
 
 ## Protect Resources with Integrity Shield
-​
-Once Integrity Shield is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection. To start actual protection, you need to define which resources should be protected specifically. This section describes the execution flow for protecting a specific resource (e.g. ConfigMap) in a specific namespace (e.g. `secure-ns`) on your cluster.
 
-The steps for protecting resources include:
-- Define which reource(s) should be protected.
-- Create a resource with signature.
-
-### Define which reource(s) should be protected
-
-You can define which resources should be protected with signature in a cluster by Integrity Shield. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
-
-```
-$ cat <<EOF | oc apply -n secure-ns -f -
-apiVersion: apis.integrityshield.io/v1alpha1
-kind: ResourceSigningProfile
-metadata:
-  name: sample-rsp
-spec:
-  rules:
-  - match:
-    - kind: ConfigMap
-    - kind: Deployment
-    - kind: Service
-EOF
-
-resourcesigningprofile.apis.integrityshield.io/sample-rsp created
-```
-
-See [Define Protected Resources](README_FOR_RESOURCE_SIGNING_PROFILE.md) for detail specs.
-
-### Create a resource with signature
-
-Any configmap cannot be created without signature in `secure-ns` namespace. Run the following command to create a sample configmap.
-
-```
-cat << EOF > /tmp/test-cm.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test-cm
-data:
-  key1: val1
-  key2: val2
-  key4: val4
-EOF
-```
-
-
-run the command below for trying to create the configmap in `secure-ns` namespace without signature. You will see it is blocked because no signature for this resource is stored in the cluster.
-
-```
-$ oc apply -f /tmp/test-cm.yaml -n secure-ns
-Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: No signature found
-```
-
-
-To generate a signature for a resource, you can use a [utility script](../scripts/gpg-rs-sign.sh) (Use [yq](https://github.com/mikefarah/yq) in the script)
-
-Run the following script to generate a signature
-
-```
-$ ./scripts/gpg-rs-sign.sh signer@enterprise.com /tmp/test-cm.yaml /tmp/test-cm-rs.yaml
-```
-
-
-Then, output file `/tmp/test-cm-rs.yaml` is A custom resource `ResourceSignature` which includes signature of the input yaml.
-
-
-```yaml
-apiVersion: apis.integrityshield.io/v1alpha1
-kind: ResourceSignature
-metadata:
-  annotations:
-    integrityshield.io/messageScope: spec
-    integrityshield.io/signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t
-  name: rsig-test-cm
-spec:
-  data:
-    - message: YXBpVmVyc2lvbjogdjEKa2luZDogQ29u
-      signature: LS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0t
-      type: resource
-```
-
-
-Create this resource.
-```
-$ oc create -f /tmp/test-cm-rs.yaml -n secure-ns
-resourcesignature.apis.integrityshield.io/rsig-test-cm created
-```
-
-Then, run the same command again to create ConfigMap. It should be successful this time because a corresponding ResourceSignature is available in the cluster.
-
-```
-$ oc create -f /tmp/test-cm.yaml -n secure-ns
-configmap/test-cm created
-```
+To see how to protect resources in cluster with Integrity Shield,  please check this [doc] (https://github.com/open-cluster-management/integrity-shield/blob/master/docs/README_QUICK.md)
 
 
 ### Clean up Integrity Shield from the cluster
