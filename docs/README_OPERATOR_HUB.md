@@ -101,10 +101,7 @@ $ oc apply -f /tmp/test-cm.yaml -n secure-ns
 Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: No signature found
 ```
 
-
-To generate a signature for a resource, you can use a [utility script](../scripts/gpg-rs-sign.sh) (Use [yq](https://github.com/mikefarah/yq) in the script)
-
-Run the following script to generate a signature
+Run the following script to generate a signature (Use [yq](https://github.com/mikefarah/yq) in the script)
 
 ```
 $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-rs-sign.sh | bash -s \
