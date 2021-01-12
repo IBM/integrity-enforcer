@@ -246,9 +246,9 @@ configmap/test-cm created
 ```
 
 
-Integrity Shield generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../script/log_server.sh). This includes when requests come and go, as well as errors which occured during processing. 
+Integrity Shield generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
 
-If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../script/log_logging.sh).
+If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../scripts/log_logging.sh).
 ```json
 {
   "abortReason": "",
