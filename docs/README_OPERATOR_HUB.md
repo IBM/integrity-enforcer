@@ -1,4 +1,4 @@
-# Integrity Shield (IShield)
+# Integrity Shield
 Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
 
 Integrity Shield's capabilities are
@@ -12,7 +12,7 @@ Integrity Shield's capabilities are
 ## Supported Platforms
 
 Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
-IShield can be deployed with operator. We have verified the feasibility on the following platforms:
+Integrity Shield  can be deployed with operator. We have verified the feasibility on the following platforms:
 
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
 - [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
@@ -28,7 +28,7 @@ The following prerequisites must be satisfied to deploy Integrity Shield on a cl
 
 ## Install Integrity Shield
 ​
-This section describe the steps for deploying Integrity Shield (IShield) on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
+This section describe the steps for deploying Integrity Shield  on your cluster. We will use RedHat OpenShift cluster and so use `oc` commands for installation. (You can use `kubectl` for Minikube or IBM Kubernetes Service.)
 
 ### Retrive the source from `integrity-enforcer` Git repository.
 
