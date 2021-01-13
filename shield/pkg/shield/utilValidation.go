@@ -17,8 +17,10 @@
 package shield
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
@@ -70,8 +72,10 @@ func ValidateResource(reqc *common.ReqContext, shieldNamespace string) (bool, st
 
 func ValidateResourceSigningProfile(reqc *common.ReqContext, shieldNamespace string) (bool, error) {
 	var data *rsp.ResourceSigningProfile
-	err := json.Unmarshal(reqc.RawObject, &data)
-	if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec.DisallowUnknownFields() // Force errors if data has undefined fields
+
+	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
 	if reqc.Namespace != shieldNamespace && data.Spec.TargetNamespaceSelector != nil {
@@ -82,8 +86,10 @@ func ValidateResourceSigningProfile(reqc *common.ReqContext, shieldNamespace str
 
 func ValidateResourceSignature(reqc *common.ReqContext) (bool, error) {
 	var data *rsig.ResourceSignature
-	err := json.Unmarshal(reqc.RawObject, &data)
-	if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec.DisallowUnknownFields() // Force errors if data has undefined fields
+
+	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
 	if len(data.Spec.Data) > 1 {
@@ -109,8 +115,10 @@ func ValidateResourceSignature(reqc *common.ReqContext) (bool, error) {
 
 func ValidateShieldConfig(reqc *common.ReqContext) (bool, error) {
 	var data *sconf.ShieldConfig
-	err := json.Unmarshal(reqc.RawObject, &data)
-	if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec.DisallowUnknownFields() // Force errors if data has undefined fields
+
+	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -118,17 +126,33 @@ func ValidateShieldConfig(reqc *common.ReqContext) (bool, error) {
 
 func ValidateSignerConfig(reqc *common.ReqContext) (bool, error) {
 	var data *sigconf.SignerConfig
-	err := json.Unmarshal(reqc.RawObject, &data)
-	if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec.DisallowUnknownFields() // Force errors if data has undefined fields
+
+	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
+	if data.Spec.Config == nil {
+		return false, fmt.Errorf("`spec.config` in SignerConfig is empty.")
+	}
+	if data.Spec.Config.Signers == nil || len(data.Spec.Config.Signers) == 0 {
+		return false, fmt.Errorf("`spec.config.signers` in SignerConfig is empty.")
+	}
+	for i, signer := range data.Spec.Config.Signers {
+		if signer.Subjects == nil || len(signer.Subjects) == 0 {
+			return false, fmt.Errorf("`spec.config.signers[%s].subjects` in SignerConfig is empty.", strconv.Itoa(i))
+		}
+	}
+
 	return true, nil
 }
 
 func ValidateHelmReleaseMetadata(reqc *common.ReqContext) (bool, error) {
 	var data *hrm.HelmReleaseMetadata
-	err := json.Unmarshal(reqc.RawObject, &data)
-	if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec.DisallowUnknownFields() // Force errors if data has undefined fields
+
+	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
 	return true, nil

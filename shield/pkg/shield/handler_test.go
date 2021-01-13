@@ -111,6 +111,28 @@ func getChangedRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest 
 	return newReq
 }
 
+func getInvalidRSPRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
+	var newReq *v1beta1.AdmissionRequest
+	reqBytes, _ := json.Marshal(req)
+	_ = json.Unmarshal(reqBytes, &newReq)
+	newReq.Object.Raw = []byte(`{"apiVersion":"apis.integrityshield.io/v1alpha1","kind":"ResourceSigningProfile","metadata":{"name":"sample-rsp"},"spec":{"rules":[{"match":[{"kind":"Pod"},{"kind":"ConfigMap"},{"kind":"Deployment"}]}]}}`)
+	newReq.Kind = metav1.GroupVersionKind{Group: "apis.integrityshield.io", Version: "v1alpha1", Kind: "ResourceSigningProfile"}
+	newReq.Name = "sample-rsp"
+	newReq.Namespace = "secure-ns"
+	return newReq
+}
+
+func getInvalidSignerConfigRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
+	var newReq *v1beta1.AdmissionRequest
+	reqBytes, _ := json.Marshal(req)
+	_ = json.Unmarshal(reqBytes, &newReq)
+	newReq.Object.Raw = []byte(`{"apiVersion":"apis.integrityshield.io/v1alpha1","kind":"SignerConfig","metadata":{"name":"signer-config"},"spec":{"config":{"policies":[{"namespaces":["*"],"signers":["SampleSigner"]},{"scope":"Cluster","signers":["SampleSigner"]}],"signers":[{"keyConfig":"sample-signer-keyconfig","name":"SampleSigner"}]}}}`)
+	newReq.Kind = metav1.GroupVersionKind{Group: "apis.integrityshield.io", Version: "v1alpha1", Kind: "SignerConfig"}
+	newReq.Name = "signer-config"
+	newReq.Namespace = "test-ns"
+	return newReq
+}
+
 func TestHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -227,6 +249,58 @@ var _ = Describe("Test integrity shield", func() {
 			}
 			return nil
 		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (deny, validatiion-fail-rsp)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			testHandler := NewHandler(testConfig)
+			invalidRSPReq := getInvalidRSPRequest(req)
+			resp := testHandler.Run(invalidRSPReq)
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "validation failed") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (deny, validatiion-fail-signerconfig)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			testHandler := NewHandler(testConfig)
+			invalidSConfReq := getInvalidSignerConfigRequest(req)
+			resp := testHandler.Run(invalidSConfReq)
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "validation failed") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (deny, secret-setup-error)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			var test2Config *config.ShieldConfig
+			tmp, _ := json.Marshal(testConfig)
+			_ = json.Unmarshal(tmp, &test2Config)
+			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/pgp/miss-configured-pubring"}
+			testHandler := NewHandler(test2Config)
+			changedReq := getChangedRequest(req)
+			resp := testHandler.Run(changedReq)
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "no verification keys are correctly loaded") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+			}
+			return nil
+		}, timeout, 5).Should(BeNil())
 	})
 	It("Handler Run Test (deny, signature-not-identical)", func() {
 		var timeout int = 10
