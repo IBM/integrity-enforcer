@@ -72,7 +72,7 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
 
     Edit [`config/samples/apis_v1alpha1_integrityshield.yaml`](../integrity-shield-operator/config/samples/apis_v1alpha1_integrityshield.yaml) to specify a signer for a namespace `secure-ns`.
 
-    Example below shows a signer `SampleSigner` identified by email `signer@enterprise.com` is configured to sign rosources to be protected in any namespace.
+    Example below shows a signer `SampleSigner` is configured with `keyConfig` to sign rosources to be protected in any namespace.
 
     ```yaml
     signerConfig:
@@ -88,7 +88,7 @@ This section describe the steps for deploying Integrity Shield (IShield) on your
       - name: "SampleSigner"
         keyConfig: sample-signer-keyconfig
         subjects:
-        - email: "sample_signer@signer.com"
+        - email: "*"
     keyConfig:
     - name: sample-signer-keyconfig
       secretName: keyring-secret

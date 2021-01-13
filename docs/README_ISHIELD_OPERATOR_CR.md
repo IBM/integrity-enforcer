@@ -59,7 +59,7 @@ spec:
     - name: "SampleSigner"
       keyConfig: sample-signer-keyconfig
       subjects:
-      - email: "sample_signer@signer.com"
+      - email: "*"
   keyConfig:
   - name: sample-signer-keyconfig
     secretName: keyring-secret
