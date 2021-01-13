@@ -5,7 +5,9 @@
 ### Check Installation
 
 To check if Integrity Shield is correctly deployed, you can check Pod status and webhook existence like the following.
+
 If `integrity-shield-server` Pod is Running and a WebhookConfiguration is there, Integrity Shield is installed and working.
+
 
 ```
 $ oc get pod -n integrity-shield-operator-system
@@ -21,6 +23,7 @@ ishield-webhook-config   1          22m
 ### Check Integrity Shield Events
 
 Integrity Shield reports all events that were denied by Integrity Shield itself. 
+
 You can see all denied requests as Kubernetes Event like below.
 
 ```
@@ -31,9 +34,11 @@ LAST SEEN   TYPE              REASON         OBJECT                MESSAGE
 ```
 
 This is an example of ConfigMap request, so the event is reported in the same namespace as ConfigMap namespace.
+
 If a request of Cluster-scoped resource such as ClusterRole is denied by Integrity Shield, the event will be created in the same namespace as Integrity Shield.
 
 To check all denied events in your cluster, simply you can run the command below.
+
 ```
 $ oc get event --all-namespaces --field-selector type=IntegrityShield
 ```
@@ -44,6 +49,7 @@ If you want to check not only denied events but also allowed events, they are lo
 You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
 
 If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../scripts/log_logging.sh).
+
 ```json
 {
   "abortReason": "",
@@ -102,7 +108,9 @@ If you want to see the result of admission check, you can see the detail by usin
 ```
 
 ### Check RSP status
+
 Resource Signing Profile (RSP) defines what resource should be protected by Integrity Shield, so RSP status shows corresponding denied events if exist.
+
 You can check RSP status like the following.
 
 ```
@@ -135,6 +143,7 @@ Status:
 ### Install issue
 
 If only operator Pod (`integrity-shield-operator-controller-xxxx-xxxx` by default) is running and there is no `integrity-shield-server-xxxx-xxxx` Pod, please check operator container log.
+
 If you see the log message like below, some required verification key secret are not ready. Once you deployed the secret there, installation will be started by operator.
 
 ```
@@ -156,9 +165,13 @@ $ oc logs deployment.apps/integrity-shield-operator-controller-manager
 ### Uninstall issue
 
 Integrity Shield protects Integirty Shield itself, so uninstalling it should be done by some correct steps.
+
 Documents and some scripts in this repository provide automated ways to uninstall Integrity Shield, so basically you don't need to know the actual steps.
+
 But sometimes you might face a issue around uninstall due to some reasons, and you might not be able to uninstall it.
+
 In such a case, deleting `MutatingWebhookConfiguration` of IntegrityShield could solve the situation.
+
 Here is example steps of manual uninstall for Integrity Shield.
 
 ```
@@ -174,13 +187,17 @@ integrity-shield-operator-controller-manager-7df9cfffd-tzq2f   1/1     Running  
 ```
 
 After deleting IntegrityShield CR, the server Pod will be deleted (because CR is the owner).
+
 Once you successfully deleted server Pod, no blocking functions are working anymore, so you can delete all other resources if you want.
 
 ### Unexpected Deny
 
 If your request has been denied in spite of non-protected resource, please check RSPs in the cluster.
+
 Basically, RSPs in a certain namespace can be used only for protection of resources in the namespace.
+
 However, RSPs in Integrity Shield namespace (`integrity-shield-operator-system` by default) can be used as something like global configuration, so it can define any namespace rule.
+
 To see all RSPs in your cluster, you can use a [list_rsp.sh](../scripts/list-rsp.sh) (Use `jq` and `column` in the script)
 
 ```
@@ -192,6 +209,7 @@ test-ns                           sample-clusterrole-rsp  [{"match":[{"kind":"Cl
 ```
 
 Additionally, if you are using ResourceSignature instead of annotation signature, you can list all ResourceSignatures in your cluster by a script [list_ressig.sh](../scripts/list-rsig.sh) . 
+
 This might be useful to solve some issues caused by mis-configured ResourceSignature.
 
 ```
@@ -206,7 +224,10 @@ test-ns    rsig-deployment-sample-deployment  kind=Deployment,name=sample-deploy
 
 If your request has been allowed unexpectedly, please check if Integrity Shield is correctly working in the cluster first.
 You can check it following [this](#check-installtion) .
+
 Also, mis-configured RSP might cause unexpected allow, so the script above ([list_rsp.sh](../scripts/list-rsp.sh)) might be useful to check RSP configurations.
+
 If Integirty Shield and RSPs are correctly set up in the cluster, server container of integrity-shield-server Pod might log unexpected error, this should not be happened though.
+
 In this case, reporting issue with your log will be great help for us to improve Integrity Shield even more. We would really appreciate you if you could report any issue.
 
