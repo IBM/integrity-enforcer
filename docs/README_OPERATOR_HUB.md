@@ -62,7 +62,7 @@ kind: ResourceSigningProfile
 metadata:
   name: sample-rsp
 spec:
-  rules:
+  protectRules:
   - match:
     - kind: ConfigMap
     - kind: Deployment
