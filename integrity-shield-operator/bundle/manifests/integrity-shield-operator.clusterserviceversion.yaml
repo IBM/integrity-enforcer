@@ -52,7 +52,7 @@ metadata:
                   "name": "SampleSigner",
                   "subjects": [
                     {
-                      "email": "sample_signer@signer.com"
+                      "email": "*"
                     }
                   ]
                 }
