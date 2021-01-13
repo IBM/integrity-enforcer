@@ -198,7 +198,7 @@ Basically, RSPs in a certain namespace can be used only for protection of resour
 
 However, RSPs in Integrity Shield namespace (`integrity-shield-operator-system` by default) can be used as something like global configuration, so it can define any namespace rule.
 
-To see all RSPs in your cluster, you can use a [list_rsp.sh](../scripts/list-rsp.sh) (Use `jq` and `column` in the script)
+To see all RSPs in your cluster, you can use a [list_rsp.sh ](../scripts/list_rsp.sh) (Use `jq` and `column` in the script)
 
 ```
 $ ./scripts/list-rsp.sh
@@ -208,7 +208,7 @@ secure-ns                         sample-rsp              [{"match":[{"kind":"Po
 test-ns                           sample-clusterrole-rsp  [{"match":[{"kind":"ClusterRole"}]}]                                     null
 ```
 
-Additionally, if you are using ResourceSignature instead of annotation signature, you can list all ResourceSignatures in your cluster by a script [list_rsig.sh](../scripts/list-rsig.sh) . 
+Additionally, if you are using ResourceSignature instead of annotation signature, you can list all ResourceSignatures in your cluster by a script [list_rsig.sh ](../scripts/list_rsig.sh) . 
 
 This might be useful to solve some issues caused by mis-configured ResourceSignature.
 
