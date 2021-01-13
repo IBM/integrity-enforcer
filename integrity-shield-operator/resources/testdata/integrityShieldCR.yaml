@@ -107,7 +107,7 @@ spec:
     - keyConfig: sample-signer-keyconfig
       name: SampleSigner
       subjects:
-      - email: "*"
+      - email: '*'
   webhookClusterResource:
     apiGroups:
     - '*'
