@@ -1915,6 +1915,8 @@ spec:
                   type: string
                 iShieldAdminUserName:
                   type: string
+                iShieldCRName:
+                  type: string
                 iShieldResource:
                   type: string
                 iShieldResourceCondition:
