@@ -210,7 +210,3 @@ Also, mis-configured RSP might cause unexpected allow, so the script above ([lis
 If Integirty Shield and RSPs are correctly set up in the cluster, server container of integrity-shield-server Pod might log unexpected error, this should not be happened though.
 In this case, reporting issue with your log will be great help for us to improve Integrity Shield even more. We would really appreciate you if you could report any issue.
 
-
-
-You have defnied a RSP to protect some resources, but for some reasons, a corresponding resource has not been protected by Integrity Shiled.
-In this case, 
