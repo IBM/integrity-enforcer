@@ -208,7 +208,7 @@ secure-ns                         sample-rsp              [{"match":[{"kind":"Po
 test-ns                           sample-clusterrole-rsp  [{"match":[{"kind":"ClusterRole"}]}]                                     null
 ```
 
-Additionally, if you are using ResourceSignature instead of annotation signature, you can list all ResourceSignatures in your cluster by a script [list_ressig.sh](../scripts/list-rsig.sh) . 
+Additionally, if you are using ResourceSignature instead of annotation signature, you can list all ResourceSignatures in your cluster by a script [list_rsig.sh](../scripts/list-rsig.sh) . 
 
 This might be useful to solve some issues caused by mis-configured ResourceSignature.
 
