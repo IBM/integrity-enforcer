@@ -201,7 +201,7 @@ However, RSPs in Integrity Shield namespace (`integrity-shield-operator-system` 
 To see all RSPs in your cluster, you can use a [list_rsp.sh ](../scripts/list_rsp.sh) (Use `jq` and `column` in the script)
 
 ```
-$ ./scripts/list-rsp.sh
+$ ./scripts/list_rsp.sh
 NAMESPACE                         NAME                    RULES                                                                    TARGET_NAMESPACE
 integrity-shield-operator-system  global-rsp              [{"match":[{"kind":"Service"}]}]                                         {"exclude":["kube-*"],"include":["*"]}
 secure-ns                         sample-rsp              [{"match":[{"kind":"Pod"},{"kind":"ConfigMap"},{"kind":"Deployment"}]}]  null
@@ -213,7 +213,7 @@ Additionally, if you are using ResourceSignature instead of annotation signature
 This might be useful to solve some issues caused by mis-configured ResourceSignature.
 
 ```
-$ ./scripts/list-rsig.sh
+$ ./scripts/list_rsig.sh
 NAMESPACE  NAME                               SIGNED_OBJECT                           SIGNED_TIME(UTC)
 secure-ns  rsig-configmap-sample-cm           kind=ConfigMap,name=sample-cm           2021-01-13T10:52:38Z
 test-ns    rsig-deployment-sample-deployment  kind=Deployment,name=sample-deployment  2021-01-13T10:53:27Z
