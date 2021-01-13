@@ -35,7 +35,7 @@ IShield provides protection for Helm chart resources. To protect the Helm chart 
    metadata:
      name: ac-test-chart-rsp
    spec:
-     rules:
+     protectRules:
      - match:
        - kind: ServiceAccount
          name: sample-app-1-sample-chart
