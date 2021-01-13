@@ -229,12 +229,13 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	// verify signature
 	sigVerifyResult, err := verifier.Verify(rsig, reqc, signingProfile)
 	if err != nil {
+		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{
 			Allow:   false,
 			Checked: true,
 			Error: &common.CheckError{
 				Error:  err,
-				Reason: "Error during signature verification",
+				Reason: reasonFail,
 			},
 		}, nil
 	}

@@ -282,6 +282,26 @@ var _ = Describe("Test integrity shield", func() {
 			return nil
 		}, timeout, 1).Should(BeNil())
 	})
+	It("Handler Run Test (deny, secret-setup-error)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			var test2Config *config.ShieldConfig
+			tmp, _ := json.Marshal(testConfig)
+			_ = json.Unmarshal(tmp, &test2Config)
+			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/pgp/miss-configured-pubring"}
+			testHandler := NewHandler(test2Config)
+			changedReq := getChangedRequest(req)
+			resp := testHandler.Run(changedReq)
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "no verification keys are correctly loaded") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+			}
+			return nil
+		}, timeout, 5).Should(BeNil())
+	})
 	It("Handler Run Test (deny, signature-not-identical)", func() {
 		var timeout int = 10
 		Eventually(func() error {
