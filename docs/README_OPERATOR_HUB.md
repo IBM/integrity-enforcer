@@ -55,6 +55,8 @@ The steps for protecting resources include:
 
 You can define which resources should be protected with signature in a cluster by Integrity Shield. A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. Example below illustrates how to define RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. After this, any resources specified here cannot be created/updated without valid signature.
 
+Note:  Create a namespace `secure-ns` beforehand or change it another existing namespace.
+
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
 apiVersion: apis.integrityshield.io/v1alpha1
@@ -93,7 +95,7 @@ EOF
 ```
 
 
-run the command below for trying to create the configmap in `secure-ns` namespace without signature. You will see it is blocked because no signature for this resource is stored in the cluster.
+Run the command below for trying to create the configmap in `secure-ns` namespace without signature. You will see it is blocked because no signature for this resource is stored in the cluster.
 
 
 ```
@@ -148,7 +150,7 @@ configmap/test-cm created
 ```
 
 
-For detail configuration, consult the [Integrity Shield documentation](https://github.com/open-cluster-management/integrity-shield/tree/master/docs).
+For detail understanding, consult the [Integrity Shield documentation](https://github.com/open-cluster-management/integrity-shield/tree/master/docs).
 
 
 ## Supported Platforms
