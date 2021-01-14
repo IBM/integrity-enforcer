@@ -30,7 +30,7 @@ $ gpg --export signer@enterprise.com > /tmp/pubring.gpg
 $ oc create secret generic --save-config keyring-secret -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
 ```
 
-Default CR already includes signer configuration with file "pubring.gpg" and secret name "keyring-secret", so all you need is t
+Default CR already includes signer configuration with file "pubring.gpg" and secret name "keyring-secret", so all you need is to create a secret resource.
 
 
 ## How to protect resources with signature
