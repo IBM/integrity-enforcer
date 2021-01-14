@@ -29,7 +29,7 @@ Afer installing Integrity Shield on a cluster, you can protect any resources (cr
 
 For this, follow the steps:
 
-Step 1. How to define which reource(s) should be protected
+Step 1. How to define which resource(s) should be protected
 
 Step 2. How to check if resources are protected
 
