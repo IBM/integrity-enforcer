@@ -9,41 +9,32 @@ Integrity Shield's capabilities are
 - Perform all integrity verification on cluster (admission controller, not in client side)
 - Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 
-## Prerequisites
+## Two preparations below must be completed before installation.
 
-### Prepare namespace for installing Integrity Shield in a cluster.
+1. Prepare namespace "integrity-shield-operator-system" on cluster.
 
-You can deploy Integrity Shield to any namespace. For instance, create a namespace `integrity-shield-operator-system` in cluster to deploy Integrity Shield.
+2. Configure public key as secret on cluster.
 
-### Define public key secret in Integrity Shield
-
-Integrity Shield requires a secret that includes a pubkey ring for verifying signatures of resources that need to be protected. 
-
-You coud export a public key to a file as shown below. 
+As default, export public verification key to file "pubring.gpg" and create secret "keyring-secret" on cluster by the following command. (You can define any other name in CR if you want. See [doc](README_SIGNER_CONFIG.md))
 
 ```
 $ gpg --export signer@enterprise.com > /tmp/pubring.gpg
+
+$ oc create secret generic --save-config keyring-secret -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
 ```
 
-Then, you can create a secret that includes a pubkey ring for verifying signatures of resources in the cluster with the following command.
+## How to protect resources with signature
 
-```
-oc create secret generic --save-config keyring-secret  -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
-```
+Afer installing Integrity Shield on a cluster, you can protect any resources (creation and updates) on cluster with signature.
 
-## Protect Resources with Integrity Shield
+For this, the following steps must be followed.
+Step 1. How to define which reource(s) should be protected
+Step 2. How to check if resources are protected
+Step 3. How to create a resource with signature
 
-Once Integrity Shield is deployed to a cluster, you are ready to put resources on the cluster into signature-based protection.
+### Step 1. How to define which reource(s) should be protected
 
-### Define which reource(s) should be protected
-
-You can define which resources should be protected with signature in a cluster by Integrity Shield. 
-
-A custom resource `ResourceSigningProfile` (RSP) includes the definition and it is created in the same namespace as resources. 
-
-Example below illustrates how to define a RSP to protect three resources ConfigMap, Deployment, and Service in a namespace `secure-ns`. 
-
-After creating below RSP in cluster, the resources of kind ConfigMap, Deployment and Service in `secure-ns` cannot be created/updated without valid signature.
+Create a custom resource `ResourceSigningProfile` (RSP) that defines which resource(s) should be protected, in the same namespace as resources. 
 
 Note:  Create a namespace `secure-ns` beforehand or change it another existing namespace.
 
@@ -64,14 +55,12 @@ EOF
 resourcesigningprofile.apis.integrityshield.io/sample-rsp created
 ```
 
-See [Define Protected Resources](https://github.com/open-cluster-management/integrity-shield/blob/master/docs/README_FOR_RESOURCE_SIGNING_PROFILE.md) for detail specs.
+After creating the above RSP on cluster,  you can not create or update the resources of kind ConfigMap, Deployment and Service in `secure-ns` without valid signature.
 
 
-### Create a resource with signature
+### Step 2. How to check if resources are protected
 
-You cannot create a configmap without signature in `secure-ns` namespace. 
-
-Let's create a sample ConfigMap using the following command, which does not include any signature.
+After creating RSP as in Step 1, as an example, let's create a sample ConfigMap using the following command, which does not include any signature.
 
 ```
 cat << EOF > /tmp/test-cm.yaml
@@ -86,7 +75,7 @@ data:
 EOF
 ```
 
-Let's try to create the above sample ConfigMap in `secure-ns` namespace without signature as shown below. You will see Integrity Shield blocked it because no signature for this resource is stored in the cluster.
+Let's try to create the above sample ConfigMap in `secure-ns` namespace without signature as shown below. You will see creation of sample configmap is blocked because no signature for this resource is stored in the cluster.
 
 
 ```
@@ -94,7 +83,7 @@ $ oc create -f /tmp/test-cm.yaml -n secure-ns
 Error from server: error when creating "/tmp/test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature. (Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"61f4aabd-df4b-4d12-90e7-11a46ee28cb0","scope":"Namespaced","userName":"IAM#cluser-user"})
 ```
 
-Let's also check the Integrity Shield block events as follows:
+Let's also check the generated events in the cluster:
 
 ```
 $ oc get event --all-namespaces --field-selector type=IntegrityShield
@@ -102,7 +91,10 @@ NAMESPACE   LAST SEEN   TYPE              REASON         OBJECT              MES
 secure-ns   40s         IntegrityShield   no-signature   configmap/test-cm   [IntegrityShieldEvent] Result: deny, Reason: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.", Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"21244827-510f-484b-bbbd-4a5d262748e1","scope":"Namespaced","userName":"IAM#user-email"}
 
 ```
-Now, let's create a signature for the above sample ConfigMap resource (/tmp/test-cm.yaml) using the following script (Use [yq](https://github.com/mikefarah/yq) in the script)
+
+### Step 3. How to create a resource with signature
+
+Now, let's create a signature for the above sample ConfigMap resource (/tmp/test-cm.yaml) using the following script (Use [yq](https://github.com/mikefarah/yq) in the script), which must be executed in the same host where the public key is setup in preparations.
 
 ```
 $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-annotation-sign.sh | bash -s \
@@ -110,7 +102,7 @@ $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-sh
   /tmp/test-cm.yaml 
 ```
 
-Then, the above script would add signature, message annotations to the file `/tmp/test-cm.yaml` as shown below.
+The above script would add signature, message annotations to the file `/tmp/test-cm.yaml` as shown below.
 
 
 ```yaml
@@ -133,9 +125,6 @@ Now, let's try creating the sample ConfigMap with signature annotation. It shoul
 $ oc create -f /tmp/test-cm.yaml -n secure-ns
 configmap/test-cm created
 ```
-
-
-For detail understanding, consult the [Integrity Shield documentation](https://github.com/open-cluster-management/integrity-shield/tree/master/docs).
 
 
 ## Supported Platforms
