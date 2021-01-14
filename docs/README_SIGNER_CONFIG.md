@@ -63,7 +63,9 @@ spec:
 ```
 
 ### Configure Verification Key
-`secret` name must be specified for verifying signer subject configuration. This secret is also needed to be set in `keyConfig` in IShield CR. Here is the example to define multiple verification keys and multiple signers.
+`secret` name must be specified for verifying signer subject configuration. This secret is also needed to be set in `keyConfig` in IShield CR. You can also specify public key filename (e.g. "pubring-a.gpg", "pubring-b.gpg") which contains exported public verification key. 
+
+Here is the example to define multiple verification keys and multiple signers.
 
 ```yaml
 spec:
@@ -89,8 +91,10 @@ spec:
   keyConfig:
   - name: sample-verification-key-a
     secretName: keyring-secret-a
+    fileName: pubring-a.gpg
   - name: sample-verification-key-b
     secretName: keyring-secret-b
+    fileName: pubring-b.gpg
 ```
 
 
