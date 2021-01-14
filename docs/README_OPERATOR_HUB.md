@@ -11,9 +11,9 @@ Integrity Shield's capabilities are
 
 ## Two preparations below must be completed before installation.
 
-1. Prepare namespace "integrity-shield-operator-system" on cluster.
+1. Prepare a namespace "integrity-shield-operator-system" on cluster.
 
-2. Configure public key as secret on cluster.
+2. Configure a public key as secret on cluster.
 
 As default, export public verification key to file "pubring.gpg" and create secret "keyring-secret" on cluster by the following command. (You can define any other name in CR if you want. See [doc](README_SIGNER_CONFIG.md))
 
@@ -27,12 +27,15 @@ $ oc create secret generic --save-config keyring-secret -n integrity-shield-oper
 
 Afer installing Integrity Shield on a cluster, you can protect any resources (creation and updates) on cluster with signature.
 
-For this, the following steps must be followed.
+For this, follow the steps:
+
 Step 1. How to define which reource(s) should be protected
+
 Step 2. How to check if resources are protected
+
 Step 3. How to create a resource with signature
 
-### Step 1. How to define which reource(s) should be protected
+### Step 1. How to define which resource(s) should be protected
 
 Create a custom resource `ResourceSigningProfile` (RSP) that defines which resource(s) should be protected, in the same namespace as resources. 
 
