@@ -78,7 +78,7 @@ data:
 EOF
 ```
 
-Let's try to create the above sample ConfigMap in `secure-ns` namespace without signature as shown below. You will see creation of sample configmap is blocked because no signature for this resource is stored in the cluster.
+Let's try to create the above sample ConfigMap in `secure-ns` namespace without signature on cluster as shown below. You will see creation of sample configmap is blocked because no signature for this resource is stored in the cluster.
 
 
 ```
