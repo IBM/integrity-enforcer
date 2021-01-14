@@ -1,7 +1,7 @@
-# Integrity Shield
+# K8s Integrity Shield
 Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
 
-Integrity Shield's capabilities are
+K8s Integrity Shield's capabilities are
 
 - Allow to deploy authorized application pakcages only
 - Allow to use signed deployment params only
@@ -18,19 +18,17 @@ Two preparations on cluster below must be completed before installation.
 2. Create secret to register signature verification key.
 
 
-See the following example to register public verification key from your signing host. 
-
-As default, export public verification key to file "pubring.gpg" and create secret "keyring-secret" on cluster by the following command. (You can define any other name in CR if you want. See [doc](README_SIGNER_CONFIG.md))
+See the following example to register public verification key from your signing host. As default, export public verification key to file "pubring.gpg" and create secret "keyring-secret" on cluster by the following command. (You can define any other name in CR if you want. See [doc](README_SIGNER_CONFIG.md))
 
 ```
 # export key to file
 $ gpg --export signer@enterprise.com > /tmp/pubring.gpg
 
-
+# create a secret on cluster
 $ oc create secret generic --save-config keyring-secret -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
 ```
 
-Default CR already includes signer configuration with file "pubring.gpg" and secret name "keyring-secret", so all you need is to create a secret resource.
+Default CR already includes signer configuration with filename "pubring.gpg" and secret name "keyring-secret", so all you need is to create a secret resource.
 
 
 ## How to protect resources with signature
@@ -93,12 +91,12 @@ LAST SEEN   TYPE              REASON         OBJECT              MESSAGE
 
 ### How to sign a resource
 
-You can sign resources with the utility scripts, which is available from our repository. Two prerequisites for using the script on your host. 
+You can sign resources with the utility script, which is available from our repository. Two prerequisites for using the script on your host. 
 
 - [yq](https://github.com/mikefarah/yq) command is available. 
 - you can sign file with GPG signing key of the signer registered in preparations. 
 
-For example of singing a YAML file `/tmp/test-cm.yaml` as `signer@enterprise.com` For signing resources, 
+For example of singing a YAML file `/tmp/test-cm.yaml` as `signer@enterprise.com`, use the utility script as shown below. This script would modify the original input file (`/tmp/test-cm.yaml`) by adding signature, message annotations to it.
 
 ```
 $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-annotation-sign.sh | bash -s \
@@ -106,8 +104,7 @@ $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-sh
   /tmp/test-cm.yaml 
 ```
 
-The above script would modify the original input file (`/tmp/test-cm.yaml`) by adding signature, message annotations to it, as shown below.
-
+Below is the sample YAML file (`/tmp/test-cm.yaml`) with signature, message annotations.
 
 ```yaml
 apiVersion: v1
@@ -132,7 +129,7 @@ configmap/test-cm created
 
 ## Supported Platforms
 
-Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
+K8s Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
 We have verified the feasibility on the following platforms:
 
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
