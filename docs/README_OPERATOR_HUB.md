@@ -93,7 +93,7 @@ LAST SEEN   TYPE              REASON         OBJECT              MESSAGE
 
 ### How to sign a resource
 
-You can sign resources with the utility scripts, which is available from our repogisty. Two prerequisites for using the script on your host. 
+You can sign resources with the utility scripts, which is available from our repository. Two prerequisites for using the script on your host. 
 
 - [yq](https://github.com/mikefarah/yq) command is available. 
 - you can sign file with GPG signing key of the signer registered in preparations. 
@@ -106,7 +106,7 @@ $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-sh
   /tmp/test-cm.yaml 
 ```
 
-The above script would add signature, message annotations to the file `/tmp/test-cm.yaml` as shown below.
+The above script would modify the original input file (`/tmp/test-cm.yaml`) by adding signature, message annotations to it, as shown below.
 
 
 ```yaml
