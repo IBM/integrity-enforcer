@@ -86,8 +86,8 @@ Event is reported.
 
 ```
 $ oc get event -n secure-ns --field-selector type=IntegrityShield
-NAMESPACE   LAST SEEN   TYPE              REASON         OBJECT              MESSAGE
-secure-ns   40s         IntegrityShield   no-signature   configmap/test-cm   [IntegrityShieldEvent] Result: deny, Reason: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.", Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"21244827-510f-484b-bbbd-4a5d262748e1","scope":"Namespaced","userName":"IAM#user-email"}
+LAST SEEN   TYPE              REASON         OBJECT              MESSAGE
+65s         IntegrityShield   no-signature   configmap/test-cm   [IntegrityShieldEvent] Result: deny, Reason: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.", Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"46cf5fde-2b46-4819-b876-a2998043c8ef","scope":"Namespaced","userName":"IAM#cluser-user"}
 
 ```
 
