@@ -9,37 +9,37 @@ Integrity Shield's capabilities are
 - Perform all integrity verification on cluster (admission controller, not in client side)
 - Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
 
-## Two preparations below must be completed before installation.
+## Preparations before installation
 
-1. Prepare a namespace "integrity-shield-operator-system" on cluster.
+Two preparations on cluster below must be completed before installation.
 
-2. Configure a public key as secret on cluster.
+1. Create a namespace `integrity-shield-operator-system`.
+
+2. Create secret to register signature verification key.
+
+
+See the following example to register public verification key from your signing host. 
 
 As default, export public verification key to file "pubring.gpg" and create secret "keyring-secret" on cluster by the following command. (You can define any other name in CR if you want. See [doc](README_SIGNER_CONFIG.md))
 
 ```
+# export key to file
 $ gpg --export signer@enterprise.com > /tmp/pubring.gpg
+
 
 $ oc create secret generic --save-config keyring-secret -n integrity-shield-operator-system --from-file=/tmp/pubring.gpg
 ```
 
+Default CR already includes signer configuration with file "pubring.gpg" and secret name "keyring-secret", so all you need is t
+
+
 ## How to protect resources with signature
 
-Afer installing Integrity Shield on a cluster, you can protect any resources (creation and updates) on cluster with signature.
+After installation, you can configure cluster to protect resources from creation and changes without signature.
 
-For this, follow the steps:
+For enabling protection, create a custom resource `ResourceSigningProfile` (RSP) that defines which resource(s) should be protected, in the same namespace as resources. 
 
-Step 1. How to define which resource(s) should be protected
-
-Step 2. How to check if resources are protected
-
-Step 3. How to create a resource with signature
-
-### Step 1. How to define which resource(s) should be protected
-
-Create a custom resource `ResourceSigningProfile` (RSP) that defines which resource(s) should be protected, in the same namespace as resources. 
-
-Note:  Create a namespace `secure-ns` beforehand or change it another existing namespace.
+Here is an example of creating RSP for protecting resources in a namespace `secure-ns`.
 
 ```
 $ cat <<EOF | oc apply -n secure-ns -f -
@@ -58,12 +58,9 @@ EOF
 resourcesigningprofile.apis.integrityshield.io/sample-rsp created
 ```
 
-After creating the above RSP on cluster,  you can not create or update the resources of kind ConfigMap, Deployment and Service in `secure-ns` without valid signature.
+After creating the RSP above, any resources of kinds configmap, deployment, and service can not be created or modified without valid signature. 
 
-
-### Step 2. How to check if resources are protected
-
-After creating RSP as in Step 1, as an example, let's create a sample ConfigMap using the following command, which does not include any signature.
+For example, let's see what happens when creating configmap below without signature. 
 
 ```
 cat << EOF > /tmp/test-cm.yaml
@@ -78,26 +75,30 @@ data:
 EOF
 ```
 
-Let's try to create the above sample ConfigMap in `secure-ns` namespace without signature on cluster as shown below. You will see creation of sample configmap is blocked because no signature for this resource is stored in the cluster.
-
+Creation of configmap is blocked, since no signature is attached to it. 
 
 ```
-$ oc create -f /tmp/test-cm.yaml -n secure-ns
+$ oc apply -f /tmp/test-cm.yaml -n secure-ns
 Error from server: error when creating "/tmp/test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature. (Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"61f4aabd-df4b-4d12-90e7-11a46ee28cb0","scope":"Namespaced","userName":"IAM#cluser-user"})
 ```
 
-Let's also check the generated events in the cluster:
+Event is reported. 
 
 ```
-$ oc get event --all-namespaces --field-selector type=IntegrityShield
+$ oc get event -n secure-ns --field-selector type=IntegrityShield
 NAMESPACE   LAST SEEN   TYPE              REASON         OBJECT              MESSAGE
 secure-ns   40s         IntegrityShield   no-signature   configmap/test-cm   [IntegrityShieldEvent] Result: deny, Reason: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.", Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"21244827-510f-484b-bbbd-4a5d262748e1","scope":"Namespaced","userName":"IAM#user-email"}
 
 ```
 
-### Step 3. How to create a resource with signature
+### How to sign a resource
 
-Now, let's create a signature for the above sample ConfigMap resource (/tmp/test-cm.yaml) using the following script (Use [yq](https://github.com/mikefarah/yq) in the script), which must be executed in the same host where the public key is setup in preparations.
+You can sign resources with the utility scripts, which is available from our repogisty. Two prerequisites for using the script on your host. 
+
+- [yq](https://github.com/mikefarah/yq) command is available. 
+- you can sign file with GPG signing key of the signer registered in preparations. 
+
+For example of singing a YAML file `/tmp/test-cm.yaml` as `signer@enterprise.com` For signing resources, 
 
 ```
 $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-annotation-sign.sh | bash -s \
@@ -122,13 +123,12 @@ data:
   key4: val4
 ```
 
-Now, let's try creating the sample ConfigMap with signature annotation. It should be successful this time because a corresponding signature is attached in the resource file.
+Creating configmap with this YAML file should be successful because signature in annotation is valid.
 
 ```
 $ oc create -f /tmp/test-cm.yaml -n secure-ns
 configmap/test-cm created
 ```
-
 
 ## Supported Platforms
 
