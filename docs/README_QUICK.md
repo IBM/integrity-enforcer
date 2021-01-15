@@ -247,21 +247,7 @@ configmap/test-cm created
 ```
 
 
-Integrity Shield reports all events that were denied by Integrity Shield itself. 
-After the above steps, you can see a denied event as Kubernetes Event like below.
-
-```
-$ oc get event -n secure-ns --field-selector type=IntegrityShield
-
-LAST SEEN   TYPE              REASON         OBJECT                MESSAGE
-27s         IntegrityShield   no-signature   configmap/test-cm   [IntegrityShieldEvent] Result: deny, Reason: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.", Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"cfea7d34-0bf0-4e6a-9b59-e53290e02e67","scope":"Namespaced","userName":"kubernetes-admin"}
-
-```
-
-For more detail about how to see these events or how to check Integrity Shield's working, see [Check and Troubleshooting](README_CHECK_AND_TROUBLESHOOTING.md).
-
-
-<!-- You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
+Integrity Shield generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
 
 If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../scripts/log_logging.sh).
 ```json
@@ -319,7 +305,7 @@ If you want to see the result of admission check, you can see the detail by usin
   "userName": "IAM#sample_signer@enterprise.com",
   "verified": false
 }
-``` -->
+```
 
 ### Clean up Integrity Shield from the cluster
 
