@@ -89,32 +89,27 @@ func (self *Handler) Check() *DecisionResult {
 	if !dr.isUndetermined() {
 		return dr
 	}
-
-	self.logEntry()
 	self.logInScope = true
 
 	dr = formatCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
-		self.logExit()
+
 		return dr
 	}
 
 	dr = iShieldResourceCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
-		self.logExit()
 		return dr
 	}
 
 	dr = deleteCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
-		self.logExit()
 		return dr
 	}
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	dr, matchedProfiles = protectedCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
-		self.logExit()
 		return dr
 	}
 
@@ -124,7 +119,6 @@ func (self *Handler) Check() *DecisionResult {
 			// this RSP allowed the request. will check next RSP.
 		} else {
 			// this RSP denied the request. return the result and will make AdmissionResponse.
-			self.logExit()
 			return dr
 		}
 	}
@@ -174,6 +168,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 // load resoruces / set default values
 func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
+
 	self.ctx = InitCheckContext(self.config)
 
 	reqNamespace := getRequestNamespace(req)
@@ -181,12 +176,16 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 	// init ReqContext
 	self.reqc = common.NewReqContext(req)
 
+	// set request UID in logger special field
+	logger.AddValueToListField("requestUID", string(req.UID))
+	// init session logger
+	logger.InitSessionLogger(self.reqc.Namespace, self.reqc.Name, self.reqc.ResourceRef().ApiVersion, self.reqc.Kind, self.reqc.Operation)
+	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires SessionLogger and ReqContext.
+	self.logEntry()
+
 	runDataLoader := NewLoader(self.config, reqNamespace)
 	self.data.loader = runDataLoader
 	self.data.Init(self.reqc, self.config.Namespace)
-
-	// init session logger
-	logger.InitSessionLogger(self.reqc.Namespace, self.reqc.Name, self.reqc.ResourceRef().ApiVersion, self.reqc.Kind, self.reqc.Operation)
 
 	return &DecisionResult{Type: common.DecisionUndetermined}
 }
@@ -223,21 +222,22 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 }
 
 func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
-	if !resp.Allowed {
-		return
+	if resp.Allowed {
+		resetRuleTableCache := false
+		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
+		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
+		if self.reqc.Kind == "Namespace" {
+			resetRuleTableCache = true
+		} else if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
+			resetRuleTableCache = true
+		}
+		if resetRuleTableCache {
+			// if namespace/RSP request is allowed, then reset cache for RuleTable (RSP list & NS list).
+			self.data.resetRuleTableCache()
+		}
 	}
-	resetRuleTableCache := false
-	iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
-	iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
-	if self.reqc.Kind == "Namespace" {
-		resetRuleTableCache = true
-	} else if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
-		resetRuleTableCache = true
-	}
-	if resetRuleTableCache {
-		// if namespace/RSP request is allowed, then reset cache for RuleTable (RSP list & NS list).
-		self.data.resetRuleTableCache()
-	}
+	self.logExit()
+	logger.RemoveValueFromListField("requestUID", self.reqc.RequestUid)
 	return
 }
 
