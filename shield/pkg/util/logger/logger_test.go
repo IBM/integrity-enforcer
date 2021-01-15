@@ -52,4 +52,9 @@ func TestLogger(t *testing.T) {
 
 	ctxLogger.SendLog([]byte(`this is test context log`))
 	ctxLogger.sizeCheckAndRotate()
+
+	AddValueToListField("key", "val1")
+	AddValueToListField("key", "val2")
+	RemoveValueFromListField("key-alt", "val-alt")
+	RemoveValueFromListField("key", "val2")
 }

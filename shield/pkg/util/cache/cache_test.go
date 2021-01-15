@@ -18,6 +18,7 @@ package cache
 
 import (
 	"testing"
+	"time"
 )
 
 func TestCacheFunctions(t *testing.T) {
@@ -40,12 +41,19 @@ func TestCacheFunctions(t *testing.T) {
 		t.Errorf("key `%s` should not exist after unset()", testKeyStr)
 	}
 
-	Set(testKeyStr, testValInt, nil)
+	oneSec := time.Second * 1
+	Set(testKeyStr, testValInt, &oneSec)
 	valIf := Get(testKeyStr)
 	if valInt, ok := valIf.(int); !ok {
 		t.Errorf("val for key `%s` should be int", testKeyStr)
 	} else if valInt != testValInt {
 		t.Errorf("\nexpected: %d\nactual: %d", testValInt, valInt)
+	}
+
+	time.Sleep(time.Second * 2)
+	valIf2 := Get(testKeyStr)
+	if _, ok := valIf2.(int); ok {
+		t.Errorf("val for key `%s` should be unset after TTL", testKeyStr)
 	}
 
 }

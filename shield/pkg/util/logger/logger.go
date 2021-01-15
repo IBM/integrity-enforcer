@@ -18,6 +18,7 @@ package logger
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -207,4 +208,55 @@ func Trace(args ...interface{}) {
 
 func WithFields(fields log.Fields) *log.Entry {
 	return ServerLogger.WithFields(fields)
+}
+
+func AddValueToListField(key, val string) {
+	data := map[string]interface{}(ServerLogger.Data)
+	current := data[key]
+	if current == nil {
+		current = "[]"
+	}
+	currentStr, ok := current.(string)
+	if !ok {
+		current = "[]"
+	}
+	var currentList []string
+	err := json.Unmarshal([]byte(currentStr), &currentList)
+	if err != nil {
+		currentList = []string{}
+	}
+	currentList = append(currentList, val)
+	newStr, err := json.Marshal(currentList)
+	if err != nil {
+		newStr = []byte("[]")
+	}
+	ServerLogger = ServerLogger.WithFields(log.Fields{key: string(newStr)})
+}
+
+func RemoveValueFromListField(key, val string) {
+	data := map[string]interface{}(ServerLogger.Data)
+	current := data[key]
+	if current == nil {
+		current = "[]"
+	}
+	currentStr, ok := current.(string)
+	if !ok {
+		current = "[]"
+	}
+	var currentList []string
+	err := json.Unmarshal([]byte(currentStr), &currentList)
+	if err != nil {
+		currentList = []string{}
+	}
+	newList := []string{}
+	for _, v := range currentList {
+		if v != val {
+			newList = append(newList, v)
+		}
+	}
+	newStr, err := json.Marshal(newList)
+	if err != nil {
+		newStr = []byte("[]")
+	}
+	ServerLogger = ServerLogger.WithFields(log.Fields{key: string(newStr)})
 }

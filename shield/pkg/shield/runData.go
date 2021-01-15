@@ -74,35 +74,44 @@ func (self *RunData) GetNSList() []v1.Namespace {
 	return self.NSList
 }
 
-func (self *RunData) setRuleTable(shieldNamespace string) {
+func (self *RunData) setRuleTable(shieldNamespace string) bool {
+	updated := false
 	ruleTable := NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
 	if ruleTable != nil && !ruleTable.IsEmpty() {
 		self.ruleTable = ruleTable
+		updated = true
 	}
+	return updated
 }
 
 func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 	rspReloaded := false
 	nsReloaded := false
+	var tmpRSPList []rspapi.ResourceSigningProfile
+	var tmpNSList []v1.Namespace
 	if self.loader != nil {
-		var tmpRSPList []rspapi.ResourceSigningProfile
-		var tmpNSList []v1.Namespace
 		tmpRSPList, rspReloaded = self.loader.RSP.GetData(true)
 		tmpNSList, nsReloaded = self.loader.Namespace.GetData(true)
-		if rspReloaded {
+		if rspReloaded || len(tmpRSPList) > 0 {
 			self.RSPList = tmpRSPList
 		}
-		if nsReloaded {
+		if nsReloaded || len(tmpNSList) > 0 {
 			self.NSList = tmpNSList
 		}
 	}
 	if self.ruleTable == nil || self.ruleTable.IsEmpty() || rspReloaded || nsReloaded {
-		self.setRuleTable(shieldNamespace)
+		rtInited := self.setRuleTable(shieldNamespace)
+		if rtInited {
+			// logger.Trace("RuleTable is updated.")
+		}
 	}
 
-	if self.ruleTable == nil {
+	if self.ruleTable == nil || self.ruleTable.IsEmpty() {
 		rspBytes, _ := json.Marshal(self.RSPList)
-		logger.Trace("RuleTable is nil; RunData.RSPList: ", string(rspBytes))
+		tmpRSPBytes, _ := json.Marshal(tmpRSPList)
+		nsBytes, _ := json.Marshal(self.NSList)
+		tmpNSBytes, _ := json.Marshal(tmpNSList)
+		logger.Trace("RuleTable is nil; RunData.RSPList: ", string(rspBytes), "RunData.NSList: ", string(nsBytes), "rspReloaded: ", rspReloaded, "nsReloaded: ", nsReloaded, "tmpRSPList: ", string(tmpRSPBytes), "tmpNSList: ", string(tmpNSBytes))
 	}
 	return self.ruleTable
 }
@@ -112,7 +121,10 @@ func (self *RunData) Init(reqc *common.ReqContext, shieldNamespace string) {
 	// self.GetResSigList(reqc)
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)
-	self.setRuleTable(shieldNamespace)
+	rtInited := self.setRuleTable(shieldNamespace)
+	if rtInited {
+		// logger.Trace("RuleTable is initialized.")
+	}
 	return
 }
 
