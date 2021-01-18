@@ -130,7 +130,6 @@ func (self *Handler) Check() *DecisionResult {
 			Message:    "IntegrityShield failed to decide a response for this request.",
 		}
 	}
-	self.logExit()
 	return dr
 }
 
@@ -177,7 +176,7 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 	self.reqc = common.NewReqContext(req)
 
 	// set request UID in logger special field
-	logger.AddValueToListField("requestUID", string(req.UID))
+	logger.AddValueToListField("ongoingReqUIDs", string(req.UID))
 	// init session logger
 	logger.InitSessionLogger(self.reqc.Namespace, self.reqc.Name, self.reqc.ResourceRef().ApiVersion, self.reqc.Kind, self.reqc.Operation)
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires SessionLogger and ReqContext.
@@ -227,7 +226,15 @@ func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
 		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
 		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
 		if self.reqc.Kind == "Namespace" {
-			resetRuleTableCache = true
+			if self.reqc.IsUpdateRequest() {
+				mtResult, _ := MutationCheck(self.reqc)
+				if mtResult != nil && mtResult.IsMutated {
+					logger.Debug("[DEBUG] namespace mutation: ", mtResult.Diff)
+					resetRuleTableCache = true
+				}
+			} else {
+				resetRuleTableCache = true
+			}
 		} else if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
 			resetRuleTableCache = true
 		}
@@ -237,7 +244,7 @@ func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
 		}
 	}
 	self.logExit()
-	logger.RemoveValueFromListField("requestUID", self.reqc.RequestUid)
+	logger.RemoveValueFromListField("ongoingReqUIDs", self.reqc.RequestUid)
 	return
 }
 
@@ -245,7 +252,9 @@ func (self *Handler) logEntry() {
 	if ok, level := self.config.ConsoleLogEnabled(self.reqc); ok {
 		logger.SetLogLevel(level) // set custom log level for this request
 		sLogger := logger.GetSessionLogger()
-		sLogger.Trace("New Admission Request Received")
+		sLogger.WithFields(log.Fields{
+			"requestUID": self.reqc.RequestUid,
+		}).Trace("New Admission Request Received")
 	}
 }
 
@@ -271,8 +280,9 @@ func (self *Handler) logExit() {
 	if ok, _ := self.config.ConsoleLogEnabled(self.reqc); ok {
 		sLogger := logger.GetSessionLogger()
 		sLogger.WithFields(log.Fields{
-			"allowed": self.ctx.Allow,
-			"aborted": self.ctx.Aborted,
+			"allowed":    self.ctx.Allow,
+			"aborted":    self.ctx.Aborted,
+			"requestUID": self.reqc.RequestUid,
 		}).Trace("New Admission Request Sent")
 		logger.SetLogLevel(self.config.Log.LogLevel) // set default log level again
 	}

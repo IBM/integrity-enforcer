@@ -77,7 +77,7 @@ func (self *RunData) GetNSList() []v1.Namespace {
 func (self *RunData) setRuleTable(shieldNamespace string) bool {
 	updated := false
 	ruleTable := NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
-	if ruleTable != nil && !ruleTable.IsEmpty() {
+	if ruleTable != nil && !ruleTable.IsEmpty() && !ruleTable.IsTargetEmpty() {
 		self.ruleTable = ruleTable
 		updated = true
 	}
@@ -99,14 +99,14 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 			self.NSList = tmpNSList
 		}
 	}
-	if self.ruleTable == nil || self.ruleTable.IsEmpty() || rspReloaded || nsReloaded {
+	if self.ruleTable == nil || self.ruleTable.IsEmpty() || self.ruleTable.IsTargetEmpty() || rspReloaded || nsReloaded {
 		rtInited := self.setRuleTable(shieldNamespace)
 		if rtInited {
 			// logger.Trace("RuleTable is updated.")
 		}
 	}
 
-	if self.ruleTable == nil || self.ruleTable.IsEmpty() {
+	if self.ruleTable == nil || self.ruleTable.IsEmpty() || self.ruleTable.IsTargetEmpty() {
 		rspBytes, _ := json.Marshal(self.RSPList)
 		tmpRSPBytes, _ := json.Marshal(tmpRSPList)
 		nsBytes, _ := json.Marshal(self.NSList)
