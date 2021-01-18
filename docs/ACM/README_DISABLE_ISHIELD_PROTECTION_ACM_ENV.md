@@ -26,13 +26,10 @@ You will use `policy-integrity-shield` to disable Integrity Shield protection in
           apiVersion: policy.open-cluster-management.io/v1
           kind: ConfigurationPolicy
           metadata:
-            name: integrity-cr-policy
+            name: policy-integrity-shield-cr
           spec:
             remediationAction: enforce 
             severity: high
-            namespaceSelector:
-              exclude: ["kube-*"]
-              include: ["integrity-shield-operator-system"]
             object-templates:
             - complianceType: mustnothave <<CHANGED FROM musthave>>
               objectDefinition:
@@ -50,7 +47,7 @@ You will use `policy-integrity-shield` to disable Integrity Shield protection in
 
     Use the utility script [gpg-annotation-sign.sh](https://github.com/open-cluster-management/integrity-shield/blob/master/scripts/gpg-annotation-sign.sh) for signing updated `policy-integrity-shield` to be deployed to an ACM managed cluster.
 
-      The following example shows how to use the utility script [gpg-annotation-sign.sh] to append signature annotations to `policy-integrity-shield.yaml`, with the following parameters:
+      The following example shows how to use the utility script `gpg-annotation-sign.sh` to append signature annotations to `policy-integrity-shield.yaml`, with the following parameters:
       - `signer@enterprise.com` - The default `signer` email, or change it to your own `signer` email.
       - `CM-Configuration-Management/policy-integrity-shield.yaml` - the relative path of the updated policy file `policy-integrity-shield.yaml`
 
@@ -85,13 +82,10 @@ You will use `policy-integrity-shield` to disable Integrity Shield protection in
       apiVersion: policy.open-cluster-management.io/v1
       kind: ConfigurationPolicy
       metadata:
-        name: integrity-namespace-policy
+        name: policy-integrity-shield-namespace
       spec:
         remediationAction: enforce
         severity: High
-        namespaceSelector:
-          exclude: ["kube-*"]
-          include: ["default"]
         object-templates:
         - complianceType: mustnothave  <<CHANGED FROM musthave>>
           objectDefinition:
@@ -124,7 +118,7 @@ You will use `policy-integrity-shield` to disable Integrity Shield protection in
          apiVersion: apps.open-cluster-management.io/v1
          kind: PlacementRule
          metadata:
-           name: placement-integrity-policy
+           name: placement-policy-integrity-shield
          spec:
            clusterConditions:
            - status: "True"
