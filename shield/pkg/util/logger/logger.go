@@ -17,13 +17,9 @@
 package logger
 
 import (
-	"bytes"
-	"encoding/json"
 	"os"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,43 +29,31 @@ type LoggerConfig struct {
 	FileDest string
 }
 
-var ServerLoggerLogger *log.Logger
-var ServerLogger *log.Entry
-var SessionTrace *SessionTraceHook
-var SessionLogger *log.Entry
+// NOTE: this singleton logger should be used only for simple log messages
+// for detail logs while handling a certain request, Handler.Logger should be used instead.
+var simpleLogger *log.Logger
 
-func GetServerLogger() *log.Entry {
-	return ServerLogger
+func init() {
+	simpleLogger = log.New()
+	simpleLogger.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
 }
 
-func GetSessionLogger() *log.Entry {
-	return SessionLogger
-}
+// func (self *Logger) GetSessionTraceString() string {
+// 	return self.SessionTrace.GetBufferedString()
+// }
 
-func GetSessionTraceString() string {
-	return SessionTrace.GetBufferedString()
-}
+// func InitSessionLogger(namespace, name, apiVersion, kind, operation string) {
+// 	// SessionTrace.Reset()
+// 	SessionLogger = ServerLogger.WithFields(log.Fields{
+// 		"namespace":  namespace,
+// 		"name":       name,
+// 		"apiVersion": apiVersion,
+// 		"kind":       kind,
+// 		"operation":  operation,
+// 	})
+// }
 
-func InitServerLogger(config LoggerConfig) {
-	ServerLoggerLogger = newLogger(config)
-	sessionTraceHook := NewSessionTraceHook(logrus.TraceLevel, &log.TextFormatter{})
-	SessionTrace = sessionTraceHook
-	ServerLoggerLogger.AddHook(sessionTraceHook)
-	ServerLogger = ServerLoggerLogger.WithField("loggerUID", uuid.New().String())
-}
-
-func InitSessionLogger(namespace, name, apiVersion, kind, operation string) {
-	SessionTrace.Reset()
-	SessionLogger = ServerLogger.WithFields(log.Fields{
-		"namespace":  namespace,
-		"name":       name,
-		"apiVersion": apiVersion,
-		"kind":       kind,
-		"operation":  operation,
-	})
-}
-
-func newLogger(conf LoggerConfig) *log.Logger {
+func NewLogger(conf LoggerConfig) *log.Logger {
 
 	logger := log.New()
 
@@ -87,7 +71,6 @@ func newLogger(conf LoggerConfig) *log.Logger {
 		}
 	}
 	logger.SetLevel(logLevel)
-
 	if conf.FileDest != "" {
 		file, err := os.OpenFile(conf.FileDest, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640) // NOSONAR
 		if err == nil {
@@ -98,7 +81,6 @@ func newLogger(conf LoggerConfig) *log.Logger {
 	} else {
 		logger.Out = os.Stdout
 	}
-
 	return logger
 }
 
@@ -122,141 +104,34 @@ func GetGreaterLevel(lvStr1, lvStr2 string) string {
 	}
 }
 
-func SetLogLevel(levelString string) {
-	if levelString != "" {
-		level, err := log.ParseLevel(levelString)
-		if err != nil {
-			ServerLogger.Info("Failed to parse log level, using info level")
-		} else {
-			ServerLoggerLogger.SetLevel(level)
-		}
-	}
-}
-
-/*
-   Hook for Logging to Buffer
-*/
-
-type SessionTraceHook struct {
-	writer    *bytes.Buffer
-	minLevel  logrus.Level
-	formatter logrus.Formatter
-}
-
-func (hook *SessionTraceHook) Reset() {
-	(*hook.writer).Reset()
-}
-
-func (hook *SessionTraceHook) GetBufferedString() string {
-	s := (*hook.writer).String()
-	hook.Reset()
-	return s
-}
-
-func NewSessionTraceHook(minLevel logrus.Level, formatter logrus.Formatter) *SessionTraceHook {
-	return &SessionTraceHook{
-		writer:    &bytes.Buffer{},
-		minLevel:  minLevel,
-		formatter: formatter,
-	}
-}
-
-func (hook *SessionTraceHook) Fire(entry *logrus.Entry) error {
-
-	msg, err := hook.formatter.Format(entry)
-	if err != nil {
-		return err
-	}
-
-	if hook.writer != nil {
-		_, err = (*hook.writer).Write([]byte(msg))
-	}
-	return err
-}
-
-func (hook *SessionTraceHook) Levels() []logrus.Level {
-	return logrus.AllLevels[:hook.minLevel+1]
-}
-
 func Panic(args ...interface{}) {
-	ServerLogger.Panic(args...)
+	simpleLogger.Panic(args...)
 }
 
 func Fatal(args ...interface{}) {
-	ServerLogger.Fatal(args...)
+	simpleLogger.Fatal(args...)
 }
 
 func Error(args ...interface{}) {
-	ServerLogger.Error(args...)
+	simpleLogger.Error(args...)
 }
 
 func Warn(args ...interface{}) {
-	ServerLogger.Warn(args...)
+	simpleLogger.Warn(args...)
 }
 
 func Info(args ...interface{}) {
-	ServerLogger.Info(args...)
+	simpleLogger.Info(args...)
 }
 
 func Debug(args ...interface{}) {
-	ServerLogger.Debug(args...)
+	simpleLogger.Debug(args...)
 }
 
 func Trace(args ...interface{}) {
-	ServerLogger.Trace(args...)
+	simpleLogger.Trace(args...)
 }
 
 func WithFields(fields log.Fields) *log.Entry {
-	return ServerLogger.WithFields(fields)
-}
-
-func AddValueToListField(key, val string) {
-	data := map[string]interface{}(ServerLogger.Data)
-	current := data[key]
-	if current == nil {
-		current = "[]"
-	}
-	currentStr, ok := current.(string)
-	if !ok {
-		current = "[]"
-	}
-	var currentList []string
-	err := json.Unmarshal([]byte(currentStr), &currentList)
-	if err != nil {
-		currentList = []string{}
-	}
-	currentList = append(currentList, val)
-	newStr, err := json.Marshal(currentList)
-	if err != nil {
-		newStr = []byte("[]")
-	}
-	ServerLogger = ServerLogger.WithFields(log.Fields{key: string(newStr)})
-}
-
-func RemoveValueFromListField(key, val string) {
-	data := map[string]interface{}(ServerLogger.Data)
-	current := data[key]
-	if current == nil {
-		current = "[]"
-	}
-	currentStr, ok := current.(string)
-	if !ok {
-		current = "[]"
-	}
-	var currentList []string
-	err := json.Unmarshal([]byte(currentStr), &currentList)
-	if err != nil {
-		currentList = []string{}
-	}
-	newList := []string{}
-	for _, v := range currentList {
-		if v != val {
-			newList = append(newList, v)
-		}
-	}
-	newStr, err := json.Marshal(newList)
-	if err != nil {
-		newStr = []byte("[]")
-	}
-	ServerLogger = ServerLogger.WithFields(log.Fields{key: string(newStr)})
+	return simpleLogger.WithFields(fields)
 }

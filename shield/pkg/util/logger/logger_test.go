@@ -33,13 +33,8 @@ func init() {
 }
 
 func TestLogger(t *testing.T) {
-	InitServerLogger(logConfig)
-	InitSessionLogger("test-ns", "test-cm", "v1", "ConfigMap", "CREATE")
-	InitContextLogger(ctxLogConfig)
 
-	ctxLogger := GetContextLogger()
-	_ = GetServerLogger()
-	_ = GetSessionLogger()
+	ctxLogger := InitContextLogger(ctxLogConfig)
 
 	Error("test error")
 	Warn("test warn")
@@ -47,14 +42,7 @@ func TestLogger(t *testing.T) {
 	Debug("test debug")
 	Trace("test trace")
 
-	sessionLogs := GetSessionTraceString()
-	t.Logf("sessionLogs: %s", sessionLogs)
-
 	ctxLogger.SendLog([]byte(`this is test context log`))
 	ctxLogger.sizeCheckAndRotate()
 
-	AddValueToListField("key", "val1")
-	AddValueToListField("key", "val2")
-	RemoveValueFromListField("key-alt", "val-alt")
-	RemoveValueFromListField("key", "val2")
 }

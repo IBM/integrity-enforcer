@@ -27,6 +27,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 	v1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
-	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	scc "github.com/openshift/api/security/v1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -141,6 +142,22 @@ func TestHandler(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
+func getTestLogger(testReq *v1beta1.AdmissionRequest, testConf *config.ShieldConfig) (*log.Logger, *log.Entry) {
+	gv := metav1.GroupVersion{Group: testReq.Kind.Group, Version: testReq.Kind.Version}
+	metaLogger := logger.NewLogger(testConf.LoggerConfig())
+	reqLog := metaLogger.WithFields(
+		log.Fields{
+			"namespace":  testReq.Namespace,
+			"name":       testReq.Name,
+			"apiVersion": gv.String(),
+			"kind":       testReq.Kind,
+			"operation":  testReq.Operation,
+			"requestUID": string(testReq.UID),
+		},
+	)
+	return metaLogger, reqLog
+}
+
 var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
@@ -180,9 +197,6 @@ var _ = BeforeSuite(func(done Done) {
 	err = json.Unmarshal(reqBytes, &req)
 	Expect(err).Should(BeNil())
 	Expect(req).ToNot(BeNil())
-
-	logger.InitServerLogger(testConfig.LoggerConfig())
-	logger.InitContextLogger(testConfig.ContextLoggerConfig())
 
 	err = k8sClient.Create(context.Background(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testConfig.Namespace}})
 	Expect(err).Should(BeNil())
@@ -238,7 +252,8 @@ var _ = Describe("Test integrity shield", func() {
 	It("Handler Run Test (allow, no-mutation)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			testHandler := NewHandler(testConfig)
+			metaLogger, reqLog := getTestLogger(req, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
 			resp := testHandler.Run(req)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -253,8 +268,9 @@ var _ = Describe("Test integrity shield", func() {
 	It("Handler Run Test (deny, validatiion-fail-rsp)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			testHandler := NewHandler(testConfig)
 			invalidRSPReq := getInvalidRSPRequest(req)
+			metaLogger, reqLog := getTestLogger(invalidRSPReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
 			resp := testHandler.Run(invalidRSPReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -269,8 +285,9 @@ var _ = Describe("Test integrity shield", func() {
 	It("Handler Run Test (deny, validatiion-fail-signerconfig)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			testHandler := NewHandler(testConfig)
 			invalidSConfReq := getInvalidSignerConfigRequest(req)
+			metaLogger, reqLog := getTestLogger(invalidSConfReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
 			resp := testHandler.Run(invalidSConfReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -285,12 +302,13 @@ var _ = Describe("Test integrity shield", func() {
 	It("Handler Run Test (deny, secret-setup-error)", func() {
 		var timeout int = 10
 		Eventually(func() error {
+			changedReq := getChangedRequest(req)
 			var test2Config *config.ShieldConfig
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
 			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/pgp/miss-configured-pubring"}
-			testHandler := NewHandler(test2Config)
-			changedReq := getChangedRequest(req)
+			metaLogger, reqLog := getTestLogger(changedReq, test2Config)
+			testHandler := NewHandler(test2Config, metaLogger, reqLog)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -305,8 +323,9 @@ var _ = Describe("Test integrity shield", func() {
 	It("Handler Run Test (deny, signature-not-identical)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			testHandler := NewHandler(testConfig)
 			changedReq := getChangedRequest(req)
+			metaLogger, reqLog := getTestLogger(changedReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))

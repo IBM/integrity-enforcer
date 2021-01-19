@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
 const (
@@ -55,8 +54,6 @@ func init() {
 	var config *config.ShieldConfig
 	configBytes, _ := ioutil.ReadFile(testFileName(testConfigFile, 0))
 	_ = json.Unmarshal(configBytes, &config)
-	logger.InitContextLogger(config.ContextLoggerConfig())
-	logger.InitServerLogger(config.LoggerConfig())
 }
 
 func testFileName(fname string, num int) string {

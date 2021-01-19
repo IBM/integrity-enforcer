@@ -18,13 +18,7 @@ package mapnode
 import (
 	"encoding/json"
 	"testing"
-
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
-
-func init() {
-	logger.InitServerLogger(logger.LoggerConfig{Level: "trace", Format: "json"})
-}
 
 func TestNode(t *testing.T) {
 	testMapBytes := []byte(`{

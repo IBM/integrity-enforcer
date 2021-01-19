@@ -49,8 +49,6 @@ func init() {
 
 	config = NewConfig()
 	config.InitShieldConfig()
-	logger.InitContextLogger(config.ShieldConfig.ContextLoggerConfig())
-	logger.InitServerLogger(config.ShieldConfig.LoggerConfig())
 	logger.Info("Integrity Shield has been started.")
 
 	cfgBytes, _ := json.Marshal(config)
@@ -60,13 +58,21 @@ func init() {
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 
-	renew := config.InitShieldConfig()
-	if renew {
-		logger.InitContextLogger(config.ShieldConfig.ContextLoggerConfig())
-		logger.InitServerLogger(config.ShieldConfig.LoggerConfig())
-	}
+	_ = config.InitShieldConfig()
 
-	reqHandler := shield.NewHandler(config.ShieldConfig)
+	gv := metav1.GroupVersion{Group: admissionReviewReq.Request.Kind.Group, Version: admissionReviewReq.Request.Kind.Version}
+	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+	reqLog := metaLogger.WithFields(
+		log.Fields{
+			"namespace":  admissionReviewReq.Request.Namespace,
+			"name":       admissionReviewReq.Request.Name,
+			"apiVersion": gv.String(),
+			"kind":       admissionReviewReq.Request.Kind,
+			"operation":  admissionReviewReq.Request.Operation,
+			"requestUID": string(admissionReviewReq.Request.UID),
+		},
+	)
+	reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, reqLog)
 	admissionRequest := admissionReviewReq.Request
 
 	//process request

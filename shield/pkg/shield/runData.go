@@ -60,20 +60,6 @@ func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSig
 	return self.ResSigList
 }
 
-func (self *RunData) GetRSPList() []rspapi.ResourceSigningProfile {
-	if self.RSPList == nil && self.loader != nil {
-		self.RSPList, _ = self.loader.RSP.GetData(true)
-	}
-	return self.RSPList
-}
-
-func (self *RunData) GetNSList() []v1.Namespace {
-	if self.NSList == nil && self.loader != nil {
-		self.NSList, _ = self.loader.Namespace.GetData(true)
-	}
-	return self.NSList
-}
-
 func (self *RunData) setRuleTable(shieldNamespace string) bool {
 	updated := false
 	ruleTable := NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
@@ -117,8 +103,6 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 }
 
 func (self *RunData) Init(reqc *common.ReqContext, shieldNamespace string) {
-	// self.GetSignerConfig()
-	// self.GetResSigList(reqc)
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)
 	rtInited := self.setRuleTable(shieldNamespace)
