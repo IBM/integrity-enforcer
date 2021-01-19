@@ -9,8 +9,8 @@ The following prerequisites must be satisfied to enable Integrity Shield protect
 
 - An [ACM]((https://www.redhat.com/en/technologies/management/advanced-cluster-management)) hub cluster with one or more managed cluster attached to it and cluster admin access to the cluster to use `oc` or `kubectl` command.
 - IShield requires a pair of keys for signing and verifying signatures of resources that need to be protected in a cluster. Refer to [doc](../README_VERIFICATION_KEY_SETUP.md) for setting up signing and verification keys. 
-- The script for deploying a verification key to an ACM managed cluster requires [yq](https://github.com/mikefarah/yq) installed on the host where we run the script.
--  Make sure it is possible to create new dedicated namespaces in the ACM hub cluster and managed clusters.
+- The script for signing an ACM policy requires [yq](https://github.com/mikefarah/yq) installed on the host where we run the script.
+- Make sure it is possible to create new dedicated namespaces in the ACM hub cluster and managed clusters.
   - Creating namespace for IShield in ACM managed cluster is handled automatically when deploying it via an ACM policy.   
 - Installation steps requires a host where we run the scripts.  Below steps are tested on Mac OS and Ubuntu hosts. 
 - Enabling Integrity Shield protection and signing ACM polices involve retriving and commiting sources from GitHub repository. Make sure to install [git](https://github.com/git-guides/install-git) on the host. 
@@ -80,9 +80,6 @@ oc create ns <custom namespace>
             spec:
               remediationAction: enforce
               severity: High
-              namespaceSelector:
-                exclude: ["kube-*"]
-                include: ["default"]
               object-templates:
               - complianceType: musthave
                 objectDefinition:
@@ -100,19 +97,19 @@ oc create ns <custom namespace>
       
         ``` 
         signerConfig:
-	   policies:
-           - namespaces:
-	     - "*"
-	     signers:
-	     - "SampleSigner"
-	   - scope: "Cluster"
-	     signers:
-	     - "SampleSigner"
-	   signers:
-	   - name: "SampleSigner"
-	     keyConfig: sample-signer-keyconfig
-	     subjects:
-	     - email: "sample_signer@signer.com"
+          policies:
+          - namespaces:
+	    - "*"
+	    signers:
+	    - "SampleSigner"
+	  - scope: "Cluster"
+	    signers:
+	    - "SampleSigner"
+	  signers:
+	  - name: "SampleSigner"
+	    keyConfig: sample-signer-keyconfig
+	    subjects:
+	    - email: "signer@signer.com"
         keyConfig:
         - name: sample-signer-keyconfig
           secretName: keyring-secret
@@ -129,7 +126,7 @@ oc create ns <custom namespace>
          apiVersion: apps.open-cluster-management.io/v1
          kind: PlacementRule
          metadata:
-           name: placement-integrity-policy
+           name: placement-policy-integrity-shield
          spec:
            clusterConditions:
            - status: "True"
