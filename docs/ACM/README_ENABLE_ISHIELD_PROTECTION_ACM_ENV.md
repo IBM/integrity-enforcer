@@ -109,7 +109,7 @@ oc create ns <custom namespace>
 	  - name: "SampleSigner"
 	    keyConfig: sample-signer-keyconfig
 	    subjects:
-	    - email: "sample_signer@signer.com"
+	    - email: "signer@signer.com"
         keyConfig:
         - name: sample-signer-keyconfig
           secretName: keyring-secret
