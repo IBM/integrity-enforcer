@@ -30,7 +30,7 @@ type LoggerConfig struct {
 }
 
 // NOTE: this singleton logger should be used only for simple log messages
-// for detail logs while handling a certain request, Handler.Logger should be used instead.
+// for detail logs while handling a certain request, Handler.requestLog should be used instead.
 var simpleLogger *log.Logger
 
 func init() {
