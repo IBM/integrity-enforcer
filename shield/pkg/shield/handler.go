@@ -36,15 +36,18 @@ import (
 ***********************************************/
 
 type Handler struct {
-	config     *config.ShieldConfig
-	ctx        *CheckContext
-	reqc       *common.ReqContext
-	data       *RunData
-	logInScope bool
+	config        *config.ShieldConfig
+	ctx           *CheckContext
+	reqc          *common.ReqContext
+	data          *RunData
+	serverLogger  *log.Logger
+	requestLog    *log.Entry
+	contextLogger *logger.ContextLogger
+	logInScope    bool
 }
 
-func NewHandler(config *config.ShieldConfig) *Handler {
-	return &Handler{config: config, data: &RunData{}}
+func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *Handler {
+	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
 }
 
 func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
@@ -130,7 +133,6 @@ func (self *Handler) Check() *DecisionResult {
 			Message:    "IntegrityShield failed to decide a response for this request.",
 		}
 	}
-	self.logExit()
 	return dr
 }
 
@@ -153,14 +155,14 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 	// create/update Event
 	err = createOrUpdateEvent(self.reqc, self.ctx, self.config)
 	if err != nil {
-		logger.Error("Failed to create event; ", err)
+		self.requestLog.Error("Failed to create event; ", err)
 		return err
 	}
 
 	// update RSP status
 	err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
 	if err != nil {
-		logger.Error("Failed to update status; ", err)
+		self.requestLog.Error("Failed to update status; ", err)
 	}
 
 	return nil
@@ -176,10 +178,6 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 	// init ReqContext
 	self.reqc = common.NewReqContext(req)
 
-	// set request UID in logger special field
-	logger.AddValueToListField("requestUID", string(req.UID))
-	// init session logger
-	logger.InitSessionLogger(self.reqc.Namespace, self.reqc.Name, self.reqc.ResourceRef().ApiVersion, self.reqc.Kind, self.reqc.Operation)
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires SessionLogger and ReqContext.
 	self.logEntry()
 
@@ -227,7 +225,15 @@ func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
 		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
 		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
 		if self.reqc.Kind == "Namespace" {
-			resetRuleTableCache = true
+			if self.reqc.IsUpdateRequest() {
+				mtResult, _ := MutationCheck(self.reqc)
+				if mtResult != nil && mtResult.IsMutated {
+					self.requestLog.Debug("[DEBUG] namespace mutation: ", mtResult.Diff)
+					resetRuleTableCache = true
+				}
+			} else {
+				resetRuleTableCache = true
+			}
 		} else if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
 			resetRuleTableCache = true
 		}
@@ -237,44 +243,42 @@ func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
 		}
 	}
 	self.logExit()
-	logger.RemoveValueFromListField("requestUID", self.reqc.RequestUid)
 	return
 }
 
 func (self *Handler) logEntry() {
-	if ok, level := self.config.ConsoleLogEnabled(self.reqc); ok {
-		logger.SetLogLevel(level) // set custom log level for this request
-		sLogger := logger.GetSessionLogger()
-		sLogger.Trace("New Admission Request Received")
+	if ok, levelStr := self.config.ConsoleLogEnabled(self.reqc); ok {
+		lvl, _ := log.ParseLevel(levelStr)
+		self.serverLogger.SetLevel(lvl) // set custom log level for this request
+		self.requestLog.Trace("New Admission Request Received")
 	}
 }
 
 func (self *Handler) logContext() {
 	if self.config.ContextLogEnabled(self.reqc) && self.logInScope {
-		cLogger := logger.GetContextLogger()
+		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
 		logRecord := self.ctx.convertToLogRecord(self.reqc)
 		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
 			logRecord["request.dump"] = self.reqc.RequestJsonStr
 		}
 		logBytes, err := json.Marshal(logRecord)
 		if err != nil {
-			logger.Error(err)
+			self.requestLog.Error(err)
 			logBytes = []byte("")
 		}
 		if self.reqc.ResourceScope == "Namespaced" || (self.reqc.ResourceScope == "Cluster" && self.ctx.Protected) {
-			cLogger.SendLog(logBytes)
+			self.contextLogger.SendLog(logBytes)
 		}
 	}
 }
 
 func (self *Handler) logExit() {
 	if ok, _ := self.config.ConsoleLogEnabled(self.reqc); ok {
-		sLogger := logger.GetSessionLogger()
-		sLogger.WithFields(log.Fields{
-			"allowed": self.ctx.Allow,
-			"aborted": self.ctx.Aborted,
+		self.requestLog.WithFields(log.Fields{
+			"allowed":    self.ctx.Allow,
+			"aborted":    self.ctx.Aborted,
+			"requestUID": self.reqc.RequestUid,
 		}).Trace("New Admission Request Sent")
-		logger.SetLogLevel(self.config.Log.LogLevel) // set default log level again
 	}
 }
 
@@ -289,10 +293,10 @@ func (self *Handler) logResponse(req *v1beta1.AdmissionRequest, resp *v1beta1.Ad
 		respData["message"] = resp.Result.Message
 		respDataBytes, err := json.Marshal(respData)
 		if err != nil {
-			logger.Error(err.Error())
+			self.requestLog.Error(err.Error())
 			return
 		}
-		logger.Trace(fmt.Sprintf("[AdmissionResponse] %s", string(respDataBytes)))
+		self.requestLog.Trace(fmt.Sprintf("[AdmissionResponse] %s", string(respDataBytes)))
 	}
 	return
 }

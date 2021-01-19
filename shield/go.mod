@@ -23,7 +23,7 @@ require (
 	github.com/prometheus/procfs v0.0.11 // indirect
 	github.com/r3labs/diff v0.0.0-20191120142937-b4ed99a31f5a
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tidwall/gjson v1.5.0
+	github.com/tidwall/gjson v1.6.7
 	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/text v0.3.3 // indirect

@@ -63,6 +63,14 @@ func (self *RuleTable) IsEmpty() bool {
 	return len(self.Items) == 0
 }
 
+func (self *RuleTable) IsTargetEmpty() bool {
+	count := 0
+	for _, rl := range self.Items {
+		count += len(rl.TargetNamespaces)
+	}
+	return count == 0
+}
+
 func (self *RuleTable) CheckIfTargetNamespace(nsName string) bool {
 	if nsName == "" {
 		return true

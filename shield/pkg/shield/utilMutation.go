@@ -34,6 +34,12 @@ func NewMutationChecker() MutationChecker {
 	return &ConcreteMutationChecker{}
 }
 
+func MutationCheck(reqc *common.ReqContext) (*common.MutationEvalResult, error) {
+	checker := NewMutationChecker()
+	dummyProf := rspapi.ResourceSigningProfile{}
+	return checker.Eval(reqc, dummyProf)
+}
+
 func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
@@ -46,6 +52,7 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 		"metadata.uid",
 		"metadata.generation",
 		"metadata.managedFields",
+		"metadata.selfLink",
 		"metadata.resourceVersion",
 		"status",
 	}

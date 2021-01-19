@@ -60,24 +60,10 @@ func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSig
 	return self.ResSigList
 }
 
-func (self *RunData) GetRSPList() []rspapi.ResourceSigningProfile {
-	if self.RSPList == nil && self.loader != nil {
-		self.RSPList, _ = self.loader.RSP.GetData(true)
-	}
-	return self.RSPList
-}
-
-func (self *RunData) GetNSList() []v1.Namespace {
-	if self.NSList == nil && self.loader != nil {
-		self.NSList, _ = self.loader.Namespace.GetData(true)
-	}
-	return self.NSList
-}
-
 func (self *RunData) setRuleTable(shieldNamespace string) bool {
 	updated := false
 	ruleTable := NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
-	if ruleTable != nil && !ruleTable.IsEmpty() {
+	if ruleTable != nil && !ruleTable.IsEmpty() && !ruleTable.IsTargetEmpty() {
 		self.ruleTable = ruleTable
 		updated = true
 	}
@@ -99,14 +85,14 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 			self.NSList = tmpNSList
 		}
 	}
-	if self.ruleTable == nil || self.ruleTable.IsEmpty() || rspReloaded || nsReloaded {
+	if self.ruleTable == nil || self.ruleTable.IsEmpty() || self.ruleTable.IsTargetEmpty() || rspReloaded || nsReloaded {
 		rtInited := self.setRuleTable(shieldNamespace)
 		if rtInited {
 			// logger.Trace("RuleTable is updated.")
 		}
 	}
 
-	if self.ruleTable == nil || self.ruleTable.IsEmpty() {
+	if self.ruleTable == nil || self.ruleTable.IsEmpty() || self.ruleTable.IsTargetEmpty() {
 		rspBytes, _ := json.Marshal(self.RSPList)
 		tmpRSPBytes, _ := json.Marshal(tmpRSPList)
 		nsBytes, _ := json.Marshal(self.NSList)
@@ -117,8 +103,6 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 }
 
 func (self *RunData) Init(reqc *common.ReqContext, shieldNamespace string) {
-	// self.GetSignerConfig()
-	// self.GetResSigList(reqc)
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)
 	rtInited := self.setRuleTable(shieldNamespace)

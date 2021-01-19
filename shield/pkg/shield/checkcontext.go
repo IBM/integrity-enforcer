@@ -22,7 +22,6 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
 /**********************************************
@@ -154,7 +153,7 @@ func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string
 	logRecord["request.objectHashType"] = reqc.ObjectHashType
 	logRecord["request.objectHash"] = reqc.ObjectHash
 
-	logRecord["sessionTrace"] = logger.GetSessionTraceString()
+	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
 
 	currentTime := time.Now()
 	ts := currentTime.Format("2006-01-02T15:04:05.000Z")

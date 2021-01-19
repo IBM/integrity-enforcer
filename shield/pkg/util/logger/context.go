@@ -35,18 +35,13 @@ type ContextLogger struct {
 	limitSize int64
 }
 
-var contextLogger *ContextLogger
-
-func GetContextLogger() *ContextLogger {
-	return contextLogger
-}
-
-func InitContextLogger(config ContextLoggerConfig) {
-	contextLogger = &ContextLogger{
+func InitContextLogger(config ContextLoggerConfig) *ContextLogger {
+	contextLogger := &ContextLogger{
 		enabled:   config.Enabled,
 		file:      config.File,
 		limitSize: config.LimitSize,
 	}
+	return contextLogger
 }
 
 func (cxLogger *ContextLogger) sizeCheckAndRotate() error {
@@ -99,7 +94,7 @@ func (cxLogger *ContextLogger) SendLog(logBytes []byte) {
 
 	err := cxLogger.writeToFile(logBytes)
 	if err != nil {
-		ServerLogger.WithFields(log.Fields{
+		simpleLogger.WithFields(log.Fields{
 			"err": err,
 		}).Warn("Context log file dump err")
 		return
