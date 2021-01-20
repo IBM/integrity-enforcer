@@ -45,67 +45,6 @@ $ oc get event --all-namespaces --field-selector type=IntegrityShield
 
 If you want to check not only denied events but also allowed events, they are logged in container log. Please see the next section.
 
-### Check Container Logs
-You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
-
-If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../scripts/log_logging.sh).
-
-```json
-{
-  "abortReason": "",
-  "aborted": false,
-  "allowed": false,
-  "apiGroup": "",
-  "apiVersion": "v1",
-  "breakglass": false,
-  "claim.ownerApiVersion": "",
-  "claim.ownerKind": "",
-  "claim.ownerName": "",
-  "claim.ownerNamespace": "secure-ns",
-  "creator": "",
-  "detectOnly": false,
-  "iShieldResource": false,
-  "ignoreSA": false,
-  "kind": "ConfigMap",
-  "ma.checked": "false",
-  "ma.diff": "",
-  "ma.errOccured": false,
-  "ma.filtered": "",
-  "ma.mutated": "false",
-  "maIntegrity.serviceAccount": "",
-  "maIntegrity.signature": "",
-  "msg": "Failed to verify signature; Signature is invalid",
-  "name": "test-cm",
-  "namespace": "secure-ns",
-  "objLabels": "",
-  "objMetaName": "test-cm",
-  "operation": "CREATE",
-  "org.ownerApiVersion": "",
-  "org.ownerKind": "",
-  "org.ownerName": "",
-  "org.ownerNamespace": "secure-ns",
-  "own.errOccured": false,
-  "own.owners": "null",
-  "own.verified": false,
-  "protected": true,
-  "reasonCode": "invalid-signature",
-  "request.dump": "",
-  "request.objectHash": "",
-  "request.objectHashType": "",
-  "request.uid": "bdb62f22-22f8-4a4d-9ead-cc034e4ce07b",
-  "requestScope": "Namespaced",
-  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=apis.integrityshield.io/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
-  "sig.allow": false,
-  "sig.errMsg": "",
-  "sig.errOccured": true,
-  "sig.errReason": "Failed to verify signature; Signature is invalid",
-  "timestamp": "2020-09-23T02:45:19.728Z",
-  "type": "",
-  "userInfo": "{\"username\":\"IAM#sample_signer@enterprise.com\",\"groups\":[\"admin\",\"ishield-group\",\"system:authenticated\"]}",
-  "userName": "IAM#sample_signer@enterprise.com",
-  "verified": false
-}
-```
 
 ### Check RSP status
 
@@ -141,7 +80,7 @@ Status:
 
 When you want to check what resources are verified with their signatures, you can use a script named [`list_signed_resources.sh `](../scripts/list_signed_resources.sh).
 
-This script shows you a list of resources that are verified by Integrity Shield, and you can use a short name for kind argument like below.
+This script shows you a list of resources that are verified by Integrity Shield, and you can use a short name for a kind argument like below.
 
 ```
 $ ./scripts/list_signed_resources.sh deployment
@@ -156,7 +95,7 @@ secure-ns  sample-cm    signer@enterprise.com  2021-01-20T07:27:59Z  ac31dd59-6f
 secure-ns  sample-cm-2  signer@enterprise.com  2021-01-20T07:43:38Z  08dbcb7d-3055-4a84-8246-302510d9b76c
 ```
 
-Also, you can specify `all` as kind argument, but please note that this queries `kubectl get` for all valid resources. The output will be like following.
+Also, you can specify `all` as kind argument, but please note that this queries `kubectl get` API for all valid resource kinds. The output will be like following.
 ```
 $ ./scripts/list_signed_resources.sh all
 --- ConfigMap ---
@@ -242,10 +181,10 @@ To see all RSPs in your cluster, you can use a [list_rsp.sh ](../scripts/list_rs
 
 ```
 $ ./scripts/list_rsp.sh
-NAMESPACE                         NAME                    RULES                                                                    TARGET_NAMESPACE
-integrity-shield-operator-system  global-rsp              [{"match":[{"kind":"Service"}]}]                                         {"exclude":["kube-*"],"include":["*"]}
-secure-ns                         sample-rsp              [{"match":[{"kind":"Pod"},{"kind":"ConfigMap"},{"kind":"Deployment"}]}]  null
-test-ns                           sample-clusterrole-rsp  [{"match":[{"kind":"ClusterRole"}]}]                                     null
+NAMESPACE                         NAME                    RULES                                                                                      TARGET_NAMESPACE
+integrity-shield-operator-system  global-rsp              {"protectRules":[{"match":[{"kind":"Service"}]}]}                                          {"exclude":["kube-*"],"include":["*"]}
+secure-ns                         sample-rsp              {"protectRules":[[{"match":[{"kind":"Pod"},{"kind":"ConfigMap"},{"kind":"Deployment"}]}]}  secure-ns
+test-ns                           sample-clusterrole-rsp  {"protectRules":[[{"match":[{"kind":"ClusterRole"}]}]}                                     test-ns
 ```
 
 Additionally, if you are using ResourceSignature instead of annotation signature, you can list all ResourceSignatures in your cluster by a script [list_rsig.sh ](../scripts/list_rsig.sh) . 
