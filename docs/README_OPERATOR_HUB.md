@@ -133,6 +133,6 @@ k8s Integrity Shield works as Kubernetes Admission Controller using Mutating Adm
 We have verified the feasibility on the following platforms:
 
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
-- [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
+- [RedHat OpenShift 4.5 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
 - [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.14
 - [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
