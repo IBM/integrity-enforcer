@@ -105,8 +105,8 @@ func (self *IShieldResourceCondition) IsServerResource(ref *common.ResourceRef) 
 }
 
 type LogRequestPattern struct {
-	common.RequestPatternWithNamespace `json:""`
-	LogLevel                           string `json:"logLevel,omitempty"`
+	*common.RequestPatternWithNamespace `json:""`
+	LogLevel                            string `json:"logLevel,omitempty"`
 }
 
 /**********************************************
