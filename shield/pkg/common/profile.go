@@ -50,8 +50,25 @@ type KustomizePattern struct {
 }
 
 type RequestPatternWithNamespace struct {
-	RequestPattern `json:""`
-	Namespace      *RulePattern `json:"namespace,omitempty"`
+	*RequestPattern `json:""`
+	Namespace       *RulePattern `json:"namespace,omitempty"`
+}
+
+func (self *RequestPatternWithNamespace) Match(reqFields map[string]string) bool {
+	if self.Namespace == nil && self.RequestPattern == nil {
+		return false
+	}
+	nsMatched := true
+	if self.Namespace != nil {
+		if !MatchPattern(string(*self.Namespace), reqFields["Namespace"]) {
+			nsMatched = false
+		}
+	}
+	otherMatched := true
+	if self.RequestPattern != nil {
+		otherMatched = self.RequestPattern.Match(reqFields)
+	}
+	return nsMatched && otherMatched
 }
 
 func (self *Rule) String() string {
