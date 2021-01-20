@@ -1,7 +1,7 @@
-# K8s Integrity Shield
-K8s Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
+# k8s Integrity Shield
+k8s Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
 
-K8s Integrity Shield's capabilities are
+k8s Integrity Shield's capabilities are
 
 - Allow to deploy authorized application pakcages only
 - Allow to use signed deployment params only
@@ -129,7 +129,7 @@ configmap/test-cm created
 
 ## Supported Platforms
 
-K8s Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
+k8s Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design.
 We have verified the feasibility on the following platforms:
 
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)

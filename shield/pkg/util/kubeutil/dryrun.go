@@ -47,7 +47,7 @@ var (
 func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 	config, err := GetKubeConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Error in getting K8s config; %s", err.Error())
+		return nil, fmt.Errorf("Error in getting k8s config; %s", err.Error())
 	}
 	dyClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -88,7 +88,7 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte, error) {
 	config, err := GetKubeConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Error in getting K8s config; %s", err.Error())
+		return nil, fmt.Errorf("Error in getting k8s config; %s", err.Error())
 	}
 	dyClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -144,7 +144,7 @@ func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte,
 func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, error) {
 	config, err := GetKubeConfig()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in getting K8s config; %s", err.Error())
+		return nil, nil, fmt.Errorf("Error in getting k8s config; %s", err.Error())
 	}
 	dyClient, err := dynamic.NewForConfig(config)
 	if err != nil {
