@@ -25,7 +25,6 @@ spec:
   unprotectAttrs:
   - attrs:
     - metadata.annotations.argocd.argoproj.io/sync-wave
-    - metadata.labels.app.kubernetes.io/instance
     match:
     - kind: "*"
   ignoreRules: 
