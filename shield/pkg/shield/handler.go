@@ -63,12 +63,13 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 
 	// make AdmissionResponse based on DecisionResult
 	resp := &v1beta1.AdmissionResponse{}
+
 	if dr.isUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc)
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.ctx)
 	} else if dr.isErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message, self.reqc)
+		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.ctx)
 	} else {
-		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc)
+		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc, self.ctx)
 	}
 
 	// log results
@@ -178,7 +179,7 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 	// init ReqContext
 	self.reqc = common.NewReqContext(req)
 
-	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires SessionLogger and ReqContext.
+	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
 	self.logEntry()
 
 	runDataLoader := NewLoader(self.config, reqNamespace)
@@ -291,6 +292,7 @@ func (self *Handler) logResponse(req *v1beta1.AdmissionRequest, resp *v1beta1.Ad
 		respData["namespace"] = req.Namespace
 		respData["name"] = req.Name
 		respData["message"] = resp.Result.Message
+		respData["patch"] = resp.Patch
 		respDataBytes, err := json.Marshal(respData)
 		if err != nil {
 			self.requestLog.Error(err.Error())

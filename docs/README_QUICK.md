@@ -200,7 +200,7 @@ run the command below for trying to create the configmap in `secure-ns` namespac
 
 ```
 $ oc apply -f /tmp/test-cm.yaml -n secure-ns
-Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: No signature found
+Error from server: error when creating "test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature, Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"cfea7d34-0bf0-4e6a-9b59-e53290e02e67","scope":"Namespaced","userName":"kubernetes-admin"}
 ```
 
 
@@ -247,64 +247,13 @@ configmap/test-cm created
 ```
 
 
-Integrity Shield generates logs while processing admission requests in a cluster. Two types of logs are available. You can see Integrity Shield server processing logs by a script called [`log_server.sh `](../scripts/log_server.sh). This includes when requests come and go, as well as errors which occured during processing.
+You can see all denied requests as Kubernetes Event like below.
 
-If you want to see the result of admission check, you can see the detail by using a script called [`log_logging.sh  `](../scripts/log_logging.sh).
-```json
-{
-  "abortReason": "",
-  "aborted": false,
-  "allowed": false,
-  "apiGroup": "",
-  "apiVersion": "v1",
-  "breakglass": false,
-  "claim.ownerApiVersion": "",
-  "claim.ownerKind": "",
-  "claim.ownerName": "",
-  "claim.ownerNamespace": "secure-ns",
-  "creator": "",
-  "detectOnly": false,
-  "iShieldResource": false,
-  "ignoreSA": false,
-  "kind": "ConfigMap",
-  "ma.checked": "false",
-  "ma.diff": "",
-  "ma.errOccured": false,
-  "ma.filtered": "",
-  "ma.mutated": "false",
-  "maIntegrity.serviceAccount": "",
-  "maIntegrity.signature": "",
-  "msg": "Failed to verify signature; Signature is invalid",
-  "name": "test-cm",
-  "namespace": "secure-ns",
-  "objLabels": "",
-  "objMetaName": "test-cm",
-  "operation": "CREATE",
-  "org.ownerApiVersion": "",
-  "org.ownerKind": "",
-  "org.ownerName": "",
-  "org.ownerNamespace": "secure-ns",
-  "own.errOccured": false,
-  "own.owners": "null",
-  "own.verified": false,
-  "protected": true,
-  "reasonCode": "invalid-signature",
-  "request.dump": "",
-  "request.objectHash": "",
-  "request.objectHashType": "",
-  "request.uid": "bdb62f22-22f8-4a4d-9ead-cc034e4ce07b",
-  "requestScope": "Namespaced",
-  "sessionTrace": "time=2020-09-23T02:45:19Z level=trace msg=New Admission Request Sent aborted=false allowed=true apiVersion=apis.integrityshield.io/v1alpha1 kind=ResourceSigningProfile name=sample-rsp namespace=secure-ns operation=UPDATE\n",
-  "sig.allow": false,
-  "sig.errMsg": "",
-  "sig.errOccured": true,
-  "sig.errReason": "Failed to verify signature; Signature is invalid",
-  "timestamp": "2020-09-23T02:45:19.728Z",
-  "type": "",
-  "userInfo": "{\"username\":\"IAM#sample_signer@enterprise.com\",\"groups\":[\"admin\",\"ishield-group\",\"system:authenticated\"]}",
-  "userName": "IAM#sample_signer@enterprise.com",
-  "verified": false
-}
+```
+$ oc get event -n secure-ns --field-selector type=IntegrityShield
+
+LAST SEEN   TYPE              REASON         OBJECT                MESSAGE
+27s         IntegrityShield   no-signature   configmap/test-cm   [IntegrityShieldEvent] Result: deny, Reason: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.", Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"cfea7d34-0bf0-4e6a-9b59-e53290e02e67","scope":"Namespaced","userName":"kubernetes-admin"}
 ```
 
 ### Clean up Integrity Shield from the cluster
