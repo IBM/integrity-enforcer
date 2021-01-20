@@ -127,7 +127,7 @@ type ResourceSignatureList struct {
 }
 
 func (ssl *ResourceSignatureList) FindMessage(apiVersion, kind, name, namespace string) (string, bool) {
-	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
+	found, si, _, _ := ssl.FindSignItem(apiVersion, kind, name, namespace)
 	if found {
 		return si.Message, true
 	}
@@ -135,21 +135,22 @@ func (ssl *ResourceSignatureList) FindMessage(apiVersion, kind, name, namespace 
 }
 
 func (ssl *ResourceSignatureList) FindSignature(apiVersion, kind, name, namespace string) (string, bool) {
-	si, _, found := ssl.FindSignItem(apiVersion, kind, name, namespace)
+	found, si, _, _ := ssl.FindSignItem(apiVersion, kind, name, namespace)
 	if found {
 		return si.Signature, true
 	}
 	return "", false
 }
 
-func (ssl *ResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (*SignItem, []byte, bool) {
+func (ssl *ResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace string) (bool, *SignItem, []byte, string) {
 	signItem := &SignItem{}
 	for _, ss := range ssl.Items {
 		if si, yamlBytes, ok := ss.FindSignItem(apiVersion, kind, name, namespace); ok {
-			return si, yamlBytes, true
+			uid := string(ss.GetUID())
+			return true, si, yamlBytes, uid
 		}
 	}
-	return signItem, nil, false
+	return false, signItem, nil, ""
 }
 
 type SignItem struct {

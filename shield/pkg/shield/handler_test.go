@@ -112,6 +112,31 @@ func getChangedRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest 
 	return newReq
 }
 
+func getRequestWithoutAnnoSig(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
+	var newReq *v1beta1.AdmissionRequest
+	reqBytes, _ := json.Marshal(req)
+	_ = json.Unmarshal(reqBytes, &newReq)
+	var cm *v1.ConfigMap
+	_ = json.Unmarshal(newReq.Object.Raw, &cm)
+	newName := "test-cm-without-annosig"
+	cm.SetName(newName)
+	currentAnno := cm.GetAnnotations()
+	newAnno := map[string]string{}
+	for k, v := range currentAnno {
+		if k == common.SignatureAnnotationKey || k == common.MessageAnnotationKey {
+			continue
+		}
+		newAnno[k] = v
+	}
+	cm.SetAnnotations(newAnno)
+	cm.Data["key2"] = "val2"
+	newReq.Object.Raw, _ = json.Marshal(cm)
+	newReq.Name = newName
+	newReq.Namespace = "secure-ns"
+	newReq.Operation = "CREATE"
+	return newReq
+}
+
 func getInvalidRSPRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
 	var newReq *v1beta1.AdmissionRequest
 	reqBytes, _ := json.Marshal(req)
@@ -234,7 +259,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	// create ressigs in test data
 	for _, rsig := range data.ResSigList.Items {
-		rsig.ObjectMeta = metav1.ObjectMeta{Name: rsig.Name, Namespace: rsig.Namespace}
+		rsig.ObjectMeta = metav1.ObjectMeta{Name: rsig.Name, Namespace: rsig.Namespace, Labels: rsig.Labels}
 		err = k8sClient.Create(context.Background(), rsig)
 		Expect(err).Should(BeNil())
 	}
@@ -260,7 +285,7 @@ var _ = Describe("Test integrity shield", func() {
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "no mutation") {
-				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
 			}
 			return nil
 		}, timeout, 1).Should(BeNil())
@@ -277,7 +302,7 @@ var _ = Describe("Test integrity shield", func() {
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "validation failed") {
-				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
 			}
 			return nil
 		}, timeout, 1).Should(BeNil())
@@ -294,7 +319,7 @@ var _ = Describe("Test integrity shield", func() {
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "validation failed") {
-				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
 			}
 			return nil
 		}, timeout, 1).Should(BeNil())
@@ -315,7 +340,7 @@ var _ = Describe("Test integrity shield", func() {
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "no verification keys are correctly loaded") {
-				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
 			}
 			return nil
 		}, timeout, 5).Should(BeNil())
@@ -332,7 +357,25 @@ var _ = Describe("Test integrity shield", func() {
 			if resp == nil {
 				return fmt.Errorf("Run() returns nil as AdmissionResponse")
 			} else if !strings.Contains(resp.Result.Message, "not identical") {
-				return fmt.Errorf("Run() returns wrong AdmissionResponse")
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (allow, valid signer, ResSig)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			modReq := getRequestWithoutAnnoSig(req)
+			metaLogger, reqLog := getTestLogger(modReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			resp := testHandler.Run(modReq)
+
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "valid signer") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
 			}
 			return nil
 		}, timeout, 1).Should(BeNil())

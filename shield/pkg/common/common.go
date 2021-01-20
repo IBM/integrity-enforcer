@@ -47,8 +47,10 @@ const (
 )
 
 const (
-	ResourceIntegrityLabelKey = "integrityshield.io/resourceIntegrity"
-	ReasonLabelKey            = "integrityshield.io/reason"
+	ResourceIntegrityLabelKey          = "integrityshield.io/resourceIntegrity"
+	SignedByAnnotationKey              = "integrityshield.io/signedBy"
+	LastVerifiedTimestampAnnotationKey = "integrityshield.io/lastVerifiedTimestamp"
+	ResourceSignatureUIDAnnotationKey  = "integrityshield.io/resourceSignatureUID"
 
 	SignatureAnnotationKey     = "integrityshield.io/signature"
 	MessageAnnotationKey       = "integrityshield.io/message"
@@ -84,7 +86,7 @@ const (
 
 /**********************************************
 
-				NamespaceSelector
+                NamespaceSelector
 
 ***********************************************/
 
@@ -136,7 +138,7 @@ func (s1 *NamespaceSelector) DeepCopy() *NamespaceSelector {
 
 /**********************************************
 
-				ResourceRef
+                ResourceRef
 
 ***********************************************/
 
@@ -164,7 +166,7 @@ func (self *ResourceRef) EqualsWithoutVersionCheck(ref *ResourceRef) bool {
 
 /**********************************************
 
-				CheckError
+                CheckError
 
 ***********************************************/
 
@@ -190,7 +192,7 @@ func (self *CheckError) MakeMessage() string {
 
 /**********************************************
 
-				ResourceLabel
+                ResourceLabel
 
 ***********************************************/
 
@@ -234,7 +236,7 @@ func (self *ResourceLabel) isDefined(key string) bool {
 
 /**********************************************
 
-				ResourceAnnotation
+                ResourceAnnotation
 
 ***********************************************/
 
@@ -288,17 +290,18 @@ func (self *ResourceAnnotation) isDefined(key string) bool {
 
 /**********************************************
 
-				Result
+                Result
 
 ***********************************************/
 
 type SignatureEvalResult struct {
-	Signer              *SignerInfo `json:"signer"`
-	SignerName          string      `json:"signerName"`
-	Checked             bool        `json:"checked"`
-	Allow               bool        `json:"allow"`
-	MatchedSignerConfig string      `json:"matchedSignerConfig"`
-	Error               *CheckError `json:"error"`
+	Signer               *SignerInfo `json:"signer"`
+	SignerName           string      `json:"signerName"`
+	Checked              bool        `json:"checked"`
+	Allow                bool        `json:"allow"`
+	MatchedSignerConfig  string      `json:"matchedSignerConfig"`
+	ResourceSignatureUID string      `json:"resourceSignatureUID"`
+	Error                *CheckError `json:"error"`
 }
 
 func (self *SignatureEvalResult) GetSignerName() string {

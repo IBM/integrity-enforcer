@@ -44,7 +44,6 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
-		common.ReasonLabelKey,
 		"metadata.annotations.namespace",
 		"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
 		"metadata.annotations.deprecated.daemonset.template.generation",
