@@ -43,7 +43,7 @@ const (
 
 /**********************************************
 
-				GeneralSignature
+                GeneralSignature
 
 ***********************************************/
 
@@ -55,7 +55,7 @@ type GeneralSignature struct {
 
 /**********************************************
 
-				Signature
+                Signature
 
 ***********************************************/
 
@@ -114,7 +114,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 
 	//2. pick ResourceSignature from custom resource if available
 	if resSigList != nil && len(resSigList.Items) > 0 {
-		si, yamlBytes, found := resSigList.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
+		found, si, yamlBytes, resSigUID := resSigList.FindSignItem(ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
 		if found {
 			signature := ishieldyaml.Base64decode(si.Signature)
 			certificate := ishieldyaml.Base64decode(si.Certificate)
@@ -136,7 +136,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "resourceSignatureUID": resSigUID},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -198,6 +198,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			},
 		}, nil
 	}
+	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
 	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
@@ -237,6 +238,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 				Error:  err,
 				Reason: reasonFail,
 			},
+			ResourceSignatureUID: rsigUID,
 		}, nil
 	}
 
@@ -248,6 +250,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			Error: &common.CheckError{
 				Reason: reasonFail,
 			},
+			ResourceSignatureUID: rsigUID,
 		}, nil
 	}
 
@@ -262,6 +265,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			Error: &common.CheckError{
 				Reason: reasonFail,
 			},
+			ResourceSignatureUID: rsigUID,
 		}, nil
 	}
 
@@ -277,12 +281,13 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			matchedSignerConfigStr = string(tmpMatchedConfig)
 		}
 		return &common.SignatureEvalResult{
-			Signer:              signer,
-			SignerName:          signer.GetName(),
-			Allow:               true,
-			Checked:             true,
-			MatchedSignerConfig: matchedSignerConfigStr,
-			Error:               nil,
+			Signer:               signer,
+			SignerName:           signer.GetName(),
+			Allow:                true,
+			Checked:              true,
+			MatchedSignerConfig:  matchedSignerConfigStr,
+			Error:                nil,
+			ResourceSignatureUID: rsigUID,
 		}, nil
 	} else {
 		reasonFail := common.ReasonCodeMap[common.REASON_NO_MATCH_SIGNER_CONFIG].Message
@@ -297,6 +302,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			Error: &common.CheckError{
 				Reason: reasonFail,
 			},
+			ResourceSignatureUID: rsigUID,
 		}, nil
 	}
 }

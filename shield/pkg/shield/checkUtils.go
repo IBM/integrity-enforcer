@@ -35,13 +35,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext) *v1beta1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext) *v1beta1.AdmissionResponse {
+	// `patchBytes` will be nil if no patch
+	patchBytes := generatePatchBytes(reqc, ctx)
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	return &v1beta1.AdmissionResponse{
 		Allowed: allowed,
 		Result: &metav1.Status{
 			Message: responseMessage,
 		},
+		Patch: patchBytes,
 	}
 }
 
