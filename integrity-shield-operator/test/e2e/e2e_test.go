@@ -418,25 +418,25 @@ var _ = Describe("Test integrity shield", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap"
-				By("Creating new namespace: " + test_namespace)
-				cmd_err := Kubectl("create", "ns", test_namespace)
+				By("Creating new namespace: " + test_namespace_new)
+				cmd_err := Kubectl("create", "ns", test_namespace_new)
 				Expect(cmd_err).To(BeNil())
-				By("Creating test configmap in ns: " + test_namespace)
-				cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace)
+				By("Creating test configmap in ns: " + test_namespace_new)
+				cmd_err = Kubectl("apply", "-f", test_configmap, "-n", test_namespace_new)
 				Expect(cmd_err).NotTo(BeNil())
 				Eventually(func() error {
-					return CheckBlockEvent(framework, "no-signature", test_namespace, expected)
+					return CheckBlockEvent(framework, "no-signature", test_namespace_new, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Signed resource should be allowed in new namespace", func() {
 				framework := initFrameWork()
 				var timeout int = 120
 				expected := "test-configmap-annotation"
-				By("Creating test configmap in ns: " + test_namespace)
-				cmd_err := Kubectl("apply", "-f", test_configmap_annotation, "-n", test_namespace)
+				By("Creating test configmap in ns: " + test_namespace_new)
+				cmd_err := Kubectl("apply", "-f", test_configmap_annotation, "-n", test_namespace_new)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
-					return CheckConfigMap(framework, test_namespace, expected)
+					return CheckConfigMap(framework, test_namespace_new, expected)
 				}, timeout, 1).Should(BeNil())
 			})
 			It("Resources in unmonitored ns can be created without signature", func() {

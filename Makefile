@@ -298,6 +298,7 @@ delete-test-env:
 	@echo
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
+	kubectl delete ns $(TEST_NS_NEW)
 	kubectl delete ns $(TEST_UNPROTECTED_NS)
 
 setup-test-resources:
@@ -392,6 +393,7 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_FILE) spec.keyConfig[1].secretName $(TEST_SECRET2)
 	@echo setup signer config
 	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].namespaces[0] $(TEST_NS)
+	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].namespaces[1] $(TEST_NS_NEW)
 	yq write -i $(TMP_CR_FILE) spec.signerConfig.policies[2].signers[0] $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].name $(TEST_SIGNERS)
 	yq write -i $(TMP_CR_FILE) spec.signerConfig.signers[1].keyConfig $(TEST_KEYCONFIG)

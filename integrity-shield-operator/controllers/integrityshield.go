@@ -27,6 +27,7 @@ import (
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	res "github.com/IBM/integrity-enforcer/integrity-shield-operator/resources"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	admv1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1022,6 +1023,9 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookEvent(instance *apiv1al
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      evtName,
 			Namespace: evtNamespace,
+			Annotations: map[string]string{
+				common.EventTypeAnnotationKey: common.EventTypeValueReconcileReport,
+			},
 		},
 		InvolvedObject:      involvedObject,
 		Type:                evtSourceName,
