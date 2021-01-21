@@ -297,7 +297,8 @@ setup-test-env:
 delete-test-env:
 	@echo
 	@echo deleting test namespace
-	kubectl delete ns $(TEST_NS)
+	# $TEST_NS will be deleted in e2e test usually, so ignore not found error.
+	kubectl delete ns $(TEST_NS) --ignore-not-found=true
 	kubectl delete ns $(TEST_NS_NEW)
 	kubectl delete ns $(TEST_UNPROTECTED_NS)
 
