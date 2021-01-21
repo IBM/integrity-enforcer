@@ -72,6 +72,7 @@ var testEnv *envtest.Environment
 var scheme *runtime.Scheme
 var r *IntegrityShieldReconciler
 var iShieldCR *apisv1alpha1.IntegrityShield
+var crBytes []byte
 
 // Kubectl executes kubectl commands
 func Kubectl(args ...string) error {
@@ -166,7 +167,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	// create ishield cr
 	var defaultCR *apisv1alpha1.IntegrityShield
-	crBytes, err := ioutil.ReadFile(testIShieldCRPath)
+	crBytes, err = ioutil.ReadFile(testIShieldCRPath)
 	Expect(err).Should(BeNil())
 	err = yaml.Unmarshal(crBytes, &defaultCR)
 	Expect(err).Should(BeNil())
@@ -177,64 +178,16 @@ var _ = BeforeSuite(func(done Done) {
 	err = k8sClient.Get(ctx, types.NamespacedName{Name: defaultCR.Name, Namespace: defaultCR.Namespace}, iShieldCR)
 	Expect(err).Should(BeNil())
 
-	// mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-	// 	Scheme:             scheme,
-	// 	MetricsBindAddress: ":8080",
-	// 	Port:               9443,
-	// 	LeaderElection:     false,
-	// 	LeaderElectionID:   "b67154b9.integrityshield.io",
-	// 	Namespace:          defaultCR.Namespace, // namespaced-scope when the value is not an empty string
-	// })
-	// Expect(err).Should(BeNil())
-
 	r = &IntegrityShieldReconciler{
 		Client: k8sClient,
 		Log:    ctrl.Log.WithName("controllers").WithName("IntegrityShield"),
 		Scheme: scheme,
 	}
 
-	// err = r.SetupWithManager(mgr)
-	// Expect(err).Should(BeNil())
-
 	keyringSecretName := "keyring-secret"
 	emptyKeyring := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: iShieldCR.Namespace, Name: keyringSecretName}, Data: map[string][]byte{}}
 	_ = k8sClient.Create(ctx, emptyKeyring)
 
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{Namespace: iShieldCR.Namespace, Name: iShieldCR.Name},
-	}
-
-	i := 0
-	deployFound := &appsv1.Deployment{}
-	for {
-		_, err = r.Reconcile(req)
-		Expect(err).Should(BeNil())
-		i++
-
-		if i%10 == 0 {
-			fmt.Println("[DEBUG] reconcile iteration: ", i)
-			tmpErr := k8sClient.Get(ctx, types.NamespacedName{Name: iShieldCR.GetIShieldServerDeploymentName(), Namespace: iShieldNamespace}, deployFound)
-			if tmpErr == nil {
-
-				break
-			}
-		}
-	}
-	fmt.Println("[DEBUG] reconcile finished: ", i)
-
-	_ = k8sClient.Delete(ctx, iShieldCR)
-	time.Sleep(time.Second * 10)
-
-	var newIShieldCR *apiv1alpha1.IntegrityShield
-	err = yaml.Unmarshal(crBytes, &newIShieldCR)
-	Expect(err).Should(BeNil())
-	newIShieldCR.SetNamespace(iShieldNamespace)
-	newIShieldCR = embedRSP(newIShieldCR)
-	err = k8sClient.Create(ctx, newIShieldCR)
-	Expect(err).Should(BeNil())
-	iShieldCR = &apisv1alpha1.IntegrityShield{}
-	err = k8sClient.Get(ctx, types.NamespacedName{Name: newIShieldCR.Name, Namespace: newIShieldCR.Namespace}, iShieldCR)
-	Expect(err).Should(BeNil())
 	close(done)
 }, 60)
 
@@ -277,6 +230,48 @@ func doReconcileTest(fn func(*apiv1alpha1.IntegrityShield) (ctrl.Result, error),
 }
 
 var _ = Describe("Test integrity shield", func() {
+
+	It("repeating Reconcile() Test", func() {
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{Namespace: iShieldCR.Namespace, Name: iShieldCR.Name},
+		}
+
+		i := 0
+		deployFound := &appsv1.Deployment{}
+		for {
+			_, err := r.Reconcile(req)
+			Expect(err).Should(BeNil())
+			i++
+
+			if i%10 == 0 {
+				fmt.Println("[DEBUG] reconcile iteration: ", i)
+				tmpErr := k8sClient.Get(context.Background(), types.NamespacedName{Name: iShieldCR.GetIShieldServerDeploymentName(), Namespace: iShieldNamespace}, deployFound)
+				if tmpErr == nil {
+
+					break
+				}
+			}
+		}
+		fmt.Println("[DEBUG] reconcile finished: ", i)
+	})
+
+	It("IShiled CR delete & re-create Test", func() {
+		ctx := context.Background()
+		var err error
+		_ = k8sClient.Delete(ctx, iShieldCR)
+		time.Sleep(time.Second * 10)
+
+		var newIShieldCR *apiv1alpha1.IntegrityShield
+		err = yaml.Unmarshal(crBytes, &newIShieldCR)
+		Expect(err).Should(BeNil())
+		newIShieldCR.SetNamespace(iShieldNamespace)
+		newIShieldCR = embedRSP(newIShieldCR)
+		err = k8sClient.Create(ctx, newIShieldCR)
+		Expect(err).Should(BeNil())
+		iShieldCR = &apisv1alpha1.IntegrityShield{}
+		err = k8sClient.Get(ctx, types.NamespacedName{Name: newIShieldCR.Name, Namespace: newIShieldCR.Namespace}, iShieldCR)
+		Expect(err).Should(BeNil())
+	})
 
 	It("Util Func isDeploymentAvailable() Test", func() {
 		_ = r.isDeploymentAvailable(iShieldCR)
