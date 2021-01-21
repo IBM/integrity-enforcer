@@ -524,3 +524,9 @@ create-private-registry:
 
 delete-private-registry:
 	$(ISHIELD_REPO_ROOT)/build/delete-private-registry.sh
+
+.PHONY: update-version
+
+# use this command to update VERSION  after doing 'make build-bundle'
+update-version:
+	$(ISHIELD_REPO_ROOT)/build/update-version.sh
