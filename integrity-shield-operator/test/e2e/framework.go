@@ -48,6 +48,7 @@ var (
 	kubeconfig_user                   = os.Getenv("KUBE_CONTEXT_USERNAME")
 	ishield_namespace                 = os.Getenv("ISHIELD_OP_NS")
 	test_namespace                    = os.Getenv("TEST_NS")
+	test_namespace_new                = os.Getenv("TEST_NS_NEW")
 	test_unprotected_namespace        = os.Getenv("TEST_UNPROTECTED_NS")
 	shield_dir                        = os.Getenv("SHIELD_OP_DIR")
 	deploy_dir                        = shield_dir + "test/deploy/"

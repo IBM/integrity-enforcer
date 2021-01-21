@@ -39,10 +39,7 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - daemonsets
   - deployments
-  - replicasets
-  - statefulsets
   verbs:
   - create
   - delete
@@ -51,33 +48,14 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - replicasets
-  verbs:
-  - get
-- apiGroups:
-  - apps
-  resourceNames:
-  - integrity-shield-operator
-  resources:
-  - deployments/finalizers
-  verbs:
-  - update
 - apiGroups:
   - ""
   resources:
   - configmaps
-  - endpoints
   - events
-  - persistentvolumeclaims
-  - pods
   - secrets
   - serviceaccounts
   - services
-  - services/finalizers
   verbs:
   - create
   - delete
@@ -86,29 +64,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - create
-  - get
 - apiGroups:
   - policy
   resources:
