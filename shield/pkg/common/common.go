@@ -67,6 +67,16 @@ const (
 	LabelValueUnverified = "unverified"
 )
 
+const (
+	EventTypeAnnotationKey   = "integrityshield.io/eventType"
+	EventResultAnnotationKey = "integrityshield.io/eventResult"
+
+	EventTypeValueReconcileReport = "reconcile-report"
+	EventTypeValueVerifyResult    = "verify-result"
+	EventResultValueAllow         = "allow"
+	EventResultValueDeny          = "deny"
+)
+
 type SignatureType string
 
 const (

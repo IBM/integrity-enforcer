@@ -92,7 +92,7 @@ func GenerateCert(svcName, NS string) ([]byte, []byte, []byte, error) {
 			CommonName: cn,
 		},
 		NotBefore:   time.Now(),
-		NotAfter:    time.Now().AddDate(10, 0, 0),
+		NotAfter:    time.Now().AddDate(2, 0, 0),
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:    x509.KeyUsageDigitalSignature,
 		DNSNames:    []string{cn},

@@ -298,6 +298,7 @@ delete-test-env:
 	@echo
 	@echo deleting test namespace
 	kubectl delete ns $(TEST_NS)
+	kubectl delete ns $(TEST_NS_NEW)
 	kubectl delete ns $(TEST_UNPROTECTED_NS)
 
 setup-test-resources:

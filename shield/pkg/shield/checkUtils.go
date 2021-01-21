@@ -59,8 +59,10 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 	}
 
 	resultStr := "deny"
+	eventResult := common.EventResultValueDeny
 	if ctx.Allow {
 		resultStr = "allow"
+		eventResult = common.EventResultValueAllow
 	}
 
 	sourceName := "IntegrityShield"
@@ -87,6 +89,10 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 	evt := &v1.Event{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: evtName,
+			Annotations: map[string]string{
+				common.EventTypeAnnotationKey:   common.EventTypeValueVerifyResult,
+				common.EventResultAnnotationKey: eventResult,
+			},
 		},
 		InvolvedObject:      involvedObject,
 		Type:                sourceName,
