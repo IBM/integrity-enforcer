@@ -557,6 +557,9 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 
 var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.labels.\"%s\"", common.ResourceIntegrityLabelKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignedByAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.LastVerifiedTimestampAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.ResourceSignatureUIDAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.CertificateAnnotationKey),
