@@ -195,19 +195,19 @@ test-prereq:
 test-unit: test-prereq test-init test-verify test-init-op test-verify-op
 
 test-init:
-	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ ) > $(TMP_DIR)results.txt
+	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ ) | tee $(TMP_DIR)results.txt
 
 test-init-op:
-	cd $(SHIELD_OP_DIR) &&  go test -v  $(shell cd $(SHIELD_OP_DIR) && go list ./... | grep -v /test ) > $(TMP_DIR)results_op.txt
+	cd $(SHIELD_OP_DIR) &&  go test -v  $(shell cd $(SHIELD_OP_DIR) && go list ./... | grep -v /test ) | tee $(TMP_DIR)results_op.txt
 
 test-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results.txt | grep "FAIL:"))
-	cat $(TMP_DIR)results.txt
+	# cat $(TMP_DIR)results.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 test-verify-op:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results_op.txt | grep "FAIL:"))
-	cat $(TMP_DIR)results_op.txt
+	# cat $(TMP_DIR)results_op.txt
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 ############################################################
