@@ -22,6 +22,7 @@ import (
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -35,15 +36,14 @@ import (
 ***********************************************/
 
 type RunData struct {
-	RSPList []rspapi.ResourceSigningProfile `json:"rspList,omitempty"`
-	NSList  []v1.Namespace                  `json:"nsList,omitempty"`
+	RSPList      []rspapi.ResourceSigningProfile `json:"rspList,omitempty"`
+	NSList       []v1.Namespace                  `json:"nsList,omitempty"`
+	SignerConfig *sigconfapi.SignerConfig        `json:"signerConfig,omitempty"`
+	ResSigList   *rsigapi.ResourceSignatureList  `json:"resSigList,omitempty"`
 
-	// for test
-	SignerConfig *sigconfapi.SignerConfig       `json:"signerConfig,omitempty"`
-	ResSigList   *rsigapi.ResourceSignatureList `json:"resSigList,omitempty"`
-
-	loader    *Loader    `json:"-"`
-	ruleTable *RuleTable `json:"-"`
+	loader        *Loader                       `json:"-"`
+	commonProfile rspapi.ResourceSigningProfile `json:"-"`
+	ruleTable     *RuleTable                    `json:"-"`
 }
 
 func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
@@ -62,7 +62,7 @@ func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSig
 
 func (self *RunData) setRuleTable(shieldNamespace string) bool {
 	updated := false
-	ruleTable := NewRuleTable(self.RSPList, self.NSList, shieldNamespace)
+	ruleTable := NewRuleTable(self.RSPList, self.NSList, self.commonProfile, shieldNamespace)
 	if ruleTable != nil && !ruleTable.IsEmpty() && !ruleTable.IsTargetEmpty() {
 		self.ruleTable = ruleTable
 		updated = true
@@ -102,10 +102,11 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 	return self.ruleTable
 }
 
-func (self *RunData) Init(reqc *common.ReqContext, shieldNamespace string) {
+func (self *RunData) Init(reqc *common.ReqContext, conf *config.ShieldConfig) {
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)
-	rtInited := self.setRuleTable(shieldNamespace)
+	self.commonProfile = rspapi.ResourceSigningProfile{Spec: *conf.CommonProfile}
+	rtInited := self.setRuleTable(conf.Namespace)
 	if rtInited {
 		// logger.Trace("RuleTable is initialized.")
 	}
