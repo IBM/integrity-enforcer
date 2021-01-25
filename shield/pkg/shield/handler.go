@@ -184,7 +184,7 @@ func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
 
 	runDataLoader := NewLoader(self.config, reqNamespace)
 	self.data.loader = runDataLoader
-	self.data.Init(self.reqc, self.config.Namespace)
+	self.data.Init(self.reqc, self.config)
 
 	return &DecisionResult{Type: common.DecisionUndetermined}
 }

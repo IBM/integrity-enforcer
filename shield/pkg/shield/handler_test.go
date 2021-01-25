@@ -95,8 +95,11 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	var req *v1beta1.AdmissionRequest
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
 	if req != nil {
-		reqc.RawObject = req.Object.Raw
-		reqc.RawOldObject = req.OldObject.Raw
+		reqc2 := common.NewReqContext(req)
+		reqc.RawObject = reqc2.RawObject
+		reqc.RawOldObject = reqc2.RawOldObject
+		reqc.OrgMetadata = reqc2.OrgMetadata
+		reqc.ClaimedMetadata = reqc2.ClaimedMetadata
 	}
 	return reqc, testConfig, data, ctx, dr0, prof, dr
 }
@@ -134,6 +137,43 @@ func getRequestWithoutAnnoSig(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionR
 	newReq.Name = newName
 	newReq.Namespace = "secure-ns"
 	newReq.Operation = "CREATE"
+	return newReq
+}
+
+func getUpdateRequest() *v1beta1.AdmissionRequest {
+	var newReq *v1beta1.AdmissionRequest
+	reqc, _, _, _, _, _, _ := getTestData(3)
+	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
+	return newReq
+}
+
+func getUpdateWithMetaChangeRequest() *v1beta1.AdmissionRequest {
+	var newReq *v1beta1.AdmissionRequest
+	reqc, _, _, _, _, _, _ := getTestData(3)
+	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
+	var cm, oldCm *v1.ConfigMap
+	_ = json.Unmarshal(newReq.Object.Raw, &cm)
+	_ = json.Unmarshal(newReq.OldObject.Raw, &oldCm)
+	currentAnno := cm.GetAnnotations()
+	currentOldAnno := oldCm.GetAnnotations()
+	newAnno := map[string]string{}
+	newOldAnno := map[string]string{}
+	for k, v := range currentAnno {
+		if k == common.LastVerifiedTimestampAnnotationKey || k == common.SignedByAnnotationKey || k == common.ResourceIntegrityLabelKey {
+			continue
+		}
+		newAnno[k] = v
+	}
+	for k, v := range currentOldAnno {
+		if k == common.LastVerifiedTimestampAnnotationKey || k == common.SignedByAnnotationKey || k == common.ResourceIntegrityLabelKey {
+			continue
+		}
+		newOldAnno[k] = v
+	}
+	cm.SetAnnotations(newAnno)
+	oldCm.SetAnnotations(newOldAnno)
+	newReq.Object.Raw, _ = json.Marshal(cm)
+	newReq.OldObject.Raw, _ = json.Marshal(oldCm)
 	return newReq
 }
 
@@ -369,6 +409,42 @@ var _ = Describe("Test integrity shield", func() {
 			metaLogger, reqLog := getTestLogger(modReq, testConfig)
 			testHandler := NewHandler(testConfig, metaLogger, reqLog)
 			resp := testHandler.Run(modReq)
+
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "valid signer") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (allow, valid signer, updating a verified resource with new sig)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			updReq := getUpdateRequest()
+			metaLogger, reqLog := getTestLogger(updReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			resp := testHandler.Run(updReq)
+
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "valid signer") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (allow, valid signer, updating a verified resource with only metadata change)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			updReq := getUpdateWithMetaChangeRequest()
+			metaLogger, reqLog := getTestLogger(updReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			resp := testHandler.Run(updReq)
 
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))

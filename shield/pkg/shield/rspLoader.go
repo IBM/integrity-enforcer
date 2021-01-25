@@ -28,7 +28,6 @@ import (
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -102,48 +101,6 @@ func (self *RSPLoader) Load(doK8sApiCall bool) bool {
 	}
 	self.Data = data
 	return reloaded
-}
-
-func (self *RSPLoader) GetByReferences(refs []*v1.ObjectReference) []rspapi.ResourceSigningProfile {
-	data := []rspapi.ResourceSigningProfile{}
-	for _, ref := range refs {
-		d, err := self.Client.ResourceSigningProfiles(ref.Namespace).Get(context.Background(), ref.Name, metav1.GetOptions{})
-		if err != nil {
-			logger.Error(err)
-		} else {
-			data = append(data, *d)
-		}
-	}
-	// add empty RSP if there is no matched reference, to enable default RSP even in the case
-	if len(data) == 0 {
-		emptyProfile := rspapi.ResourceSigningProfile{}
-		data = []rspapi.ResourceSigningProfile{
-			emptyProfile,
-		}
-	}
-	data, err := self.MergeDefaultProfiles(data)
-	if err != nil {
-		logger.Error(err)
-	}
-	return data
-}
-
-func (self *RSPLoader) MergeDefaultProfiles(data []rspapi.ResourceSigningProfile) ([]rspapi.ResourceSigningProfile, error) {
-	dp, err := self.GetDefaultProfile()
-	if err != nil {
-		logger.Error(err)
-	} else {
-		for i, d := range data {
-			data[i] = d.Merge(dp)
-		}
-	}
-	return data, nil
-}
-
-func (self *RSPLoader) GetDefaultProfile() (rspapi.ResourceSigningProfile, error) {
-	rsp := rspapi.ResourceSigningProfile{}
-	rsp.Spec = *(self.commonProfile)
-	return rsp, nil
 }
 
 func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.ReqContext, errMsg string) error {
