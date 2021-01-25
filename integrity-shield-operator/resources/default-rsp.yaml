@@ -14,12 +14,8 @@ spec:
     match:
     - name: '*'
   - attrs:
-    - secrets.0.name
-    - secrets.1.name
-    - secrets.2.name
-    - imagePullSecrets.0.name
-    - imagePullSecrets.1.name
-    - imagePullSecrets.2.name
+    - secrets.*.name
+    - imagePullSecrets.*.name
     match:
     - kind: ServiceAccount
   unprotectAttrs:
@@ -27,6 +23,10 @@ spec:
     - metadata.annotations.argocd.argoproj.io/sync-wave
     match:
     - kind: "*"
+  - attrs:
+    - secrets.*.name
+    match:
+    - kind: ServiceAccount
   ignoreRules: 
   - match: 
     - username: system:admin
