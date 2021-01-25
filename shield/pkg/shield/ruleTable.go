@@ -33,7 +33,7 @@ type RuleTable struct {
 	ShieldNamespace string     `json:"shieldNamespace,omitempty"`
 }
 
-func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, shieldNamespace string) *RuleTable {
+func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, commonProfile rspapi.ResourceSigningProfile, shieldNamespace string) *RuleTable {
 	allTargetNamespaces := []string{}
 	items := []RuleItem{}
 	for _, p := range profiles {
@@ -49,7 +49,8 @@ func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Name
 		} else {
 			targetNamespaces = append(targetNamespaces, pNamespace)
 		}
-		items = append(items, RuleItem{Profile: p, TargetNamespaces: targetNamespaces})
+		pWithCommon := p.Merge(commonProfile)
+		items = append(items, RuleItem{Profile: pWithCommon, TargetNamespaces: targetNamespaces})
 		allTargetNamespaces = common.GetUnionOfArrays(allTargetNamespaces, targetNamespaces)
 	}
 	return &RuleTable{
