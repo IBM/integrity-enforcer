@@ -20,9 +20,8 @@ The following describes how to create the policy only in 3 steps.
 
       You can find `policy-integrity-shield-events.yaml` in the directory `community/CM-Configuration-Management/`.
 
-  
-      Optional Step) Configure the placement rule 
-      
+      ---
+      `Optional Step) Configure the placement rule`
 
       The [PlacementRule](https://github.com/open-cluster-management/policy-collection) in `policy-integrity-shield-events.yaml` determines which ACM managed clusters Integrity Shield should be deployed. 
 
@@ -90,7 +89,8 @@ The following describes how to create the policy only in 3 steps.
       When you have deployed Integrity Shield itself and this `policy-integrity-shield-events` at the same time, it should show `Compliant` on the status right after installation. 
 
 
-### Check a detail of denied events via ACM Console
+
+## Check a detail of denied events via ACM Console
 
 When you find `Not Compliant` status on this policy, you can see the reason why the deny event was happend via ACM Web Console.
 
