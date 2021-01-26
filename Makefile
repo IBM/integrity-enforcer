@@ -533,3 +533,30 @@ delete-private-registry:
 # use this command to update VERSION  after doing 'make build-bundle'
 update-version:
 	$(ISHIELD_REPO_ROOT)/build/update-version.sh
+
+
+.PHONY: check-bundle-test
+
+check-bundle-test:
+	@if [ -z "$(TEST_BUNDLE)" ]; then \
+		echo TEST_BUNDLE is empty. Please set true for operator bundle test.; \
+		exit 1;\
+	fi
+
+# Before executing this target,  change BUNDLE_REGISTRY and execute `make build-bundle'
+test-e2e-bundle: check-bundle-test
+	$(ISHIELD_REPO_ROOT)/build/prepare-e2e-bundle-test.sh v0.17.0
+	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment.sh
+	make create-key-ring
+	make setup-tmp-cr
+	make setup-test-resources
+	make setup-test-env
+	make e2e-test
+
+clean-e2e-test-log:
+	$(ISHIELD_REPO_ROOT)/build/clean-e2e-test-log.sh
+
+test-e2e-bundle-clean: check-bundle-test
+	make test-e2e-clean-common --ignore-errors
+	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test.sh v0.17.0
+	make clean-e2e-test-log
