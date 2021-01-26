@@ -14,7 +14,7 @@ The following describes how to create the policy only in 3 steps.
    
   You will use the ACM policy called `policy-integrity-shield-events`, which is specified in [policy-integrity-shield-events.yaml](https://github.com/open-cluster-management/policy-collection/blob/master/community/CM-Configuration-Management/policy-integrity-shield-events.yaml), and the following describes how to create this policy on your ACM hub cluster.
    
-  1. Retrive the source from [policy-collection](https://github.com/open-cluster-management/policy-collection) Git repository.
+  1. Retrieve the source from [policy-collection](https://github.com/open-cluster-management/policy-collection) Git repository.
    
       Following the [installation doc](../README_ENABLE_ISHIELD_PROTECTION_ACM_ENV.md), a forked repository of [policy-collection](https://github.com/open-cluster-management/policy-collection) should be ready on your machine. (Otherwise, please finish it before this doc.)
 
@@ -67,7 +67,7 @@ The following describes how to create the policy only in 3 steps.
       b)  Create `policy-integrity-shield-events` in the ACM hub cluster in the same namespace as the namespace of `policy-integrity-shield`.
 
       Connect to the ACM Hub cluster and execute the following script with the following parameters:
-        - `https://github.com/YOUR-ORG-NAME/policy-collection.git` -  The URL for the forked `policy-collection` GitHub reposiory.
+        - `https://github.com/YOUR-ORG-NAME/policy-collection.git` -  The URL for the forked `policy-collection` GitHub repository.
         - `community` - The directory where `policy-integrity-shield-events.yaml` is located.
         - `policy-community` - The namespace for creating policy
 
@@ -78,11 +78,11 @@ The following describes how to create the policy only in 3 steps.
 
       When the ACM GitOps successfully synced up, the policy `policy-integrity-shield-events` will be created in an ACM managed cluster(s) which are selected based on the placement rule in the policy. 
       
-      Then, please confirm the status (i.e. Compliance) of `policy-integrity-shield-events` in the ACM Multicloud webconsole (Governace and Risk).
+      Then, please confirm the status (i.e., Compliance) of `policy-integrity-shield-events` in the ACM Multicloud web console (Governance and Risk).
       
       Compliance status of `policy-integrity-shield-events` represents an existence of `deny` event in a cluster.
 
-      When Integrity Shield denies a Kubernetes resource request, it reports a corresponding event as Kubernetes Event. This policy is checking existence of this kind of Integrity Shield Event, and if there is one or more events, it shows `Not Compliant` in the webconsole.
+      When Integrity Shield denies a Kubernetes resource request, it reports a corresponding event as Kubernetes Event. This policy is checking existence of this kind of Integrity Shield Event, and if there is one or more events, it shows `Not Compliant` in the web console.
 
       ![Example of Not Compliant](./images/policy-events-not-compliant.png)
 
@@ -92,13 +92,13 @@ The following describes how to create the policy only in 3 steps.
 
 ## Check a detail of denied events via ACM Console
 
-When you find `Not Compliant` status on this policy, you can see the reason why the deny event was happend via ACM Web Console.
+When you find `Not Compliant` status on this policy, you can see the reason why the deny event was happened via ACM Web Console.
 
 Clicking `Status` tab in the `policy-integrity-shield-events`, you will see this kind of page with `Not Compliant` report.
 
 ![Policy Status](./images/policy-events-status-page.png)
 
-The area with red rectangle in this image shows what event was happend against this policy, and you can see detail of the event by clicking `View yaml` link.
+The area with red rectangle in this image shows what event was happened against this policy, and you can see detail of the event by clicking `View yaml` link.
 
 This page shows the detail of denied events, and you can check which resource, who requested, what was missing, how you can remediate it, and so on.
 
@@ -106,3 +106,4 @@ This page shows the detail of denied events, and you can check which resource, w
 
 For example, the event in the above image describes something like following
 - an attempt to update a policy named `policy-community.policy-namespace` was failed because a signature was not found, so please attach it for passing verification of this request.
+
