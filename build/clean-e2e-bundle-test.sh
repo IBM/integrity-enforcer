@@ -24,7 +24,12 @@ fi
 
 echo "E2E TEST BUNDLE GOES HERE!"
 
-
+if [ "${ISHIELD_ENV}" = local ]; then
+   BUNDLE_INDEX_IMAGE=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+else
+   BUNDLE_INDEX_IMAGE=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
+fi
+echo "Testing BUNDLE_INDEX_IMAGE: $BUNDLE_INDEX_IMAGE"
 echo ""
 echo "-------------------------------------------------"
 
@@ -59,8 +64,8 @@ metadata:
   name: integrity-shield-operator-catalog
   namespace: olm
 spec:
-  displayName: Ishild Operator
-  image: ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+  displayName: Integrity Shield Operator
+  image: ${BUNDLE_INDEX_IMAGE}
   publisher: IBM
   sourceType: grpc
   updateStrategy:
