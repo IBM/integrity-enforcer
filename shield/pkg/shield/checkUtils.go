@@ -35,9 +35,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext) *v1beta1.AdmissionResponse {
-	// `patchBytes` will be nil if no patch
-	patchBytes := generatePatchBytes(reqc, ctx)
+func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext, conf *config.ShieldConfig) *v1beta1.AdmissionResponse {
+	var patchBytes []byte
+	if conf.PatchEnabled(reqc) {
+		// `patchBytes` will be nil if no patch
+		patchBytes = generatePatchBytes(reqc, ctx)
+	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	return &v1beta1.AdmissionResponse{
 		Allowed: allowed,
@@ -208,6 +211,12 @@ func checkIfIShieldAdminRequest(reqc *common.ReqContext, config *config.ShieldCo
 	if config.IShieldAdminUserGroup != "" {
 		groupMatched = common.MatchPatternWithArray(config.IShieldAdminUserGroup, reqc.UserGroups)
 	}
+	// TODO: find better way to merge user input value into the default value for string attribute
+	if config.IShieldAdminUserName == "" {
+		config.IShieldAdminUserName = "system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount"
+	} else {
+		config.IShieldAdminUserName = config.IShieldAdminUserName + ",system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount"
+	}
 	userMatched := false
 	if config.IShieldAdminUserName != "" {
 		userMatched = common.MatchPattern(config.IShieldAdminUserName, reqc.UserName)
@@ -222,6 +231,11 @@ func checkIfIShieldServerRequest(reqc *common.ReqContext, config *config.ShieldC
 
 func checkIfIShieldOperatorRequest(reqc *common.ReqContext, config *config.ShieldConfig) bool {
 	return common.ExactMatch(config.IShieldResourceCondition.OperatorServiceAccount, reqc.UserName) //"service account for integrity-shield-operator"
+}
+
+func checkIfGarbageCollectorRequest(reqc *common.ReqContext) bool {
+	// TODO: should be configurable?
+	return reqc.UserName == "system:serviceaccount:kube-system:generic-garbage-collector"
 }
 
 func getBreakGlassConditions(signerConfig *sigconfapi.SignerConfig) []common.BreakGlassCondition {
