@@ -37,7 +37,7 @@ cd $ISHIELD_REPO_ROOT/integrity-shield-operator
 # Build ishield-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle IMG=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
+make bundle IMG=${TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
 
 # Temporary workarround for dealing with CRD generation issue
 
@@ -60,18 +60,18 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
-docker pull ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
+docker pull ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 
 if [ "$pull_status" = "failed" ]; then
    sed -i '/ replaces: /d' ${SHIELD_OP_DIR}/bundle/manifests/*.clusterserviceversion.yaml
 fi
 
-make bundle-build BUNDLE_IMG=${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+make bundle-build BUNDLE_IMG=${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Push ishield-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
-docker push ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+docker push ${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
 
 # Prepare ishield-operator bundle index
 echo -----------------------------
@@ -80,13 +80,13 @@ echo [3/4] Adding bundle to index
 
 
 if [ "$pull_status" = "failed" ]; then
-        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --tag ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+                      --tag ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 else
 	echo "Succesfulling pulled previous index"
-	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --from-index ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
-                      --tag ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
+                      --from-index ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
+                      --tag ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
 fi
 
 rm -f tmp.Dockerfile
@@ -94,11 +94,11 @@ rm -f tmp.Dockerfile
 # Build ishield-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
-docker build -f index.Dockerfile -t ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
+docker build -f index.Dockerfile -t ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
 # Push ishield-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
-docker push ${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+docker push ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 
 echo "Completed building bundle and index"

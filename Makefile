@@ -543,8 +543,11 @@ check-bundle-test:
 		exit 1;\
 	fi
 
-# Before executing this target,  change BUNDLE_REGISTRY and execute `make build-bundle'
+# Before executing this target,  change BUNDLE_REGISTRY
 test-e2e-bundle: check-bundle-test
+	make clean-e2e-test-log
+	make setup-image # execute `make setup-image` for making sure new images exist
+	$(ISHIELD_REPO_ROOT)/build/build_bundle.sh # Used for ISHIELD_ENV=local/remote
 	$(ISHIELD_REPO_ROOT)/build/prepare-e2e-bundle-test.sh v0.17.0
 	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment.sh
 	make create-key-ring
