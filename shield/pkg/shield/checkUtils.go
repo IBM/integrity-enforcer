@@ -211,15 +211,13 @@ func checkIfIShieldAdminRequest(reqc *common.ReqContext, config *config.ShieldCo
 	if config.IShieldAdminUserGroup != "" {
 		groupMatched = common.MatchPatternWithArray(config.IShieldAdminUserGroup, reqc.UserGroups)
 	}
-	// TODO: find better way to merge user input value into the default value for string attribute
-	if config.IShieldAdminUserName == "" {
-		config.IShieldAdminUserName = "system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount"
-	} else {
-		config.IShieldAdminUserName = config.IShieldAdminUserName + ",system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount"
-	}
 	userMatched := false
 	if config.IShieldAdminUserName != "" {
 		userMatched = common.MatchPattern(config.IShieldAdminUserName, reqc.UserName)
+	}
+	// TODO: delete this block after OLM SA will be added to `config.IShieldAdminUserName` in CR
+	if common.MatchPattern("system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount", reqc.UserName) {
+		userMatched = true
 	}
 	isAdmin := (groupMatched || userMatched)
 	return isAdmin
