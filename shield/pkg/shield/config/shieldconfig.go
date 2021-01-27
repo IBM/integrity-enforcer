@@ -152,7 +152,7 @@ func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) (bool, string) {
 
 func (ec *ShieldConfig) PatchEnabled(reqc *common.ReqContext) bool {
 	// TODO: make this configurable
-	if reqc.Kind == "Policy" {
+	if reqc.Kind == "Policy" && reqc.ApiGroup == "policy.open-cluster-management.io" {
 		return false
 	}
 	if ec.Patch == nil {
