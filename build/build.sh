@@ -30,6 +30,6 @@ ${ISHIELD_REPO_ROOT}/build/push_images_ocm.sh
 
 echo "Building integrity shield bundle starting : $(date)"
 
-${ISHIELD_REPO_ROOT}/build/build_bundle_ocm.sh
+${ISHIELD_REPO_ROOT}/build/build_bundle.sh
 
 echo "Building integrity shield bundle completed : $(date)"

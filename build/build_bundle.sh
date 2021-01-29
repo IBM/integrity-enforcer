@@ -25,22 +25,39 @@ if ! [ -x "$(command -v opm)" ]; then
     exit 1
 fi
 
-
 if [ -z "$ISHIELD_REPO_ROOT" ]; then
     echo "ISHIELD_REPO_ROOT is empty. Please set root directory for IShield repository"
     exit 1
 fi
 
-cd $ISHIELD_REPO_ROOT/integrity-shield-operator
+if [ -z "$SHIELD_OP_DIR" ]; then
+    echo "SHIELD_OP_DIR is empty. Please set env."
+    exit 1
+fi
 
+
+cd $SHIELD_OP_DIR
+
+echo "Current directory: $(pwd)"
+
+if [ "${ISHIELD_ENV}" = "remote" ]; then
+   export COMPONENT_VERSION=${VERSION}
+   export COMPONENT_DOCKER_REPO=${REGISTRY}
+   TARGET_BUNDLE_IMG=${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
+   TARGET_INDEX_IMG_PREVIOUS_VERSION=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION}
+   TARGET_INDEX_IMG=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
+elif [ "${ISHIELD_ENV}" = "local" ]; then
+   TARGET_BUNDLE_IMG=${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+   TARGET_INDEX_IMG_PREVIOUS_VERSION=${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}
+   TARGET_INDEX_IMG=${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
+fi
 
 # Build ishield-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle IMG=${TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} VERSION=${VERSION}
+make bundle IMG=${TARGET_BUNDLE_IMG} VERSION=${VERSION}
 
 # Temporary workarround for dealing with CRD generation issue
-
 tmpcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshieldren.yaml"
 targetcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshields.yaml"
 
@@ -60,33 +77,38 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
-docker pull ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
-
+docker pull ${TARGET_INDEX_IMG_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 if [ "$pull_status" = "failed" ]; then
-   sed -i '/ replaces: /d' ${SHIELD_OP_DIR}/bundle/manifests/*.clusterserviceversion.yaml
+  sed -i '/ replaces: /d' ${SHIELD_OP_DIR}/bundle/manifests/*.clusterserviceversion.yaml
 fi
 
-make bundle-build BUNDLE_IMG=${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+make bundle-build BUNDLE_IMG=${BUNDLE_IMG}
 
 # Push ishield-operator bundle
 echo -----------------------------
 echo [2/4] Pushing bundle
-docker push ${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
+
+if [ "${ISHIELD_ENV}" = "remote" ]; then
+    export COMPONENT_NAME=${ISHIELD_BUNDLE}
+    export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+    docker login quay.io -u ${DOCKER_USER} -p ${DOCKER_PASS}
+    make docker-push IMG=$DOCKER_IMAGE_AND_TAG
+elif [ "${ISHIELD_ENV}" = "local" ]; then
+    docker push ${TARGET_BUNDLE_IMG}
+fi
 
 # Prepare ishield-operator bundle index
 echo -----------------------------
 echo [3/4] Adding bundle to index
 
-
-
 if [ "$pull_status" = "failed" ]; then
-        sudo /usr/local/bin/opm index add -c docker --generate --bundles ${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --tag ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+     sudo /usr/local/bin/opm index add -c docker --generate --bundles ${TARGET_BUNDLE_IMG} \
+                      --tag ${TARGET_INDEX_IMG} --out-dockerfile tmp.Dockerfile
 else
-	echo "Succesfulling pulled previous index"
-	sudo /usr/local/bin/opm index add -c docker --generate --bundles ${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION} \
-                      --from-index ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION} \
-                      --tag ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --out-dockerfile tmp.Dockerfile
+     echo "Succesfulling pulled previous index"
+     sudo /usr/local/bin/opm index add -c docker --generate --bundles ${TARGET_BUNDLE_IMG} \
+                      --from-index ${TARGET_INDEX_IMG_PREVIOUS_VERSION} \
+                      --tag ${TARGET_INDEX_IMG} --out-dockerfile tmp.Dockerfile
 fi
 
 rm -f tmp.Dockerfile
@@ -94,11 +116,17 @@ rm -f tmp.Dockerfile
 # Build ishield-operator bundle index
 echo -----------------------------
 echo [3/4]  Building bundle index
-docker build -f index.Dockerfile -t ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
+docker build -f index.Dockerfile -t ${TARGET_INDEX_IMG} --build-arg USER_ID=1001 --build-arg GROUP_ID=12009  . --no-cache
 
 # Push ishield-operator bundle index
 echo -----------------------------
 echo [3/4]  Pushing bundle index
-docker push ${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 
+if [ "${ISHIELD_ENV}" = "remote" ]; then
+    export COMPONENT_NAME=${ISHIELD_INDEX}
+    export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
+    make docker-push IMG=$DOCKER_IMAGE_AND_TAG
+elif [ "${ISHIELD_ENV}" = "local" ]; then
+    docker push $TARGET_INDEX_IMG}
+fi
 echo "Completed building bundle and index"
