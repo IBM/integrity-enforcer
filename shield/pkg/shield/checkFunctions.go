@@ -97,11 +97,12 @@ func iShieldResourceCheck(reqc *common.ReqContext, config *config.ShieldConfig, 
 		ctx.IShieldResource = true
 	}
 
-	iShieldAdmin := checkIfIShieldAdminRequest(reqc, config)
-	iShieldServer := checkIfIShieldServerRequest(reqc, config)
-	iShieldOperator := checkIfIShieldOperatorRequest(reqc, config)
+	adminReq := checkIfIShieldAdminRequest(reqc, config)
+	serverReq := checkIfIShieldServerRequest(reqc, config)
+	operatorReq := checkIfIShieldOperatorRequest(reqc, config)
+	gcReq := checkIfGarbageCollectorRequest(reqc)
 
-	if (iShieldOperatorResource && iShieldAdmin) || (iShieldServerResource && (iShieldOperator || iShieldServer)) {
+	if (iShieldOperatorResource && (adminReq || gcReq)) || (iShieldServerResource && (operatorReq || serverReq || gcReq)) {
 		ctx.Allow = true
 		ctx.Verified = true
 		ctx.ReasonCode = common.REASON_ISHIELD_ADMIN

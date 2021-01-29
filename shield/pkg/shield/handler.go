@@ -65,11 +65,11 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 	resp := &v1beta1.AdmissionResponse{}
 
 	if dr.isUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.ctx)
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.ctx, self.config)
 	} else if dr.isErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.ctx)
+		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.ctx, self.config)
 	} else {
-		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc, self.ctx)
+		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc, self.ctx, self.config)
 	}
 
 	// log results
