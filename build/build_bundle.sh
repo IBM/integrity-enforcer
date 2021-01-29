@@ -43,10 +43,12 @@ echo "Current directory: $(pwd)"
 if [ "${ISHIELD_ENV}" = "remote" ]; then
    export COMPONENT_VERSION=${VERSION}
    export COMPONENT_DOCKER_REPO=${REGISTRY}
+   TARGET_OPERATOR_IMG=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
    TARGET_BUNDLE_IMG=${ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
    TARGET_INDEX_IMG_PREVIOUS_VERSION=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}${COMPONENT_TAG_EXTENSION}
    TARGET_INDEX_IMG=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}${COMPONENT_TAG_EXTENSION}
 elif [ "${ISHIELD_ENV}" = "local" ]; then
+   TARGET_OPERATOR_IMG=${TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION}
    TARGET_BUNDLE_IMG=${TEST_ISHIELD_OPERATOR_BUNDLE_IMAGE_NAME_AND_VERSION}
    TARGET_INDEX_IMG_PREVIOUS_VERSION=${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_PREVIOUS_VERSION}
    TARGET_INDEX_IMG=${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
@@ -55,7 +57,7 @@ fi
 # Build ishield-operator bundle
 echo -----------------------------
 echo [1/4] Building bundle
-make bundle IMG=${TARGET_BUNDLE_IMG} VERSION=${VERSION}
+make bundle IMG=${TARGET_OPERATOR_IMG} VERSION=${VERSION}
 
 # Temporary workarround for dealing with CRD generation issue
 tmpcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshieldren.yaml"
@@ -82,7 +84,7 @@ if [ "$pull_status" = "failed" ]; then
   sed -i '/ replaces: /d' ${SHIELD_OP_DIR}/bundle/manifests/*.clusterserviceversion.yaml
 fi
 
-make bundle-build BUNDLE_IMG=${BUNDLE_IMG}
+make bundle-build BUNDLE_IMG=${TARGET_BUNDLE_IMG}
 
 # Push ishield-operator bundle
 echo -----------------------------
