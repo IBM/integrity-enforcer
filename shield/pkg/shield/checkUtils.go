@@ -113,7 +113,12 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 	}
 
 	responseMessage := fmt.Sprintf("Result: %s, Reason: \"%s\", Request: %s", resultStr, ctx.Message, reqc.Info(nil))
-	evt.Message = fmt.Sprintf("[IntegrityShieldEvent] %s", responseMessage)
+	tmpMessage := fmt.Sprintf("[IntegrityShieldEvent] %s", responseMessage)
+	// Event.Message can have 1024 chars at most
+	if len(tmpMessage) > 1024 {
+		tmpMessage = tmpMessage[:950] + " ... Trimmed. `Event.Message` can have 1024 chars at maximum."
+	}
+	evt.Message = tmpMessage
 	evt.Reason = common.ReasonCodeMap[ctx.ReasonCode].Code
 	evt.Count = evt.Count + 1
 	evt.EventTime = metav1.NewMicroTime(now)
