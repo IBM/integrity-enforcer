@@ -237,20 +237,25 @@ var _ = Describe("Test integrity shield", func() {
 		}
 
 		i := 0
+		maxReconcileTrial := 600
 		deployFound := &appsv1.Deployment{}
 		for {
-			_, err := r.Reconcile(req)
-			Expect(err).Should(BeNil())
+			_, recError := r.Reconcile(req)
 			i++
 
 			if i%10 == 0 {
 				fmt.Println("[DEBUG] reconcile iteration: ", i)
 				tmpErr := k8sClient.Get(context.Background(), types.NamespacedName{Name: iShieldCR.GetIShieldServerDeploymentName(), Namespace: iShieldNamespace}, deployFound)
 				if tmpErr == nil {
-
 					break
 				}
 			}
+			if i > maxReconcileTrial {
+				fmt.Println("[DEBUG] reconcile iteration exceeded the max trial num, but ishield server has not been deplyed.")
+				tmpErr := fmt.Errorf("Reconcile Test exceeded the max trial number. The last error from reconcile(): %s", recError.Error())
+				Expect(tmpErr).Should(BeNil())
+			}
+			time.Sleep(time.Millisecond * 500)
 		}
 		fmt.Println("[DEBUG] reconcile finished: ", i)
 	})
