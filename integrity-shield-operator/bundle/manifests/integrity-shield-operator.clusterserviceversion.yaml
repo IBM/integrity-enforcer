@@ -117,10 +117,7 @@ spec:
             - apiGroups:
                 - apps
               resources:
-                - daemonsets
                 - deployments
-                - replicasets
-                - statefulsets
               verbs:
                 - create
                 - delete
@@ -129,33 +126,14 @@ spec:
                 - patch
                 - update
                 - watch
-            - apiGroups:
-                - apps
-              resources:
-                - deployments
-                - replicasets
-              verbs:
-                - get
-            - apiGroups:
-                - apps
-              resourceNames:
-                - integrity-shield-operator
-              resources:
-                - deployments/finalizers
-              verbs:
-                - update
             - apiGroups:
                 - ""
               resources:
                 - configmaps
-                - endpoints
                 - events
-                - persistentvolumeclaims
-                - pods
                 - secrets
                 - serviceaccounts
                 - services
-                - services/finalizers
               verbs:
                 - create
                 - delete
@@ -164,29 +142,6 @@ spec:
                 - patch
                 - update
                 - watch
-            - apiGroups:
-                - ""
-              resources:
-                - namespaces
-              verbs:
-                - get
-                - list
-                - patch
-                - update
-                - watch
-            - apiGroups:
-                - ""
-              resources:
-                - pods
-              verbs:
-                - get
-            - apiGroups:
-                - monitoring.coreos.com
-              resources:
-                - servicemonitors
-              verbs:
-                - create
-                - get
             - apiGroups:
                 - policy
               resources:
@@ -303,5 +258,4 @@ spec:
   provider:
     name: IBM
     url: https://github.com/ibm/integrity-enforcer
-  replaces: integrity-shield-operator.v0.1.2
   version: 0.1.3
