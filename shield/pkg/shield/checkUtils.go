@@ -241,6 +241,21 @@ func checkIfGarbageCollectorRequest(reqc *common.ReqContext) bool {
 	return reqc.UserName == "system:serviceaccount:kube-system:generic-garbage-collector"
 }
 
+func checkIfSpecialServiceAccountRequest(reqc *common.ReqContext) bool {
+	// TODO: should be configurable?
+	if strings.HasPrefix(reqc.UserName, "system:serviceaccount:kube-") {
+		return true
+	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:openshift-") {
+		return true
+	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:openshift:") {
+		return true
+	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:open-cluster-") {
+		return true
+	}
+
+	return false
+}
+
 func getBreakGlassConditions(signerConfig *sigconfapi.SignerConfig) []common.BreakGlassCondition {
 	conditions := []common.BreakGlassCondition{}
 	if signerConfig != nil {
