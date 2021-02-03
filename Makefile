@@ -545,7 +545,7 @@ test-e2e-bundle:
 clean-e2e-test-log:
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-test-log.sh
 
-test-e2e-bundle-clean: check-bundle-test
+test-e2e-bundle-clean:
 	make test-e2e-clean-common --ignore-errors
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test.sh v0.17.0
 	make clean-e2e-test-log
