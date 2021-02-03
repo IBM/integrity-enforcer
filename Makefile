@@ -168,12 +168,7 @@ pull-images:
 ############################################################
 
 build-bundle:
-		@if [ "$(ISHIELD_ENV)" = local ]; then \
-			$(ISHIELD_REPO_ROOT)/build/build_bundle.sh; \
-		else \
-			$(ISHIELD_REPO_ROOT)/build/build_bundle_ocm.sh; \
-		fi
-
+		$(ISHIELD_REPO_ROOT)/build/build_bundle.sh
 ############################################################
 # clean section
 ############################################################
@@ -533,3 +528,24 @@ delete-private-registry:
 # use this command to update VERSION  after doing 'make build-bundle'
 update-version:
 	$(ISHIELD_REPO_ROOT)/build/update-version.sh
+
+# Before executing this target,  change BUNDLE_REGISTRY
+test-e2e-bundle:
+	make clean-e2e-test-log
+	make setup-image # execute `make setup-image` for making sure new images exist
+	$(ISHIELD_REPO_ROOT)/build/build_bundle.sh # Used for ISHIELD_ENV=local/remote
+	$(ISHIELD_REPO_ROOT)/build/prepare-e2e-bundle-test.sh v0.17.0
+	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment.sh
+	make create-key-ring
+	make setup-tmp-cr
+	make setup-test-resources
+	make setup-test-env
+	make e2e-test
+
+clean-e2e-test-log:
+	$(ISHIELD_REPO_ROOT)/build/clean-e2e-test-log.sh
+
+test-e2e-bundle-clean: check-bundle-test
+	make test-e2e-clean-common --ignore-errors
+	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test.sh v0.17.0
+	make clean-e2e-test-log
