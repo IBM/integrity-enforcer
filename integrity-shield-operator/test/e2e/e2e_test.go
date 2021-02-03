@@ -44,6 +44,7 @@ var _ = Describe("Test integrity shield", func() {
 			err := CheckIShieldResources(framework, "ServiceAccount", ishield_namespace, expected)
 			Expect(err).To(BeNil())
 		})
+
 	})
 
 	Describe("Check ishield server in ns:"+ishield_namespace, func() {
