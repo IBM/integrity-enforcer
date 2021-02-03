@@ -44,7 +44,6 @@ import (
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	local_test, _                     = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
-	bundle_test, _                    = strconv.ParseBool(os.Getenv("TEST_BUNDLE"))
 	skip_default_user_test            = true
 	kubeconfig_user                   = os.Getenv("KUBE_CONTEXT_USERNAME")
 	ishield_namespace                 = os.Getenv("ISHIELD_OP_NS")

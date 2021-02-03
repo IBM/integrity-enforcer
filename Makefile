@@ -530,17 +530,8 @@ delete-private-registry:
 update-version:
 	$(ISHIELD_REPO_ROOT)/build/update-version.sh
 
-
-.PHONY: check-bundle-test
-
-check-bundle-test:
-	@if [ -z "$(TEST_BUNDLE)" ]; then \
-		echo TEST_BUNDLE is empty. Please set true for operator bundle test.; \
-		exit 1;\
-	fi
-
 # Before executing this target,  change BUNDLE_REGISTRY
-test-e2e-bundle: check-bundle-test
+test-e2e-bundle:
 	make clean-e2e-test-log
 	make setup-image # execute `make setup-image` for making sure new images exist
 	$(ISHIELD_REPO_ROOT)/build/build_bundle.sh # Used for ISHIELD_ENV=local/remote
