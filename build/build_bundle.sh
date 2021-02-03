@@ -129,6 +129,6 @@ if [ "${ISHIELD_ENV}" = "remote" ]; then
     export DOCKER_IMAGE_AND_TAG=${COMPONENT_DOCKER_REPO}/${COMPONENT_NAME}:${COMPONENT_VERSION}${COMPONENT_TAG_EXTENSION}
     make docker-push IMG=$DOCKER_IMAGE_AND_TAG
 elif [ "${ISHIELD_ENV}" = "local" ]; then
-    docker push $TARGET_INDEX_IMG}
+    docker push ${TARGET_INDEX_IMG}
 fi
 echo "Completed building bundle and index"
