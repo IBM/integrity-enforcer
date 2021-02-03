@@ -76,8 +76,13 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "SingleNam
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "MultiNamespace").supported=false)') && echo "$change" > tmp.json
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamespaces").supported=false)') && echo "$change" > tmp.json
 
+description=$(<${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md )
+
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
+
+#echo $description
+yq w -i --style folded $csvfile spec.description  "$description"
 
 docker pull ${TARGET_INDEX_IMG_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 if [ "$pull_status" = "failed" ]; then
@@ -85,6 +90,8 @@ if [ "$pull_status" = "failed" ]; then
 fi
 
 make bundle-build BUNDLE_IMG=${TARGET_BUNDLE_IMG}
+
+
 
 # Push ishield-operator bundle
 echo -----------------------------
@@ -132,3 +139,7 @@ elif [ "${ISHIELD_ENV}" = "local" ]; then
     docker push ${TARGET_INDEX_IMG}
 fi
 echo "Completed building bundle and index"
+
+targetFile="${SHIELD_OP_DIR}/bundle.Dockerfile"
+licenseFile="${SHIELD_OP_DIR}/license.txt"
+$ISHIELD_REPO_ROOT/build/addlicense.sh $targetFile $licenseFile
