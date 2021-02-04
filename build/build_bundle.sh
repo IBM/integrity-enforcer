@@ -76,25 +76,10 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "SingleNam
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "MultiNamespace").supported=false)') && echo "$change" > tmp.json
 change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamespaces").supported=false)') && echo "$change" > tmp.json
 
-# notworking
-#description=$(<${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md )
-
-# notworking
-#description=$(<${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md)
-#description=${description//$'\n'/ }
-
-#change=$(cat tmp.json | jq ".spec.description=${description})") && echo "$change" > tmp.json
-
-#not working
-#read -r -d  '' description << ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
-
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
-echo  "$description"
-#exit 1
-
-#yq w -i --style folded $csvfile spec.description  "$description"
+yq w -i $csvfile spec.description  -- "$(< ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md)"
 
 docker pull ${TARGET_INDEX_IMG_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 if [ "$pull_status" = "failed" ]; then
