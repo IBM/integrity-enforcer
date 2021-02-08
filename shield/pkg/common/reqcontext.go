@@ -25,7 +25,7 @@ import (
 	gjson "github.com/tidwall/gjson"
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -133,7 +133,7 @@ type ParsedRequest struct {
 	JsonStr string
 }
 
-func NewParsedRequest(request *v1beta1.AdmissionRequest) *ParsedRequest {
+func NewParsedRequest(request *admv1.AdmissionRequest) *ParsedRequest {
 	var pr = &ParsedRequest{
 		UID: string(request.UID),
 	}
@@ -207,7 +207,7 @@ func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewReqContext(req *v1beta1.AdmissionRequest) *ReqContext {
+func NewReqContext(req *admv1.AdmissionRequest) *ReqContext {
 
 	pr := NewParsedRequest(req)
 
