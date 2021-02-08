@@ -337,6 +337,10 @@ create-key-ring:
 	kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
 	# kubectl create -f $(SHIELD_OP_DIR)test/deploy/certpool_secret.yaml -n $(ISHIELD_OP_NS)
 
+delete-key-ring:
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
+
 install-crds:
 	@echo installing crds
 	kustomize build $(SHIELD_OP_DIR)config/crd | kubectl apply -f -
@@ -534,7 +538,8 @@ test-e2e-bundle:
 	make clean-e2e-test-log
 	make setup-image # execute `make setup-image` for making sure new images exist
 	$(ISHIELD_REPO_ROOT)/build/build_bundle.sh # Used for ISHIELD_ENV=local/remote
-	$(ISHIELD_REPO_ROOT)/build/prepare-e2e-bundle-test.sh v0.17.0
+	$(ISHIELD_REPO_ROOT)/build/setup-olm.sh v0.17.0
+	$(ISHIELD_REPO_ROOT)/build/deploy-bundle.sh
 	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment.sh
 	make create-key-ring
 	make setup-tmp-cr
@@ -549,3 +554,17 @@ test-e2e-bundle-clean:
 	make test-e2e-clean-common --ignore-errors
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test.sh v0.17.0
 	make clean-e2e-test-log
+
+setup-olm:
+	$(ISHIELD_REPO_ROOT)/build/setup-olm.sh v0.17.0
+
+
+deploy-bundle:
+	$(ISHIELD_REPO_ROOT)/build/deploy-bundle.sh
+
+bundle-test:
+	make create-key-ring
+	make setup-tmp-cr
+	make setup-test-resources
+	make setup-test-env
+	make e2e-test

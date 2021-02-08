@@ -80,6 +80,7 @@ cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
 yq w -i $csvfile spec.description  -- "$(< ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md)"
+yq w -i $csvfile metadata.annotations.containerImage "${TARGET_OPERATOR_IMG}"
 
 docker pull ${TARGET_INDEX_IMG_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 if [ "$pull_status" = "failed" ]; then

@@ -16,22 +16,17 @@
 
 set -e
 
-if [[ ${#@} -ne 1 ]]; then
-    echo "Usage: $0 version"
-    echo "* version: the github release version of OLM"
-    exit 1
-fi
-
-echo "E2E TEST BUNDLE GOES HERE!"
+echo "CREATE BUNDLE RESOURCES GOES HERE!"
 
 BUNDLE_INDX_IMAGE=${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 echo BUNDLE_INDX_IMAGE: ${BUNDLE_INDX_IMAGE}
 
+STARTING_CSV=$(cat  $SHIELD_OP_DIR/bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml | yq r - 'metadata.name')
+
 release=$1
 echo ""
 echo "-------------------------------------------------"
-echo "Install OLM"
-curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/${release}/install.sh | bash -s ${release}
+echo "Install bundle catalogsource"
 
 cat <<EOF | kubectl create -f -
 apiVersion: v1
@@ -55,9 +50,11 @@ metadata:
   namespace: ${ISHIELD_OP_NS}
 spec:
   channel: alpha
+  installPlanApproval: Automatic
   name: integrity-shield-operator
   source: integrity-shield-operator-catalog
   sourceNamespace: olm
+  startingCSV: ${STARTING_CSV}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
@@ -71,7 +68,7 @@ spec:
   sourceType: grpc
   updateStrategy:
     registryPoll:
-      interval: 45m
+      interval: 15m
 EOF
 
 
