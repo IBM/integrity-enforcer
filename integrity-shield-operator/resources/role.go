@@ -70,10 +70,10 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 			},
 			{
 				APIGroups: []string{
-					"", "admissionregistration.k8s.io",
+					"",
 				},
 				Resources: []string{
-					"events", "mutatingwebhookconfigurations",
+					"events",
 				},
 				Verbs: []string{
 					"create", "update", "get",

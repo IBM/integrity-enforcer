@@ -110,11 +110,11 @@ spec:
       - email: '*'
   webhookClusterResource:
     apiGroups:
-    - apiextensions.k8s.io
+    - '*'
     apiVersions:
-    - v1
+    - '*'
     resources:
-    - customresourcedefinitions
+    - '*'
   webhookConfigName: ishield-webhook-config
   webhookNamespacedResource:
     apiGroups:
