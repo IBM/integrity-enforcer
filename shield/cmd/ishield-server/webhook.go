@@ -26,7 +26,7 @@ import (
 	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -56,7 +56,7 @@ func init() {
 	logger.Info("ShieldConfig is loaded.")
 }
 
-func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
 
 	_ = config.InitShieldConfig()
 
@@ -114,11 +114,11 @@ func (server *WebhookServer) serveRequest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var admissionResponse *v1beta1.AdmissionResponse
-	admissionReviewReq := v1beta1.AdmissionReview{}
+	var admissionResponse *admv1.AdmissionResponse
+	admissionReviewReq := admv1.AdmissionReview{}
 	if _, _, err := universalDeserializer.Decode(body, nil, &admissionReviewReq); err != nil {
 
-		admissionResponse = &v1beta1.AdmissionResponse{
+		admissionResponse = &admv1.AdmissionResponse{
 			Result: &metav1.Status{
 				Message: err.Error(),
 			},
@@ -130,7 +130,9 @@ func (server *WebhookServer) serveRequest(w http.ResponseWriter, r *http.Request
 
 	}
 
-	admissionReview := v1beta1.AdmissionReview{}
+	admissionReview := admv1.AdmissionReview{
+		TypeMeta: admissionReviewReq.TypeMeta,
+	}
 
 	if admissionResponse != nil {
 		admissionReview.Response = admissionResponse

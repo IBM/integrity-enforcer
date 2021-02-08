@@ -29,26 +29,31 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext, conf *config.ShieldConfig) *v1beta1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 	var patchBytes []byte
 	if conf.PatchEnabled(reqc) {
 		// `patchBytes` will be nil if no patch
 		patchBytes = generatePatchBytes(reqc, ctx)
 	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
-	return &v1beta1.AdmissionResponse{
+	resp := &admv1.AdmissionResponse{
 		Allowed: allowed,
 		Result: &metav1.Status{
 			Message: responseMessage,
 		},
-		Patch: patchBytes,
 	}
+	if patchBytes != nil {
+		patchType := admv1.PatchTypeJSONPatch
+		resp.Patch = patchBytes
+		resp.PatchType = &patchType
+	}
+	return resp
 }
 
 func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *config.ShieldConfig) error {
@@ -195,7 +200,7 @@ func checkIfUnprocessedInIShield(reqc *common.ReqContext, config *config.ShieldC
 	return false
 }
 
-func getRequestNamespace(req *v1beta1.AdmissionRequest) string {
+func getRequestNamespace(req *admv1.AdmissionRequest) string {
 	reqNamespace := ""
 	if req.Kind.Kind != "Namespace" && req.Namespace != "" {
 		reqNamespace = req.Namespace

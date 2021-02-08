@@ -28,7 +28,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,7 +62,7 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var schemes *runtime.Scheme
 
-var req *v1beta1.AdmissionRequest
+var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
 func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
@@ -92,7 +92,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	dr0 = &DecisionResult{
 		Type: common.DecisionUndetermined,
 	}
-	var req *v1beta1.AdmissionRequest
+	var req *admv1.AdmissionRequest
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
 	if req != nil {
 		reqc2 := common.NewReqContext(req)
@@ -104,8 +104,8 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	return reqc, testConfig, data, ctx, dr0, prof, dr
 }
 
-func getChangedRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
-	var newReq *v1beta1.AdmissionRequest
+func getChangedRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
+	var newReq *admv1.AdmissionRequest
 	reqBytes, _ := json.Marshal(req)
 	_ = json.Unmarshal(reqBytes, &newReq)
 	var cm *v1.ConfigMap
@@ -115,8 +115,8 @@ func getChangedRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest 
 	return newReq
 }
 
-func getRequestWithoutAnnoSig(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
-	var newReq *v1beta1.AdmissionRequest
+func getRequestWithoutAnnoSig(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
+	var newReq *admv1.AdmissionRequest
 	reqBytes, _ := json.Marshal(req)
 	_ = json.Unmarshal(reqBytes, &newReq)
 	var cm *v1.ConfigMap
@@ -140,15 +140,15 @@ func getRequestWithoutAnnoSig(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionR
 	return newReq
 }
 
-func getUpdateRequest() *v1beta1.AdmissionRequest {
-	var newReq *v1beta1.AdmissionRequest
+func getUpdateRequest() *admv1.AdmissionRequest {
+	var newReq *admv1.AdmissionRequest
 	reqc, _, _, _, _, _, _ := getTestData(3)
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
 	return newReq
 }
 
-func getUpdateWithMetaChangeRequest() *v1beta1.AdmissionRequest {
-	var newReq *v1beta1.AdmissionRequest
+func getUpdateWithMetaChangeRequest() *admv1.AdmissionRequest {
+	var newReq *admv1.AdmissionRequest
 	reqc, _, _, _, _, _, _ := getTestData(3)
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
 	var cm, oldCm *v1.ConfigMap
@@ -177,8 +177,8 @@ func getUpdateWithMetaChangeRequest() *v1beta1.AdmissionRequest {
 	return newReq
 }
 
-func getInvalidRSPRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
-	var newReq *v1beta1.AdmissionRequest
+func getInvalidRSPRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
+	var newReq *admv1.AdmissionRequest
 	reqBytes, _ := json.Marshal(req)
 	_ = json.Unmarshal(reqBytes, &newReq)
 	newReq.Object.Raw = []byte(`{"apiVersion":"apis.integrityshield.io/v1alpha1","kind":"ResourceSigningProfile","metadata":{"name":"sample-rsp"},"spec":{"rules":[{"match":[{"kind":"Pod"},{"kind":"ConfigMap"},{"kind":"Deployment"}]}]}}`)
@@ -188,8 +188,8 @@ func getInvalidRSPRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionReque
 	return newReq
 }
 
-func getInvalidSignerConfigRequest(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRequest {
-	var newReq *v1beta1.AdmissionRequest
+func getInvalidSignerConfigRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
+	var newReq *admv1.AdmissionRequest
 	reqBytes, _ := json.Marshal(req)
 	_ = json.Unmarshal(reqBytes, &newReq)
 	newReq.Object.Raw = []byte(`{"apiVersion":"apis.integrityshield.io/v1alpha1","kind":"SignerConfig","metadata":{"name":"signer-config"},"spec":{"config":{"policies":[{"namespaces":["*"],"signers":["SampleSigner"]},{"scope":"Cluster","signers":["SampleSigner"]}],"signers":[{"keyConfig":"sample-signer-keyconfig","name":"SampleSigner"}]}}}`)
@@ -207,7 +207,7 @@ func TestHandler(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
-func getTestLogger(testReq *v1beta1.AdmissionRequest, testConf *config.ShieldConfig) (*log.Logger, *log.Entry) {
+func getTestLogger(testReq *admv1.AdmissionRequest, testConf *config.ShieldConfig) (*log.Logger, *log.Entry) {
 	gv := metav1.GroupVersion{Group: testReq.Kind.Group, Version: testReq.Kind.Version}
 	metaLogger := logger.NewLogger(testConf.LoggerConfig())
 	reqLog := metaLogger.WithFields(
