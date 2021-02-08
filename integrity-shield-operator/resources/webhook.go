@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
-	admv1 "k8s.io/api/admissionregistration/v1beta1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
@@ -50,10 +50,10 @@ func BuildServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
 }
 
 //webhook configuration
-func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield) *admv1.MutatingWebhookConfiguration {
+func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield) *admregv1.MutatingWebhookConfiguration {
 
-	namespaced := admv1.NamespacedScope
-	cluster := admv1.ClusterScope
+	namespaced := admregv1.NamespacedScope
+	cluster := admregv1.ClusterScope
 
 	namespacedRule := cr.Spec.WebhookNamespacedResource
 	namespacedRule.Scope = &namespaced
@@ -67,41 +67,42 @@ func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield
 
 	var empty []byte
 
-	sideEffect := admv1.SideEffectClassNone
+	sideEffect := admregv1.SideEffectClassNone
 	timeoutSeconds := int32(apiv1alpha1.DefaultIShieldWebhookTimeout)
 
-	wc := &admv1.MutatingWebhookConfiguration{
+	wc := &admregv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.GetWebhookConfigName(),
 			Namespace: cr.Namespace,
 		},
-		Webhooks: []admv1.MutatingWebhook{
+		Webhooks: []admregv1.MutatingWebhook{
 			{
 				Name: fmt.Sprintf("ac-server.%s.svc", cr.Namespace),
-				ClientConfig: admv1.WebhookClientConfig{
-					Service: &admv1.ServiceReference{
+				ClientConfig: admregv1.WebhookClientConfig{
+					Service: &admregv1.ServiceReference{
 						Name:      cr.GetWebhookServiceName(),
 						Namespace: cr.Namespace,
 						Path:      path, //"/mutate"
 					},
 					CABundle: empty,
 				},
-				Rules: []admv1.RuleWithOperations{
+				Rules: []admregv1.RuleWithOperations{
 					{
-						Operations: []admv1.OperationType{
-							admv1.Create, admv1.Delete, admv1.Update,
+						Operations: []admregv1.OperationType{
+							admregv1.Create, admregv1.Delete, admregv1.Update,
 						},
 						Rule: namespacedRule,
 					},
 					{
-						Operations: []admv1.OperationType{
-							admv1.Create, admv1.Delete, admv1.Update,
+						Operations: []admregv1.OperationType{
+							admregv1.Create, admregv1.Delete, admregv1.Update,
 						},
 						Rule: clusterRule,
 					},
 				},
-				SideEffects:    &sideEffect,
-				TimeoutSeconds: &timeoutSeconds,
+				SideEffects:             &sideEffect,
+				TimeoutSeconds:          &timeoutSeconds,
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 			},
 		},
 	}

@@ -28,7 +28,7 @@ import (
 	res "github.com/IBM/integrity-enforcer/integrity-shield-operator/resources"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	admv1 "k8s.io/api/admissionregistration/v1beta1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -902,7 +902,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1
 func (r *IntegrityShieldReconciler) createOrUpdateWebhook(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildMutatingWebhookConfigurationForIShield(instance)
-	found := &admv1.MutatingWebhookConfiguration{}
+	found := &admregv1.MutatingWebhookConfiguration{}
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
@@ -962,7 +962,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhook(instance *apiv1alpha1.
 func (r *IntegrityShieldReconciler) deleteWebhook(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildMutatingWebhookConfigurationForIShield(instance)
-	found := &admv1.MutatingWebhookConfiguration{}
+	found := &admregv1.MutatingWebhookConfiguration{}
 
 	reqLogger := r.Log.WithValues(
 		"Instance.Name", instance.Name,
