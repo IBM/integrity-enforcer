@@ -242,6 +242,16 @@ func (self *Handler) finalize(resp *admv1.AdmissionResponse) {
 			// if namespace/RSP request is allowed, then reset cache for RuleTable (RSP list & NS list).
 			self.data.resetRuleTableCache()
 		}
+		// if a new RSP contains a rule for Cluster scope kind, add the kind to webhook config rule
+		if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
+			updated, err := updateWebhookForNewRSP(self.reqc, self.config)
+			if err != nil {
+				self.requestLog.Errorf("Failed to update webhook config with new RSP; %s", err.Error())
+			}
+			if updated {
+				self.requestLog.Info("Updated webhook config with new RSP.")
+			}
+		}
 	}
 	self.logExit()
 	return

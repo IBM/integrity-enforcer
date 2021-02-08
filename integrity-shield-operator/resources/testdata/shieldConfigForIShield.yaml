@@ -158,6 +158,7 @@ spec:
     iShieldResourceCondition: {}
     iShieldCRName: integrity-shield-server
     iShieldServerUserName: system:serviceaccount::ishield-sa
+    iShieldWebhookConfigName: ishield-webhook-config
     ignore:
     - kind: Event
     - kind: Lease

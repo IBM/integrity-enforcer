@@ -62,6 +62,9 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	if ecc.Spec.ShieldConfig.IShieldServerUserName == "" {
 		ecc.Spec.ShieldConfig.IShieldServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.GetServiceAccountName())
 	}
+	if ecc.Spec.ShieldConfig.IShieldWebhookConfigName == "" {
+		ecc.Spec.ShieldConfig.IShieldWebhookConfigName = cr.GetWebhookConfigName()
+	}
 	if len(ecc.Spec.ShieldConfig.KeyPathList) == 0 {
 		keyPathList := []string{}
 		for _, keyConf := range cr.Spec.KeyConfig {

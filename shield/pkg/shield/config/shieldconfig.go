@@ -65,6 +65,7 @@ type ShieldConfig struct {
 	IShieldAdminUserName     string                    `json:"iShieldAdminUserName,omitempty"`
 	IShieldCRName            string                    `json:"iShieldCRName,omitempty"`
 	IShieldServerUserName    string                    `json:"iShieldServerUserName,omitempty"`
+	IShieldWebhookConfigName string                    `json:"iShieldWebhookConfigName,omitempty"`
 	Options                  []string                  `json:"options,omitempty"`
 }
 
