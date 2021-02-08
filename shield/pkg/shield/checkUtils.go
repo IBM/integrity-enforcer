@@ -256,6 +256,8 @@ func checkIfSpecialServiceAccountRequest(reqc *common.ReqContext) bool {
 		return true
 	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:open-cluster-") {
 		return true
+	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:olm:") {
+		return true
 	}
 
 	return false
