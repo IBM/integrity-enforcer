@@ -107,9 +107,9 @@ spec:
     apiVersions: ["*"]
     resources: ["*"]
   webhookClusterResource:
-    apiGroups: ["*"]
-    apiVersions: ["*"]
-    resources: ["*"]
+    apiGroups: ["apiextensions.k8s.io"]
+    apiVersions: ["v1"]
+    resources: ["customresourcedefinitions"]
     # OCP4.4 or earlier, need to select resources.
     # - podsecuritypolicies
     # - clusterrolebindings

@@ -28,7 +28,7 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	iec "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	admv1 "k8s.io/api/admissionregistration/v1beta1"
+	admv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"

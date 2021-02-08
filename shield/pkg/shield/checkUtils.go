@@ -17,11 +17,14 @@
 package shield
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
@@ -29,26 +32,34 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	discovery "k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext, conf *config.ShieldConfig) *v1beta1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 	var patchBytes []byte
 	if conf.PatchEnabled(reqc) {
 		// `patchBytes` will be nil if no patch
 		patchBytes = generatePatchBytes(reqc, ctx)
 	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
-	return &v1beta1.AdmissionResponse{
+	resp := &admv1.AdmissionResponse{
 		Allowed: allowed,
 		Result: &metav1.Status{
 			Message: responseMessage,
 		},
-		Patch: patchBytes,
 	}
+	if patchBytes != nil {
+		patchType := admv1.PatchTypeJSONPatch
+		resp.Patch = patchBytes
+		resp.PatchType = &patchType
+	}
+	return resp
 }
 
 func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *config.ShieldConfig) error {
@@ -195,7 +206,7 @@ func checkIfUnprocessedInIShield(reqc *common.ReqContext, config *config.ShieldC
 	return false
 }
 
-func getRequestNamespace(req *v1beta1.AdmissionRequest) string {
+func getRequestNamespace(req *admv1.AdmissionRequest) string {
 	reqNamespace := ""
 	if req.Kind.Kind != "Namespace" && req.Namespace != "" {
 		reqNamespace = req.Namespace
@@ -296,4 +307,174 @@ func checkIfBreakGlassEnabled(reqc *common.ReqContext, signerConfig *sigconfapi.
 
 func checkIfDetectOnly(sconf *config.ShieldConfig) bool {
 	return (sconf.Mode == config.DetectMode)
+}
+
+func updateWebhookForNewRSP(reqc *common.ReqContext, conf *config.ShieldConfig) (bool, error) {
+	var data *rsp.ResourceSigningProfile
+	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec.DisallowUnknownFields() // Force errors if data has undefined fields
+
+	if err := dec.Decode(&data); err != nil {
+		return false, err
+	}
+	patterns := []*common.RequestPattern{}
+	for _, r := range data.Spec.ProtectRules {
+		patterns = append(patterns, r.Match...)
+		patterns = append(patterns, r.Exclude...)
+	}
+	for _, r := range data.Spec.IgnoreRules {
+		patterns = append(patterns, r.Match...)
+		patterns = append(patterns, r.Exclude...)
+	}
+	for _, r := range data.Spec.ForceCheckRules {
+		patterns = append(patterns, r.Match...)
+		patterns = append(patterns, r.Exclude...)
+	}
+
+	patternKind := []metav1.GroupVersionKind{}
+	for _, p := range patterns {
+		var gvk *metav1.GroupVersionKind
+		var foundGroup, foundVersion, foundKind string
+
+		if p.ApiGroup != nil {
+			foundGroup = string(*(p.ApiGroup))
+		}
+		if p.ApiVersion != nil {
+			foundVersion = string(*(p.ApiVersion))
+		}
+		if p.Kind != nil {
+			foundKind = string(*(p.Kind))
+		}
+
+		if foundGroup != "" || foundKind != "" {
+			gvk = &metav1.GroupVersionKind{
+				Group:   foundGroup,
+				Version: foundVersion,
+				Kind:    foundKind,
+			}
+		}
+
+		if gvk != nil {
+			patternKind = append(patternKind, *gvk)
+		}
+	}
+
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		return false, err
+	}
+	dClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return false, err
+	}
+	resList, err := dClient.ServerPreferredResources()
+	if err != nil {
+		return false, err
+	}
+
+	addList := []metav1.APIResource{}
+	for _, dResList := range resList {
+		if len(dResList.APIResources) == 0 {
+			continue
+		}
+		dGv, err := schema.ParseGroupVersion(dResList.GroupVersion)
+		if err != nil {
+			continue
+		}
+		for _, dRes := range dResList.APIResources {
+			if dRes.Namespaced {
+				continue
+			}
+			dRes.Group = dGv.Group
+			dRes.Version = dGv.Version
+
+			match := false
+			for _, pGvk := range patternKind {
+				if pGvk.Group == "" && pGvk.Kind == "" {
+					continue
+				}
+
+				if pGvk.Group != "" && pGvk.Kind == "" {
+					if pGvk.Group == dRes.Group {
+						match = true
+						break
+					}
+				}
+
+				if pGvk.Group == "" && pGvk.Kind != "" {
+					if pGvk.Kind == dRes.Kind {
+						match = true
+						break
+					}
+				}
+
+				if pGvk.Group != "" && pGvk.Kind != "" {
+					if pGvk.Group == dRes.Group && pGvk.Kind == dRes.Kind {
+						match = true
+						break
+					}
+				}
+			}
+
+			if match {
+				addList = append(addList, dRes)
+			}
+		}
+	}
+
+	webhookName := conf.IShieldWebhookConfigName
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return false, err
+	}
+	webhook, err := client.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.Background(), webhookName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	tmpWebhook := webhook.Webhooks
+	if len(tmpWebhook) == 0 {
+		return false, fmt.Errorf("recevied webhook configuration `%s` has no webhook.", webhookName)
+	}
+	hook := tmpWebhook[0]
+	newRules := []admregv1.RuleWithOperations{}
+	newRules = append(newRules, hook.Rules...)
+	for _, res := range addList {
+		skip := false
+		for _, r := range newRules {
+			if *(r.Scope) == admregv1.NamespacedScope {
+				continue
+			}
+			if len(r.Resources) != 1 || len(r.APIGroups) != 1 {
+				continue
+			}
+
+			if r.Resources[0] == res.Name && r.APIGroups[0] == res.Group {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		} else {
+			clusterScope := admregv1.ClusterScope
+			r := admregv1.RuleWithOperations{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update, admregv1.Delete},
+				Rule: admregv1.Rule{
+					APIGroups:   []string{res.Group},
+					APIVersions: []string{res.Version},
+					Resources:   []string{res.Name},
+					Scope:       &clusterScope,
+				},
+			}
+			newRules = append(newRules, r)
+		}
+	}
+
+	webhook.Webhooks[0].Rules = newRules
+
+	_, err = client.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), webhook, metav1.UpdateOptions{})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

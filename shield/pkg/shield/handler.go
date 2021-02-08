@@ -26,7 +26,7 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
 )
 
 /**********************************************
@@ -50,7 +50,7 @@ func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
 }
 
-func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
+func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 
 	// init ctx, reqc and data & init logger
 	self.initialize(req)
@@ -62,7 +62,7 @@ func (self *Handler) Run(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionRespon
 	dr = self.overwriteDecision(dr)
 
 	// make AdmissionResponse based on DecisionResult
-	resp := &v1beta1.AdmissionResponse{}
+	resp := &admv1.AdmissionResponse{}
 
 	if dr.isUndetermined() {
 		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.ctx, self.config)
@@ -170,7 +170,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 }
 
 // load resoruces / set default values
-func (self *Handler) initialize(req *v1beta1.AdmissionRequest) *DecisionResult {
+func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 
 	self.ctx = InitCheckContext(self.config)
 
@@ -220,7 +220,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 	return dr
 }
 
-func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
+func (self *Handler) finalize(resp *admv1.AdmissionResponse) {
 	if resp.Allowed {
 		resetRuleTableCache := false
 		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
@@ -241,6 +241,17 @@ func (self *Handler) finalize(resp *v1beta1.AdmissionResponse) {
 		if resetRuleTableCache {
 			// if namespace/RSP request is allowed, then reset cache for RuleTable (RSP list & NS list).
 			self.data.resetRuleTableCache()
+		}
+
+		// if a new RSP contains a rule for Cluster scope kind, add the kind to webhook config rule
+		if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
+			updated, err := updateWebhookForNewRSP(self.reqc, self.config)
+			if err != nil {
+				self.requestLog.Errorf("Failed to update webhook config with new RSP; %s", err.Error())
+			}
+			if updated {
+				self.requestLog.Info("Updated webhook config with new RSP.")
+			}
 		}
 	}
 	self.logExit()
@@ -283,7 +294,7 @@ func (self *Handler) logExit() {
 	}
 }
 
-func (self *Handler) logResponse(req *v1beta1.AdmissionRequest, resp *v1beta1.AdmissionResponse) {
+func (self *Handler) logResponse(req *admv1.AdmissionRequest, resp *admv1.AdmissionResponse) {
 	if self.config.Log.LogAllResponse {
 		respData := map[string]interface{}{}
 		respData["allowed"] = resp.Allowed

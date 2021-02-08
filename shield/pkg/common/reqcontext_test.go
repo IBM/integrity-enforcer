@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	v1beta1 "k8s.io/api/admission/v1beta1"
+	admv1 "k8s.io/api/admission/v1"
 )
 
 const reqcPath = "./testdata/reqc_1.json"
@@ -39,7 +39,7 @@ func TestReqContext(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var req *v1beta1.AdmissionRequest
+	var req *admv1.AdmissionRequest
 	err = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
 	if err != nil {
 		t.Error(err)

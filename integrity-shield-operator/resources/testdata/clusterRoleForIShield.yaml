@@ -28,8 +28,10 @@ rules:
   - update
 - apiGroups:
   - ""
+  - "admissionregistration.k8s.io"
   resources:
   - events
+  - mutatingwebhookconfigurations
   verbs:
   - create
   - update
