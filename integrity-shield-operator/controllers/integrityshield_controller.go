@@ -71,9 +71,31 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	var recErr error
 
 	// apply default config if not ignored
+	// this step is necessary to identify default resource names such as ishield-webhook-config, so this should be done even before finalizer
 	if !instance.Spec.IgnoreDefaultIShieldCR {
 		instance = resources.MergeDefaultIntegrityShieldCR(instance, "")
 	}
+
+	// Integrity Shield is under deletion - finalizer step
+	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
+		if containsString(instance.ObjectMeta.Finalizers, apisv1alpha1.CleanupFinalizerName) {
+			if err := r.deleteClusterScopedChildrenResources(instance); err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried
+				reqLogger.Error(err, "Error occured during finalizer process. retrying soon.")
+				return ctrl.Result{}, err
+			}
+
+			// remove our finalizer from the list and update it.
+			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, apisv1alpha1.CleanupFinalizerName)
+			if err := r.Update(context.Background(), instance); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// otherwise, normal reconcile
 
 	if ok, nonReadyKey := r.isKeyRingReady(instance); !ok {
 		reqLogger.Info(fmt.Sprintf("KeyRing secret \"%s\" does not exist. Skip reconciling.", nonReadyKey))
@@ -236,4 +258,86 @@ func (r *IntegrityShieldReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&apisv1alpha1.IntegrityShield{}).
 		Owns(&apisv1alpha1.IntegrityShield{}).
 		Complete(r)
+}
+
+func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instance *apisv1alpha1.IntegrityShield) error {
+	// delete any cluster scope resources owned by the instance
+	// (In Iubernetes 1.20 and later, a garbage collector ignore cluster scope children even if their owner is deleted)
+	var err error
+	_, err = r.deleteWebhook(instance)
+	if err != nil {
+		return err
+	}
+	_, err = r.deletePodSecurityPolicy(instance)
+	if err != nil {
+		return err
+	}
+	if !instance.Spec.Security.AutoIShieldAdminCreationDisabled {
+		_, err = r.deleteClusterRoleBindingForIShieldAdmin(instance)
+		if err != nil {
+			return err
+		}
+		_, err = r.deleteClusterRoleForIShieldAdmin(instance)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = r.deleteClusterRoleBindingForIShield(instance)
+	if err != nil {
+		return err
+	}
+	_, err = r.deleteClusterRoleForIShield(instance)
+	if err != nil {
+		return err
+	}
+
+	enabledPulgins := instance.Spec.ShieldConfig.GetEnabledPlugins()
+	if enabledPulgins["helm"] {
+		_, err = r.deleteHelmReleaseMetadataCRD(instance)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = r.deleteResourceSigningProfileCRD(instance)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.deleteResourceSignatureCRD(instance)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.deleteSignerConfigCRD(instance)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.deleteShieldConfigCRD(instance)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Helper functions to check and remove string from a slice of strings.
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+func removeString(slice []string, s string) (result []string) {
+	for _, item := range slice {
+		if item == s {
+			continue
+		}
+		result = append(result, item)
+	}
+	return
 }

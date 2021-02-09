@@ -56,6 +56,8 @@ const (
 	DefaultKeyringFilename                    = "pubring.gpg"
 	DefaultIShieldWebhookTimeout              = 10
 	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+	CleanupFinalizerName = "cleanup.finalizers.integrityshield.io"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
