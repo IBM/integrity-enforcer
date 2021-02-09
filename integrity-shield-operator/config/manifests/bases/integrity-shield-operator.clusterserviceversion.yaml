@@ -6,7 +6,7 @@ metadata:
     capabilities: Basic Install
     categories: Security
     certified: "false"
-    containerImage: https://quay.io/repository/open-cluster-management/integrity-shield-operator:v0.1.4
+    containerImage: quay.io/open-cluster-management/integrity-shield-operator:0.1.4
     createdAt: "2021-01-13T18:00:00Z"
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
