@@ -2,6 +2,8 @@ apiVersion: apis.integrityshield.io/v1alpha1
 kind: IntegrityShield
 metadata:
   name: integrity-shield-server
+  finalizers:
+  - cleanup.finalizers.integrityshield.io
 spec:
   namespace: integrity-shield-operator-system
   shieldConfig:

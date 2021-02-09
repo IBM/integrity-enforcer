@@ -103,7 +103,7 @@ func iShieldResourceCheck(reqc *common.ReqContext, config *config.ShieldConfig, 
 	gcReq := checkIfGarbageCollectorRequest(reqc)
 	spSAReq := checkIfSpecialServiceAccountRequest(reqc)
 
-	if (iShieldOperatorResource && (adminReq || gcReq || spSAReq)) || (iShieldServerResource && (operatorReq || serverReq || gcReq || spSAReq)) {
+	if (iShieldOperatorResource && (adminReq || operatorReq || gcReq || spSAReq)) || (iShieldServerResource && (operatorReq || serverReq || gcReq || spSAReq)) {
 		ctx.Allow = true
 		ctx.Verified = true
 		ctx.ReasonCode = common.REASON_ISHIELD_ADMIN

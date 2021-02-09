@@ -106,6 +106,32 @@ func (r *IntegrityShieldReconciler) createOrUpdateCRD(instance *apiv1alpha1.Inte
 
 }
 
+func (r *IntegrityShieldReconciler) deleteCRD(instance *apiv1alpha1.IntegrityShield, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
+	ctx := context.Background()
+	found := &extv1.CustomResourceDefinition{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"CustomResourceDefinition.Name", expected.Name)
+
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
+
+	if err == nil {
+		reqLogger.Info(fmt.Sprintf("Deleting the IShield CustomResourceDefinition %s", expected.Name))
+		err = r.Delete(ctx, found)
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Failed to delete the IShield CustomResourceDefinition %s", expected.Name))
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if errors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else {
+		return ctrl.Result{}, err
+	}
+
+}
+
 func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildShieldConfigCRD(instance)
@@ -133,6 +159,35 @@ func (r *IntegrityShieldReconciler) createOrUpdateResourceSigningProfileCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildResourceSigningProfileCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteShieldConfigCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildShieldConfigCRD(instance)
+	return r.deleteCRD(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteSignerConfigCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildSignerConfigCRD(instance)
+	return r.deleteCRD(instance, expected)
+}
+func (r *IntegrityShieldReconciler) deleteResourceSignatureCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildResourceSignatureCRD(instance)
+	return r.deleteCRD(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteHelmReleaseMetadataCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildHelmReleaseMetadataCRD(instance)
+	return r.deleteCRD(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteResourceSigningProfileCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildResourceSigningProfileCRD(instance)
+	return r.deleteCRD(instance, expected)
 }
 
 /**********************************************
@@ -409,6 +464,33 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRole(instance *apiv1alp
 
 }
 
+func (r *IntegrityShieldReconciler) deleteClusterRole(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
+	ctx := context.Background()
+	found := &rbacv1.ClusterRole{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"ClusterRole.Name", expected.Name)
+
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
+
+	if err == nil {
+		reqLogger.Info(fmt.Sprintf("Deleting the IShield ClusterRole %s", expected.Name))
+		err = r.Delete(ctx, found)
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Failed to delete the IShield ClusterRole %s", expected.Name))
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if errors.IsNotFound(err) {
+
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else {
+		return ctrl.Result{}, err
+	}
+
+}
+
 func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBinding(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRoleBinding{}
@@ -448,6 +530,32 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBinding(instance *a
 
 	// No reconcile was necessary
 	return ctrl.Result{}, nil
+
+}
+
+func (r *IntegrityShieldReconciler) deleteClusterRoleBinding(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
+	ctx := context.Background()
+	found := &rbacv1.ClusterRoleBinding{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"ClusterRoleBinding.Name", expected.Name)
+
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
+
+	if err == nil {
+		reqLogger.Info(fmt.Sprintf("Deleting the IShield ClusterRoleBinding %s", expected.Name))
+		err = r.Delete(ctx, found)
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Failed to delete the IShield ClusterRoleBinding %s", expected.Name))
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if errors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else {
+		return ctrl.Result{}, err
+	}
 
 }
 
@@ -543,6 +651,12 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBindingForIShieldAd
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
 }
 
+func (r *IntegrityShieldReconciler) deleteClusterRoleBindingForIShieldAdmin(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildClusterRoleBindingForIShieldAdmin(instance)
+	return r.deleteClusterRoleBinding(instance, expected)
+}
+
 func (r *IntegrityShieldReconciler) createOrUpdateRoleBindingForIShieldAdmin(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildRoleBindingForIShieldAdmin(instance)
@@ -561,11 +675,23 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleForIShieldAdmin(
 	return r.createOrUpdateClusterRole(instance, expected)
 }
 
+func (r *IntegrityShieldReconciler) deleteClusterRoleForIShieldAdmin(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildClusterRoleForIShieldAdmin(instance)
+	return r.deleteClusterRole(instance, expected)
+}
+
 // for ie
 func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBindingForIShield(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForIShield(instance)
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteClusterRoleBindingForIShield(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildClusterRoleBindingForIShield(instance)
+	return r.deleteClusterRoleBinding(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateRoleBindingForIShield(
@@ -584,6 +710,12 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleForIShield(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForIShield(instance)
 	return r.createOrUpdateClusterRole(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteClusterRoleForIShield(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildClusterRoleForIShield(instance)
+	return r.deleteClusterRole(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
@@ -627,6 +759,33 @@ func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *ap
 	// No reconcile was necessary
 	return ctrl.Result{}, nil
 
+}
+
+// delete ishield-psp
+func (r *IntegrityShieldReconciler) deletePodSecurityPolicy(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	ctx := context.Background()
+	expected := res.BuildPodSecurityPolicy(instance)
+	found := &policyv1.PodSecurityPolicy{}
+
+	reqLogger := r.Log.WithValues(
+		"Instance.Name", instance.Name,
+		"PodSecurityPolicy.Name", expected.Name)
+
+	err := r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
+
+	if err == nil {
+		reqLogger.Info("Deleting the IShield PodSecurityPolicy")
+		err = r.Delete(ctx, found)
+		if err != nil {
+			reqLogger.Error(err, "Failed to delete the IShield PodSecurityPolicy")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else if errors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+	} else {
+		return ctrl.Result{}, err
+	}
 }
 
 /**********************************************
