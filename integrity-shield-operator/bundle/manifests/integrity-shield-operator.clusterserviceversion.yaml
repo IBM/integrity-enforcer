@@ -64,13 +64,13 @@ metadata:
     capabilities: Basic Install
     categories: Security
     certified: "false"
-    containerImage: quay.io/open-cluster-management/integrity-shield-operator:0.1.3
+    containerImage: quay.io/open-cluster-management/integrity-shield-operator:0.1.4
     createdAt: "2021-01-13T18:00:00Z"
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/open-cluster-management/integrity-shield
     support: Community
-  name: integrity-shield-operator.v0.1.3
+  name: integrity-shield-operator.v0.1.4
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -338,7 +338,7 @@ spec:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
-                    image: quay.io/open-cluster-management/integrity-shield-operator:0.1.3
+                    image: quay.io/open-cluster-management/integrity-shield-operator:0.1.4
                     imagePullPolicy: Always
                     name: manager
                     resources:
@@ -406,4 +406,5 @@ spec:
   provider:
     name: Community
     url: https://github.com/open-cluster-management/integrity-shield
-  version: 0.1.3
+  replaces: integrity-shield-operator.v0.1.3
+  version: 0.1.4
