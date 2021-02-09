@@ -1,7 +1,8 @@
 # k8s Integrity Shield
-k8s Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
 
-k8s Integrity Shield's capabilities are
+K8s Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on Admission Webhook on Kubernetes cluster.
+
+K8s Integrity Shield's capabilities are
 
 - Allow to deploy authorized application pakcages only
 - Allow to use signed deployment params only
@@ -35,7 +36,7 @@ Default CR already includes signer configuration with filename "pubring.gpg" and
 
 After installation, you can configure cluster to protect resources from creation and changes without signature.
 
-For enabling protection, create a custom resource `ResourceSigningProfile` (RSP) that defines which resource(s) should be protected, in the same namespace as resources. 
+For enabling protection, create a custom resource `ResourceSigningProfile` (RSP) that defines which resource(s) should be protected, in the same namespace as resources.
 
 Here is an example of creating RSP for protecting resources in a namespace `secure-ns`.
 
@@ -56,9 +57,9 @@ EOF
 resourcesigningprofile.apis.integrityshield.io/sample-rsp created
 ```
 
-After creating the RSP above, any resources of kinds configmap, deployment, and service can not be created or modified without valid signature. 
+After creating the RSP above, any resources of kinds configmap, deployment, and service can not be created or modified without valid signature.
 
-For example, let's see what happens when creating configmap below without signature. 
+For example, let's see what happens when creating configmap below without signature.
 
 ```
 cat << EOF > /tmp/test-cm.yaml
@@ -73,14 +74,14 @@ data:
 EOF
 ```
 
-Creation of configmap is blocked, since no signature is attached to it. 
+Creation of configmap is blocked, since no signature is attached to it.
 
 ```
 $ oc apply -f /tmp/test-cm.yaml -n secure-ns
 Error from server: error when creating "/tmp/test-cm.yaml": admission webhook "ac-server.integrity-shield-operator-system.svc" denied the request: Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature. (Request: {"kind":"ConfigMap","name":"test-cm","namespace":"secure-ns","operation":"CREATE","request.uid":"61f4aabd-df4b-4d12-90e7-11a46ee28cb0","scope":"Namespaced","userName":"IAM#cluser-user"})
 ```
 
-Event is reported. 
+Event is reported.
 
 ```
 $ oc get event -n secure-ns --field-selector type=IntegrityShield
@@ -91,17 +92,17 @@ LAST SEEN   TYPE              REASON         OBJECT              MESSAGE
 
 ### How to sign a resource
 
-You can sign resources with the utility script, which is available from our repository. Two prerequisites for using the script on your host. 
+You can sign resources with the utility script, which is available from our repository. Two prerequisites for using the script on your host.
 
-- [yq](https://github.com/mikefarah/yq) command is available. 
-- you can sign file with GPG signing key of the signer registered in preparations. 
+- [yq](https://github.com/mikefarah/yq) command is available.
+- you can sign file with GPG signing key of the signer registered in preparations.
 
 For example of singing a YAML file `/tmp/test-cm.yaml` as `signer@enterprise.com`, use the utility script as shown below. This script would modify the original input file (`/tmp/test-cm.yaml`) by adding signature, message annotations to it.
 
 ```
 $ curl -s https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/gpg-annotation-sign.sh | bash -s \
   signer@enterprise.com \
-  /tmp/test-cm.yaml 
+  /tmp/test-cm.yaml
 ```
 
 Below is the sample YAML file (`/tmp/test-cm.yaml`) with signature, message annotations.
@@ -129,7 +130,7 @@ configmap/test-cm created
 
 ## Supported Platforms
 
-k8s Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design.
+K8s Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design.
 We have verified the feasibility on the following platforms:
 
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)

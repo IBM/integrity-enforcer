@@ -12,24 +12,13 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License
 
-set -e
+targetFile=$1
+licenseFile=$2
 
-echo "BUILD GOES HERE!"
+LICENSELEN=$(wc -l ${licenseFile} | cut -f1 -d ' ')
 
-echo "<repo>/<component>:<tag> : $1"
+echo $LICENSELEN
 
-# Run our build target
-
-make build-images NO_CACHE=true
-
-echo "Pushing images with Travis build tag"
-
-${ISHIELD_REPO_ROOT}/build/push_images_ocm.sh
-
-echo "Building integrity shield bundle starting : $(date)"
-
-${ISHIELD_REPO_ROOT}/build/build_bundle.sh
-
-echo "Building integrity shield bundle completed : $(date)"
+head -$LICENSELEN ${targetFile} | diff ${licenseFile} - || ( ( cat ${licenseFile}; echo; cat ${targetFile}) > ${SHIELD_OP_DIR}/file; mv ${SHIELD_OP_DIR}/file ${targetFile})
