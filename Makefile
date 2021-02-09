@@ -168,11 +168,7 @@ pull-images:
 ############################################################
 
 build-bundle:
-		@if [ "$(ISHIELD_ENV)" = local ]; then \
-			$(ISHIELD_REPO_ROOT)/build/build_bundle.sh; \
-		else \
-			$(ISHIELD_REPO_ROOT)/build/build_bundle_ocm.sh; \
-		fi
+		$(ISHIELD_REPO_ROOT)/build/build_bundle.sh
 
 ############################################################
 # clean section
