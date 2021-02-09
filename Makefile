@@ -536,16 +536,12 @@ update-version:
 # Before executing this target,  change BUNDLE_REGISTRY
 test-e2e-bundle:
 	make clean-e2e-test-log
+	make setup-olm
 	make setup-image # execute `make setup-image` for making sure new images exist
 	$(ISHIELD_REPO_ROOT)/build/build_bundle.sh # Used for ISHIELD_ENV=local/remote
-	$(ISHIELD_REPO_ROOT)/build/setup-olm.sh v0.17.0
 	$(ISHIELD_REPO_ROOT)/build/deploy-bundle.sh
 	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment.sh
-	make create-key-ring
-	make setup-tmp-cr
-	make setup-test-resources
-	make setup-test-env
-	make e2e-test
+	make bundle-test
 
 clean-e2e-test-log:
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-test-log.sh
