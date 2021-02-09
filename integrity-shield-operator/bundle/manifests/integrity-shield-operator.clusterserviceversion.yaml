@@ -8,6 +8,9 @@ metadata:
           "apiVersion": "apis.integrityshield.io/v1alpha1",
           "kind": "IntegrityShield",
           "metadata": {
+            "finalizers": [
+              "cleanup.finalizers.integrityshield.io"
+            ],
             "name": "integrity-shield-server"
           },
           "spec": {
