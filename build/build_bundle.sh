@@ -79,8 +79,14 @@ change=$(cat tmp.json | jq '.spec.installModes |=map (select(.type == "AllNamesp
 cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
+cp  ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md /tmp/README_OPERATOR_HUB.md
+sed -i '1d' ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
+sed -i '1d' ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
+
 yq w -i $csvfile spec.description  -- "$(< ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md)"
 yq w -i $csvfile metadata.annotations.containerImage "${TARGET_OPERATOR_IMG}"
+
+mv /tmp/README_OPERATOR_HUB.md ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
 
 docker pull ${TARGET_INDEX_IMG_PREVIOUS_VERSION} | grep "Image is up to date" && pull_status="pulled" || pull_status="failed"
 if [ "$pull_status" = "failed" ]; then
