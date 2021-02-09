@@ -80,8 +80,7 @@ cat tmp.json  | yq r - -P > $csvfile
 rm tmp.json
 
 cp  ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md ${TMP_DIR}README_OPERATOR_HUB.md
-sed -i '1d' ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
-sed -i '1d' ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
+sed -i '1,2d' ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md
 
 yq w -i $csvfile spec.description  -- "$(< ${ISHIELD_REPO_ROOT}/docs/README_OPERATOR_HUB.md)"
 yq w -i $csvfile metadata.annotations.containerImage "${TARGET_OPERATOR_IMG}"
