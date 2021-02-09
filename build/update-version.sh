@@ -18,10 +18,12 @@ set -e
 
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/docs/ACM/README_DISABLE_ISHIELD_PROTECTION_ACM_ENV.md
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/scripts/install_shield.sh
+sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/COMPONENT_VERSION
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}Makefile
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}resources/testdata/deploymentForIShield.yaml
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}resources/testdata/integrityShieldCRForTest.yaml
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}resources/testdata/integrityShieldCR.yaml
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}resources/default-ishield-cr.yaml
+sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}config/manifests/bases/integrity-shield-operator.clusterserviceversion.yaml
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_DIR}version/version.go
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_DIR}pkg/util/mapnode/node_test.go
