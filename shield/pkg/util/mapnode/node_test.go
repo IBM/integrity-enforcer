@@ -405,7 +405,7 @@ func TestNode(t *testing.T) {
                         "value": "sample-operator"
                     }
                     ],
-                    "image": "sampleregistry/sample-operator:0.1.3dev",
+                    "image": "sampleregistry/sample-operator:0.1.4dev",
                     "imagePullPolicy": "Always",
                     "name": "sample-operator"
                 }
@@ -541,7 +541,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: sampleregistry/sample-operator:0.1.3dev
+        image: sampleregistry/sample-operator:0.1.4dev
         imagePullPolicy: Always
         name: sample-operator
 `)
