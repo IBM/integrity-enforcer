@@ -2,6 +2,8 @@ apiVersion: apis.integrityshield.io/v1alpha1
 kind: IntegrityShield
 metadata:
   creationTimestamp: null
+  finalizers:
+  - cleanup.finalizers.integrityshield.io
   name: integrity-shield-server
 spec:
   affinity: {}
