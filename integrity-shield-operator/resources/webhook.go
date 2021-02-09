@@ -18,8 +18,12 @@ package resources
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
+	"github.com/ghodss/yaml"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,6 +74,29 @@ func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield
 	sideEffect := admregv1.SideEffectClassNone
 	timeoutSeconds := int32(apiv1alpha1.DefaultIShieldWebhookTimeout)
 
+	rules := []admregv1.RuleWithOperations{
+		{
+			Operations: []admregv1.OperationType{
+				admregv1.Create, admregv1.Delete, admregv1.Update,
+			},
+			Rule: namespacedRule,
+		},
+		{
+			Operations: []admregv1.OperationType{
+				admregv1.Create, admregv1.Delete, admregv1.Update,
+			},
+			Rule: clusterRule,
+		},
+	}
+
+	if common.ExactMatchWithPatternArray("roks", cr.Spec.ShieldConfig.Options) {
+		var roksRules []admregv1.RuleWithOperations
+		fpath := filepath.Clean(apiv1alpha1.WebhookRulesForRoksYamlPath)
+		rulesBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
+		_ = yaml.Unmarshal(rulesBytes, &roksRules)
+		rules = roksRules
+	}
+
 	wc := &admregv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.GetWebhookConfigName(),
@@ -86,20 +113,7 @@ func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield
 					},
 					CABundle: empty,
 				},
-				Rules: []admregv1.RuleWithOperations{
-					{
-						Operations: []admregv1.OperationType{
-							admregv1.Create, admregv1.Delete, admregv1.Update,
-						},
-						Rule: namespacedRule,
-					},
-					{
-						Operations: []admregv1.OperationType{
-							admregv1.Create, admregv1.Delete, admregv1.Update,
-						},
-						Rule: clusterRule,
-					},
-				},
+				Rules:                   rules,
 				SideEffects:             &sideEffect,
 				TimeoutSeconds:          &timeoutSeconds,
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},

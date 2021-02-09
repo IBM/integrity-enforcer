@@ -52,6 +52,7 @@ const (
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
 	DefaultResourceSigningProfileYamlPath     = "./resources/default-rsp.yaml"
+	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
 	DefaultKeyringFilename                    = "pubring.gpg"
 	DefaultIShieldWebhookTimeout              = 10
 	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token"

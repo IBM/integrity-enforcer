@@ -5,6 +5,7 @@ RUN mkdir /ishield-op-app && mkdir /ishield-op-app/resources
 
 ADD /resources/default-rsp.yaml /ishield-op-app/resources/default-rsp.yaml
 ADD /resources/default-ishield-cr.yaml /ishield-op-app/resources/default-ishield-cr.yaml
+ADD /resources/webhook-rules-for-roks.yaml /ishield-op-app/resources/webhook-rules-for-roks.yaml
 COPY build/_output/bin/integrity-shield-operator /ishield-op-app/manager
 
 RUN chgrp -R 0 /ishield-op-app && chmod -R g=u /ishield-op-app

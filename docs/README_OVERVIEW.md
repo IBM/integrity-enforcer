@@ -22,8 +22,8 @@ Integrity Shield works as Kubernetes Admission Controller using Mutating Admissi
 Integrity Shield can be deployed with operator. We have verified the feasibility on the following platforms:
 
 - [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
-- [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
-- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.14
+- [RedHat OpenShift 4.5 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud) (*see also [config for ROKS](README_CONFIG_FOR_ROKS.md))
+- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.17
 - [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
 
 ## How Integrity Shield works
