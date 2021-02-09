@@ -1,0 +1,70 @@
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["*"]
+  apiVersions: ["*"]
+  resources: ["*"]
+  scope: "Namespaced"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: [""]
+  apiVersions: ["v1"]
+  resources: ["namespaces", "nodes", "persistentvolumes", "componentstatuses"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["policy"]
+  apiVersions: ["v1beta1"]
+  resources: ["podsecuritypolicies"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["rbac.authorization.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["clusterroles", "clusterrolebindings"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["apiextensions.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["customresourcedefinitions"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["storage.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["csidrivers", "csinodes", "storageclasses", "volumeattachments"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["authentication.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["tokenreviews"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["authorization.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["subjectaccessreviews", "selfsubjectaccessreviews", "selfsubjectrulesreviews"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["apiregistration.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["apiservices"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["certificates.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["certificatesigningrequests"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["flowcontrol.apiserver.k8s.io"]
+  apiVersions: ["v1beta1"]
+  resources: ["flowschemas", "prioritylevelconfigurations"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["networking.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["ingressclasses"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["node.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["runtimeclasses"]
+  scope: "Cluster"
+- operations: ["CREATE", "UPDATE", "DELETE"]
+  apiGroups: ["scheduling.k8s.io"]
+  apiVersions: ["v1"]
+  resources: ["priorityclasses"]
+  scope: "Cluster"
