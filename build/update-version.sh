@@ -19,6 +19,7 @@ set -e
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/docs/ACM/README_DISABLE_ISHIELD_PROTECTION_ACM_ENV.md
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/scripts/install_shield.sh
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/COMPONENT_VERSION
+sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/develop/local-deploy/operator_local.yaml
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}Makefile
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}resources/testdata/deploymentForIShield.yaml
 sed -i "s|$PREV_VERSION|$VERSION|" ${SHIELD_OP_DIR}resources/testdata/integrityShieldCRForTest.yaml
