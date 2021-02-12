@@ -409,6 +409,5 @@ spec:
   maturity: alpha
   provider:
     name: Community
-    url: https://github.com/open-cluster-management/integrity-shield
   replaces: integrity-shield-operator.v0.1.3
   version: 0.1.4
