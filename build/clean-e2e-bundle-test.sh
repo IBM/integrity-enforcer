@@ -22,7 +22,12 @@ if [[ ${#@} -ne 1 ]]; then
     exit 1
 fi
 
-echo "E2E TEST BUNDLE GOES HERE!"
+echo "E2E TEST BUNDLE CLEAN GOES HERE!"
+
+if [ -z "$ISHIELD_OP_NS" ]; then
+    echo "ISHIELD_OP_NS is empty. Please set env."
+    exit 1
+fi
 
 if [ -z "$ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION" ]; then
     echo "ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION is empty. Please set env."

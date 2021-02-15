@@ -531,11 +531,6 @@ update-version:
 	$(ISHIELD_REPO_ROOT)/build/update-version.sh
 
 # Before executing this target,  change BUNDLE_REGISTRY
-check-test-bundle:
-	@if [ -z "$(TEST_BUNDLE)" ]; then \
-		echo TEST_BUNDLE is empty. Please set true for local test.; \
-		exit 1;\
-	fi
 
 test-e2e-bundle: check-test-bundle
 	make clean-e2e-test-log

@@ -44,7 +44,6 @@ import (
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	local_test, _                     = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
-	bundle_test,_			  = strconv.ParseBool(os.Getenv("TEST_BUNDLE"))
 	skip_default_user_test            = true
 	kubeconfig_user                   = os.Getenv("KUBE_CONTEXT_USERNAME")
 	ishield_namespace                 = os.Getenv("ISHIELD_OP_NS")
@@ -70,9 +69,6 @@ var (
 	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
 	DefaultSignerConfigName           = "signer-config"
 	DefaultShieldConfigName           = "ishield-config"
-	ishield_op_sa                     = "integrity-shield-operator-manager"
-	ishield_op_role                   = "integrity-shield-operator-leader-election-role"
-	ishield_op_rb                     = "integrity-shield-operator-leader-election-rolebinding"
 	ishield_olm_op_admin_role	  = "ishield-admin-role"
 	ishield_olm_op_admin_rb		  = "ishield-admin-rolebinding"
 	ishield_olm_op_cluster_role       = "ishield-cluster-role-sim"
