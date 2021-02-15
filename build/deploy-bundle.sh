@@ -41,7 +41,7 @@ echo BUNDLE_INDX_IMAGE: ${BUNDLE_INDX_IMAGE}
 STARTING_CSV=$(cat  $SHIELD_OP_DIR/bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml | yq r - 'metadata.name')
 
 if [ -z "$STARTING_CSV" ]; then
-    echo "STARTING_CSV is empty. Please set env."
+    echo "STARTING_CSV is empty. Please check if integrity-shield-operator.clusterserviceversion.yaml is generated correctly"
     exit 1
 fi
 
