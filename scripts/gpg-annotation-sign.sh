@@ -51,16 +51,16 @@ fi
 msg=`cat $INPUT_FILE | $base`
 
 # signature
-sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
+sig=`cat $INPUT_FILE > /tmp/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - /tmp/temp-aaa.yaml | $base`
 
 if [[ $YQ_VERSION == "3" ]]; then
-   yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
-   yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $sig
+   yq w -i -d* $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
+   yq w -i -d* $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $sig
 elif [[ $YQ_VERSION == "4" ]]; then
    yq eval ".metadata.annotations.\"integrityshield.io/message\" = \"$msg\"" -i $INPUT_FILE
    yq eval ".metadata.annotations.\"integrityshield.io/signature\" = \"$sig\""  -i $INPUT_FILE
 fi
 
-if [ -f temp-aaa.yaml ]; then
-   rm temp-aaa.yaml
+if [ -f /tmp/temp-aaa.yaml ]; then
+   rm /tmp/temp-aaa.yaml
 fi
