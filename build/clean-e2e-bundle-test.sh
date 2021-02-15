@@ -24,6 +24,11 @@ fi
 
 echo "E2E TEST BUNDLE GOES HERE!"
 
+if [ -z "$ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION is empty. Please set env."
+    exit 1
+fi
+
 if [ "${ISHIELD_ENV}" = local ]; then
    BUNDLE_INDEX_IMAGE=${ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 else
