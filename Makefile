@@ -552,7 +552,7 @@ test-e2e-bundle-clean-local:
 	make clean-e2e-bundle-test-local
 	make clean-e2e-test-log
 
-OLM_RELEASE_URLclean-e2e-bundle-test-local:
+clean-e2e-bundle-test-local:
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test-local.sh
 
 clean-e2e-test-log:
