@@ -84,7 +84,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 
 		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, unprotectAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType)
 		if !matched {
-			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
+			msg := fmt.Sprintf("The message for this signature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
 				Error: &common.CheckError{
 					Msg:    msg,
