@@ -31,9 +31,11 @@ INPUT_FILE=$2
 if [ -z "$TMP_DIR" ]; then
     echo "TMP_DIR is empty. Setting /tmp as default"
     TMP_DIR="/tmp"
-    if [ ! -d $TMP_DIR ]; then
-       echo "$TMP_DIR directory does not exist, please create it."
-    fi
+fi
+
+if [ ! -d $TMP_DIR ]; then
+    echo "$TMP_DIR directory does not exist, please create it."
+    exit 1
 fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then

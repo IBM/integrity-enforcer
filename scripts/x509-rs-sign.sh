@@ -41,11 +41,12 @@ OUTPUT_FILE=$4
 if [ -z "$TMP_DIR" ]; then
     echo "TMP_DIR is empty. Setting /tmp as default"
     TMP_DIR="/tmp"
-    if [ ! -d $TMP_DIR ]; then
-       echo "$TMP_DIR directory does not exist, please create it."
-    fi
 fi
 
+if [ ! -d $TMP_DIR ]; then
+    echo "$TMP_DIR directory does not exist, please create it."
+    exit 1
+fi
 # compute signature (and encoded message and certificate)
 cat <<EOF > $OUTPUT_FILE
 apiVersion: apis.integrityshield.io/v1alpha1
