@@ -12,13 +12,11 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License
 
-set -e
+logs=$(ls ${SHIELD_OP_DIR}test/e2e/*.log 2>/dev/null | wc -l)
 
-echo "E2E TEST GOES HERE!"
-make test-e2e
-
-# TODO: Enable this later
-#echo "E2E BUNDLE TEST GOES HERE!"
-#make test-e2e-bundle
+if [ ! $logs = 0 ]; then
+   echo logs: $logs
+   sudo rm ${SHIELD_OP_DIR}test/e2e/*.log
+fi

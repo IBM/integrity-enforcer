@@ -16,9 +16,19 @@
 
 set -e
 
-echo "E2E TEST GOES HERE!"
-make test-e2e
+if [[ ${#@} -ne 1 ]]; then
+    echo "Usage: $0 version"
+    echo "* version: the github release version of OLM"
+    exit 1
+fi
 
-# TODO: Enable this later
-#echo "E2E BUNDLE TEST GOES HERE!"
-#make test-e2e-bundle
+echo "SETUP-OLM GOES HERE!"
+
+release=$1
+echo ""
+echo "-------------------------------------------------"
+echo "Install OLM"
+curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/${release}/install.sh | bash -s ${release}
+
+
+
