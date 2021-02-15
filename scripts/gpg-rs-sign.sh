@@ -81,12 +81,18 @@ if [[ $YQ_VERSION == "3" ]]; then
    indx=0
    yq r -d'*'  ${INPUT_FILE} -j | while read doc;
    do
-         echo "$RSC_TEMPLATE" >> $OUTPUT_FILE
          resApiVer=$(echo $doc | yq r - 'apiVersion' | tr / _)
+         echo resApiVer: $resApiVer
+         if [ -z "$resApiVer" ] || [ "$resApiVer" = "null" ] ; then
+            break
+         fi
+
          resKind=$(echo $doc | yq r - 'kind')
          reslowerkind=$(echo $resKind | tr "[:upper:]" "[:lower:]")
          resname=$(echo $doc | yq r - 'metadata.name')
          rsigname="rsig-${reslowerkind}-${resname}"
+
+         echo "$RSC_TEMPLATE" >> $OUTPUT_FILE
          yq w -i -d$indx $OUTPUT_FILE metadata.name $rsigname
          yq w -i -d$indx $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigobject-apiversion"' $resApiVer
          yq w -i -d$indx $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigobject-kind"' $resKind
@@ -127,8 +133,9 @@ elif [[ $YQ_VERSION == "4" ]]; then
               indx=$[$indx+1]
            fi
         done
-        sed -i '$ s/---//g' $OUTPUT_FILE
 fi
+
+sed -i '$ s/---//g' $OUTPUT_FILE
 
 if [[ $YQ_VERSION == "3" ]]; then
    yq w -i -d* $OUTPUT_FILE spec.data.[0].message $msg
