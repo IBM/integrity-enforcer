@@ -534,31 +534,31 @@ update-version:
 
 test-e2e-bundle: check-test-bundle
 	make clean-e2e-test-log
-	make setup-olm
+	make setup-olm-local
 	make setup-image # execute `make setup-image` for making sure new images exist
 	make build-bundle # Used for ISHIELD_ENV=local/remote
-	make deploy-bundle
-	make check-bundle
-	make bundle-test
+	make deploy-bundle-local
+	make check-bundle-local
+	make bundle-test-local
 
-deploy-bundle:
-	$(ISHIELD_REPO_ROOT)/build/deploy-bundle.sh
+deploy-bundle-local:
+	$(ISHIELD_REPO_ROOT)/build/deploy-bundle-local.sh
 
-check-bundle:
-	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment.sh
+check-bundle-local:
+	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment-local.sh
 
 clean-e2e-test-log:
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-test-log.sh
 
-test-e2e-bundle-clean:
+test-e2e-bundle-clean-local:
 	make test-e2e-clean-common --ignore-errors
-	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test.sh v0.17.0
+	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test-local.sh v0.17.0
 	make clean-e2e-test-log
 
-setup-olm:
-	$(ISHIELD_REPO_ROOT)/build/setup-olm.sh v0.17.0
+setup-olm-local:
+	$(ISHIELD_REPO_ROOT)/build/setup-olm-local.sh v0.17.0
 
-bundle-test:
+bundle-test-local:
 	make create-key-ring
 	make setup-tmp-cr
 	make setup-test-resources
