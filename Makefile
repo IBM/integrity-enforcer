@@ -547,16 +547,19 @@ deploy-bundle-local:
 check-bundle-local:
 	$(ISHIELD_REPO_ROOT)/build/check-bundle-deployment-local.sh
 
+test-e2e-bundle-clean-local:
+	make test-e2e-clean-common --ignore-errors
+	make clean-e2e-bundle-test-local
+	make clean-e2e-test-log
+
+OLM_RELEASE_URLclean-e2e-bundle-test-local:
+	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test-local.sh
+
 clean-e2e-test-log:
 	$(ISHIELD_REPO_ROOT)/build/clean-e2e-test-log.sh
 
-test-e2e-bundle-clean-local:
-	make test-e2e-clean-common --ignore-errors
-	$(ISHIELD_REPO_ROOT)/build/clean-e2e-bundle-test-local.sh v0.17.0
-	make clean-e2e-test-log
-
 setup-olm-local:
-	$(ISHIELD_REPO_ROOT)/build/setup-olm-local.sh v0.17.0
+	$(ISHIELD_REPO_ROOT)/build/setup-olm-local.sh
 
 bundle-test-local:
 	make create-key-ring

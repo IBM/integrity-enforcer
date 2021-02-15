@@ -16,19 +16,17 @@
 
 set -e
 
-if [[ ${#@} -ne 1 ]]; then
-    echo "Usage: $0 version"
-    echo "* version: the github release version of OLM"
+if [ -z "$OLM_VERSION" ]; then
+    echo "OLM_VERSION is empty. Please set olm version."
     exit 1
 fi
 
 echo "SETUP-OLM GOES HERE!"
 
-release=$1
 echo ""
 echo "-------------------------------------------------"
-echo "Install OLM"
-curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/${release}/install.sh | bash -s ${release}
+echo "Install OLM locally"
+curl -sL ${OLM_RELEASE_URL}/${OLM_VERSION}/install.sh | bash -s ${OLM_VERSION}
 
 
 

@@ -16,16 +16,15 @@
 
 set -e
 
-if [[ ${#@} -ne 1 ]]; then
-    echo "Usage: $0 version"
-    echo "* version: the github release version of OLM"
-    exit 1
-fi
-
 echo "E2E TEST BUNDLE CLEAN GOES HERE!"
 
 if [ -z "$ISHIELD_OP_NS" ]; then
     echo "ISHIELD_OP_NS is empty. Please set env."
+    exit 1
+fi
+
+if [ -z "$OLM_VERSION" ]; then
+    echo "OLM_VERSION is empty. Please set olm version."
     exit 1
 fi
 
@@ -91,8 +90,7 @@ echo "-------------------------------------------------"
 OLM_NS_EXIST=$(kubectl get ns | grep olm | cut -d' ' -f1)
 
 if [ ! -z  $OLM_NS_EXIST ]; then
-     release=$1
-     url=https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/${release}/deploy/upstream/quickstart/
+     url=https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/${OLM_VERSION}/deploy/upstream/quickstart/
      olm_url="${url}olm.yaml"
      crd_url="${url}crds.yaml"
      curl -s -k $olm_url | yq r -d"*" - -j | while read doc;
