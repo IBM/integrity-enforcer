@@ -53,25 +53,25 @@ var _ = Describe("Test integrity shield", func() {
 		})
 		It("Operator role should be created", func() {
 			framework := initFrameWork()
-			expected := ishield_olm_op_admin_role
+			expected := ishield_op_admin_role
 			err := CheckIShieldResources(framework, "Role", ishield_namespace, expected)
 			Expect(err).To(BeNil())
 		})
 		It("Operator rb should be created", func() {
 			framework := initFrameWork()
-			expected := ishield_olm_op_admin_rb
+			expected := ishield_op_admin_rb
 			err := CheckIShieldResources(framework, "RoleBinding", ishield_namespace, expected)
 			Expect(err).To(BeNil())
 		})
 		It("Operator role should be created", func() {
 			framework := initFrameWork()
-			expected := ishield_olm_op_cluster_role
+			expected := ishield_op_cluster_role
 			err := CheckIShieldResources(framework, "Role", ishield_namespace, expected)
 			Expect(err).To(BeNil())
 		})
 		It("Operator rb should be created", func() {
 			framework := initFrameWork()
-			expected := ishield_olm_op_cluster_rb
+			expected := ishield_op_cluster_rb
 			err := CheckIShieldResources(framework, "RoleBinding", ishield_namespace, expected)
 			Expect(err).To(BeNil())
 		})

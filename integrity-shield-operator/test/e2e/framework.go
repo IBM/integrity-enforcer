@@ -69,10 +69,10 @@ var (
 	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
 	DefaultSignerConfigName           = "signer-config"
 	DefaultShieldConfigName           = "ishield-config"
-	ishield_olm_op_admin_role	  = "ishield-admin-role"
-	ishield_olm_op_admin_rb		  = "ishield-admin-rolebinding"
-	ishield_olm_op_cluster_role       = "ishield-cluster-role-sim"
-	ishield_olm_op_cluster_rb	  = "ishield-cluster-role-binding-sim"
+	ishield_op_admin_role	  	  = "ishield-admin-role"
+	ishield_op_admin_rb		  = "ishield-admin-rolebinding"
+	ishield_op_cluster_role       	  = "ishield-cluster-role-sim"
+	ishield_op_cluster_rb	  	  = "ishield-cluster-role-binding-sim"
 )
 
 type Framework struct {
