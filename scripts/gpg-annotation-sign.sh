@@ -28,6 +28,13 @@ fi
 SIGNER=$1
 INPUT_FILE=$2
 
+if [ -z "$TMP_DIR" ]; then
+    echo "TMP_DIR is empty. Setting /tmp as default"
+    TMP_DIR="/tmp"
+    if [ ! -d $TMP_DIR ];
+       echo "$TMP_DIR directory does not exist, please create it."
+    fi
+fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
@@ -51,7 +58,7 @@ fi
 msg=`cat $INPUT_FILE | $base`
 
 # signature
-sig=`cat $INPUT_FILE > /tmp/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - /tmp/temp-aaa.yaml | $base`
+sig=`cat $INPUT_FILE > $TMP_DIR/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - $TMP_DIR/temp-aaa.yaml | $base`
 
 if [[ $YQ_VERSION == "3" ]]; then
    yq w -i -d* $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
@@ -61,6 +68,6 @@ elif [[ $YQ_VERSION == "4" ]]; then
    yq eval ".metadata.annotations.\"integrityshield.io/signature\" = \"$sig\""  -i $INPUT_FILE
 fi
 
-if [ -f /tmp/temp-aaa.yaml ]; then
-   rm /tmp/temp-aaa.yaml
+if [ -f $TMP_DIR/temp-aaa.yaml ]; then
+   rm $TMP_DIR/temp-aaa.yaml
 fi

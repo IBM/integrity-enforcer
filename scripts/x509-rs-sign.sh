@@ -38,6 +38,14 @@ CERT_FILE=$2
 INPUT_FILE=$3
 OUTPUT_FILE=$4
 
+if [ -z "$TMP_DIR" ]; then
+    echo "TMP_DIR is empty. Setting /tmp as default"
+    TMP_DIR="/tmp"
+    if [ ! -d $TMP_DIR ];
+       echo "$TMP_DIR directory does not exist, please create it."
+    fi
+fi
+
 # compute signature (and encoded message and certificate)
 cat <<EOF > $OUTPUT_FILE
 apiVersion: apis.integrityshield.io/v1alpha1
@@ -80,7 +88,7 @@ yq w -i $OUTPUT_FILE spec.data.[0].certificate $crt
 rsigspec=`cat $OUTPUT_FILE | yq r - -j |jq -r '.spec' | yq r - --prettyPrint | $base`
 
 # resource signature signature
-rsigsig=`echo -e "$rsigspec" > temp-rsig.yaml; openssl dgst -sha256 -sign ${KEY_FILE} temp-rsig.yaml | $base`
+rsigsig=`echo -e "$rsigspec" > ${TMP_DIR}/temp-rsig.yaml; openssl dgst -sha256 -sign ${KEY_FILE} ${TMP_DIR}/temp-rsig.yaml | $base`
 
 # name of resource signature
 resApiVer=`cat $INPUT_FILE | yq r - -j | jq -r '.apiVersion' `
@@ -97,6 +105,6 @@ yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigobject-apiversion"'
 yq w -i $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigobject-kind"' $resKind
 yq w -i --tag !!str $OUTPUT_FILE 'metadata.labels."integrityshield.io/sigtime"' $sigtime
 
-if [ -f /tmp/temp-rsig.yaml ]; then
-   rm /tmp/temp-rsig.yaml
+if [ -f ${TMP_DIR}/temp-rsig.yaml ]; then
+   rm ${TMP_DIR}/temp-rsig.yaml
 fi

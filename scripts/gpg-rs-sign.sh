@@ -25,6 +25,14 @@ if [ ! -e $2 ]; then
   exit 1
 fi
 
+if [ -z "$TMP_DIR" ]; then
+    echo "TMP_DIR is empty. Setting /tmp as default"
+    TMP_DIR="/tmp"
+    if [ ! -d $TMP_DIR ];
+       echo "$TMP_DIR directory does not exist, please create it."
+    fi
+fi
+
 SIGNER=$1
 INPUT_FILE=$2
 OUTPUT_FILE=$3
@@ -59,7 +67,7 @@ YQ_VERSION=$(yq --version 2>&1 | awk '{print $3}' | cut -c 1 )
 msg=`cat $INPUT_FILE | gzip -c | $base`
 
 # signature
-sig=`cat ${INPUT_FILE} > /tmp/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - /tmp/temp-aaa.yaml | $base`
+sig=`cat ${INPUT_FILE} > $TMP_DIR/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - $TMP_DIR/temp-aaa.yaml | $base`
 sigtime=`date +%s`
 
 if [ -f $OUTPUT_FILE ]; then
@@ -101,7 +109,7 @@ elif [[ $YQ_VERSION == "4" ]]; then
            if [ -z "$resApiVer" ]; then
               break
            else
-              TMP_FILE="/tmp/${rsigname}.yaml"
+              TMP_FILE="$TMP_DIR/${rsigname}.yaml"
               echo "$RSC_TEMPLATE" >> ${TMP_FILE}
               yq eval ".metadata.name = \"$rsigname\"" -i $TMP_FILE
               yq eval ".metadata.labels.\"integrityshield.io/sigobject-apiversion\" = \"$resApiVer\"" -i $TMP_FILE
@@ -136,17 +144,17 @@ elif [[ $YQ_VERSION == "4" ]]; then
 fi
 
 # resource signature signature
-rsigsig=`echo -e "$rsigspec" > /tmp/temp-rsig.yaml; gpg -u $SIGNER --detach-sign --armor --output - /tmp/temp-rsig.yaml | $base`
+rsigsig=`echo -e "$rsigspec" > $TMP_DIR/temp-rsig.yaml; gpg -u $SIGNER --detach-sign --armor --output - $TMP_DIR/temp-rsig.yaml | $base`
 if [[ $YQ_VERSION == "3" ]]; then
    yq w -i -d* $OUTPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $rsigsig
 elif [[ $YQ_VERSION == "4" ]]; then
    yq eval ".metadata.annotations.\"integrityshield.io/signature\" = \"$rsigsig\"" -i $OUTPUT_FILE
 fi
 
-if [ -f /tmp/temp-aaa.yaml ]; then
-   rm /tmp/temp-aaa.yaml
+if [ -f $TMP_DIR/temp-aaa.yaml ]; then
+   rm $TMP_DIR/temp-aaa.yaml
 fi
 
-if [ -f /tmp/temp-rsig.yaml ]; then
-   rm /tmp/temp-rsig.yaml
+if [ -f $TMP_DIR/temp-rsig.yaml ]; then
+   rm $TMP_DIR/temp-rsig.yaml
 fi

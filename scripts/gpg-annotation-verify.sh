@@ -19,6 +19,14 @@ if ! [ -x "$(command -v yq)" ]; then
    exit 1
 fi
 
+if [ -z "$TMP_DIR" ]; then
+    echo "TMP_DIR is empty. Setting /tmp as default"
+    TMP_DIR="/tmp"
+    if [ ! -d $TMP_DIR ];
+       echo "$TMP_DIR directory does not exist, please create it."
+    fi
+fi
+
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
     base_decode='base64 -d'
@@ -31,7 +39,7 @@ msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/message"'
 sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"')
 
 
-ISHIELD_TMP_DIR="/tmp/ishield_tmp_dir"
+ISHIELD_TMP_DIR="${TMP_DIR}/ishield_tmp_dir"
 
 if [ ! -d ${ISHIELD_TMP_DIR} ]; then
    mkdir -p  ${ISHIELD_TMP_DIR}
