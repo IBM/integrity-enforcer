@@ -18,12 +18,37 @@ set -e
 
 echo "CREATE BUNDLE RESOURCES GOES HERE!"
 
+
+if [ -z "$SHIELD_OP_DIR" ]; then
+    echo "SHIELD_OP_DIR is empty. Please set env."
+    exit 1
+fi
+
+if [ -z "$ISHIELD_OP_NS" ]; then
+    echo "ISHIELD_OP_NS is empty. Please set env."
+    exit 1
+fi
+
+if [ -z "$TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION" ]; then
+    echo "TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION is empty. Please set env."
+    exit 1
+fi
+
+if [ -z "$BUNDLE_INDX_IMAGE" ]; then
+    echo "BUNDLE_INDX_IMAGE is empty. Please set env."
+    exit 1
+fi
+
 BUNDLE_INDX_IMAGE=${TEST_ISHIELD_OPERATOR_INDEX_IMAGE_NAME_AND_VERSION}
 echo BUNDLE_INDX_IMAGE: ${BUNDLE_INDX_IMAGE}
 
 STARTING_CSV=$(cat  $SHIELD_OP_DIR/bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml | yq r - 'metadata.name')
 
-release=$1
+if [ -z "$STARTING_CSV" ]; then
+    echo "STARTING_CSV is empty. Please set env."
+    exit 1
+fi
+
 echo ""
 echo "-------------------------------------------------"
 echo "Install bundle catalogsource"
@@ -64,7 +89,7 @@ metadata:
 spec:
   displayName: Integrity Ishield Operator
   image: ${BUNDLE_INDX_IMAGE}
-  publisher: IBM
+  publisher: Community
   sourceType: grpc
   updateStrategy:
     registryPoll:

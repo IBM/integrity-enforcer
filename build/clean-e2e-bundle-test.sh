@@ -66,7 +66,7 @@ metadata:
 spec:
   displayName: Integrity Shield Operator
   image: ${BUNDLE_INDEX_IMAGE}
-  publisher: IBM
+  publisher: Community
   sourceType: grpc
   updateStrategy:
     registryPoll:

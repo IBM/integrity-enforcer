@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+if [ -z "$SHIELD_OP_DIR" ]; then
+    echo "SHIELD_OP_DIR is empty. Please set env."
+    exit 1
+fi
+
 logs=$(ls ${SHIELD_OP_DIR}test/e2e/*.log 2>/dev/null | wc -l)
 
 if [ ! $logs = 0 ]; then
