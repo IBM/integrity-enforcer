@@ -102,7 +102,7 @@ elif [[ $YQ_VERSION == "4" ]]; then
         while true
         do
            resApiVer=$(yq eval ".apiVersion | select(di == $indx)" ${INPUT_FILE}  | sed 's/\//_/g')
-	   resKind=$(yq eval ".kind | select(di == $indx)" ${INPUT_FILE}  | sed 's/\//_/g')
+           resKind=$(yq eval ".kind | select(di == $indx)" ${INPUT_FILE}  | sed 's/\//_/g')
            reslowerkind=$(echo $resKind | tr '[:upper:]' '[:lower:]')
            resname=$(yq eval ".metadata.name | select(di == $indx)" ${INPUT_FILE})
            rsigname="rsig-${reslowerkind}-${resname}"
