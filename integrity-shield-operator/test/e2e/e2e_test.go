@@ -51,30 +51,6 @@ var _ = Describe("Test integrity shield", func() {
 				return CheckPodStatus(framework, ishield_namespace, expected)
 			}, timeout, 1).Should(BeNil())
 		})
-		It("Operator role should be created", func() {
-			framework := initFrameWork()
-			expected := ishield_op_admin_role
-			err := CheckIShieldResources(framework, "Role", ishield_namespace, expected)
-			Expect(err).To(BeNil())
-		})
-		It("Operator rb should be created", func() {
-			framework := initFrameWork()
-			expected := ishield_op_admin_rb
-			err := CheckIShieldResources(framework, "RoleBinding", ishield_namespace, expected)
-			Expect(err).To(BeNil())
-		})
-		It("Operator role should be created", func() {
-			framework := initFrameWork()
-			expected := ishield_op_cluster_role
-			err := CheckIShieldResources(framework, "Role", ishield_namespace, expected)
-			Expect(err).To(BeNil())
-		})
-		It("Operator rb should be created", func() {
-			framework := initFrameWork()
-			expected := ishield_op_cluster_rb
-			err := CheckIShieldResources(framework, "RoleBinding", ishield_namespace, expected)
-			Expect(err).To(BeNil())
-		})
 	})
 
 	Describe("Test ishield resources", func() {
