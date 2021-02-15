@@ -82,7 +82,6 @@ if [[ $YQ_VERSION == "3" ]]; then
    yq r -d'*'  ${INPUT_FILE} -j | while read doc;
    do
          resApiVer=$(echo $doc | yq r - 'apiVersion' | tr / _)
-         echo resApiVer: $resApiVer
          if [ -z "$resApiVer" ] || [ "$resApiVer" = "null" ] ; then
             break
          fi
