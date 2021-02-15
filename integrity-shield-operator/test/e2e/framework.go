@@ -74,9 +74,9 @@ var (
 	ishield_op_role                   = "integrity-shield-operator-leader-election-role"
 	ishield_op_rb                     = "integrity-shield-operator-leader-election-rolebinding"
 	ishield_olm_op_admin_role	  = "ishield-admin-role"
-        ishield_olm_op_admin_rb		  = "ishield-admin-rolebinding"
-        ishield_olm_op_cluster_role       = "ishield-cluster-role-sim"
-        ishield_olm_op_cluster_rb	  = "ishield-cluster-role-binding-sim"
+	ishield_olm_op_admin_rb		  = "ishield-admin-rolebinding"
+	ishield_olm_op_cluster_role       = "ishield-cluster-role-sim"
+	ishield_olm_op_cluster_rb	  = "ishield-cluster-role-binding-sim"
 )
 
 type Framework struct {
