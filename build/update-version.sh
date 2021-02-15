@@ -16,6 +16,16 @@
 
 set -e
 
+if [ -z "$ISHIELD_REPO_ROOT" ]; then
+    echo "ISHIELD_REPO_ROOT is empty. Please set env."
+    exit 1
+fi
+
+if [ -z "$SHIELD_OP_DIR" ]; then
+    echo "SHIELD_OP_DIR is empty. Please set env."
+    exit 1
+fi
+
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/docs/ACM/README_DISABLE_ISHIELD_PROTECTION_ACM_ENV.md
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/scripts/install_shield.sh
 sed -i "s|$PREV_VERSION|$VERSION|" ${ISHIELD_REPO_ROOT}/COMPONENT_VERSION

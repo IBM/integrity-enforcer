@@ -69,9 +69,6 @@ var (
 	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
 	DefaultSignerConfigName           = "signer-config"
 	DefaultShieldConfigName           = "ishield-config"
-	ishield_op_sa                     = "integrity-shield-operator-manager"
-	ishield_op_role                   = "integrity-shield-operator-leader-election-role"
-	ishield_op_rb                     = "integrity-shield-operator-leader-election-rolebinding"
 )
 
 type Framework struct {
