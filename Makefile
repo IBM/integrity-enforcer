@@ -385,6 +385,8 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_FILE) spec.logger.imagePullPolicy Always
 	yq write -i $(TMP_CR_FILE) spec.server.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.server.imagePullPolicy Always
+	yq write -i $(TMP_CR_FILE) spec.observer.image $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always
 	@echo setup keyring configs
 	yq write -i $(TMP_CR_FILE) spec.keyConfig[0].name $(TEST_KEYCONFIG)
 	yq write -i $(TMP_CR_FILE) spec.keyConfig[0].secretName $(TEST_SECRET)

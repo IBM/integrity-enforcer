@@ -2,6 +2,8 @@ apiVersion: apis.integrityshield.io/v1alpha1
 kind: IntegrityShield
 metadata:
   name: integrity-shield-server
+  finalizers:
+  - cleanup.finalizers.integrityshield.io
 spec:
   namespace: integrity-shield-operator-system
   shieldConfig:
@@ -24,11 +26,13 @@ spec:
     - name: "SampleSigner"
       keyConfig: sample-signer-keyconfig
       subjects:
-      - email: "sample_signer@signer.com"
+      - email: "*"
   keyConfig:
   - name: sample-signer-keyconfig
     secretName: keyring-secret
   server:
     imagePullPolicy: IfNotPresent
   logger:
+    imagePullPolicy: IfNotPresent
+  observer:
     imagePullPolicy: IfNotPresent
