@@ -29,11 +29,6 @@ if [ ! -d $TMP_DIR ]; then
     exit 1
 fi
 
-if [ ! -f $INPUT_FILE ]; then
-    echo "Input file could not be found."
-    exit 1
-fi
-
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
     base_decode='base64 -d'
@@ -42,15 +37,8 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base_decode='base64 -D'
 fi
 
-YQ_VERSION=$(yq --version 2>&1 | awk '{print $3}' | cut -c 1 )
-
-if [[ $YQ_VERSION == "3" ]]; then
-    msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/message"')
-    sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"')
-elif [[ $YQ_VERSION == "4" ]]; then
-    msg=$(yq eval '.metadata.annotations."integrityshield.io/message" | select(di == 0)' ${INPUT_FILE})
-    sign=$(yq eval '.metadata.annotations."integrityshield.io/signature" | select(di == 0)' ${INPUT_FILE})
-fi
+msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/message"')
+sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"')
 
 
 ISHIELD_TMP_DIR="${TMP_DIR}/ishield_tmp_dir"
@@ -67,21 +55,14 @@ ISHIELD_MSG_FILE="${ISHIELD_TMP_DIR}/input.msg"
 
 cat ${INPUT_FILE} > ${ISHIELD_INPUT_FILE}
 
-if [[ $YQ_VERSION == "3" ]]; then
-   yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
-   yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
-   yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations' -i
-elif [[ $YQ_VERSION == "4" ]]; then
-   yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i ${ISHIELD_INPUT_FILE}
-   yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i ${ISHIELD_INPUT_FILE}
-   yq eval 'del(.metadata.annotations)'  -i ${ISHIELD_INPUT_FILE}
-fi
+yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
+yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
 
 
 msg_body=`cat ${ISHIELD_INPUT_FILE} | $base`
 
 if [ "${msg}" != "${msg_body}" ]; then
-   echo "Input file content has been changed."
+   echo Input file content has been changed.
    if [ -d ${ISHIELD_TMP_DIR} ]; then
      rm -rf ${ISHIELD_TMP_DIR}
    fi

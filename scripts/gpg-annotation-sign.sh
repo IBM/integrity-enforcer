@@ -49,6 +49,10 @@ if ! { [ $YQ_VERSION == "3" ] || [ $YQ_VERSION == "4" ]; } then
    echo Please choose yq version: 3.x.x or 4.x.x !
    exit 1
 fi
+
+# remove last occurance of '---'
+sed -i '$ s/---//g' $INPUT_FILE
+
 if [[ $YQ_VERSION == "3" ]]; then
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' -i
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' -i
@@ -56,6 +60,7 @@ elif [[ $YQ_VERSION == "4" ]]; then
    yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i $INPUT_FILE
    yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i $INPUT_FILE
 fi
+
 # message
 msg=`cat $INPUT_FILE | $base`
 
