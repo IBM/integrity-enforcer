@@ -66,6 +66,18 @@ spec:
         cpu: 200m
         memory: 256Mi
     stdOutput: true
+  observer:
+    enabled: true
+    image: quay.io/open-cluster-management/integrity-shield-observer:0.1.4
+    imagePullPolicy: Always
+    name: observer
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
   replicaCount: 1
   security:
     clusterRole: ishield-cluster-role

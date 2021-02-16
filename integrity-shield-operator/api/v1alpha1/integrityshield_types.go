@@ -78,12 +78,13 @@ type IntegrityShieldSpec struct {
 	Tolerations      []v1.Toleration           `json:"tolerations,omitempty"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	IgnoreDefaultIShieldCR bool            `json:"ignoreDefaultIShieldCR,omitempty"`
-	Security               SecurityConfig  `json:"security,omitempty"`
-	KeyConfig              []KeyConfig     `json:"keyConfig,omitempty"`
-	Server                 ServerContainer `json:"server,omitempty"`
-	Logger                 LoggerContainer `json:"logger,omitempty"`
-	RegKeySecret           RegKeySecret    `json:"regKeySecret,omitempty"`
+	IgnoreDefaultIShieldCR bool              `json:"ignoreDefaultIShieldCR,omitempty"`
+	Security               SecurityConfig    `json:"security,omitempty"`
+	KeyConfig              []KeyConfig       `json:"keyConfig,omitempty"`
+	Server                 ServerContainer   `json:"server,omitempty"`
+	Logger                 LoggerContainer   `json:"logger,omitempty"`
+	Observer               ObserverContainer `json:"observer,omitempty"`
+	RegKeySecret           RegKeySecret      `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string               `json:"shieldConfigCrName,omitempty"`
 	ShieldConfig            *iec.ShieldConfig    `json:"shieldConfig,omitempty"`
@@ -150,6 +151,15 @@ type LoggerContainer struct {
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 	EsConfig        *EsConfig               `json:"es,omitempty"`
 	EsSecretName    string                  `json:"esSecretName,omitempty"`
+}
+
+type ObserverContainer struct {
+	Enabled         *bool                   `json:"enabled,omitempty"`
+	Name            string                  `json:"name,omitempty"`
+	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
+	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image           string                  `json:"image,omitempty"`
+	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type EsConfig struct {
