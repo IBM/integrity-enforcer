@@ -18,8 +18,19 @@ package observer
 
 import (
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
+var testLogger *log.Logger
+
+func init() {
+	testLogger = log.StandardLogger()
+	testLogger.SetFormatter(&log.JSONFormatter{})
+}
 func TestNewIntegrityShieldObserver(t *testing.T) {
-	t.Log("test ok")
+	iShieldObserver := NewIntegrityShieldObserver(testLogger)
+	if iShieldObserver == nil {
+		t.Error("Failed to test NewIntegrityShieldObserver()")
+	}
 }
