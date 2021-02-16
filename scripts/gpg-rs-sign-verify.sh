@@ -69,11 +69,6 @@ cat ${INPUT_FILE} > ${ISHIELD_INPUT_FILE}
 
 msg_body=`cat ${ISHIELD_INPUT_FILE} | gzip -c | $base`
 
-echo -------------------------------------------------------------------------
-echo $msg
-echo -------------------------------------------------------------------------
-echo $msg_body
-echo -------------------------------------------------------------------------
 if [ "${msg}" != "${msg_body}" ]; then
    echo "Input file content has been changed."
    if [ -d ${ISHIELD_TMP_DIR} ]; then
