@@ -1,1 +1,1 @@
-{"type":"deny","reasonCode":19,"message":"Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature."}
+{"type":"deny","reasonCode":19,"message":"Signature verification is required for this request, but no signature is found. Please attach a valid signature."}
