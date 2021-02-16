@@ -75,6 +75,14 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
 	unprotectAttrsList := signingProfile.UnprotectAttrs(reqc.Map())
 
+	resSigUID := sig.data["resourceSignatureUID"]
+	sigFrom := ""
+	if resSigUID == "" {
+		sigFrom = "annotation"
+	} else {
+		sigFrom = "ResourceSignature"
+	}
+
 	if sig.option["matchRequired"] {
 		message, _ := sig.data["message"]
 		// use yamlBytes if single yaml data is extracted from ResourceSignature
@@ -84,7 +92,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 
 		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, unprotectAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType)
 		if !matched {
-			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
+			msg := fmt.Sprintf("The message for this signature in %s is not identical with the requested object. diff: %s", sigFrom, diffStr)
 			return &SigVerifyResult{
 				Error: &common.CheckError{
 					Msg:    msg,
@@ -112,10 +120,10 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 				if diffIsInMessageScope {
 					isValidScopeSignature = true
 				} else {
-					scopeDenyMsg = "messageScope of the signature does not cover all changed attributes in this update"
+					scopeDenyMsg = fmt.Sprintf("messageScope of the signature in %s does not cover all changed attributes in this update", sigFrom)
 				}
 			} else {
-				scopeDenyMsg = "Original object must be integrityVerified to allow UPDATE request with scope signature"
+				scopeDenyMsg = fmt.Sprintf("Original object must be integrityVerified to allow UPDATE request with scope signature specified in %s", sigFrom)
 			}
 		}
 		if !isValidScopeSignature {
@@ -138,7 +146,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		ok, reasonFail, signer, err := pgp.VerifySignature(self.PGPKeyPathList, message, signature)
 		if err != nil {
 			vcerr = &common.CheckError{
-				Msg:    "Error occured in signature verification",
+				Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
 				Reason: reasonFail,
 				Error:  err,
 			}
@@ -164,7 +172,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 				retErr = nil
 			} else {
 				vcerr = &common.CheckError{
-					Msg:    "Failed to verify signature",
+					Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
 					Reason: reasonFail,
 					Error:  nil,
 				}
@@ -178,7 +186,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.X509KeyPathList)
 		if err != nil {
 			vcerr = &common.CheckError{
-				Msg:    "Error occured in certificate verification",
+				Msg:    fmt.Sprintf("Error occured while verifying certificate in %s", sigFrom),
 				Reason: reasonFail,
 				Error:  err,
 			}
@@ -186,7 +194,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			retErr = err
 		} else if !certOk {
 			vcerr = &common.CheckError{
-				Msg:    "Failed to verify certificate",
+				Msg:    fmt.Sprintf("Failed to verify certificate in %s", sigFrom),
 				Reason: reasonFail,
 				Error:  nil,
 			}
@@ -206,7 +214,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
 			if err != nil {
 				vcerr = &common.CheckError{
-					Msg:    "Error occured in signature verification",
+					Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
 					Reason: reasonFail,
 					Error:  err,
 				}
@@ -218,7 +226,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 				retErr = nil
 			} else {
 				vcerr = &common.CheckError{
-					Msg:    "Failed to verify signature",
+					Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
 					Reason: reasonFail,
 					Error:  nil,
 				}
