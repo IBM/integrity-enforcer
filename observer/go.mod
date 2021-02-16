@@ -8,6 +8,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.2.1
 	github.com/google/go-cmp v0.5.2
+	github.com/hpcloud/tail v1.0.0
 	github.com/jasonlvhit/gocron v0.0.1 // indirect
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
@@ -25,7 +26,7 @@ require (
 replace (
 	github.com/IBM/integrity-enforcer/observer => ./
 	github.com/IBM/integrity-enforcer/shield => ../shield
-    k8s.io/api => k8s.io/api v0.18.6
+	k8s.io/api => k8s.io/api v0.18.6
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.6
 	k8s.io/apimachinery => k8s.io/apimachinery v0.18.6
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.6

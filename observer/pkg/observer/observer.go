@@ -23,8 +23,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
+	"github.com/hpcloud/tail"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +35,7 @@ import (
 
 const defaultIntervalSecondsStr = "30"
 const defaultSummaryConfigMapName = "integrity-shield-status-report"
+const timeFormat = "2006-01-02 15:04:05"
 
 type IntegrityShieldObserver struct {
 	IShiledNamespace string
@@ -40,10 +43,12 @@ type IntegrityShieldObserver struct {
 	EventsFilePath   string
 	IntervalSeconds  uint64
 
-	loader *Loader
+	loader     *Loader
+	logger     *log.Logger
+	eventQueue []string
 }
 
-func NewIntegrityShieldObserver() *IntegrityShieldObserver {
+func NewIntegrityShieldObserver(logger *log.Logger) *IntegrityShieldObserver {
 	iShieldNS := os.Getenv("SHIELD_NS")
 	shieldConfigName := os.Getenv("SHIELD_CONFIG_NAME")
 	eventsFilePath := os.Getenv("EVENTS_FILE_PATH")
@@ -53,7 +58,7 @@ func NewIntegrityShieldObserver() *IntegrityShieldObserver {
 	}
 	intervalSeconds, err := strconv.ParseUint(intervalSecondsStr, 10, 64)
 	if err != nil {
-		log.Warningf("Failed to parse interval seconds `%s`; use default value: %s", intervalSecondsStr, defaultIntervalSecondsStr)
+		logger.Warningf("Failed to parse interval seconds `%s`; use default value: %s", intervalSecondsStr, defaultIntervalSecondsStr)
 		intervalSeconds, _ = strconv.ParseUint(defaultIntervalSecondsStr, 10, 64)
 	}
 
@@ -65,27 +70,74 @@ func NewIntegrityShieldObserver() *IntegrityShieldObserver {
 		EventsFilePath:   eventsFilePath,
 		IntervalSeconds:  intervalSeconds,
 		loader:           loader,
+		logger:           logger,
 	}
 }
 
-func (self *IntegrityShieldObserver) Run() error {
+func (self *IntegrityShieldObserver) Run(event chan *tail.Line, report chan bool) error {
+	for {
+		var l *tail.Line
+		select {
+		case l = <-event:
+			self.addEvent(l.Text)
+		case <-report:
+			lines := self.getEvents()
+			err := self.report(lines)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (self *IntegrityShieldObserver) report(lines []string) error {
 	data, err := self.loader.Load()
 	if err != nil {
-		log.Errorf("Failed to load IShield Resources; %s", err.Error())
+		self.logger.Errorf("Failed to load IShield Resources; %s", err.Error())
 		return err
 	}
-	events, err := readEventsFile(self.EventsFilePath)
+	events, err := readEventLines(lines)
 	if err != nil {
-		log.Errorf("Failed to load events.txt; %s", err.Error())
+		self.logger.Errorf("Failed to load events.txt; %s", err.Error())
 		return err
 	}
-	err = self.report(data, events)
+	err = self.updateSummary(data, events)
 	if err != nil {
-		log.Errorf("Failed to create or update `%s`; %s", defaultSummaryConfigMapName, err.Error())
+		self.logger.Errorf("Failed to create or update `%s`; %s", defaultSummaryConfigMapName, err.Error())
 		return err
 	}
-	log.Info("Updated a report.")
+	self.logger.Info("Updated a status report")
 	return nil
+}
+
+func (self *IntegrityShieldObserver) addEvent(line string) {
+	self.eventQueue = append(self.eventQueue, line)
+}
+
+func (self *IntegrityShieldObserver) getEvents() []string {
+	lines := []string{}
+	for _, l := range self.eventQueue {
+		lines = append(lines, l)
+	}
+	self.clearEvents()
+	return lines
+}
+
+func (self *IntegrityShieldObserver) clearEvents() {
+	self.eventQueue = []string{}
+}
+
+func readEventLines(lines []string) ([]map[string]interface{}, error) {
+	events := []map[string]interface{}{}
+	for _, l := range lines {
+		var tmpEvent map[string]interface{}
+		err := json.Unmarshal([]byte(l), &tmpEvent)
+		if err != nil {
+			continue
+		}
+		events = append(events, tmpEvent)
+	}
+	return events, nil
 }
 
 func readEventsFile(fpath string) ([]map[string]interface{}, error) {
@@ -94,18 +146,11 @@ func readEventsFile(fpath string) ([]map[string]interface{}, error) {
 		return nil, err
 	}
 	s := bufio.NewScanner(f)
-	events := []map[string]interface{}{}
+	lines := []string{}
 	for s.Scan() {
-		var tmpEvent map[string]interface{}
-		lineBytes := s.Bytes()
-		err := json.Unmarshal(lineBytes, &tmpEvent)
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, tmpEvent)
+		lines = append(lines, s.Text())
 	}
-
-	return events, nil
+	return readEventLines(lines)
 }
 
 func (self *IntegrityShieldObserver) summarize(data *RuntimeData, events []map[string]interface{}) map[string]string {
@@ -114,7 +159,7 @@ func (self *IntegrityShieldObserver) summarize(data *RuntimeData, events []map[s
 	opPods, svPods := getIShieldPods(data)
 	podsStatus := makePodsStatus(opPods, svPods)
 	for k, v := range podsStatus {
-		summary[k] = v
+		summary["pods."+k] = v
 	}
 
 	rspNum := len(data.RSPList.Items)
@@ -137,14 +182,16 @@ func (self *IntegrityShieldObserver) summarize(data *RuntimeData, events []map[s
 			denyCount++
 		}
 	}
-	summary["total"] = strconv.Itoa(count)
-	summary["deny"] = strconv.Itoa(denyCount)
-	summary["RSPs"] = strconv.Itoa(rspNum)
-	summary["ResSigs"] = strconv.Itoa(rsigNum)
+	summary["count.events"] = strconv.Itoa(count)
+	summary["count.deniedEvents"] = strconv.Itoa(denyCount)
+	summary["resource.numOfRSPs"] = strconv.Itoa(rspNum)
+	summary["resource.numOfResSigs"] = strconv.Itoa(rsigNum)
+	summary["__meta.interval"] = strconv.Itoa(int(self.IntervalSeconds))
+	summary["__meta.updatedTimestamp"] = time.Now().UTC().Format(timeFormat)
 	return summary
 }
 
-func (self *IntegrityShieldObserver) report(data *RuntimeData, events []map[string]interface{}) error {
+func (self *IntegrityShieldObserver) updateSummary(data *RuntimeData, events []map[string]interface{}) error {
 
 	summary := self.summarize(data, events)
 

@@ -18,25 +18,59 @@ package main
 
 import (
 	"github.com/IBM/integrity-enforcer/observer/pkg/observer"
+	"github.com/hpcloud/tail"
 	"github.com/jasonlvhit/gocron"
 	log "github.com/sirupsen/logrus"
 )
 
+var logger *log.Logger
+
 func init() {
-	log.SetFormatter(&log.JSONFormatter{})
+	logger = log.StandardLogger()
+	logger.SetFormatter(&log.JSONFormatter{})
 }
 
 func main() {
 
-	log.Info("Observer has started.")
+	logger.Info("Observer container has started.")
 
-	iShieldObserver := observer.NewIntegrityShieldObserver()
-	task := iShieldObserver.Run
+	eventChannel := make(chan *tail.Line)
+	reportChannel := make(chan bool)
+
+	iShieldObserver := observer.NewIntegrityShieldObserver(logger)
 	interval := iShieldObserver.IntervalSeconds
+	fpath := iShieldObserver.EventsFilePath
 
-	// Do jobs without params
-	gocron.Every(interval).Second().Do(task)
+	tailConf := tail.Config{
+		ReOpen: true, // "true" enables to reopen a recreated file (tail -F)
+		Follow: true, // "true" enables following a file (tail -f), this must be also set if ReOpen is true
+		Poll:   true, // "true" uses poll instead of inotify, this must be set when the file is recreated on the rotation
+		Logger: logger,
+	}
 
-	// Start all the pending jobs
-	<-gocron.Start()
+	// tail events.txt
+	t, err := tail.TailFile(fpath, tailConf)
+	if err != nil {
+		log.Errorf("Failed to start tailing %s; %s", fpath, err.Error())
+		return
+	}
+	// event signal is sent when new line is added
+	eventChannel = t.Lines
+
+	// set gocron job to trigger reporting
+	gocron.Every(interval).Second().Do(func() {
+		reportChannel <- true
+	})
+
+	// start gocron goroutine for periodical reporting
+	go func() {
+		<-gocron.Start()
+	}()
+
+	// start observer loop in main thread
+	err = iShieldObserver.Run(eventChannel, reportChannel)
+	if err != nil {
+		logger.Errorf("Error occured while running observer; %s", err.Error())
+		return
+	}
 }
