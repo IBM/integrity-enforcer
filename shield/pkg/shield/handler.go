@@ -154,7 +154,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 	var err error
 	// create/update Event
-	err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
+	err = createOrUpdateEvent(self.reqc, self.ctx, self.config)
 	if err != nil {
 		self.requestLog.Error("Failed to create event; ", err)
 		return err

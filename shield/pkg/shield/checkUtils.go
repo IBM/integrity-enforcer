@@ -56,7 +56,7 @@ func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, 
 	return resp
 }
 
-func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *config.ShieldConfig, denyRSP *rspapi.ResourceSigningProfile) error {
+func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *config.ShieldConfig) error {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return err
@@ -117,11 +117,7 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 		evt = current
 	}
 
-	rspInfo := ""
-	if denyRSP != nil {
-		rspInfo = fmt.Sprintf("(RSP `namespace: %s, name: %s`)", denyRSP.GetNamespace(), denyRSP.GetName())
-	}
-	responseMessage := fmt.Sprintf("Result: %s, Reason: \"%s\"%s, Request: %s", resultStr, ctx.Message, rspInfo, reqc.Info(nil))
+	responseMessage := fmt.Sprintf("Result: %s, Reason: \"%s\", Request: %s", resultStr, ctx.Message, reqc.Info(nil))
 	tmpMessage := fmt.Sprintf("[IntegrityShieldEvent] %s", responseMessage)
 	// Event.Message can have 1024 chars at most
 	if len(tmpMessage) > 1024 {
