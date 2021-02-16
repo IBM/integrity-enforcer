@@ -467,7 +467,7 @@ var ReasonCodeMap = map[int]ReasonCode{
 		Code:    "invalid-signature",
 	},
 	REASON_NO_SIG: {
-		Message: "Signature verification is required for this request, but no signature is found. Please attach a valid signature to the annotation or by a ResourceSignature.",
+		Message: "Signature verification is required for this request, but no signature is found. Please attach a valid signature.",
 		Code:    "no-signature",
 	},
 	REASON_NO_VALID_KEYRING: {
