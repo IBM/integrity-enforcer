@@ -68,13 +68,33 @@ ISHIELD_MSG_FILE="${ISHIELD_TMP_DIR}/input.msg"
 cat ${INPUT_FILE} > ${ISHIELD_INPUT_FILE}
 
 if [[ $YQ_VERSION == "3" ]]; then
-   yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
-   yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
-   yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations' -i
+   yq d -d* ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
+   yq d -d* ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
+   cnt=0
+   yq r -d* ${ISHIELD_INPUT_FILE} -j | while read doc;
+   do
+      annotation_exist=$(echo $doc | yq r - 'metadata.annotations')
+      if  [ "${annotation_exist}" == "{}" ]; then
+          yq d -d${cnt} ${ISHIELD_INPUT_FILE} 'metadata.annotations' -i
+      fi
+      cnt=$[$cnt+1]
+   done
 elif [[ $YQ_VERSION == "4" ]]; then
    yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i ${ISHIELD_INPUT_FILE}
    yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i ${ISHIELD_INPUT_FILE}
-   yq eval 'del(.metadata.annotations)'  -i ${ISHIELD_INPUT_FILE}
+   cnt=0
+   while true
+   do
+      kind=$(yq eval ".kind | select(di == $cnt)" ${ISHIELD_INPUT_FILE}  | sed 's/\//_/g')
+      if [ -z "$kind" ]; then
+          break
+      fi
+      annotation_exist=$(yq eval ".metadata.annotations | select(di == $cnt)" ${ISHIELD_INPUT_FILE})
+      if  [ "${annotation_exist}" == "{}" ]; then
+          yq eval "del(.metadata.annotations | select(di == $cnt))" -i ${ISHIELD_INPUT_FILE}
+      fi
+      cnt=$[$cnt+1]
+   done
 fi
 
 
