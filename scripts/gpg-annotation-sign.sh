@@ -25,6 +25,11 @@ if [ ! -e $2 ]; then
   exit 1
 fi
 
+if ! [ -x "$(command -v yq)" ]; then
+   echo 'Error: yq is not installed.' >&2
+   exit 1
+fi
+
 SIGNER=$1
 INPUT_FILE=$2
 
