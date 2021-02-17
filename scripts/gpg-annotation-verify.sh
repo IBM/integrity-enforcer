@@ -19,6 +19,16 @@ if ! [ -x "$(command -v yq)" ]; then
    exit 1
 fi
 
+if [ ! -f $INPUT_FILE ]; then
+   echo "Input file does not exist, please create it."
+   exit 1
+fi
+
+if [ ! -f $PUBRING_KEY ]; then
+   echo "pubring key file does not exist, please create it."
+   exit 1
+fi
+
 if [ -z "$TMP_DIR" ]; then
     echo "TMP_DIR is empty. Setting /tmp as default"
     TMP_DIR="/tmp"
@@ -26,11 +36,6 @@ fi
 
 if [ ! -d $TMP_DIR ]; then
     echo "$TMP_DIR directory does not exist, please create it."
-    exit 1
-fi
-
-if [ ! -f $INPUT_FILE ]; then
-    echo "Input file could not be found."
     exit 1
 fi
 

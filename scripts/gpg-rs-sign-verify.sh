@@ -20,6 +20,21 @@ if ! [ -x "$(command -v yq)" ]; then
    exit 1
 fi
 
+if [ ! -f $INPUT_FILE ]; then
+   echo "Input file does not exist, please create it."
+   exit 1
+fi
+
+if [ ! -f $INPUT_RS_FILE ]; then
+   echo "Input Resource Signature file does not exist, please create it."
+   exit 1
+fi
+
+if [ ! -f $PUBRING_KEY ]; then
+   echo "Pubring key file does not exist, please create it."
+   exit 1
+fi
+
 if [ -z "$TMP_DIR" ]; then
     echo "TMP_DIR is empty. Setting /tmp as default"
     TMP_DIR="/tmp"
@@ -30,10 +45,6 @@ if [ ! -d $TMP_DIR ]; then
     exit 1
 fi
 
-if [ ! -f $INPUT_FILE ]; then
-    echo "Input file could not be found."
-    exit 1
-fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'

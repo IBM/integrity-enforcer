@@ -26,6 +26,11 @@ OUTPUT_FILE=$3
 
 base_rpp='{"apiVersion":"apis.integrityshield.io/v1alpha1","kind":"ResourceSigningProfile","metadata":{"name":""},"spec": {} }'
 
+if [ ! -f $INPUT_FILE ]; then
+   echo "Input file does not exist, please create it."
+   exit 1
+fi
+
 if [ -f $OUTPUT_FILE ]; then
    rm $OUTPUT_FILE
 fi
@@ -37,6 +42,7 @@ if [[ $YQ_VERSION == "3" ]]; then
 elif [[ $YQ_VERSION == "4" ]]; then
   echo -e $base_rpp | yq eval --prettyPrint >> $OUTPUT_FILE
 fi
+
 # Prepare RSP
 
 # 1. set rpp name

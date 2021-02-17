@@ -16,13 +16,27 @@
 
 CMDNAME=`basename $0`
 if [ $# -ne 3 ]; then
-  echo "Usage: $CMDNAME <signer> <input> <output>" 1>&2
+  echo "Usage: $CMDNAME <signer-email> <input-file> <output-file>" 1>&2
   exit 1
 fi
 
 if [ ! -e $2 ]; then
   echo "$2 does not exist"
   exit 1
+fi
+
+SIGNER=$1
+INPUT_FILE=$2
+OUTPUT_FILE=$3
+
+if [ -z $SIGNER ]; then
+   echo "Signer email is empty, please provide it."
+   exit 1
+fi
+
+if [ ! -f $INPUT_FILE ]; then
+   echo "Input file does not exist, please create it."
+   exit 1
 fi
 
 if [ -z "$TMP_DIR" ]; then
@@ -34,10 +48,6 @@ if [ ! -d $TMP_DIR ]; then
     echo "$TMP_DIR directory does not exist, please create it."
     exit 1
 fi
-
-SIGNER=$1
-INPUT_FILE=$2
-OUTPUT_FILE=$3
 
 RSC_TEMPLATE=""
 
@@ -111,7 +121,6 @@ elif [[ $YQ_VERSION == "4" ]]; then
            reslowerkind=$(echo $resKind | tr '[:upper:]' '[:lower:]')
            resname=$(yq eval ".metadata.name | select(di == $indx)" ${INPUT_FILE})
            rsigname="rsig-${reslowerkind}-${resname}"
-           #echo $resApiVer $resKind $reslowerkind $resname $rsigname
 
            if [ -z "$resApiVer" ]; then
               break

@@ -16,7 +16,7 @@
 
 CMDNAME=`basename $0`
 if [ $# -ne 2 ]; then
-  echo "Usage: $CMDNAME <signer> <input>" 1>&2
+  echo "Usage: $CMDNAME <signer-email> <input-file>" 1>&2
   exit 1
 fi
 
@@ -27,6 +27,16 @@ fi
 
 SIGNER=$1
 INPUT_FILE=$2
+
+if [ -z "$SIGNER" ]; then
+   echo "signer-email is empty. please provide it."
+   exit 1
+fi
+
+if [ ! -f "$INPUT_FILE" ]; then
+   echo "Input file does not exist. please create it."
+   exit 1
+fi
 
 if [ -z "$TMP_DIR" ]; then
     echo "TMP_DIR is empty. Setting /tmp as default"
