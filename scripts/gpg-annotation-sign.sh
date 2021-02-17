@@ -16,7 +16,7 @@
 
 CMDNAME=`basename $0`
 if [ $# -ne 2 ]; then
-  echo "Usage: $CMDNAME <signer> <input>" 1>&2
+  echo "Usage: $CMDNAME <signer-email> <input-file>" 1>&2
   exit 1
 fi
 
@@ -25,9 +25,33 @@ if [ ! -e $2 ]; then
   exit 1
 fi
 
+if ! [ -x "$(command -v yq)" ]; then
+   echo 'Error: yq is not installed.' >&2
+   exit 1
+fi
+
 SIGNER=$1
 INPUT_FILE=$2
 
+if [ -z "$SIGNER" ]; then
+   echo "signer-email is empty. please provide it."
+   exit 1
+fi
+
+if [ ! -f "$INPUT_FILE" ]; then
+   echo "Input file does not exist. please create it."
+   exit 1
+fi
+
+if [ -z "$TMP_DIR" ]; then
+    echo "TMP_DIR is empty. Setting /tmp as default"
+    TMP_DIR="/tmp"
+fi
+
+if [ ! -d $TMP_DIR ]; then
+    echo "$TMP_DIR directory does not exist, please create it."
+    exit 1
+fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
@@ -40,6 +64,10 @@ if ! { [ $YQ_VERSION == "3" ] || [ $YQ_VERSION == "4" ]; } then
    echo Please choose yq version: 3.x.x or 4.x.x !
    exit 1
 fi
+
+# remove last occurance of '---'
+sed -i '$ s/---//g' $INPUT_FILE
+
 if [[ $YQ_VERSION == "3" ]]; then
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' -i
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' -i
@@ -47,20 +75,21 @@ elif [[ $YQ_VERSION == "4" ]]; then
    yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i $INPUT_FILE
    yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i $INPUT_FILE
 fi
+
 # message
 msg=`cat $INPUT_FILE | $base`
 
 # signature
-sig=`cat $INPUT_FILE > temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - temp-aaa.yaml | $base`
+sig=`cat $INPUT_FILE > $TMP_DIR/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - $TMP_DIR/temp-aaa.yaml | $base`
 
 if [[ $YQ_VERSION == "3" ]]; then
-   yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
-   yq w -i $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $sig
+   yq w -i -d* $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' $msg
+   yq w -i -d* $INPUT_FILE 'metadata.annotations."integrityshield.io/signature"' $sig
 elif [[ $YQ_VERSION == "4" ]]; then
    yq eval ".metadata.annotations.\"integrityshield.io/message\" = \"$msg\"" -i $INPUT_FILE
    yq eval ".metadata.annotations.\"integrityshield.io/signature\" = \"$sig\""  -i $INPUT_FILE
 fi
 
-if [ -f temp-aaa.yaml ]; then
-   rm temp-aaa.yaml
+if [ -f $TMP_DIR/temp-aaa.yaml ]; then
+   rm $TMP_DIR/temp-aaa.yaml
 fi
