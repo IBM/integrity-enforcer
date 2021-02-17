@@ -16,9 +16,17 @@
 
 set -e
 
-echo "E2E TEST GOES HERE!"
-make test-e2e
+if [ -z "$OLM_VERSION" ]; then
+    echo "OLM_VERSION is empty. Please set olm version."
+    exit 1
+fi
 
-# TODO: Enable this later
-#echo "E2E BUNDLE TEST GOES HERE!"
-#make test-e2e-bundle
+echo "SETUP-OLM GOES HERE!"
+
+echo ""
+echo "-------------------------------------------------"
+echo "Install OLM locally"
+curl -sL ${OLM_RELEASE_URL}/${OLM_VERSION}/install.sh | bash -s ${OLM_VERSION}
+
+
+

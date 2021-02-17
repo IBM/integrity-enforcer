@@ -201,6 +201,29 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		Resources: cr.Spec.Logger.Resources,
 	}
 
+	observerContainer := v1.Container{
+		Name:            cr.Spec.Observer.Name,
+		SecurityContext: cr.Spec.Observer.SecurityContext,
+		Image:           cr.Spec.Observer.Image,
+		ImagePullPolicy: cr.Spec.Observer.ImagePullPolicy,
+		VolumeMounts:    servervolumemounts,
+		Env: []v1.EnvVar{
+			{
+				Name:  "SHIELD_NS",
+				Value: cr.Namespace,
+			},
+			{
+				Name:  "SHIELD_CONFIG_NAME",
+				Value: cr.GetShieldConfigCRName(),
+			},
+			{
+				Name:  "EVENTS_FILE_PATH",
+				Value: "/ishield-app/public/events.txt",
+			},
+		},
+		Resources: cr.Spec.Observer.Resources,
+	}
+
 	containers := []v1.Container{
 		serverContainer,
 	}
@@ -211,6 +234,14 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 	}
 	if loggerEnabled {
 		containers = append(containers, loggerContainer)
+	}
+
+	observerEnabled := false
+	if cr.Spec.Observer.Enabled != nil {
+		observerEnabled = *(cr.Spec.Observer.Enabled)
+	}
+	if observerEnabled {
+		containers = append(containers, observerContainer)
 	}
 
 	return &appsv1.Deployment{

@@ -52,9 +52,6 @@ INPUT_FILE=${TMP_DIR}/input.yaml
 PUB_RING_KEY=${TMP_DIR}/pubring.gpg
 RS_FILE=${TMP_DIR}/rs.yaml
 
-define(){ IFS='\n' read -r -d '' ${1} || true; }
-
-
 echo "$INPUT_YAML" > ${INPUT_FILE}
 
 if [ -f ${INPUT_FILE} ]; then
