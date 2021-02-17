@@ -53,10 +53,10 @@ cat >${TMP_DIR}/generate_key <<EOF
 EOF
 
    echo "Going to generate new gpg key for ${SIGNER}"
-   gpg --batch --generate-key ${TMP_DIR}/generate_key
+   gpg --batch --generate-key ${TMP_DIR}/generate_key 2>/dev/null
 fi
 
-gpg --list-secret-keys
+# gpg --list-secret-keys
 
-echo Exporting pubring key to ${PUB_RING_KEY}.
-gpg --export ${SIGNER} > ${PUB_RING_KEY}
+echo "Exporting pubring key to ${PUB_RING_KEY}."
+gpg --export ${SIGNER} > ${PUB_RING_KEY} 2>/dev/null

@@ -15,8 +15,8 @@
 # limitations under the License.
 
 CMDNAME=`basename $0`
-if [ $# -ne 2 ]; then
-  echo "Usage: $CMDNAME <signer> <tmp-dir>" 1>&2
+if [ $# -ne 3 ]; then
+  echo "Usage: $CMDNAME <signer> <tmp-dir> <input-yaml>" 1>&2
   exit 1
 fi
 
@@ -33,6 +33,7 @@ fi
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 SIGNER=$1
 TMP_DIR="$2"/IV_TMP
+INPUT_YAML=$3
 
 KEY_EXIST=$(gpg --list-keys | grep ${SIGNER})
 
@@ -50,48 +51,6 @@ fi
 INPUT_FILE=${TMP_DIR}/input.yaml
 PUB_RING_KEY=${TMP_DIR}/pubring.gpg
 
-define(){ IFS='\n' read -r -d '' ${1} || true; }
-
-echo ""
-define INPUT_YAML <<-EOF
-apiVersion: policy.open-cluster-management.io/v1
-kind: Policy
-metadata:
-  name: policy-cert-ocp4
-  annotations:
-    policy.open-cluster-management.io/standards: NIST SP 800-53
-    policy.open-cluster-management.io/categories: SC System and Communications Protection
-    policy.open-cluster-management.io/controls: SC-12 Cryptographic Key Establishment and Management
-spec:
-  remediationAction: inform
-  disabled: false
----
-apiVersion: policy.open-cluster-management.io/v1
-kind: PlacementBinding
-metadata:
-  name: binding-policy-cert-ocp4
-placementRef:
-  name: placement-policy-cert-ocp4
-  kind: PlacementRule
-  apiGroup: apps.open-cluster-management.io
-subjects:
-- name: policy-cert-ocp4
-  kind: Policy
-  apiGroup: policy.open-cluster-management.io
----
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
-metadata:
-  name: placement-policy-cert-ocp4
-spec:
-  clusterConditions:
-  - status: "True"
-    type: ManagedClusterConditionAvailable
-  clusterSelector:
-    matchExpressions:
-      - {key: vendor, operator: In, values: ["OpenShift"]}
-EOF
-
 echo "$INPUT_YAML" > ${INPUT_FILE}
 
 if [ -f ${INPUT_FILE} ]; then
@@ -103,7 +62,7 @@ if [ -f ${INPUT_FILE} ]; then
      echo [1/4] Exporting gpg key
    fi
 
-   $SCRIPT_DIR/gen-gpg-key.sh "${SIGNER}" "${PUB_RING_KEY}" "${TMP_DIR}" "${GEN_KEY}"
+   $SCRIPT_DIR/gen-gpg-key.sh "${SIGNER}" "${PUB_RING_KEY}" "${TMP_DIR}" "${GEN_KEY}" 2>/dev/null
    if [ ! -f ${PUB_RING_KEY} ]; then
         echo Failed to generate gpg key.
         exit 1
