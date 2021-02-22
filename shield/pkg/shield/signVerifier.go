@@ -73,7 +73,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
 
 	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
-	unprotectAttrsList := signingProfile.UnprotectAttrs(reqc.Map())
+	ignoreAttrsList := signingProfile.IgnoreAttrs(reqc.Map())
 
 	if sig.option["matchRequired"] {
 		message, _ := sig.data["message"]
@@ -82,7 +82,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			message = yamlBytes
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, unprotectAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType)
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType)
 		if !matched {
 			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
@@ -235,7 +235,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, unprotectAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -255,7 +255,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 
 	addMask := []string{}
 	if len(focus) == 0 {
-		for _, attrs := range unprotectAttrs {
+		for _, attrs := range ignoreAttrs {
 			addMask = append(addMask, attrs.Attrs...)
 		}
 		mask = append(mask, addMask...)

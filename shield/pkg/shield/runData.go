@@ -41,9 +41,9 @@ type RunData struct {
 	SignerConfig *sigconfapi.SignerConfig        `json:"signerConfig,omitempty"`
 	ResSigList   *rsigapi.ResourceSignatureList  `json:"resSigList,omitempty"`
 
-	loader        *Loader                       `json:"-"`
-	commonProfile rspapi.ResourceSigningProfile `json:"-"`
-	ruleTable     *RuleTable                    `json:"-"`
+	loader        *Loader               `json:"-"`
+	commonProfile *common.CommonProfile `json:"-"`
+	ruleTable     *RuleTable            `json:"-"`
 }
 
 func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
@@ -105,7 +105,7 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 func (self *RunData) Init(reqc *common.ReqContext, conf *config.ShieldConfig) {
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)
-	self.commonProfile = rspapi.ResourceSigningProfile{Spec: *conf.CommonProfile}
+	self.commonProfile = conf.CommonProfile
 	rtInited := self.setRuleTable(conf.Namespace)
 	if rtInited {
 		// logger.Trace("RuleTable is initialized.")

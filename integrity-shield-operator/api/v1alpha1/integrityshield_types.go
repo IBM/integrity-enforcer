@@ -51,7 +51,7 @@ const (
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
-	DefaultResourceSigningProfileYamlPath     = "./resources/default-rsp.yaml"
+	CommonProfileYamlPath                     = "./resources/common-profile.yaml"
 	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
 	DefaultKeyringFilename                    = "pubring.gpg"
 	DefaultIShieldWebhookTimeout              = 10
@@ -86,10 +86,12 @@ type IntegrityShieldSpec struct {
 	Observer               ObserverContainer `json:"observer,omitempty"`
 	RegKeySecret           RegKeySecret      `json:"regKeySecret,omitempty"`
 
-	ShieldConfigCrName      string               `json:"shieldConfigCrName,omitempty"`
-	ShieldConfig            *iec.ShieldConfig    `json:"shieldConfig,omitempty"`
-	SignerConfig            *common.SignerConfig `json:"signerConfig,omitempty"`
-	ResourceSigningProfiles []*ProfileConfig     `json:"resourceSigningProfiles,omitempty"`
+	ShieldConfigCrName      string                 `json:"shieldConfigCrName,omitempty"`
+	ShieldConfig            *iec.ShieldConfig      `json:"shieldConfig,omitempty"`
+	IgnoreRules             []*common.Rule         `json:"ignoreRules,omitempty"`
+	IgnoreAttrs             []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
+	SignerConfig            *common.SignerConfig   `json:"signerConfig,omitempty"`
+	ResourceSigningProfiles []*ProfileConfig       `json:"resourceSigningProfiles,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
