@@ -32,7 +32,7 @@ import (
 )
 
 const defaultIShieldCRPath = "./default-ishield-cr.yaml"
-const defaultRspPath = "./default-rsp.yaml"
+const commonProfilePath = "./common-profile.yaml"
 const sampleIShieldCRPath = "../config/samples/apis_v1alpha1_integrityshield.yaml"
 
 func loadTestInstance(t *testing.T) *apiv1alpha1.IntegrityShield {
@@ -158,7 +158,7 @@ func TestResourceSigningProfileCRD(t *testing.T) {
 }
 func TestShieldConfigCR(t *testing.T) {
 	instance := loadTestInstance(t)
-	obj := BuildShieldConfigForIShield(instance, nil, defaultRspPath)
+	obj := BuildShieldConfigForIShield(instance, nil, commonProfilePath)
 	yamlPath := "./testdata/shieldConfigForIShield.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }

@@ -196,11 +196,11 @@ func (r *IntegrityShieldReconciler) deleteResourceSigningProfileCRD(
 
 ***********************************************/
 
-func getCommonRSPPath() string {
+func getCommonProfilePath() string {
 	// normal case
-	_, err := os.Stat(apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+	_, err := os.Stat(apiv1alpha1.CommonProfileYamlPath)
 	if err == nil {
-		return apiv1alpha1.DefaultResourceSigningProfileYamlPath
+		return apiv1alpha1.CommonProfileYamlPath
 	}
 
 	// in case of test
@@ -208,18 +208,18 @@ func getCommonRSPPath() string {
 	if err != nil {
 		currentDir = "./"
 	}
-	testCommonProfilePath := filepath.Join(currentDir, "../", apiv1alpha1.DefaultResourceSigningProfileYamlPath)
+	testCommonProfilePath := filepath.Join(currentDir, "../", apiv1alpha1.CommonProfileYamlPath)
 	_, err = os.Stat(testCommonProfilePath)
 	if err == nil {
 		return testCommonProfilePath
 	}
-	return apiv1alpha1.DefaultResourceSigningProfileYamlPath
+	return apiv1alpha1.CommonProfileYamlPath
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, getCommonRSPPath())
+	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, getCommonProfilePath())
 	found := &ec.ShieldConfig{}
 
 	reqLogger := r.Log.WithValues(

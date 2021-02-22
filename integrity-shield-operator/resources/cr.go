@@ -36,7 +36,7 @@ import (
 var log = logf.Log.WithName("controller_integrityshield")
 
 // shield config cr
-func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtime.Scheme, defaultRspYamlPath string) *ec.ShieldConfig {
+func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtime.Scheme, commonProfileYamlPath string) *ec.ShieldConfig {
 
 	ecc := &ec.ShieldConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,25 +96,35 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 		OperatorServiceAccount: operatorSA,
 	}
 	if ecc.Spec.ShieldConfig.CommonProfile == nil {
-		var defaultrsp *rsp.ResourceSigningProfile
+		var commonProfile *common.CommonProfile
 
-		fpath := filepath.Clean(defaultRspYamlPath)
-		deafultRspBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
+		fpath := filepath.Clean(commonProfileYamlPath)
+		commonProfileBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
 
-		err := yaml.Unmarshal(deafultRspBytes, &defaultrsp)
+		err := yaml.Unmarshal(commonProfileBytes, &commonProfile)
 
 		if err != nil {
 			reqLogger := log.WithValues("BuildShieldConfigForIShield", cr.GetShieldConfigCRName())
 			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
 		}
+
 		if operatorSA != "" {
 			// add IShield operator SA to ignoreRules in commonProfile
 			operatorSAPattern := common.RulePattern(operatorSA)
-			ignoreRules := defaultrsp.Spec.IgnoreRules
+			ignoreRules := commonProfile.IgnoreRules
+
 			ignoreRules = append(ignoreRules, &common.Rule{Match: []*common.RequestPattern{{UserName: &operatorSAPattern}}})
-			defaultrsp.Spec.IgnoreRules = ignoreRules
+			commonProfile.IgnoreRules = ignoreRules
 		}
-		ecc.Spec.ShieldConfig.CommonProfile = &(defaultrsp.Spec)
+
+		if len(cr.Spec.IgnoreRules) > 0 {
+			commonProfile.IgnoreRules = append(commonProfile.IgnoreRules, cr.Spec.IgnoreRules...)
+		}
+		if len(cr.Spec.IgnoreAttrs) > 0 {
+			commonProfile.IgnoreAttrs = append(commonProfile.IgnoreAttrs, cr.Spec.IgnoreAttrs...)
+		}
+
+		ecc.Spec.ShieldConfig.CommonProfile = commonProfile
 	}
 
 	return ecc

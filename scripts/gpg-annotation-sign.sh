@@ -66,7 +66,7 @@ if ! { [ $YQ_VERSION == "3" ] || [ $YQ_VERSION == "4" ]; } then
 fi
 
 # remove last occurance of '---'
-sed -i '$ s/---//g' $INPUT_FILE
+# sed -i '$ s/---//g' $INPUT_FILE
 
 if [[ $YQ_VERSION == "3" ]]; then
    yq d $INPUT_FILE 'metadata.annotations."integrityshield.io/message"' -i

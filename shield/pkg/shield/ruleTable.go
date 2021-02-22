@@ -33,9 +33,16 @@ type RuleTable struct {
 	ShieldNamespace string     `json:"shieldNamespace,omitempty"`
 }
 
-func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, commonProfile rspapi.ResourceSigningProfile, shieldNamespace string) *RuleTable {
+func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, commonProfile *common.CommonProfile, shieldNamespace string) *RuleTable {
 	allTargetNamespaces := []string{}
 	items := []RuleItem{}
+	commonProfileRSP := rspapi.ResourceSigningProfile{
+		Spec: rspapi.ResourceSigningProfileSpec{},
+	}
+	if commonProfile != nil {
+		commonProfileRSP.Spec.IgnoreRules = commonProfile.IgnoreRules
+		commonProfileRSP.Spec.IgnoreAttrs = commonProfile.IgnoreAttrs
+	}
 	for _, p := range profiles {
 		pNamespace := p.GetNamespace()
 		targetNamespaces := []string{}
@@ -49,7 +56,7 @@ func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Name
 		} else {
 			targetNamespaces = append(targetNamespaces, pNamespace)
 		}
-		pWithCommon := p.Merge(commonProfile)
+		pWithCommon := p.Merge(commonProfileRSP)
 		items = append(items, RuleItem{Profile: pWithCommon, TargetNamespaces: targetNamespaces})
 		allTargetNamespaces = common.GetUnionOfArrays(allTargetNamespaces, targetNamespaces)
 	}

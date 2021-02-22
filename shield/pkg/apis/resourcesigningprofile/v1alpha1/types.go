@@ -37,7 +37,6 @@ type ResourceSigningProfileSpec struct {
 	ForceCheckRules         []*common.Rule             `json:"forceCheckRules,omitempty"`
 	KustomizePatterns       []*common.KustomizePattern `json:"kustomizePatterns,omitempty"`
 	ProtectAttrs            []*common.AttrsPattern     `json:"protectAttrs,omitempty"`
-	UnprotectAttrs          []*common.AttrsPattern     `json:"unprotectAttrs,omitempty"`
 	IgnoreAttrs             []*common.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
@@ -125,7 +124,6 @@ func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) Resourc
 	newProfile.Spec.IgnoreRules = append(newProfile.Spec.IgnoreRules, another.Spec.IgnoreRules...)
 	newProfile.Spec.ForceCheckRules = append(newProfile.Spec.ForceCheckRules, another.Spec.ForceCheckRules...)
 	newProfile.Spec.ProtectAttrs = append(newProfile.Spec.ProtectAttrs, another.Spec.ProtectAttrs...)
-	newProfile.Spec.UnprotectAttrs = append(newProfile.Spec.UnprotectAttrs, another.Spec.UnprotectAttrs...)
 	newProfile.Spec.IgnoreAttrs = append(newProfile.Spec.IgnoreAttrs, another.Spec.IgnoreAttrs...)
 	return newProfile
 }
@@ -143,16 +141,6 @@ func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*com
 func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.ProtectAttrs {
-		if attrsPattern.MatchWith(reqFields) {
-			patterns = append(patterns, attrsPattern)
-		}
-	}
-	return patterns
-}
-
-func (self ResourceSigningProfile) UnprotectAttrs(reqFields map[string]string) []*common.AttrsPattern {
-	patterns := []*common.AttrsPattern{}
-	for _, attrsPattern := range self.Spec.UnprotectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
