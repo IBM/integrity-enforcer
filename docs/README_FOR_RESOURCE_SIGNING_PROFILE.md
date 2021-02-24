@@ -90,10 +90,22 @@ forceCheckRules:
 - match:
   - kind: "Secret"
 ```
+## Define allow change patterns when creating a resource
 
-## Define allow change patterns
+You can also set rules to allow some changes in the resource even without valid signature. For example, in the case of creating a resource, changes in attribute `data.comment1` in a ConfigMap `protected-cm` is allowed.
 
-You can also set rules to allow some changes in the resource even without valid signature. For example, changes in attribute `data.comment1` in a ConfigMap `protected-cm` is allowed.
+```yaml
+unprotectAttrs:
+- attrs:
+  - data.comment1
+  match:
+  - name: protected-cm
+    kind: ConfigMap
+```
+
+## Define allow change patterns when updating an existing resource
+
+You can also set rules to allow some changes in the resource even without valid signature. For example, in the case of updating an existing resource, changes in attribute `data.comment1` in a ConfigMap `protected-cm` is allowed.
 
 ```yaml
 ignoreAttrs:
@@ -103,6 +115,7 @@ ignoreAttrs:
   - name: protected-cm
     kind: ConfigMap
 ```
+
 
 
 ## Cluster scope
