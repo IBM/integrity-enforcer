@@ -1,0 +1,71 @@
+ignoreAttrs:
+  - attrs:
+    - metadata.managedFields.*
+    - metadata.resourceVersion
+    - metadata.selfLink
+    - metadata.annotations.control-plane.alpha.kubernetes.io/leader
+    - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
+    - metadata.finalizers*
+    match:
+    - name: '*'
+  - attrs:
+    - secrets.*.name
+    - imagePullSecrets.*.name
+    match:
+    - kind: ServiceAccount
+  - attrs:
+    - spec.ports.*.nodePort
+    match:
+    - kind: Service
+ignoreRules: 
+- match: 
+  - username: system:admin
+  - username: system:apiserver
+  - username: system:kube-scheduler
+  - username: system:kube-controller-manager
+  - username: system:serviceaccount:kube-system:generic-garbage-collector
+  - username: system:serviceaccount:kube-system:attachdetach-controller
+  - username: system:serviceaccount:kube-system:certificate-controller
+  - username: system:serviceaccount:kube-system:clusterrole-aggregation-controller
+  - username: system:serviceaccount:kube-system:cronjob-controller
+  - username: system:serviceaccount:kube-system:disruption-controller
+  - username: system:serviceaccount:kube-system:endpoint-controller
+  - username: system:serviceaccount:kube-system:horizontal-pod-autoscaler
+  - username: system:serviceaccount:kube-system:ibm-file-plugin
+  - username: system:serviceaccount:kube-system:ibm-keepalived-watcher
+  - username: system:serviceaccount:kube-system:ibmcloud-block-storage-plugin
+  - username: system:serviceaccount:kube-system:job-controller
+  - username: system:serviceaccount:kube-system:namespace-controller
+  - username: system:serviceaccount:kube-system:node-controller
+  - username: system:serviceaccount:kube-system:job-controller
+  - username: system:serviceaccount:kube-system:pod-garbage-collector
+  - username: system:serviceaccount:kube-system:pv-protection-controller
+  - username: system:serviceaccount:kube-system:pvc-protection-controller
+  - username: system:serviceaccount:kube-system:replication-controller
+  - username: system:serviceaccount:kube-system:resourcequota-controller
+  - username: system:serviceaccount:kube-system:service-account-controller
+  - username: system:serviceaccount:kube-system:statefulset-controller
+- match: 
+  - kind: ControllerRevision, Pod
+    username: system:serviceaccount:kube-system:daemon-set-controller
+- match: 
+  - kind: Pod, PersistentVolumeClaim
+    username: system:serviceaccount:kube-system:persistent-volume-binder
+- match: 
+  - kind: ReplicaSet
+    username: system:serviceaccount:kube-system:deployment-controller
+- match: 
+  - kind: Pod
+    username:  system:serviceaccount:kube-system:replicaset-controller
+- match: 
+  - kind: PersistentVolumeClaim
+    username: system:serviceaccount:kube-system:statefulset-controller
+- match: 
+  - kind: ServiceAccount
+    username: system:kube-controller-manager
+- match: 
+  - kind: EndpointSlice
+    username: system:serviceaccount:kube-system:endpointslice-controller
+- match: 
+  - kind: Secret
+    username: system:kube-controller-manager

@@ -32,8 +32,9 @@ import (
 )
 
 const defaultIShieldCRPath = "./default-ishield-cr.yaml"
-const commonProfilePath = "./common-profile.yaml"
 const sampleIShieldCRPath = "../config/samples/apis_v1alpha1_integrityshield.yaml"
+
+var commonProfilePathList = []string{"./common-profiles/kubernetes-profile.yaml", "./common-profiles/openshift-profile.yaml", "./common-profiles/others-profile.yaml"}
 
 func loadTestInstance(t *testing.T) *apiv1alpha1.IntegrityShield {
 	iecrYamlBytes, err := ioutil.ReadFile(sampleIShieldCRPath)
@@ -158,7 +159,7 @@ func TestResourceSigningProfileCRD(t *testing.T) {
 }
 func TestShieldConfigCR(t *testing.T) {
 	instance := loadTestInstance(t)
-	obj := BuildShieldConfigForIShield(instance, nil, commonProfilePath)
+	obj := BuildShieldConfigForIShield(instance, nil, commonProfilePathList)
 	yamlPath := "./testdata/shieldConfigForIShield.yaml"
 	testObjAndYaml(t, obj, yamlPath)
 }

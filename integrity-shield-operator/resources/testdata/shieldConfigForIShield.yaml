@@ -20,6 +20,10 @@ spec:
         match:
         - kind: ServiceAccount
       - attrs:
+        - spec.ports.*.nodePort
+        match:
+        - kind: Service
+      - attrs:
         - metadata.annotations.argocd.argoproj.io/sync-wave
         match:
         - kind: '*'
@@ -28,10 +32,7 @@ spec:
         - username: system:admin
         - username: system:apiserver
         - username: system:kube-scheduler
-        - username: system:serviceaccount:openshift-marketplace:marketplace-operator
-        - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
-        - username: system:serviceaccount:openshift-network-operator:default
-        - username: system:serviceaccount:openshift-monitoring:prometheus-operator
+        - username: system:kube-controller-manager
         - username: system:serviceaccount:kube-system:generic-garbage-collector
         - username: system:serviceaccount:kube-system:attachdetach-controller
         - username: system:serviceaccount:kube-system:certificate-controller
@@ -54,10 +55,37 @@ spec:
         - username: system:serviceaccount:kube-system:resourcequota-controller
         - username: system:serviceaccount:kube-system:service-account-controller
         - username: system:serviceaccount:kube-system:statefulset-controller
-        - username: system:serviceaccount:ibm-common-services:cert-manager
+      - match:
+        - kind: ControllerRevision, Pod
+          username: system:serviceaccount:kube-system:daemon-set-controller
+      - match:
+        - kind: Pod, PersistentVolumeClaim
+          username: system:serviceaccount:kube-system:persistent-volume-binder
+      - match:
+        - kind: ReplicaSet
+          username: system:serviceaccount:kube-system:deployment-controller
+      - match:
+        - kind: Pod
+          username: system:serviceaccount:kube-system:replicaset-controller
+      - match:
+        - kind: PersistentVolumeClaim
+          username: system:serviceaccount:kube-system:statefulset-controller
+      - match:
+        - kind: ServiceAccount
+          username: system:kube-controller-manager
+      - match:
+        - kind: EndpointSlice
+          username: system:serviceaccount:kube-system:endpointslice-controller
+      - match:
+        - kind: Secret
+          username: system:kube-controller-manager
+      - match:
+        - username: system:serviceaccount:openshift-marketplace:marketplace-operator
+        - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
+        - username: system:serviceaccount:openshift-network-operator:default
+        - username: system:serviceaccount:openshift-monitoring:prometheus-operator
         - username: system:serviceaccount:openshift-cloud-credential-operator:default
         - username: system:serviceaccount:openshift-machine-config-operator:default
-        - username: system:kube-controller-manager
         - username: system:serviceaccount:openshift-infra:namespace-security-allocation-controller
         - username: system:serviceaccount:openshift-cluster-version:default
         - username: system:serviceaccount:openshift-authentication-operator:authentication-operator
@@ -72,7 +100,6 @@ spec:
         - username: system:serviceaccount:openshift-machine-api:machine-api-operator
         - username: system:serviceaccount:openshift-machine-config-operator:machine-config-controller
         - username: system:serviceaccount:openshift-machine-api:machine-api-controllers
-        - username: system:serviceaccount:ibm-system:olm-operator-serviceaccount
         - username: system:serviceaccount:openshift-cluster-storage-operator:csi-snapshot-controller-operator
         - username: system:serviceaccount:openshift-kube-controller-manager:localhost-recovery-client
         - username: system:serviceaccount:openshift-kube-storage-version-migrator-operator:kube-storage-version-migrator-operator
@@ -82,10 +109,6 @@ spec:
         - username: system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
         - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
         - username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
-        - username: system:serviceaccount:tigera-operator:tigera-operator
-      - match:
-        - kind: ControllerRevision, Pod
-          username: system:serviceaccount:kube-system:daemon-set-controller
       - match:
         - kind: ConfigMap
           username: system:serviceaccount:openshift-service-ca:configmap-cabundle-injector-sa
@@ -108,23 +131,11 @@ spec:
       - match:
         - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
       - match:
-        - kind: Pod, PersistentVolumeClaim
-          username: system:serviceaccount:kube-system:persistent-volume-binder
-      - match:
         - kind: ConfigMap,DaemonSet
           username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
       - match:
         - kind: Secret
           username: system:serviceaccount:openshift-cluster-samples-operator:cluster-samples-operator
-      - match:
-        - kind: ReplicaSet
-          username: system:serviceaccount:kube-system:deployment-controller
-      - match:
-        - kind: Pod
-          username: system:serviceaccount:kube-system:replicaset-controller
-      - match:
-        - kind: PersistentVolumeClaim
-          username: system:serviceaccount:kube-system:statefulset-controller
       - match:
         - kind: Deployment
           username: system:serviceaccount:openshift-ingress-operator:ingress-operator
@@ -135,23 +146,18 @@ spec:
         - kind: Pod
           username: system:node:*
       - match:
-        - kind: ServiceAccount
-          username: system:kube-controller-manager
-      - match:
-        - kind: EndpointSlice
-          username: system:serviceaccount:kube-system:endpointslice-controller
-      - match:
-        - kind: Secret
-          username: system:kube-controller-manager
-      - match:
         - kind: ClusterServiceVersion, ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
           username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
       - match:
         - kind: InstallPlan, Role, RoleBinding, Deployment
           username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+      - match:
+        - username: system:serviceaccount:ibm-common-services:cert-manager
+        - username: system:serviceaccount:ibm-system:olm-operator-serviceaccount
+        - username: system:serviceaccount:tigera-operator:tigera-operator
     iShieldAdminUserGroup: system:masters,system:cluster-admins
-    iShieldResourceCondition: {}
     iShieldCRName: integrity-shield-server
+    iShieldResourceCondition: {}
     iShieldServerUserName: system:serviceaccount::ishield-sa
     ignore:
     - kind: Event

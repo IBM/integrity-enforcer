@@ -1,57 +1,11 @@
-ignoreAttrs:
-  - attrs:
-    - metadata.managedFields.*
-    - metadata.resourceVersion
-    - metadata.selfLink
-    - metadata.annotations.control-plane.alpha.kubernetes.io/leader
-    - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
-    - metadata.finalizers*
-    match:
-    - name: '*'
-  - attrs:
-    - secrets.*.name
-    - imagePullSecrets.*.name
-    match:
-    - kind: ServiceAccount
-  - attrs:
-    - metadata.annotations.argocd.argoproj.io/sync-wave
-    match:
-    - kind: "*"
 ignoreRules: 
-- match: 
-  - username: system:admin
-  - username: system:apiserver
-  - username: system:kube-scheduler
+- match:
   - username: system:serviceaccount:openshift-marketplace:marketplace-operator
   - username: system:serviceaccount:openshift-monitoring:cluster-monitoring-operator
   - username: system:serviceaccount:openshift-network-operator:default
   - username: system:serviceaccount:openshift-monitoring:prometheus-operator
-  - username: system:serviceaccount:kube-system:generic-garbage-collector
-  - username: system:serviceaccount:kube-system:attachdetach-controller
-  - username: system:serviceaccount:kube-system:certificate-controller
-  - username: system:serviceaccount:kube-system:clusterrole-aggregation-controller
-  - username: system:serviceaccount:kube-system:cronjob-controller
-  - username: system:serviceaccount:kube-system:disruption-controller
-  - username: system:serviceaccount:kube-system:endpoint-controller
-  - username: system:serviceaccount:kube-system:horizontal-pod-autoscaler
-  - username: system:serviceaccount:kube-system:ibm-file-plugin
-  - username: system:serviceaccount:kube-system:ibm-keepalived-watcher
-  - username: system:serviceaccount:kube-system:ibmcloud-block-storage-plugin
-  - username: system:serviceaccount:kube-system:job-controller
-  - username: system:serviceaccount:kube-system:namespace-controller
-  - username: system:serviceaccount:kube-system:node-controller
-  - username: system:serviceaccount:kube-system:job-controller
-  - username: system:serviceaccount:kube-system:pod-garbage-collector
-  - username: system:serviceaccount:kube-system:pv-protection-controller
-  - username: system:serviceaccount:kube-system:pvc-protection-controller
-  - username: system:serviceaccount:kube-system:replication-controller
-  - username: system:serviceaccount:kube-system:resourcequota-controller
-  - username: system:serviceaccount:kube-system:service-account-controller
-  - username: system:serviceaccount:kube-system:statefulset-controller
-  - username: system:serviceaccount:ibm-common-services:cert-manager
   - username: system:serviceaccount:openshift-cloud-credential-operator:default
   - username: system:serviceaccount:openshift-machine-config-operator:default
-  - username: system:kube-controller-manager
   - username: system:serviceaccount:openshift-infra:namespace-security-allocation-controller
   - username: system:serviceaccount:openshift-cluster-version:default
   - username: system:serviceaccount:openshift-authentication-operator:authentication-operator
@@ -66,7 +20,6 @@ ignoreRules:
   - username: system:serviceaccount:openshift-machine-api:machine-api-operator
   - username: system:serviceaccount:openshift-machine-config-operator:machine-config-controller
   - username: system:serviceaccount:openshift-machine-api:machine-api-controllers
-  - username: system:serviceaccount:ibm-system:olm-operator-serviceaccount
   - username: system:serviceaccount:openshift-cluster-storage-operator:csi-snapshot-controller-operator
   - username: system:serviceaccount:openshift-kube-controller-manager:localhost-recovery-client
   - username: system:serviceaccount:openshift-kube-storage-version-migrator-operator:kube-storage-version-migrator-operator
@@ -76,10 +29,6 @@ ignoreRules:
   - username: system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
   - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
   - username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
-  - username: system:serviceaccount:tigera-operator:tigera-operator
-- match: 
-  - kind: ControllerRevision, Pod
-    username: system:serviceaccount:kube-system:daemon-set-controller
 - match: 
   - namespace: openshift-service-ca, openshift-network-operator
     kind: ConfigMap
@@ -110,9 +59,6 @@ ignoreRules:
   - namespace: openshift-operator-lifecycle-manager
     username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
 - match: 
-  - kind: Pod, PersistentVolumeClaim
-    username: system:serviceaccount:kube-system:persistent-volume-binder
-- match: 
   - namespace: openshift-cluster-node-tuning-operator
     kind: ConfigMap,DaemonSet
     username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
@@ -120,15 +66,6 @@ ignoreRules:
   - namespace: openshift
     kind: Secret
     username: system:serviceaccount:openshift-cluster-samples-operator:cluster-samples-operator
-- match: 
-  - kind: ReplicaSet
-    username: system:serviceaccount:kube-system:deployment-controller
-- match: 
-  - kind: Pod
-    username:  system:serviceaccount:kube-system:replicaset-controller
-- match: 
-  - kind: PersistentVolumeClaim
-    username: system:serviceaccount:kube-system:statefulset-controller
 - match: 
   - namespace: openshift-ingress
     kind: Deployment
@@ -140,15 +77,6 @@ ignoreRules:
   - namespace: openshift-marketplace
     kind: Pod
     username: system:node:*
-- match: 
-  - kind: ServiceAccount
-    username: system:kube-controller-manager
-- match: 
-  - kind: EndpointSlice
-    username: system:serviceaccount:kube-system:endpointslice-controller
-- match: 
-  - kind: Secret
-    username: system:kube-controller-manager
 - match: 
   - kind: ClusterServiceVersion, ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
     username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
