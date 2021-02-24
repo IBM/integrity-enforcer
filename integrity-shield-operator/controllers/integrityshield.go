@@ -999,6 +999,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookDeployment(instance *ap
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
+func (r *IntegrityShieldReconciler) createOrUpdateEmulatorDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildEmulatorDeploymentForIShield(instance)
+	return r.createOrUpdateDeployment(instance, expected)
+}
+
 /**********************************************
 
 				Service
@@ -1049,6 +1054,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateService(instance *apiv1alpha1.
 
 func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildServiceForIShield(instance)
+	return r.createOrUpdateService(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) createOrUpdateEmulatorService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildEmulatorServiceForIShield(instance)
 	return r.createOrUpdateService(instance, expected)
 }
 

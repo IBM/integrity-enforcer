@@ -281,6 +281,126 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 	}
 }
 
+// emulator deployment
+func BuildEmulatorDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+	labels := cr.Spec.MetaLabels
+
+	var servervolumemounts []v1.VolumeMount
+	var volumes []v1.Volume
+
+	volumes = []v1.Volume{
+		SecretVolume("ishield-tls-certs", cr.GetWebhookServerTlsSecretName()),
+		EmptyDirVolume("log-volume"),
+		EmptyDirVolume("tmp"),
+	}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		tmpSecretVolume := SecretVolume(keyConf.Name, keyConf.SecretName)
+		volumes = append(volumes, tmpSecretVolume)
+	}
+
+	servervolumemounts = []v1.VolumeMount{
+		{
+			MountPath: "/run/secrets/tls",
+			Name:      "ishield-tls-certs",
+			ReadOnly:  true,
+		},
+		{
+			MountPath: "/tmp",
+			Name:      "tmp",
+		},
+		{
+			MountPath: "/ishield-app/public",
+			Name:      "log-volume",
+		},
+	}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		sigType := keyConf.SignatureType
+		if sigType == common.SignatureTypeDefault {
+			sigType = common.SignatureTypePGP
+		}
+		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/", keyConf.Name, sigType), Name: keyConf.Name}
+		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
+	}
+
+	emulatorContainer := v1.Container{
+		Name:            cr.Spec.Emulator.Name,
+		SecurityContext: cr.Spec.Emulator.SecurityContext,
+		Image:           cr.Spec.Emulator.Image,
+		ImagePullPolicy: cr.Spec.Emulator.ImagePullPolicy,
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "emulator-api",
+				ContainerPort: cr.Spec.Emulator.Port,
+				Protocol:      v1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: servervolumemounts,
+		Env: []v1.EnvVar{
+			{
+				Name:  "SHIELD_NS",
+				Value: cr.Namespace,
+			},
+			{
+				Name:  "SHIELD_CONFIG_NAME",
+				Value: cr.GetShieldConfigCRName(),
+			},
+			{
+				Name:  "CHART_BASE_URL",
+				Value: cr.Spec.Server.ChartBaseUrl,
+			},
+			{
+				Name:  "SHIELD_CM_RELOAD_SEC",
+				Value: strconv.Itoa(int(cr.Spec.Server.ShieldCmReloadSec)),
+			},
+			{
+				Name:  "SHIELD_POLICY_RELOAD_SEC",
+				Value: strconv.Itoa(int(cr.Spec.Server.EnforcePolicyReloadSec)),
+			},
+		},
+		Resources: cr.Spec.Server.Resources,
+	}
+
+	containers := []v1.Container{
+		emulatorContainer,
+	}
+
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetIShieldEmulatorDeploymentName(),
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Strategy: appsv1.DeploymentStrategy{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       cr.Spec.MaxSurge,
+					MaxUnavailable: cr.Spec.MaxUnavailable,
+				},
+			},
+			Replicas: cr.Spec.ReplicaCount,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: cr.Spec.EmulatorSelectorLabels,
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: cr.Spec.EmulatorSelectorLabels,
+				},
+				Spec: v1.PodSpec{
+					ImagePullSecrets:   cr.Spec.ImagePullSecrets,
+					ServiceAccountName: cr.GetServiceAccountName(),
+					SecurityContext:    cr.Spec.Security.PodSecurityContext,
+					Containers:         containers,
+					NodeSelector:       cr.Spec.NodeSelector,
+					Affinity:           cr.Spec.Affinity,
+					Tolerations:        cr.Spec.Tolerations,
+
+					Volumes: volumes,
+				},
+			},
+		},
+	}
+}
+
 // EqualDeployments returns a Boolean
 func EqualDeployments(expected *appsv1.Deployment, found *appsv1.Deployment) bool {
 	if !EqualLabels(found.ObjectMeta.Labels, expected.ObjectMeta.Labels) {

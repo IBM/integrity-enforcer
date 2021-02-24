@@ -78,6 +78,19 @@ spec:
       requests:
         cpu: 200m
         memory: 256Mi
+  emulator:
+    enabled: true
+    image: quay.io/open-cluster-management/integrity-shield-emulator:0.1.4
+    imagePullPolicy: Always
+    name: emulator
+    port: 8443
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
   replicaCount: 1
   security:
     clusterRole: ishield-cluster-role
@@ -95,6 +108,8 @@ spec:
     autoIShieldAdminRoleCreationDisabled: false
   selector:
     app: ishield-server
+  emulatorSelector:
+    app: ishield-emulator
   server:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true

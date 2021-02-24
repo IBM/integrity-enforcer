@@ -57,6 +57,11 @@ if [ -z "$ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION" ]; then
     exit 1
 fi
 
+if [ -z "$ISHIELD_EMULATOR_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_EMULATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+    exit 1
+fi
+
 if [ -z "$ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
     echo "ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
@@ -75,6 +80,7 @@ BASEDIR=./deployment
 DOCKERFILE=./image/Dockerfile
 LOGG_BASEDIR=${ISHIELD_REPO_ROOT}/logging/
 OBSV_BASEDIR=${ISHIELD_REPO_ROOT}/observer/
+EMLT_BASEDIR=${ISHIELD_REPO_ROOT}/emulator/
 OPERATOR_BASEDIR=${ISHIELD_REPO_ROOT}/integrity-shield-operator/
 
 # Build ishield-server image
@@ -148,6 +154,33 @@ if [ "$NO_CACHE" = true ] ; then
      docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} ${OBSV_BASEDIR} --no-cache
 else
      docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} ${OBSV_BASEDIR}
+fi
+
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+echo done.
+echo -----------------------------
+echo ""
+
+# Build ishield-emulator image
+echo -----------------------------
+echo [3/4] Building ishield-emulator image.
+cd ${EMLT_BASEDIR}
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${ISHIELD_EMULATOR} ./cmd/${SERVICE_NAME}
+
+if [ "$NO_CACHE" = true ] ; then
+     docker build -t ${ISHIELD_EMULATOR_IMAGE_NAME_AND_VERSION} ${EMLT_BASEDIR} --no-cache
+else
+     docker build -t ${ISHIELD_EMULATOR_IMAGE_NAME_AND_VERSION} ${EMLT_BASEDIR}
 fi
 
 exit_status=$?

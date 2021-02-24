@@ -220,6 +220,21 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return recResult, recErr
 	}
 
+	emulatorEnabled := instance.Spec.Emulator.Enabled
+	if *emulatorEnabled {
+		//Deployment
+		recResult, recErr = r.createOrUpdateEmulatorDeployment(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		//Service
+		recResult, recErr = r.createOrUpdateEmulatorService(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+	}
+
 	//Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {

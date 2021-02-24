@@ -1,0 +1,579 @@
+//
+// Copyright 2020 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package shield
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
+	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
+	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
+	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
+	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
+)
+
+/**********************************************
+
+				Verifier
+
+***********************************************/
+
+type VerifierInterface interface {
+	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error)
+}
+
+/**********************************************
+
+				ResourceVerifier
+
+***********************************************/
+
+type ResourceVerifier struct {
+	Namespace             string
+	PGPKeyPathList        []string
+	X509KeyPathList       []string
+	AllMountedKeyPathList []string
+}
+
+func NewVerifier(signType SignedResourceType, shieldNamespace string, pgpKeyPathList, x509KeyPathList, allKeyPathList []string) VerifierInterface {
+	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
+		return &ResourceVerifier{Namespace: shieldNamespace, PGPKeyPathList: pgpKeyPathList, X509KeyPathList: x509KeyPathList, AllMountedKeyPathList: allKeyPathList}
+	} else if signType == SignedResourceTypeHelm {
+		return &HelmVerifier{Namespace: shieldNamespace, KeyPathList: pgpKeyPathList}
+	}
+	return nil
+}
+
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error) {
+	var vcerr *common.CheckError
+	var vsinfo *common.SignerInfo
+	var retErr error
+
+	kustomizeList := signingProfile.Kustomize(reqc.Map())
+	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
+
+	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
+	ignoreAttrsList := signingProfile.IgnoreAttrs(reqc.Map())
+
+	if sig.option["matchRequired"] {
+		message, _ := sig.data["message"]
+		// use yamlBytes if single yaml data is extracted from ResourceSignature
+		if yamlBytes, ok := sig.data["yamlBytes"]; ok {
+			message = yamlBytes
+		}
+
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType)
+		if !matched {
+			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
+			return &SigVerifyResult{
+				Error: &common.CheckError{
+					Msg:    msg,
+					Reason: msg,
+					Error:  nil,
+				},
+				Signer: nil,
+			}, nil
+		}
+	}
+
+	if sig.option["scopedSignature"] {
+		isValidScopeSignature := false
+		scopeDenyMsg := ""
+		if reqc.IsCreateRequest() {
+			// for CREATE request, this boolean flag will be true.
+			// because signature verification will work as value check in the case of scopedSignature.
+			isValidScopeSignature = true
+		} else if reqc.IsUpdateRequest() {
+			// for UPDATE request, IShield will confirm that no value is modified except attributes in `scope`.
+			// if there is any modification, the request will be denied.
+			if reqc.OrgMetadata.Labels.IntegrityVerified() {
+				scope, _ := sig.data["scope"]
+				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope)
+				if diffIsInMessageScope {
+					isValidScopeSignature = true
+				} else {
+					scopeDenyMsg = "messageScope of the signature does not cover all changed attributes in this update"
+				}
+			} else {
+				scopeDenyMsg = "Original object must be integrityVerified to allow UPDATE request with scope signature"
+			}
+		}
+		if !isValidScopeSignature {
+			return &SigVerifyResult{
+				Error: &common.CheckError{
+					Msg:    scopeDenyMsg,
+					Reason: scopeDenyMsg,
+					Error:  nil,
+				},
+				Signer: nil,
+			}, nil
+		}
+	}
+
+	message := sig.data["message"]
+	signature := sig.data["signature"]
+	certificateStr, certFound := sig.data["certificate"]
+	if len(self.PGPKeyPathList) > 0 {
+
+		ok, reasonFail, signer, err := pgp.VerifySignature(self.PGPKeyPathList, message, signature)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in signature verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if ok {
+			vcerr = nil
+			vsinfo = &common.SignerInfo{
+				Email:   signer.Email,
+				Name:    signer.Name,
+				Comment: signer.Comment,
+			}
+			retErr = nil
+		} else {
+			if ok2, _, signer2, _ := pgp.VerifySignature(self.AllMountedKeyPathList, message, signature); ok2 && signer2 != nil {
+				signerAlt := &common.SignerInfo{
+					Email:   signer2.Email,
+					Name:    signer2.Name,
+					Comment: signer2.Comment,
+				}
+				vcerr = nil
+				vsinfo = signerAlt
+				retErr = nil
+			} else {
+				vcerr = &common.CheckError{
+					Msg:    "Failed to verify signature",
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
+				retErr = nil
+			}
+		}
+	}
+	if len(self.X509KeyPathList) > 0 && certFound {
+		certificate := []byte(certificateStr)
+		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.X509KeyPathList)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in certificate verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if !certOk {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify certificate",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		} else {
+			cert, err := x509.ParseCertificate(certificate)
+			if err != nil {
+				logger.Error("Failed to parse certificate; ", err)
+			}
+			pubKeyBytes, err := x509.GetPublicKeyFromCertificate(certificate)
+			if err != nil {
+				logger.Error("Failed to get public key from certificate; ", err)
+			}
+			message := []byte(sig.data["message"])
+			signature := []byte(sig.data["signature"])
+			sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
+			if err != nil {
+				vcerr = &common.CheckError{
+					Msg:    "Error occured in signature verification",
+					Reason: reasonFail,
+					Error:  err,
+				}
+				vsinfo = nil
+				retErr = err
+			} else if sigOk {
+				vcerr = nil
+				vsinfo = x509.NewSignerInfoFromCert(cert)
+				retErr = nil
+			} else {
+				vcerr = &common.CheckError{
+					Msg:    "Failed to verify signature",
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
+				retErr = nil
+			}
+		}
+	}
+
+	svresult := &SigVerifyResult{
+		Error:  vcerr,
+		Signer: vsinfo,
+	}
+	return svresult, retErr
+}
+
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType) (bool, string) {
+	var mask, focus []string
+	matched := false
+	diffStr := ""
+	mask = getMaskDef("")
+
+	orgObj := []byte(message)
+	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error in loading orgNode: %s", err.Error()))
+		return false, ""
+	}
+
+	focus = []string{}
+	for _, attrs := range protectAttrs {
+		focus = append(focus, attrs.Attrs...)
+	}
+
+	addMask := []string{}
+	if len(focus) == 0 {
+		for _, attrs := range ignoreAttrs {
+			addMask = append(addMask, attrs.Attrs...)
+		}
+		mask = append(mask, addMask...)
+	}
+
+	matched, diffStr = matchContents(orgObj, reqObj, focus, mask, allowDiffPatterns)
+	if matched {
+		logger.Debug("matched directly")
+	}
+
+	// do not attempt to DryRun for Cluster scope resource
+	// because ishield-sa does not have role for creating "any" resource at cluster scope
+	if resScope == "Cluster" {
+		return matched, diffStr
+	}
+
+	if !matched && signType == SignedResourceTypeResource {
+
+		nsMaskedOrgBytes := orgNode.Mask([]string{"metadata.namespace"}).ToYaml()
+		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), self.Namespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in DryRunCreate: %s", err.Error()))
+			return false, ""
+		}
+		mask = getMaskDef("")
+		mask = append(mask, addMask...)
+		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+
+		matched, diffStr = matchContents(simObj, reqObj, focus, mask, allowDiffPatterns)
+		if matched {
+			logger.Debug("matched by DryRunCreate()")
+		}
+	}
+	if !matched && signType == SignedResourceTypeApplyingResource {
+
+		reqNode, _ := mapnode.NewFromBytes(reqObj)
+		reqNamespace := reqNode.GetString("metadata.namespace")
+		_, patchedBytes, err := kubeutil.GetApplyPatchBytes(orgObj, reqNamespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
+			return false, ""
+		}
+		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
+		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.Namespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
+			return false, ""
+		}
+		mask = getMaskDef("")
+		mask = append(mask, addMask...)
+		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns)
+		if matched {
+			logger.Debug("matched by GetApplyPatchBytes()")
+		}
+	}
+	if !matched && signType == SignedResourceTypePatch {
+		patchedBytes, err := kubeutil.StrategicMergePatch(reqObj, orgObj, "")
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in getting patched bytes: %s", err.Error()))
+			return false, ""
+		}
+		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
+		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.Namespace)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
+			return false, ""
+		}
+		mask = getMaskDef("")
+		mask = append(mask, addMask...)
+		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
+		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns)
+		if matched {
+			logger.Debug("matched by StrategicMergePatch()")
+		}
+	}
+	return matched, diffStr
+}
+
+func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string) bool {
+	var mask []string
+	mask = getMaskDef("")
+	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
+	mask = append(mask, scopeKeys...)
+	matched, _ := matchContents(orgObj, rawObj, nil, mask, nil)
+	return matched
+}
+
+func getMaskDef(kind string) []string {
+	maskDefBytes := []byte(`
+		{
+		}
+	`)
+	var maskDef map[string][]string
+	err := json.Unmarshal(maskDefBytes, &maskDef)
+	if err != nil {
+		logger.Error(err)
+		return []string{}
+	}
+	maskDef["*"] = CommonMessageMask
+
+	masks := []string{}
+	masks = append(masks, maskDef["*"]...)
+	maskForKind, ok := maskDef[kind]
+	if !ok {
+		return masks
+	}
+	masks = append(masks, maskForKind...)
+	return masks
+}
+
+func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPatterns []*mapnode.DiffPattern) (bool, string) {
+	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
+	if err != nil {
+		logger.Error("Failed to load original message as *Node", string(orgObj))
+		return false, ""
+	}
+	reqNode, err := mapnode.NewFromBytes(reqObj)
+	if err != nil {
+		logger.Error("Failed to load requested object as *Node", string(reqObj))
+		return false, ""
+	}
+
+	matched := false
+	orgNodeToCompare := orgNode.Copy()
+	reqNodeToCompare := reqNode.Copy()
+	if len(focus) > 0 {
+		orgNodeToCompare = orgNode.Extract(focus)
+		reqNodeToCompare = reqNode.Extract(focus)
+	} else {
+		orgNodeToCompare = orgNode.Mask(mask)
+		reqNodeToCompare = reqNode.Mask(mask)
+	}
+
+	dr := orgNodeToCompare.Diff(reqNodeToCompare)
+	if dr != nil && len(allowDiffPatterns) > 0 {
+		dr = dr.Remove(allowDiffPatterns)
+	}
+	diffStr := ""
+
+	if dr == nil {
+		matched = true
+	}
+
+	if !matched && dr != nil {
+		diffStr = dr.String()
+	}
+
+	return matched, diffStr
+}
+
+func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) string {
+	message := ""
+	node, err := mapnode.NewFromBytes(rawObj)
+	if err != nil {
+		return ""
+	}
+	if mutableAttrs != "" {
+		mutableAttrs = strings.ReplaceAll(mutableAttrs, "\n", "")
+		mask := strings.Split(mutableAttrs, ",")
+		for i := range mask {
+			mask[i] = strings.Trim(mask[i], " ")
+		}
+		node = node.Mask(mask)
+	}
+	if filter == "" {
+		message = node.ToJson() + "\n"
+	} else {
+		filterKeys := mapnode.SplitCommaSeparatedKeys(filter)
+		for _, k := range filterKeys {
+			subNodeList := node.MultipleSubNode(k)
+			for _, subNode := range subNodeList {
+				message += subNode.ToJson() + "\n"
+			}
+		}
+	}
+	return message
+}
+
+func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
+	ref := reqc.ResourceRef()
+	name := reqc.Name
+	kustomizedName := name
+	for _, pattern := range kustomizeList {
+		newRef := pattern.OverrideName(ref)
+		kustomizedName = newRef.Name
+	}
+	if kustomizedName == name {
+		return nil
+	}
+
+	key := "metadata.name"
+	values := map[string]interface{}{
+		"before": name,
+		"after":  kustomizedName,
+	}
+	allowDiffPattern := &mapnode.DiffPattern{
+		Key:    key,
+		Values: values,
+	}
+	return []*mapnode.DiffPattern{allowDiffPattern}
+}
+
+type SigVerifyResult struct {
+	Error  *common.CheckError
+	Signer *common.SignerInfo
+}
+
+/**********************************************
+
+				HelmVerifier
+
+***********************************************/
+
+type HelmVerifier struct {
+	Namespace   string
+	KeyPathList []string
+}
+
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error) {
+	var vcerr *common.CheckError
+	var vsinfo *common.SignerInfo
+	var retErr error
+
+	rlsStr, _ := sig.data["releaseSecret"]
+	hrmStr, _ := sig.data["helmReleaseMetadata"]
+
+	if sig.option["matchRequired"] {
+		matched := helm.MatchReleaseSecret(rlsStr, hrmStr)
+		if !matched {
+			return &SigVerifyResult{
+				Error: &common.CheckError{
+					Msg:    "HelmReleaseMetadata is not identical with the release secret",
+					Reason: "HelmReleaseMetadata is not identical with the release secret",
+					Error:  nil,
+				},
+				Signer: nil,
+			}, nil
+		}
+	}
+
+	// verify helm chart with prov in HelmReleaseMetadata.
+	// helm provenance supports only PGP Verification.
+	var hrmObj *hrm.HelmReleaseMetadata
+	err := json.Unmarshal([]byte(hrmStr), &hrmObj)
+	if err != nil {
+		msg := fmt.Sprintf("Error occured in helm chart verification; %s", err.Error())
+		vcerr = &common.CheckError{
+			Msg:    msg,
+			Reason: msg,
+			Error:  fmt.Errorf("%s", msg),
+		}
+		vsinfo = nil
+		retErr = err
+	} else {
+
+		helmChart := hrmObj.Spec.Chart
+		helmProv := hrmObj.Spec.Prov
+		ok, signer, reasonFail, err := helm.VerifyChartAndProv(helmChart, helmProv, self.KeyPathList)
+		if err != nil {
+			vcerr = &common.CheckError{
+				Msg:    "Error occured in helm chart verification",
+				Reason: reasonFail,
+				Error:  err,
+			}
+			vsinfo = nil
+			retErr = err
+		} else if ok {
+			vcerr = nil
+			vsinfo = &common.SignerInfo{
+				Email:   signer.Email,
+				Name:    signer.Name,
+				Comment: signer.Comment,
+			}
+			retErr = nil
+		} else {
+			vcerr = &common.CheckError{
+				Msg:    "Failed to verify helm chart and its provenance",
+				Reason: reasonFail,
+				Error:  nil,
+			}
+			vsinfo = nil
+			retErr = nil
+		}
+	}
+
+	svresult := &SigVerifyResult{
+		Error:  vcerr,
+		Signer: vsinfo,
+	}
+	return svresult, retErr
+
+}
+
+var CommonMessageMask = []string{
+	fmt.Sprintf("metadata.labels.\"%s\"", common.ResourceIntegrityLabelKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignedByAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.LastVerifiedTimestampAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.ResourceSignatureUIDAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.CertificateAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),
+	"metadata.annotations.namespace",
+	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
+	"metadata.managedFields",
+	"metadata.creationTimestamp",
+	"metadata.generation",
+	"metadata.annotations.deprecated.daemonset.template.generation",
+	"metadata.namespace",
+	"metadata.resourceVersion",
+	"metadata.selfLink",
+	"metadata.uid",
+}

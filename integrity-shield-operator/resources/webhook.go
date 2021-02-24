@@ -122,3 +122,26 @@ func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield
 	}
 	return wc
 }
+
+// emulator service
+func BuildEmulatorServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
+	var targetport intstr.IntOrString
+	targetport.Type = intstr.String
+	targetport.StrVal = "emulator-api"
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetIShieldEmulatorServiceName(),
+			Namespace: cr.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       8443,
+					TargetPort: targetport, //"emulator-api"
+				},
+			},
+			Selector: cr.Spec.EmulatorSelectorLabels,
+		},
+	}
+	return svc
+}

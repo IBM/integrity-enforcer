@@ -49,6 +49,8 @@ const (
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
+	DefaultIShieldEmulatorDeployName          = "integrity-shield-emulator"
+	DefaultIShieldEmulatorServiceName         = "integrity-shield-emulator"
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
 	CommonProfileYamlPath                     = "./resources/common-profile.yaml"
@@ -68,15 +70,16 @@ type IntegrityShieldSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	MaxSurge         *intstr.IntOrString       `json:"maxSurge,omitempty"`
-	MaxUnavailable   *intstr.IntOrString       `json:"maxUnavailable,omitempty"`
-	ReplicaCount     *int32                    `json:"replicaCount,omitempty"`
-	MetaLabels       map[string]string         `json:"labels,omitempty"`
-	SelectorLabels   map[string]string         `json:"selector,omitempty"`
-	NodeSelector     map[string]string         `json:"nodeSelector,omitempty"`
-	Affinity         *v1.Affinity              `json:"affinity,omitempty"`
-	Tolerations      []v1.Toleration           `json:"tolerations,omitempty"`
-	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	MaxSurge               *intstr.IntOrString       `json:"maxSurge,omitempty"`
+	MaxUnavailable         *intstr.IntOrString       `json:"maxUnavailable,omitempty"`
+	ReplicaCount           *int32                    `json:"replicaCount,omitempty"`
+	MetaLabels             map[string]string         `json:"labels,omitempty"`
+	SelectorLabels         map[string]string         `json:"selector,omitempty"`
+	EmulatorSelectorLabels map[string]string         `json:"emulatorSelector,omitempty"`
+	NodeSelector           map[string]string         `json:"nodeSelector,omitempty"`
+	Affinity               *v1.Affinity              `json:"affinity,omitempty"`
+	Tolerations            []v1.Toleration           `json:"tolerations,omitempty"`
+	ImagePullSecrets       []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	IgnoreDefaultIShieldCR bool              `json:"ignoreDefaultIShieldCR,omitempty"`
 	Security               SecurityConfig    `json:"security,omitempty"`
@@ -84,6 +87,7 @@ type IntegrityShieldSpec struct {
 	Server                 ServerContainer   `json:"server,omitempty"`
 	Logger                 LoggerContainer   `json:"logger,omitempty"`
 	Observer               ObserverContainer `json:"observer,omitempty"`
+	Emulator               EmulatorContainer `json:"emulator,omitempty"`
 	RegKeySecret           RegKeySecret      `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                 `json:"shieldConfigCrName,omitempty"`
@@ -161,6 +165,16 @@ type ObserverContainer struct {
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
+	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type EmulatorContainer struct {
+	Enabled         *bool                   `json:"enabled,omitempty"`
+	Name            string                  `json:"name,omitempty"`
+	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
+	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image           string                  `json:"image,omitempty"`
+	Port            int32                   `json:"port,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -313,12 +327,20 @@ func (self *IntegrityShield) GetIShieldServerDeploymentName() string {
 	return self.Name
 }
 
+func (self *IntegrityShield) GetIShieldEmulatorDeploymentName() string {
+	return DefaultIShieldEmulatorDeployName
+}
+
 func (self *IntegrityShield) GetWebhookServiceName() string {
 	return self.Spec.WebhookServiceName
 }
 
 func (self *IntegrityShield) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName
+}
+
+func (self *IntegrityShield) GetIShieldEmulatorServiceName() string {
+	return DefaultIShieldEmulatorServiceName
 }
 
 func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {
