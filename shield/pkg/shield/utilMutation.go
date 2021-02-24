@@ -103,10 +103,11 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj)
 
 	reqFields := reqc.Map()
+	includeDiffValue := reqc.IncludeDiffValue()
 
 	ignoreAttrsList := signingProfile.IgnoreAttrs(reqFields)
 
-	if mr, err := GetMAResult(ma4kInput, ignoreAttrsList); err != nil {
+	if mr, err := GetMAResult(ma4kInput, ignoreAttrsList, includeDiffValue); err != nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "Error when checking mutation",
@@ -189,7 +190,7 @@ func MutationMessage(resourceName string, diffResult []mapnode.Difference) (msg 
 	return msg
 }
 
-func GetMAResult(ma4kInput *Ma4kInput, rules []*common.AttrsPattern) (*MAResult, error) {
+func GetMAResult(ma4kInput *Ma4kInput, rules []*common.AttrsPattern, includeDiffValue bool) (*MAResult, error) {
 	mr := &MAResult{}
 	oldObject, _ := mapnode.NewFromMap(ma4kInput.Before)
 	newObject, _ := mapnode.NewFromMap(ma4kInput.After)
@@ -228,7 +229,13 @@ func GetMAResult(ma4kInput *Ma4kInput, rules []*common.AttrsPattern) (*MAResult,
 		mr.IsMutated = true
 		mr.Checked = true
 	}
-	mr.Diff = unfiltered.String()
+	diffStr := ""
+	if includeDiffValue {
+		diffStr = unfiltered.String()
+	} else {
+		diffStr = unfiltered.KeyString()
+	}
+	mr.Diff = diffStr
 	mr.Filtered = filtered.String()
 	mr.MatchedKeys = matchedKeys
 	msg := MutationMessage(ma4kInput.Name, unfiltered.Items)

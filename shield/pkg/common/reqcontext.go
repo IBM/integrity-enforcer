@@ -128,6 +128,10 @@ func (rc *ReqContext) IsServiceAccount() bool {
 	return rc.Kind == "ServiceAccount" && rc.GroupVersion() == "v1"
 }
 
+func (rc *ReqContext) IncludeDiffValue() bool {
+	return rc.Kind == "Secret"
+}
+
 type ParsedRequest struct {
 	UID     string
 	JsonStr string
