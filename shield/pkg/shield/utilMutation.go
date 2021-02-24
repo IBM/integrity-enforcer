@@ -230,13 +230,16 @@ func GetMAResult(ma4kInput *Ma4kInput, rules []*common.AttrsPattern, includeDiff
 		mr.Checked = true
 	}
 	diffStr := ""
+	filteredStr := ""
 	if includeDiffValue {
 		diffStr = unfiltered.String()
+		filteredStr = filtered.String()
 	} else {
 		diffStr = unfiltered.KeyString()
+		filteredStr = filtered.KeyString()
 	}
 	mr.Diff = diffStr
-	mr.Filtered = filtered.String()
+	mr.Filtered = filteredStr
 	mr.MatchedKeys = matchedKeys
 	msg := MutationMessage(ma4kInput.Name, unfiltered.Items)
 	mr.Msg = msg
