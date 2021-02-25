@@ -833,6 +833,8 @@ func FindDiffBetweenNodes(t1, t2 *Node, findType map[string]bool) *DiffResult {
 		items = append(items, d)
 	}
 
+	items = removeKeyDiffsInListNode(items)
+
 	items = append(items, typeDiffs...)
 	sort.SliceStable(items, func(i, j int) bool {
 		return items[i].Key < items[j].Key
@@ -906,6 +908,34 @@ func splitConcatKey(concatKey string) []string {
 		}
 	}
 	return parsedKeys
+}
+
+// extract actual diff (remove "key-only diffs" in list)
+func removeKeyDiffsInListNode(items []Difference) []Difference {
+	items2 := []Difference{}
+	for _, item := range items {
+		keyOk, _ := regexp.MatchString(`\.\d+\.`, item.Key)
+		valBeforeNil := (item.Values["before"] == nil)
+		valAfterNil := (item.Values["after"] == nil)
+		addThis := true
+		if keyOk && (valBeforeNil || valAfterNil) {
+			re := regexp.MustCompile(`\.\d+\.`)
+			searchKey := re.ReplaceAllString(item.Key, `\.\d+\.`)
+			for _, tmpItem := range items {
+				keyMatched, _ := regexp.MatchString(searchKey, tmpItem.Key)
+				tmpValAfterMatched := (item.Values["before"] == tmpItem.Values["after"]) && (tmpItem.Values["before"] == nil) && valAfterNil
+				tmpValBeforeMatched := (item.Values["after"] == tmpItem.Values["before"]) && (tmpItem.Values["after"] == nil) && valBeforeNil
+				if keyMatched && (tmpValBeforeMatched || tmpValAfterMatched) {
+					addThis = false
+					break
+				}
+			}
+		}
+		if addThis {
+			items2 = append(items2, item)
+		}
+	}
+	return items2
 }
 
 func GetValueByLongKey(m map[string]interface{}, longKey string) (interface{}, error) {
