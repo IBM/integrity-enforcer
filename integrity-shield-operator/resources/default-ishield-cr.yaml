@@ -67,7 +67,7 @@ spec:
         memory: 256Mi
     stdOutput: true
   observer:
-    enabled: false
+    enabled: true
     image: quay.io/open-cluster-management/integrity-shield-observer:0.1.4
     imagePullPolicy: Always
     name: observer
