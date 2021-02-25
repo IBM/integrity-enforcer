@@ -26,6 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type CommonProfile struct {
+	IgnoreRules []*Rule         `json:"ignoreRules,omitempty"`
+	IgnoreAttrs []*AttrsPattern `json:"ignoreAttrs,omitempty"`
+}
+
 type Rule struct {
 	Match   []*RequestPattern `json:"match,omitempty"`
 	Exclude []*RequestPattern `json:"exclude,omitempty"`

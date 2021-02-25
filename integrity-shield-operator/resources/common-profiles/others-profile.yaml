@@ -1,0 +1,10 @@
+ignoreAttrs:
+  - attrs:
+    - metadata.annotations.argocd.argoproj.io/sync-wave
+    match:
+    - kind: "*"
+ignoreRules: 
+- match: 
+  - username: system:serviceaccount:ibm-common-services:cert-manager
+  - username: system:serviceaccount:ibm-system:olm-operator-serviceaccount
+  - username: system:serviceaccount:tigera-operator:tigera-operator

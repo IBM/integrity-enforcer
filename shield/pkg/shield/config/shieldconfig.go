@@ -17,7 +17,6 @@
 package config
 
 import (
-	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	"github.com/jinzhu/copier"
@@ -45,12 +44,12 @@ type ShieldConfig struct {
 	Patch *PatchConfig        `json:"patch,omitempty"`
 	Log   *LoggingScopeConfig `json:"log,omitempty"`
 
-	InScopeNamespaceSelector *common.NamespaceSelector          `json:"inScopeNamespaceSelector,omitempty"`
-	Allow                    []common.RequestPattern            `json:"allow,omitempty"`
-	Ignore                   []common.RequestPattern            `json:"ignore,omitempty"`
-	Mode                     IntegrityShieldMode                `json:"mode,omitempty"`
-	Plugin                   []PluginConfig                     `json:"plugin,omitempty"`
-	CommonProfile            *rspapi.ResourceSigningProfileSpec `json:"commonProfile,omitempty"`
+	InScopeNamespaceSelector *common.NamespaceSelector `json:"inScopeNamespaceSelector,omitempty"`
+	Allow                    []common.RequestPattern   `json:"allow,omitempty"`
+	Ignore                   []common.RequestPattern   `json:"ignore,omitempty"`
+	Mode                     IntegrityShieldMode       `json:"mode,omitempty"`
+	Plugin                   []PluginConfig            `json:"plugin,omitempty"`
+	CommonProfile            *common.CommonProfile     `json:"commonProfile,omitempty"`
 
 	Namespace          string   `json:"namespace,omitempty"`
 	SignatureNamespace string   `json:"signatureNamespace,omitempty"`

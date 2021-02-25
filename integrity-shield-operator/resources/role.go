@@ -162,7 +162,7 @@ func BuildRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
 					"*",
 				},
 				Verbs: []string{
-					"get", "create", "update",
+					"get", "list", "create", "update",
 				},
 			},
 		},

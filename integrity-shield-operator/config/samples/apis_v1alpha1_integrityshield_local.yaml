@@ -34,3 +34,5 @@ spec:
     imagePullPolicy: IfNotPresent
   logger:
     imagePullPolicy: IfNotPresent
+  observer:
+    imagePullPolicy: IfNotPresent

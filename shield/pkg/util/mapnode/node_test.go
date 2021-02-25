@@ -17,406 +17,16 @@ package mapnode
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"testing"
 )
 
 func TestNode(t *testing.T) {
-	testMapBytes := []byte(`{
-        "apiVersion": "v1",
-        "kind": "Pod",
-        "metadata": {
-            "creationTimestamp": "2020-03-09T05:19:11Z",
-            "generateName": "sample-go-operator-b8bb6c748-",
-            "labels": {
-                "name": "sample-go-operator",
-                "pod-template-hash": "b8bb6c748"
-            },
-            "name": "sample-go-operator-b8bb6c748-vz2m8",
-            "namespace": "test-go-operator",
-            "ownerReferences": [
-                {
-                    "apiVersion": "apps/v1",
-                    "blockOwnerDeletion": true,
-                    "controller": true,
-                    "kind": "ReplicaSet",
-                    "name": "sample-go-operator-b8bb6c748",
-                    "uid": "4b78a793-50f0-4a20-ba99-bebafaa60f31"
-                }
-            ]
-        },
-        "spec": {
-            "containers": [
-                {
-                    "command": [
-                        "sample-go-operator"
-                    ],
-                    "env": [
-                        {
-                            "name": "WATCH_NAMESPACE",
-                            "valueFrom": {
-                                "fieldRef": {
-                                    "apiVersion": "v1",
-                                    "fieldPath": "metadata.namespace"
-                                }
-                            }
-                        },
-                        {
-                            "name": "POD_NAME",
-                            "valueFrom": {
-                                "fieldRef": {
-                                    "apiVersion": "v1",
-                                    "fieldPath": "metadata.name"
-                                }
-                            }
-                        },
-                        {
-                            "name": "OPERATOR_NAME",
-                            "value": "sample-go-operator"
-                        }
-                    ],
-                    "image": "sample-go-operator:local",
-                    "imagePullPolicy": "IfNotPresent",
-                    "name": "sample-go-operator",
-                    "resources": {},
-                    "terminationMessagePath": "/dev/termination-log",
-                    "terminationMessagePolicy": "File",
-                    "volumeMounts": [
-                        {
-                            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-                            "name": "sample-go-operator-token-lxn92",
-                            "readOnly": true
-                        }
-                    ]
-                }
-            ],
-            "dnsPolicy": "ClusterFirst",
-            "enableServiceLinks": true,
-            "nodeName": "minikube",
-            "priority": 0,
-            "restartPolicy": "Always",
-            "schedulerName": "default-scheduler",
-            "securityContext": {},
-            "serviceAccount": "sample-go-operator",
-            "serviceAccountName": "sample-go-operator",
-            "terminationGracePeriodSeconds": 30,
-            "tolerations": [
-                {
-                    "effect": "NoExecute",
-                    "key": "node.kubernetes.io/not-ready",
-                    "operator": "Exists",
-                    "tolerationSeconds": 300
-                },
-                {
-                    "effect": "NoExecute",
-                    "key": "node.kubernetes.io/unreachable",
-                    "operator": "Exists",
-                    "tolerationSeconds": 300
-                }
-            ],
-            "volumes": [
-                {
-                    "name": "sample-go-operator-token-lxn92",
-                    "secret": {
-                        "defaultMode": 420,
-                        "secretName": "sample-go-operator-token-lxn92"
-                    }
-                }
-            ]
-        },
-        "status": {
-            "conditions": [
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:11Z",
-                    "status": "True",
-                    "type": "Initialized"
-                },
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:13Z",
-                    "status": "True",
-                    "type": "Ready"
-                },
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:13Z",
-                    "status": "True",
-                    "type": "ContainersReady"
-                },
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:11Z",
-                    "status": "True",
-                    "type": "PodScheduled"
-                }
-            ],
-            "containerStatuses": [
-                {
-                    "containerID": "docker://a5771eba38babec412f55b728a101601beb701ee341077280036c05d5f4b605d",
-                    "image": "sample-go-operator:local",
-                    "imageID": "docker://sha256:9a4febf14706677aa4e71de150a0616bd2b6d28392c25a5517742aa3b540097b",
-                    "lastState": {},
-                    "name": "sample-go-operator",
-                    "ready": true,
-                    "restartCount": 0,
-                    "state": {
-                        "running": {
-                            "startedAt": "2020-03-09T05:19:12Z"
-                        }
-                    }
-                }
-            ],
-            "hostIP": "192.168.64.28",
-            "phase": "Running",
-            "podIP": "172.17.0.8",
-            "qosClass": "BestEffort",
-            "startTime": "2020-03-09T05:19:11Z"
-        }
-    }
-    `)
-	testMap2Bytes := []byte(`{
-        "apiVersion": "v1",
-        "kind": "Pod",
-        "metadata": {
-            "creationTimestamp": "2020-03-09T05:19:11Z",
-            "generateName": "sample-go-operator-b8bb6c748-",
-            "labels": {
-                "name": "sample-go-operator",
-                "pod-template-hash": "b8bb6c748"
-            },
-            "name": "sample-go-operator-b8bb6c748-vz2m8",
-            "namespace": "test-go-operator",
-            "ownerReferences": [
-                {
-                    "apiVersion": "apps/v1",
-                    "blockOwnerDeletion": true,
-                    "controller": true,
-                    "kind": "ReplicaSet",
-                    "name": "sample-go-operator-b8bb6c748",
-                    "uid": "4b78a793-50f0-4a20-ba99-bebafaa60f31"
-                }
-            ],
-            "resourceVersion": "402534",
-            "selfLink": "/api/v1/namespaces/test-go-operator/pods/sample-go-operator-b8bb6c748-vz2m8",
-            "uid": "6885d94e-6fd1-40c8-847b-85fcf00abbdc"
-        },
-        "spec": {
-            "containers": [
-                {
-                    "command": [
-                        "sample-go-operator"
-                    ],
-                    "env": [
-                        {
-                            "name": "WATCH_NAMESPACE",
-                            "valueFrom": {
-                                "fieldRef": {
-                                    "apiVersion": "v1",
-                                    "fieldPath": "metadata.namespace"
-                                }
-                            }
-                        },
-                        {
-                            "name": "POD_NAME",
-                            "valueFrom": {
-                                "fieldRef": {
-                                    "apiVersion": "v1",
-                                    "fieldPath": "metadata.name"
-                                }
-                            }
-                        },
-                        {
-                            "name": "OPERATOR_NAME",
-                            "value": "sample-go-operator"
-                        }
-                    ],
-                    "image": "sample-go-operator:local",
-                    "imagePullPolicy": "Always",
-                    "name": "sample-go-operator",
-                    "resources": {},
-                    "terminationMessagePath": "/dev/termination-log",
-                    "terminationMessagePolicy": "File",
-                    "volumeMounts": [
-                        {
-                            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-                            "name": "sample-go-operator-token-lxn92",
-                            "readOnly": true
-                        }
-                    ]
-                }
-            ],
-            "dnsPolicy": "ClusterFirst",
-            "enableServiceLinks": true,
-            "nodeName": "minikube",
-            "priority": 0,
-            "restartPolicy": "Always",
-            "schedulerName": "default-scheduler",
-            "securityContext": {
-                "privileged": true
-            },
-            "serviceAccount": "sample-go-operator",
-            "serviceAccountName": "sample-go-operator",
-            "terminationGracePeriodSeconds": 30,
-            "tolerations": [
-                {
-                    "effect": "NoExecute",
-                    "key": "node.kubernetes.io/not-ready",
-                    "operator": "Exists",
-                    "tolerationSeconds": 300
-                },
-                {
-                    "effect": "NoExecute",
-                    "key": "node.kubernetes.io/unreachable",
-                    "operator": "Exists",
-                    "tolerationSeconds": 300
-                }
-            ],
-            "volumes": [
-                {
-                    "name": "sample-go-operator-token-lxn92",
-                    "secret": {
-                        "defaultMode": 420,
-                        "secretName": "sample-go-operator-token-lxn92"
-                    }
-                }
-            ]
-        },
-        "status": {
-            "conditions": [
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:11Z",
-                    "status": "True",
-                    "type": "Initialized"
-                },
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:13Z",
-                    "status": "True",
-                    "type": "Ready"
-                },
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:13Z",
-                    "status": "True",
-                    "type": "ContainersReady"
-                },
-                {
-                    "lastProbeTime": null,
-                    "lastTransitionTime": "2020-03-09T05:19:11Z",
-                    "status": "True",
-                    "type": "PodScheduled"
-                }
-            ],
-            "containerStatuses": [
-                {
-                    "containerID": "docker://a5771eba38babec412f55b728a101601beb701ee341077280036c05d5f4b605d",
-                    "image": "sample-go-operator:local",
-                    "imageID": "docker://sha256:9a4febf14706677aa4e71de150a0616bd2b6d28392c25a5517742aa3b540097b",
-                    "lastState": {},
-                    "name": "sample-go-operator",
-                    "ready": true,
-                    "restartCount": 0,
-                    "state": {
-                        "running": {
-                            "startedAt": "2020-03-09T05:19:12Z"
-                        }
-                    }
-                }
-            ],
-            "hostIP": "192.168.64.28",
-            "phase": "Running",
-            "podIP": "172.17.0.8",
-            "qosClass": "BestEffort",
-            "startTime": "2020-03-09T05:19:11Z"
-        }
-    }
-    `)
 
-	testMap4Bytes := []byte(`
-        {
-        "key1": {
-            "key11": {
-            "key111": "val111",
-            "key112": "val112"
-            },
-            "key12": {
-            "key121": "val121",
-            "key122": "val122",
-            "key123": "val123"
-            }
-        },
-        "key2": [
-            {
-            "key21": "val21"
-            },
-            {
-            "key22": "val22"
-            }
-        ]
-        } 
-    `)
-	deployOperatorBytes := []byte(`
-    {
-        "apiVersion": "apps/v1",
-        "kind": "Deployment",
-        "metadata": {
-            "annotations": {
-            "signPaths": "apiVersion,kind,metadata.name,spec.template.spec.containers[].env[]",
-            "kubernetes.io/createdby": "openshift.io/dockercfg-hoge-fuga"
-            },
-            "name": "sample-operator"
-        },
-        "spec": {
-            "replicas": 1,
-            "selector": {
-            "matchLabels": {
-                "name": "sample-operator"
-            }
-            },
-            "template": {
-            "metadata": {
-                "labels": {
-                "name": "sample-operator"
-                }
-            },
-            "spec": {
-                "containers": [
-                {
-                    "env": [
-                    {
-                        "name": "WATCH_NAMESPACE",
-                        "valueFrom": {
-                        "fieldRef": {
-                            "fieldPath": "metadata.namespace"
-                        }
-                        }
-                    },
-                    {
-                        "name": "POD_NAME",
-                        "valueFrom": {
-                        "fieldRef": {
-                            "fieldPath": "metadata.name"
-                        }
-                        }
-                    },
-                    {
-                        "name": "OPERATOR_NAME",
-                        "value": "sample-operator"
-                    }
-                    ],
-                    "image": "sampleregistry/sample-operator:0.1.4dev",
-                    "imagePullPolicy": "Always",
-                    "name": "sample-operator"
-                }
-                ],
-                "serviceAccountName": "sample-operator"
-            }
-            }
-        }
-        }
-        
-    `)
+	testMapBytes, _ := ioutil.ReadFile("testdata/data1.json")
+	testMap2Bytes, _ := ioutil.ReadFile("testdata/data2.json")
+	testMap4Bytes, _ := ioutil.ReadFile("testdata/data3.json")
+	deployOperatorBytes, _ := ioutil.ReadFile("testdata/data4.json")
 
 	mergeTestByte := []byte(`{"metadata":{"name":"test-resource"}}`)
 	mergeTestByte2 := []byte(`{"metadata":{"namespace":"test-ns"}}`)
@@ -496,8 +106,7 @@ func TestNode(t *testing.T) {
 		"spec.template.spec.containers[].env[2]",
 	}
 	maskedEnvNode := deployOperatorNode.Extract(keepKeys2).Mask(mask2)
-	// maskedEnvNode := deployOperatorNode.Filter(keepKeys2)
-	// t.Log("15,", maskedEnvNode.ToYAML())
+	wildcardMasked := deployOperatorNode.Mask([]string{"metadata.annotations.\"kubernetes.io/*\""}).SubNode("metadata.annotations")
 
 	nodewithNil := emptyNode()
 	nodeWithNilJson := nodewithNil.ToJson()
@@ -512,6 +121,10 @@ func TestNode(t *testing.T) {
 	nodeWrongType1, _ := NewFromBytes([]byte(`{"testdata":{"key1":"val1","key2":"val2"}}`))
 	nodeWrongType2, _ := NewFromBytes([]byte(`{"testdata":{"key1":"val1","key2":123}}`))
 	drWrongType := nodeWrongType1.Diff(nodeWrongType2)
+
+	listNode1, _ := NewFromBytes([]byte(`{"listkey":[{"key1":"val1"},{"key2":"val2"},{"key3":"val3"},{"key4":"val4"},{"key5":"val5"}]}`))
+	listNode2, _ := NewFromBytes([]byte(`{"listkey":[{"key2":"val2"},{"key3":"val3"},{"key4":"val4"},{"key5":"val5"}]}`))
+	drListNode := listNode1.Diff(listNode2)
 
 	e := make(map[int]interface{})
 	e[1] = string(`[{"command":["sample-go-operator"],"env":[{"name":"WATCH_NAMESPACE","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.namespace"}}},{"name":"POD_NAME","valueFrom":{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.name"}}},{"name":"OPERATOR_NAME","value":"sample-go-operator"}],"image":"sample-go-operator:local","imagePullPolicy":"IfNotPresent","name":"sample-go-operator","resources":{},"terminationMessagePath":"/dev/termination-log","terminationMessagePolicy":"File","volumeMounts":[{"mountPath":"/var/run/secrets/kubernetes.io/serviceaccount","name":"sample-go-operator-token-lxn92","readOnly":true}]}]`)
@@ -545,9 +158,11 @@ spec:
         imagePullPolicy: Always
         name: sample-operator
 `)
-	e[14] = string(`null`)
-	e[15] = string(`{"metadata":{"name":"test-resource","namespace":"test-ns"}}`)
-	e[16] = string(`{"items":[{"key":"testdata.key2","values":{"after":"(type: float64) %!s(float64=123)","before":"(type: string) val2"}}]}`)
+	e[14] = string(`{"signPaths":"apiVersion,kind,metadata.name,spec.template.spec.containers[].env[]"}`)
+	e[15] = string(`null`)
+	e[16] = string(`{"metadata":{"name":"test-resource","namespace":"test-ns"}}`)
+	e[17] = string(`{"items":[{"key":"testdata.key2","values":{"after":"(type: float64) %!s(float64=123)","before":"(type: string) val2"}}]}`)
+	e[18] = string(`{"items":[{"key":"listkey.0.key1","values":{"after":null,"before":"val1"}}]}`)
 
 	a := make(map[int]interface{})
 	a[1] = string(containersJSON)
@@ -563,9 +178,11 @@ spec:
 	a[11] = string(dotKeyValue)
 	a[12] = string(envNode.ToJson())
 	a[13] = string(maskedEnvNode.ToYaml())
-	a[14] = string(nodeWithNilJson)
-	a[15] = string(mergedNode.ToJson())
-	a[16] = string(drWrongType.String())
+	a[14] = string(wildcardMasked.ToJson())
+	a[15] = string(nodeWithNilJson)
+	a[16] = string(mergedNode.ToJson())
+	a[17] = string(drWrongType.String())
+	a[18] = string(drListNode.String())
 
 	for i := range e {
 		if a[i] != e[i] {

@@ -14,6 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+CMDNAME=`basename $0`
+if [ $# -ne 2 ]; then
+  echo "Usage: $CMDNAME <target-file> <license-file>" 1>&2
+  exit 1
+fi
+
+if [ -z "$SHIELD_OP_DIR" ]; then
+    echo "SHIELD_OP_DIR is empty. Please set env."
+    exit 1
+fi
+
 targetFile=$1
 licenseFile=$2
 
