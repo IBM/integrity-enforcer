@@ -49,17 +49,17 @@ type VerifierInterface interface {
 ***********************************************/
 
 type ResourceVerifier struct {
-	Namespace             string
 	PGPKeyPathList        []string
 	X509KeyPathList       []string
 	AllMountedKeyPathList []string
+	dryRunNamespace       string // namespace for dryrun; should be empty for cluster scope request
 }
 
-func NewVerifier(signType SignedResourceType, shieldNamespace string, pgpKeyPathList, x509KeyPathList, allKeyPathList []string) VerifierInterface {
+func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509KeyPathList, allKeyPathList []string) VerifierInterface {
 	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
-		return &ResourceVerifier{Namespace: shieldNamespace, PGPKeyPathList: pgpKeyPathList, X509KeyPathList: x509KeyPathList, AllMountedKeyPathList: allKeyPathList}
+		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509KeyPathList: x509KeyPathList, AllMountedKeyPathList: allKeyPathList}
 	} else if signType == SignedResourceTypeHelm {
-		return &HelmVerifier{Namespace: shieldNamespace, KeyPathList: pgpKeyPathList}
+		return &HelmVerifier{Namespace: dryRunNamespace, KeyPathList: pgpKeyPathList}
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			message = yamlBytes
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType, excludeDiffValue)
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, reqc.Kind, sig.SignType, excludeDiffValue)
 		if !matched {
 			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
@@ -237,7 +237,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType, excludeDiffValue bool) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope, resKind string, signType SignedResourceType, excludeDiffValue bool) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -270,14 +270,14 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 
 	// do not attempt to DryRun for Cluster scope resource
 	// because ishield-sa does not have role for creating "any" resource at cluster scope
-	if resScope == "Cluster" {
+	if resScope == "Cluster" && resKind != "CustomResourceDefinition" {
 		return matched, diffStr
 	}
 
 	if !matched && signType == SignedResourceTypeResource {
 
 		nsMaskedOrgBytes := orgNode.Mask([]string{"metadata.namespace"}).ToYaml()
-		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), self.Namespace)
+		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), self.dryRunNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate: %s", err.Error()))
 			return false, ""
@@ -303,7 +303,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		}
 		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
 		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
-		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.Namespace)
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.dryRunNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
 			return false, ""
@@ -325,7 +325,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		}
 		patchedNode, _ := mapnode.NewFromBytes(patchedBytes)
 		nsMaskedPatchedNode := patchedNode.Mask([]string{"metadata.namespace"})
-		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.Namespace)
+		simPatchedObj, err := kubeutil.DryRunCreate([]byte(nsMaskedPatchedNode.ToYaml()), self.dryRunNamespace)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error in DryRunCreate for Patch: %s", err.Error()))
 			return false, ""
