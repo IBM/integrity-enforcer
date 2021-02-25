@@ -148,6 +148,21 @@ func (d *DiffResult) String() string {
 	return d.ToJson()
 }
 
+func (d *DiffResult) KeyString() string {
+	keys := d.Keys()
+	keyMap := map[string][]map[string]string{
+		"items": {},
+	}
+	for _, k := range keys {
+		keyMap["items"] = append(keyMap["items"], map[string]string{"key": k})
+	}
+	keysByte, err := json.Marshal(keyMap)
+	if err != nil {
+		return ""
+	}
+	return string(keysByte)
+}
+
 func keyExistsInList(slice []string, val string) (bool, string) {
 	var isMatch bool
 	for _, item := range slice {
