@@ -36,7 +36,7 @@ import (
 var log = logf.Log.WithName("controller_integrityshield")
 
 // shield config cr
-func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtime.Scheme, commonProfileYamlPath string) *ec.ShieldConfig {
+func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtime.Scheme, commonProfileYamlPathList []string) *ec.ShieldConfig {
 
 	ecc := &ec.ShieldConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,16 +96,19 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 		OperatorServiceAccount: operatorSA,
 	}
 	if ecc.Spec.ShieldConfig.CommonProfile == nil {
-		var commonProfile *common.CommonProfile
+		commonProfile := &common.CommonProfile{}
 
-		fpath := filepath.Clean(commonProfileYamlPath)
-		commonProfileBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
-
-		err := yaml.Unmarshal(commonProfileBytes, &commonProfile)
-
-		if err != nil {
-			reqLogger := log.WithValues("BuildShieldConfigForIShield", cr.GetShieldConfigCRName())
-			reqLogger.Error(err, "Failed to load default CommonProfile from file.")
+		for _, presetPath := range commonProfileYamlPathList {
+			var tmpProfile *common.CommonProfile
+			fpath := filepath.Clean(presetPath)
+			tmpProfileBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
+			err := yaml.Unmarshal(tmpProfileBytes, &tmpProfile)
+			if err != nil {
+				reqLogger := log.WithValues("BuildShieldConfigForIShield", cr.GetShieldConfigCRName())
+				reqLogger.Error(err, fmt.Sprintf("Failed to load preset CommonProfile from file `%s`", fpath))
+			}
+			commonProfile.IgnoreRules = append(commonProfile.IgnoreRules, tmpProfile.IgnoreRules...)
+			commonProfile.IgnoreAttrs = append(commonProfile.IgnoreAttrs, tmpProfile.IgnoreAttrs...)
 		}
 
 		if operatorSA != "" {

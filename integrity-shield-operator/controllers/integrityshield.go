@@ -19,9 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
@@ -196,30 +198,32 @@ func (r *IntegrityShieldReconciler) deleteResourceSigningProfileCRD(
 
 ***********************************************/
 
-func getCommonProfilePath() string {
-	// normal case
-	_, err := os.Stat(apiv1alpha1.CommonProfileYamlPath)
-	if err == nil {
-		return apiv1alpha1.CommonProfileYamlPath
+func getCommonProfilesPath() []string {
+	commonProfileDir := apiv1alpha1.CommonProfilesPath
+
+	_, err := os.Stat(apiv1alpha1.CommonProfilesPath)
+	if err != nil && os.IsNotExist(err) {
+		// when this func is called in unit test, use correct path for test
+		currentDir, _ := os.Getwd()
+		commonProfileDir = filepath.Join(currentDir, "../", apiv1alpha1.CommonProfilesPath)
 	}
 
-	// in case of test
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "./"
+	files, _ := ioutil.ReadDir(commonProfileDir)
+
+	yamlPaths := []string{}
+	for _, f := range files {
+		fpath := filepath.Join(commonProfileDir, f.Name())
+		if strings.HasSuffix(fpath, ".yaml") {
+			yamlPaths = append(yamlPaths, fpath)
+		}
 	}
-	testCommonProfilePath := filepath.Join(currentDir, "../", apiv1alpha1.CommonProfileYamlPath)
-	_, err = os.Stat(testCommonProfilePath)
-	if err == nil {
-		return testCommonProfilePath
-	}
-	return apiv1alpha1.CommonProfileYamlPath
+	return yamlPaths
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 
-	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, getCommonProfilePath())
+	expected := res.BuildShieldConfigForIShield(instance, r.Scheme, getCommonProfilesPath())
 	found := &ec.ShieldConfig{}
 
 	reqLogger := r.Log.WithValues(
