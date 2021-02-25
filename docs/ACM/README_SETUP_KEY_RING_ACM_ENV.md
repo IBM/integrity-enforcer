@@ -33,7 +33,7 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shi
           -namespace integrity-shield-operator-system  \
           --secret keyring-secret  \
           --path /tmp/pubring.gpg \
-          --label environment=dev  |  kubectl apply -f -
+          --label environment=dev  |  oc apply -f -
 ```
 
 
@@ -51,6 +51,6 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shi
           --namespace integrity-shield-operator-system  \
           --secret keyring-secret  \
           --path /tmp/pubring.gpg \
-          --label environment=dev  |  kubectl delete -f -
+          --label environment=dev  |  oc delete -f -
 ```
 
