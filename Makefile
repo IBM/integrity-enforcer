@@ -312,7 +312,7 @@ e2e-test:
 	@echo run test
 	$(ISHIELD_REPO_ROOT)/build/check_test_results.sh
 
-test-gpg-annotation:
+test-gpg-annotation: check-local-test
 	@echo
 	$(ISHIELD_REPO_ROOT)/build/run_unit_test_sign_script.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(TMP_DIR)
 ############################################################
