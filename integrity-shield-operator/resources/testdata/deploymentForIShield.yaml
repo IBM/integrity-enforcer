@@ -100,32 +100,6 @@ spec:
         volumeMounts:
         - mountPath: /ishield-app/public
           name: log-volume
-      - env:
-        - name: SHIELD_NS
-        - name: SHIELD_CONFIG_NAME
-          value: ishield-config
-        - name: EVENTS_FILE_PATH
-          value: /ishield-app/public/events.txt
-        image: quay.io/open-cluster-management/integrity-shield-observer:0.1.4
-        imagePullPolicy: Always
-        name: observer
-        resources:
-          limits:
-            cpu: 500m
-            memory: 512Mi
-          requests:
-            cpu: 200m
-            memory: 256Mi
-        volumeMounts:
-        - mountPath: /run/secrets/tls
-          name: ishield-tls-certs
-          readOnly: true
-        - mountPath: /tmp
-          name: tmp
-        - mountPath: /ishield-app/public
-          name: log-volume
-        - mountPath: /sample-signer-keyconfig/pgp/
-          name: sample-signer-keyconfig
       serviceAccountName: ishield-sa
       volumes:
       - name: ishield-tls-certs
