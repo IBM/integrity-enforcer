@@ -19,6 +19,26 @@ if ! [ -x "$(command -v yq)" ]; then
    exit 1
 fi
 
+if [ ! -f $INPUT_FILE ]; then
+   echo "Input file does not exist, please create it."
+   exit 1
+fi
+
+if [ ! -f $PUBRING_KEY ]; then
+   echo "pubring key file does not exist, please create it."
+   exit 1
+fi
+
+if [ -z "$TMP_DIR" ]; then
+    echo "TMP_DIR is empty. Setting /tmp as default"
+    TMP_DIR="/tmp"
+fi
+
+if [ ! -d $TMP_DIR ]; then
+    echo "$TMP_DIR directory does not exist, please create it."
+    exit 1
+fi
+
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     base='base64 -w 0'
     base_decode='base64 -d'
@@ -27,11 +47,18 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     base_decode='base64 -D'
 fi
 
-msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/message"')
-sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"')
+YQ_VERSION=$(yq --version 2>&1 | awk '{print $3}' | cut -c 1 )
+
+if [[ $YQ_VERSION == "3" ]]; then
+    msg=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/message"')
+    sign=$(yq r -d0 ${INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"')
+elif [[ $YQ_VERSION == "4" ]]; then
+    msg=$(yq eval '.metadata.annotations."integrityshield.io/message" | select(di == 0)' ${INPUT_FILE})
+    sign=$(yq eval '.metadata.annotations."integrityshield.io/signature" | select(di == 0)' ${INPUT_FILE})
+fi
 
 
-ISHIELD_TMP_DIR="/tmp/ishield_tmp_dir"
+ISHIELD_TMP_DIR="${TMP_DIR}/ishield_tmp_dir"
 
 if [ ! -d ${ISHIELD_TMP_DIR} ]; then
    mkdir -p  ${ISHIELD_TMP_DIR}
@@ -45,14 +72,41 @@ ISHIELD_MSG_FILE="${ISHIELD_TMP_DIR}/input.msg"
 
 cat ${INPUT_FILE} > ${ISHIELD_INPUT_FILE}
 
-yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
-yq d ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
+if [[ $YQ_VERSION == "3" ]]; then
+   yq d -d* ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/message"' -i
+   yq d -d* ${ISHIELD_INPUT_FILE} 'metadata.annotations."integrityshield.io/signature"' -i
+   cnt=0
+   yq r -d* ${ISHIELD_INPUT_FILE} -j | while read doc;
+   do
+      annotation_exist=$(echo $doc | yq r - 'metadata.annotations')
+      if  [ "${annotation_exist}" == "{}" ]; then
+          yq d -d${cnt} ${ISHIELD_INPUT_FILE} 'metadata.annotations' -i
+      fi
+      cnt=$[$cnt+1]
+   done
+elif [[ $YQ_VERSION == "4" ]]; then
+   yq eval 'del(.metadata.annotations."integrityshield.io/message")' -i ${ISHIELD_INPUT_FILE}
+   yq eval 'del(.metadata.annotations."integrityshield.io/signature")' -i ${ISHIELD_INPUT_FILE}
+   cnt=0
+   while true
+   do
+      kind=$(yq eval ".kind | select(di == $cnt)" ${ISHIELD_INPUT_FILE}  | sed 's/\//_/g')
+      if [ -z "$kind" ]; then
+          break
+      fi
+      annotation_exist=$(yq eval ".metadata.annotations | select(di == $cnt)" ${ISHIELD_INPUT_FILE})
+      if  [ "${annotation_exist}" == "{}" ]; then
+          yq eval "del(.metadata.annotations | select(di == $cnt))" -i ${ISHIELD_INPUT_FILE}
+      fi
+      cnt=$[$cnt+1]
+   done
+fi
 
 
 msg_body=`cat ${ISHIELD_INPUT_FILE} | $base`
 
 if [ "${msg}" != "${msg_body}" ]; then
-   echo Input file content has been changed.
+   echo "Input file content has been changed."
    if [ -d ${ISHIELD_TMP_DIR} ]; then
      rm -rf ${ISHIELD_TMP_DIR}
    fi

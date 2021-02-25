@@ -3,7 +3,7 @@ FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 
 RUN mkdir /ishield-op-app && mkdir /ishield-op-app/resources
 
-ADD /resources/default-rsp.yaml /ishield-op-app/resources/default-rsp.yaml
+ADD /resources/common-profiles /ishield-op-app/resources/common-profiles
 ADD /resources/default-ishield-cr.yaml /ishield-op-app/resources/default-ishield-cr.yaml
 ADD /resources/webhook-rules-for-roks.yaml /ishield-op-app/resources/webhook-rules-for-roks.yaml
 COPY build/_output/bin/integrity-shield-operator /ishield-op-app/manager

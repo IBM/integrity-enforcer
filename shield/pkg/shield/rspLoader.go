@@ -37,14 +37,14 @@ type RSPLoader struct {
 	shieldNamespace        string
 	profileNamespace       string
 	requestNamespace       string
-	commonProfile          *rspapi.ResourceSigningProfileSpec
+	commonProfile          *common.CommonProfile
 	defaultProfileInterval time.Duration
 
 	Client *rspclient.ApisV1alpha1Client
 	Data   []rspapi.ResourceSigningProfile
 }
 
-func NewRSPLoader(shieldNamespace, profileNamespace, requestNamespace string, commonProfile *rspapi.ResourceSigningProfileSpec) *RSPLoader {
+func NewRSPLoader(shieldNamespace, profileNamespace, requestNamespace string, commonProfile *common.CommonProfile) *RSPLoader {
 	defaultProfileInterval := time.Second * 60
 	config, _ := kubeutil.GetKubeConfig()
 	client, _ := rspclient.NewForConfig(config)

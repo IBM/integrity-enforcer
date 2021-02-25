@@ -18,3 +18,7 @@ set -e
 
 echo "E2E TEST GOES HERE!"
 make test-e2e
+
+# TODO: Enable this later
+#echo "E2E BUNDLE TEST GOES HERE!"
+#make test-e2e-bundle

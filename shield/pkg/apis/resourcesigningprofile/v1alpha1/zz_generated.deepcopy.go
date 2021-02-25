@@ -184,16 +184,6 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 			}
 		}
 	}
-	if in.UnprotectAttrs != nil {
-		in, out := &in.UnprotectAttrs, &out.UnprotectAttrs
-		*out = make([]*common.AttrsPattern, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = (*in).DeepCopy()
-			}
-		}
-	}
 	if in.IgnoreAttrs != nil {
 		in, out := &in.IgnoreAttrs, &out.IgnoreAttrs
 		*out = make([]*common.AttrsPattern, len(*in))
