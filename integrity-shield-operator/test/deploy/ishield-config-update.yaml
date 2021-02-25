@@ -25,6 +25,10 @@ spec:
         - imagePullSecrets.2.name
         match:
         - kind: ServiceAccount
+      - attrs:
+        - metadata.annotations.argocd.argoproj.io/sync-wave
+        match:
+        - kind: '*'
       ignoreRules:
       - match:
         - username: system:admin
@@ -154,11 +158,6 @@ spec:
           username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
       - match:
         - username: system:serviceaccount:integrity-shield-operator-system:integrity-shield-operator-manager
-      unprotectAttrs:
-      - attrs:
-        - metadata.annotations.argocd.argoproj.io/sync-wave
-        match:
-        - kind: '*'
     iShieldAdminUserGroup: system:masters
     iShieldResourceCondition:
       operatorResources:

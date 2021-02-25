@@ -852,37 +852,6 @@ spec:
                             type: object
                         type: object
                     type: object
-                  unprotectAttrs:
-                    items:
-                      properties:
-                        attrs:
-                          items:
-                            type: string
-                          type: array
-                        match:
-                          items:
-                            properties:
-                              apiGroup:
-                                description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                type: string
-                              apiVersion:
-                                type: string
-                              kind:
-                                type: string
-                              name:
-                                type: string
-                              operation:
-                                type: string
-                              scope:
-                                type: string
-                              usergroup:
-                                type: string
-                              username:
-                                type: string
-                            type: object
-                          type: array
-                      type: object
-                    type: array
                 type: object
               type: array
             security:
@@ -1430,37 +1399,6 @@ spec:
                               type: object
                           type: object
                       type: object
-                    unprotectAttrs:
-                      items:
-                        properties:
-                          attrs:
-                            items:
-                              type: string
-                            type: array
-                          match:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                        type: object
-                      type: array
                   type: object
                 iShieldAdminUserGroup:
                   type: string
