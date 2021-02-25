@@ -69,10 +69,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	var vsinfo *common.SignerInfo
 	var retErr error
 
-	includeDiffValue := true
-	if reqc.IncludeDiffValue() {
-		includeDiffValue = false
-	}
+	excludeDiffValue := reqc.ExcludeDiffValue()
 
 	kustomizeList := signingProfile.Kustomize(reqc.Map())
 	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
@@ -87,7 +84,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			message = yamlBytes
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType, includeDiffValue)
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, sig.SignType, excludeDiffValue)
 		if !matched {
 			msg := fmt.Sprintf("Message in ResourceSignature is not identical with the requested object. diff: %s", diffStr)
 			return &SigVerifyResult{
@@ -113,7 +110,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			// if there is any modification, the request will be denied.
 			if reqc.OrgMetadata.Labels.IntegrityVerified() {
 				scope, _ := sig.data["scope"]
-				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope, includeDiffValue)
+				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope, excludeDiffValue)
 				if diffIsInMessageScope {
 					isValidScopeSignature = true
 				} else {
@@ -240,7 +237,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType, includeDiffValue bool) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope string, signType SignedResourceType, excludeDiffValue bool) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -266,7 +263,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 	}
 
-	matched, diffStr = matchContents(orgObj, reqObj, focus, mask, allowDiffPatterns, includeDiffValue)
+	matched, diffStr = matchContents(orgObj, reqObj, focus, mask, allowDiffPatterns, excludeDiffValue)
 	if matched {
 		logger.Debug("matched directly")
 	}
@@ -290,7 +287,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
 
-		matched, diffStr = matchContents(simObj, reqObj, focus, mask, allowDiffPatterns, includeDiffValue)
+		matched, diffStr = matchContents(simObj, reqObj, focus, mask, allowDiffPatterns, excludeDiffValue)
 		if matched {
 			logger.Debug("matched by DryRunCreate()")
 		}
@@ -315,7 +312,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns, includeDiffValue)
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns, excludeDiffValue)
 		if matched {
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
@@ -337,7 +334,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 		mask = append(mask, "metadata.name") // DryRunCreate() uses name like `<name>-dry-run` to avoid already exists error
 		mask = append(mask, "status")        // DryRunCreate() may generate different status. this will be ignored.
-		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns, includeDiffValue)
+		matched, diffStr = matchContents(simPatchedObj, reqObj, focus, mask, allowDiffPatterns, excludeDiffValue)
 		if matched {
 			logger.Debug("matched by StrategicMergePatch()")
 		}
@@ -345,12 +342,12 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 	return matched, diffStr
 }
 
-func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string, includeDiffValue bool) bool {
+func (self *ResourceVerifier) IsPatchWithScopeKey(orgObj, rawObj []byte, scope string, excludeDiffValue bool) bool {
 	var mask []string
 	mask = getMaskDef("")
 	scopeKeys := mapnode.SplitCommaSeparatedKeys(scope)
 	mask = append(mask, scopeKeys...)
-	matched, _ := matchContents(orgObj, rawObj, nil, mask, nil, includeDiffValue)
+	matched, _ := matchContents(orgObj, rawObj, nil, mask, nil, excludeDiffValue)
 	return matched
 }
 
@@ -377,7 +374,7 @@ func getMaskDef(kind string) []string {
 	return masks
 }
 
-func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPatterns []*mapnode.DiffPattern, includeValue bool) (bool, string) {
+func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPatterns []*mapnode.DiffPattern, excludeDiffValue bool) (bool, string) {
 	orgNode, err := mapnode.NewFromYamlBytes(orgObj)
 	if err != nil {
 		logger.Error("Failed to load original message as *Node", string(orgObj))
@@ -411,10 +408,10 @@ func matchContents(orgObj, reqObj []byte, focus, mask []string, allowDiffPattern
 	}
 
 	if !matched && dr != nil {
-		if includeValue {
-			diffStr = dr.String()
-		} else {
+		if excludeDiffValue {
 			diffStr = dr.KeyString()
+		} else {
+			diffStr = dr.String()
 		}
 	}
 
