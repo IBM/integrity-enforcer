@@ -77,7 +77,7 @@ elif [[ $YQ_VERSION == "4" ]]; then
 fi
 
 # message
-msg=`cat $INPUT_FILE | $base`
+msg=`cat $INPUT_FILE | gzip -c | $base`
 
 # signature
 sig=`cat $INPUT_FILE > $TMP_DIR/temp-aaa.yaml; gpg -u $SIGNER --detach-sign --armor --output - $TMP_DIR/temp-aaa.yaml | $base`
