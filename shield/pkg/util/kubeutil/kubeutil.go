@@ -37,11 +37,14 @@ func GetInClusterConfig() (*rest.Config, error) {
 }
 
 func GetOutOfClusterConfig() (*rest.Config, error) {
-	home := os.Getenv("HOME")
-	if home == "" {
-		home = os.Getenv("USERPROFILE")
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+	if kubeconfigPath == "" {
+		home := os.Getenv("HOME")
+		if home == "" {
+			home = os.Getenv("USERPROFILE")
+		}
+		kubeconfigPath = filepath.Join(home, ".kube", "config")
 	}
-	kubeconfigPath := filepath.Join(home, ".kube", "config")
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		return nil, err
