@@ -139,7 +139,7 @@ func (self *RequestPattern) match(reqFields map[string]string, exactMatchForName
 		scope = reqScope
 	}
 
-	if scope == "Cluster" && self.Name == nil {
+	if exactMatchForName && scope == "Cluster" && self.Name == nil {
 		return false
 	}
 

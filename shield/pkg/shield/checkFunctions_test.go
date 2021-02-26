@@ -37,7 +37,7 @@ const (
 	testDrFile   = "testdata/dr_NUM.json"
 )
 
-const MaxCaseNum = 3
+const MaxCaseNum = 4
 
 func TestCheckFunctions(t *testing.T) {
 	for i := 0; i <= MaxCaseNum; i++ {

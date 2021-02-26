@@ -51,7 +51,7 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 	}
 	dyClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("Error in createging DynamicClient; %s", err.Error())
+		return nil, fmt.Errorf("Error in creating DynamicClient; %s", err.Error())
 	}
 
 	obj := &unstructured.Unstructured{}
@@ -63,9 +63,12 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error in Unmarshal into unstructured obj; %s", err.Error())
 	}
-	obj.SetName(fmt.Sprintf("%s-dry-run", obj.GetName()))
-
 	gvk := obj.GroupVersionKind()
+
+	if gvk.Kind != "CustomResourceDefinition" {
+		obj.SetName(fmt.Sprintf("%s-dry-run", obj.GetName()))
+	}
+
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 	gvClient := dyClient.Resource(gvr)
 
@@ -76,7 +79,7 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 		simObj, err = gvClient.Namespace(namespace).Create(context.Background(), obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Error in createging resource; %s, gvk: %s", err.Error(), gvk)
+		return nil, fmt.Errorf("Error in creating resource; %s, gvk: %s", err.Error(), gvk)
 	}
 	simObjBytes, err := yaml.Marshal(simObj)
 	if err != nil {
@@ -92,7 +95,7 @@ func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte,
 	}
 	dyClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("Error in createging DynamicClient; %s", err.Error())
+		return nil, fmt.Errorf("Error in creating DynamicClient; %s", err.Error())
 	}
 
 	obj := &unstructured.Unstructured{}
@@ -148,11 +151,11 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 	}
 	dyClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in createging DynamicClient; %s", err.Error())
+		return nil, nil, fmt.Errorf("Error in creating DynamicClient; %s", err.Error())
 	}
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Error in createging DiscoveryClient; %s", err.Error())
+		return nil, nil, fmt.Errorf("Error in creating DiscoveryClient; %s", err.Error())
 	}
 	openAPISchemaDoc, err := discoveryClient.OpenAPISchema()
 	if err != nil {

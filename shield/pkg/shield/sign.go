@@ -225,7 +225,11 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	}
 
 	// create verifier
-	verifier := NewVerifier(rsig.SignType, self.config.Namespace, pgpPubkeys, x509Pubkeys, self.config.KeyPathList)
+	dryRunNamespace := ""
+	if reqc.ResourceScope == string(common.ScopeNamespaced) {
+		dryRunNamespace = self.config.Namespace
+	}
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Pubkeys, self.config.KeyPathList)
 
 	// verify signature
 	sigVerifyResult, err := verifier.Verify(rsig, reqc, signingProfile)

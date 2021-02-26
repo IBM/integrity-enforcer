@@ -249,6 +249,7 @@ func (self *Handler) finalize(resp *admv1.AdmissionResponse) {
 
 func (self *Handler) logEntry() {
 	if ok, levelStr := self.config.ConsoleLogEnabled(self.reqc); ok {
+		logger.SetSingletonLoggerLevel(levelStr) // change singleton logger level; this might be overwritten by parallel handler instance
 		lvl, _ := log.ParseLevel(levelStr)
 		self.serverLogger.SetLevel(lvl) // set custom log level for this request
 		self.requestLog.Trace("New Admission Request Received")
@@ -275,6 +276,7 @@ func (self *Handler) logContext() {
 
 func (self *Handler) logExit() {
 	if ok, _ := self.config.ConsoleLogEnabled(self.reqc); ok {
+		logger.SetSingletonLoggerLevel(self.config.Log.LogLevel)
 		self.requestLog.WithFields(log.Fields{
 			"allowed":    self.ctx.Allow,
 			"aborted":    self.ctx.Aborted,

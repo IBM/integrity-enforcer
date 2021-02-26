@@ -81,6 +81,17 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 			},
 			{
 				APIGroups: []string{
+					"apiextensions.k8s.io",
+				},
+				Resources: []string{
+					"customresourcedefinitions",
+				},
+				Verbs: []string{
+					"get", "list", "create", "update",
+				},
+			},
+			{
+				APIGroups: []string{
 					"*",
 				},
 				Resources: []string{

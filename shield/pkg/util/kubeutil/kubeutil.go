@@ -17,7 +17,6 @@
 package kubeutil
 
 import (
-	"flag"
 	"os"
 	"path/filepath"
 
@@ -38,14 +37,12 @@ func GetInClusterConfig() (*rest.Config, error) {
 }
 
 func GetOutOfClusterConfig() (*rest.Config, error) {
-	var kubeconfig *string
 	home := os.Getenv("HOME")
 	if home == "" {
 		home = os.Getenv("USERPROFILE")
 	}
-	kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "path to kube config")
-	flag.Parse()
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	kubeconfigPath := filepath.Join(home, ".kube", "config")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
