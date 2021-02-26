@@ -30,10 +30,10 @@ First connect to an ACM hub cluster and execute the [acm-verification-key-setup.
 
 ```
 curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
-          integrity-shield-operator-system  \
-          keyring-secret  \
-          /tmp/pubring.gpg \
-          environment:dev  |  kubectl apply -f -
+          --namespace integrity-shield-operator-system  \
+          --secret keyring-secret  \
+          --path /tmp/pubring.gpg \
+          --label environment=dev  |  oc apply -f -
 ```
 
 
@@ -48,9 +48,9 @@ First connect to a ACM hub cluster where a verification key is already setup and
 
 ```
 curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
-          integrity-shield-operator-system  \
-          keyring-secret  \
-          /tmp/pubring.gpg \
-          environment:dev  |  kubectl delete -f -
+          --namespace integrity-shield-operator-system  \
+          --secret keyring-secret  \
+          --path /tmp/pubring.gpg \
+          --label environment=dev  |  oc delete -f -
 ```
 
