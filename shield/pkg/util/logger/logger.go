@@ -38,6 +38,15 @@ func init() {
 	simpleLogger.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
 }
 
+func SetSingletonLoggerLevel(lvlStr string) {
+	lvl, err := log.ParseLevel(lvlStr)
+	if err != nil {
+		return
+	}
+	simpleLogger.SetLevel(lvl)
+	return
+}
+
 // func (self *Logger) GetSessionTraceString() string {
 // 	return self.SessionTrace.GetBufferedString()
 // }

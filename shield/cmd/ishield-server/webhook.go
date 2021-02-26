@@ -49,6 +49,7 @@ func init() {
 
 	config = NewConfig()
 	config.InitShieldConfig()
+	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
 	logger.Info("Integrity Shield has been started.")
 
 	cfgBytes, _ := json.Marshal(config)

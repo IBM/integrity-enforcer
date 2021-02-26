@@ -70,6 +70,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	var reqc *common.ReqContext
 
 	var data *RunData
+	var cfg *config.ShieldConfig
 	var ctx *CheckContext
 	var dr0 *DecisionResult
 	var prof rspapi.ResourceSigningProfile
@@ -83,7 +84,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	profBytes, _ := ioutil.ReadFile(testFileName(testProfFile, num))
 	drBytes, _ := ioutil.ReadFile(testFileName(testDrFile, num))
 	_ = json.Unmarshal(reqcBytes, &reqc)
-	_ = json.Unmarshal(configBytes, &testConfig)
+	_ = json.Unmarshal(configBytes, &cfg)
 	_ = json.Unmarshal(dataBytes, &data)
 	_ = json.Unmarshal(ctxBytes, &ctx)
 	//_ = json.Unmarshal(drBytes, &dr)
@@ -101,7 +102,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 		reqc.OrgMetadata = reqc2.OrgMetadata
 		reqc.ClaimedMetadata = reqc2.ClaimedMetadata
 	}
-	return reqc, testConfig, data, ctx, dr0, prof, dr
+	return reqc, cfg, data, ctx, dr0, prof, dr
 }
 
 func getChangedRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
@@ -145,6 +146,13 @@ func getUpdateRequest() *admv1.AdmissionRequest {
 	reqc, _, _, _, _, _, _ := getTestData(3)
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
 	return newReq
+}
+
+func getCRDRequest() (*admv1.AdmissionRequest, *config.ShieldConfig) {
+	var newReq *admv1.AdmissionRequest
+	reqc, crdTestConfig, _, _, _, _, _ := getTestData(4)
+	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
+	return newReq, crdTestConfig
 }
 
 func getUpdateWithMetaChangeRequest() *admv1.AdmissionRequest {
@@ -257,11 +265,14 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
-	reqc, testConfig, data, _, _, _, _ := getTestData(1)
+	reqc, tmpConfig, data, _, _, _, _ := getTestData(1)
+	testConfig = tmpConfig
 	reqBytes := []byte(reqc.RequestJsonStr)
 	err = json.Unmarshal(reqBytes, &req)
 	Expect(err).Should(BeNil())
 	Expect(req).ToNot(BeNil())
+
+	_, _, crdTestData, _, _, _, _ := getTestData(4)
 
 	err = k8sClient.Create(context.Background(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testConfig.Namespace}})
 	Expect(err).Should(BeNil())
@@ -292,6 +303,11 @@ var _ = BeforeSuite(func(done Done) {
 
 	// create rsps in test data
 	for _, rsp := range data.RSPList {
+		rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
+		err = k8sClient.Create(context.Background(), &rsp)
+		Expect(err).Should(BeNil())
+	}
+	for _, rsp := range crdTestData.RSPList {
 		rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
 		err = k8sClient.Create(context.Background(), &rsp)
 		Expect(err).Should(BeNil())
@@ -445,6 +461,24 @@ var _ = Describe("Test integrity shield", func() {
 			metaLogger, reqLog := getTestLogger(updReq, testConfig)
 			testHandler := NewHandler(testConfig, metaLogger, reqLog)
 			resp := testHandler.Run(updReq)
+
+			respBytes, _ := json.Marshal(resp)
+			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
+			if resp == nil {
+				return fmt.Errorf("Run() returns nil as AdmissionResponse")
+			} else if !strings.Contains(resp.Result.Message, "valid signer") {
+				return fmt.Errorf("Run() returns wrong AdmissionResponse; Received Response: %s", resp.Result.Message)
+			}
+			return nil
+		}, timeout, 1).Should(BeNil())
+	})
+	It("Handler Run Test (allow, valid signer, creating CRD with annotation signature)", func() {
+		var timeout int = 10
+		Eventually(func() error {
+			crdReq, crdTestConfig := getCRDRequest()
+			metaLogger, reqLog := getTestLogger(crdReq, crdTestConfig)
+			testHandler := NewHandler(crdTestConfig, metaLogger, reqLog)
+			resp := testHandler.Run(crdReq)
 
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
