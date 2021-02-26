@@ -39,8 +39,15 @@ const (
 
 const MaxCaseNum = 4
 
+var skipCaseNum = map[int]bool{
+	4: true, // skip this because CRD test requires dryrun
+}
+
 func TestCheckFunctions(t *testing.T) {
 	for i := 0; i <= MaxCaseNum; i++ {
+		if skipCaseNum[i] {
+			continue
+		}
 		testInScopeCheck(t, i)
 		testFormatCheck(t, i)
 		testIShieldResourceCheck(t, i)
