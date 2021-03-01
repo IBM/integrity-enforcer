@@ -35,10 +35,10 @@ type ResourceInfo struct {
 
 func FindSingleYaml(message []byte, apiVersion, kind, name, namespace string) (bool, []byte) {
 	for _, ri := range ParseMessage(message) {
-		if ri.ApiVersion == apiVersion &&
-			ri.Kind == kind &&
-			ri.Name == name &&
-			(ri.Namespace == namespace || ri.Namespace == "") {
+		if common.MatchPattern(apiVersion, ri.ApiVersion) &&
+			common.MatchPattern(kind, ri.Kind) &&
+			common.MatchPattern(name, ri.Name) &&
+			(common.MatchPattern(namespace, ri.Namespace) || ri.Namespace == "") {
 			return true, ri.raw
 		}
 	}

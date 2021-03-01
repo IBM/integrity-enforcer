@@ -111,7 +111,7 @@ func TestKustomizePattern(t *testing.T) {
 	reqc.Name = "prefix." + reqc.Name
 
 	var kust *KustomizePattern
-	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*."}`)
+	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*.","originalNamespace":"default"}`)
 	err = json.Unmarshal(kustBytes, &kust)
 	if err != nil {
 		t.Error(err)
@@ -123,7 +123,7 @@ func TestKustomizePattern(t *testing.T) {
 		return
 	}
 	rawRef := reqc.ResourceRef()
-	kustRef := kust.OverrideName(rawRef)
+	kustRef := kust.Override(rawRef)
 	if kustRef.Name != originalName {
 		t.Errorf("OverrideName() returns wrong result; expected: %s, actual: %s", originalName, kustRef.Name)
 		return
