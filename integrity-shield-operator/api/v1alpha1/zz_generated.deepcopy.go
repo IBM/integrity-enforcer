@@ -22,6 +22,7 @@ package v1alpha1
 
 import (
 	resourcesigningprofilev1alpha1 "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -206,6 +207,20 @@ func (in *IntegrityShieldSpec) DeepCopyInto(out *IntegrityShieldSpec) {
 	if in.ShieldConfig != nil {
 		in, out := &in.ShieldConfig, &out.ShieldConfig
 		*out = (*in).DeepCopy()
+	}
+	if in.IgnoreRules != nil {
+		in, out := &in.IgnoreRules, &out.IgnoreRules
+		*out = make([]*common.Rule, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.IgnoreAttrs != nil {
+		in, out := &in.IgnoreAttrs, &out.IgnoreAttrs
+		*out = make([]*common.AttrsPattern, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.SignerConfig != nil {
 		in, out := &in.SignerConfig, &out.SignerConfig
