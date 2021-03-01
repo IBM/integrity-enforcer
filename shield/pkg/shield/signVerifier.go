@@ -459,7 +459,7 @@ func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*common.Kust
 	name := reqc.Name
 	kustomizedName := name
 	for _, pattern := range kustomizeList {
-		newRef := pattern.OverrideName(ref)
+		newRef := pattern.Override(ref)
 		kustomizedName = newRef.Name
 	}
 	if kustomizedName == name {

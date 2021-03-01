@@ -184,7 +184,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	// override ref name if there is kustomize pattern for this
 	kustPatterns := signingProfile.Kustomize(reqc.Map())
 	if len(kustPatterns) > 0 {
-		ref = kustPatterns[0].OverrideName(ref)
+		ref = kustPatterns[0].Override(ref)
 	}
 
 	// find signature

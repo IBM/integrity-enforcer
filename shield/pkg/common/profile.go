@@ -49,9 +49,10 @@ type RequestPattern struct {
 }
 
 type KustomizePattern struct {
-	Match      []*RequestPattern `json:"match,omitempty"`
-	NamePrefix *RulePattern      `json:"namePrefix,omitempty"`
-	NameSuffix *RulePattern      `json:"nameSuffix,omitempty"`
+	Match             []*RequestPattern `json:"match,omitempty"`
+	NamePrefix        *RulePattern      `json:"namePrefix,omitempty"`
+	NameSuffix        *RulePattern      `json:"nameSuffix,omitempty"`
+	OriginalNamespace *RulePattern      `json:"originalNamespace,omitempty"`
 }
 
 type RequestPatternWithNamespace struct {
@@ -192,7 +193,13 @@ func reverse(s string) string {
 	return string(runes)
 }
 
-func (self *KustomizePattern) OverrideName(ref *ResourceRef) *ResourceRef {
+func (self *KustomizePattern) Override(ref *ResourceRef) *ResourceRef {
+	ref = self.overrideName(ref)
+	ref = self.overrideNamespace(ref)
+	return ref
+}
+
+func (self *KustomizePattern) overrideName(ref *ResourceRef) *ResourceRef {
 	name := ref.Name
 	if self.NamePrefix == nil && self.NameSuffix == nil {
 		return ref
@@ -236,6 +243,18 @@ func (self *KustomizePattern) OverrideName(ref *ResourceRef) *ResourceRef {
 		}
 	}
 	ref.Name = name
+	return ref
+}
+
+func (self *KustomizePattern) overrideNamespace(ref *ResourceRef) *ResourceRef {
+	namespace := ref.Namespace
+	if self.OriginalNamespace == nil {
+		return ref
+	} else {
+		namespace = string(*self.OriginalNamespace)
+	}
+
+	ref.Namespace = namespace
 	return ref
 }
 
