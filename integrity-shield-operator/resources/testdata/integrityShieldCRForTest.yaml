@@ -8,10 +8,6 @@ spec:
   keyConfig:
   - name: sample-signer-keyconfig
     secretName: keyring-secret
-    signatureType: pgp
-  - name: test-signer2-keyconfig
-    secretName: keyring-secret-signer2
-    signatureType: pgp
   labels:
     app: ishield-server
   logger:
@@ -108,18 +104,10 @@ spec:
       signers:
       - SampleSigner
     signers:
-    - name: SampleSigner
-      keyConfig: keyring-secret
+    - keyConfig: sample-signer-keyconfig
+      name: SampleSigner
       subjects:
-      - email: hirokuni.kitahara1@ibm.com
-    - name: TestSigner
-      keyConfig: keyring-secret
-      subjects:
-      - email: gajan@jp.ibm.com
-    - name: TestSigner2
-      keyConfig: keyring-secret-signer2
-      subjects:
-      - email: dummy@dummy.com
+      - email: '*'
   webhookClusterResource:
     apiGroups:
     - '*'
