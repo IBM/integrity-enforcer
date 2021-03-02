@@ -210,14 +210,14 @@ func (in *IntegrityShieldSpec) DeepCopyInto(out *IntegrityShieldSpec) {
 	}
 	if in.IgnoreRules != nil {
 		in, out := &in.IgnoreRules, &out.IgnoreRules
-		*out = make([]*common.Rule, len(*in))
+		*out = make([]common.Rule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.IgnoreAttrs != nil {
 		in, out := &in.IgnoreAttrs, &out.IgnoreAttrs
-		*out = make([]*common.AttrsPattern, len(*in))
+		*out = make([]common.AttrsPattern, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
