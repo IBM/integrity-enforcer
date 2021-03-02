@@ -86,12 +86,12 @@ type IntegrityShieldSpec struct {
 	Observer               ObserverContainer `json:"observer,omitempty"`
 	RegKeySecret           RegKeySecret      `json:"regKeySecret,omitempty"`
 
-	ShieldConfigCrName      string                 `json:"shieldConfigCrName,omitempty"`
-	ShieldConfig            *iec.ShieldConfig      `json:"shieldConfig,omitempty"`
-	IgnoreRules             []*common.Rule         `json:"ignoreRules,omitempty"`
-	IgnoreAttrs             []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
-	SignerConfig            *common.SignerConfig   `json:"signerConfig,omitempty"`
-	ResourceSigningProfiles []*ProfileConfig       `json:"resourceSigningProfiles,omitempty"`
+	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
+	ShieldConfig            *iec.ShieldConfig     `json:"shieldConfig,omitempty"`
+	IgnoreRules             []common.Rule         `json:"ignoreRules,omitempty"`
+	IgnoreAttrs             []common.AttrsPattern `json:"ignoreAttrs,omitempty"`
+	SignerConfig            *common.SignerConfig  `json:"signerConfig,omitempty"`
+	ResourceSigningProfiles []*ProfileConfig      `json:"resourceSigningProfiles,omitempty"`
 
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
