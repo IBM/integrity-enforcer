@@ -37,6 +37,7 @@ type ResourceSigningProfileSpec struct {
 	ForceCheckRules         []*common.Rule             `json:"forceCheckRules,omitempty"`
 	KustomizePatterns       []*common.KustomizePattern `json:"kustomizePatterns,omitempty"`
 	ProtectAttrs            []*common.AttrsPattern     `json:"protectAttrs,omitempty"`
+	UnprotectAttrs          []*common.AttrsPattern     `json:"unprotectAttrs,omitempty"`
 	IgnoreAttrs             []*common.AttrsPattern     `json:"ignoreAttrs,omitempty"`
 }
 
@@ -151,6 +152,12 @@ func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*
 func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.IgnoreAttrs {
+		if attrsPattern.MatchWith(reqFields) {
+			patterns = append(patterns, attrsPattern)
+		}
+	}
+	// `UnprotectAttrs` is deprecated, but keep this for backward compatibility
+	for _, attrsPattern := range self.Spec.UnprotectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
