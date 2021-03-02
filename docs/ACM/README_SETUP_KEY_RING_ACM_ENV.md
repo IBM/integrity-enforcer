@@ -47,7 +47,7 @@ First connect to a ACM hub cluster where a verification key is already setup and
 - `environment:dev` - The placement rule flags which are the labels/tags that idetifies a managed cluster(s). Use the flags to setup ACM placement rule that selects the managed clusters in which the verification key needs to be setup. (e.g. environment:dev).  See [doc](https://github.com/open-cluster-management/policy-collection)
 
 ```
-curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/ACM/acm-verification-key-setup.sh | bash -s \
+curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shield/master/scripts/ACM/acm-verification-key-setup.sh | bash -s - \
           --namespace integrity-shield-operator-system  \
           --secret keyring-secret  \
           --path /tmp/pubring.gpg \
