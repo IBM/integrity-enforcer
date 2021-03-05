@@ -68,8 +68,9 @@ func (self *SignerConfig) GetSignerMap() map[string][]SubjectCondition {
 		tmpSC := []SubjectCondition{}
 		for _, sj := range si.Subjects {
 			sc := SubjectCondition{
-				Name:    si.Name,
-				Subject: sj,
+				Name:      si.Name,
+				KeyConfig: si.KeyConfig,
+				Subject:   sj,
 			}
 			tmpSC = append(tmpSC, sc)
 		}
@@ -133,7 +134,7 @@ func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace st
 	return candidateKeys
 }
 
-func (self *SignerConfig) Match(namespace string, signer *SignerInfo) (bool, *SignerConfigCondition) {
+func (self *SignerConfig) Match(namespace string, signer *SignerInfo, verifiedKeyPathList []string) (bool, *SignerConfigCondition) {
 	signerMap := self.GetSignerMap()
 	for _, spc := range self.Policies {
 		var included, excluded bool
@@ -155,9 +156,14 @@ func (self *SignerConfig) Match(namespace string, signer *SignerInfo) (bool, *Si
 				continue
 			}
 			for _, subjectCondition := range subjectConditions {
-				if subjectCondition.Match(signer) {
-					signerMatched = true
-					break
+				if subjectOk := subjectCondition.Match(signer); !subjectOk {
+					continue
+				}
+				for _, keyPath := range verifiedKeyPathList {
+					if strings.Contains(keyPath, fmt.Sprintf("/%s/", subjectCondition.KeyConfig)) {
+						signerMatched = true
+						break
+					}
 				}
 			}
 			if signerMatched {
@@ -205,8 +211,9 @@ type SubjectMatchPattern struct {
 }
 
 type SubjectCondition struct {
-	Name    string              `json:"name"`
-	Subject SubjectMatchPattern `json:"subject"`
+	Name      string              `json:"name"`
+	KeyConfig string              `json:"keyConfig"`
+	Subject   SubjectMatchPattern `json:"subject"`
 }
 
 func (self *SubjectCondition) Match(signer *SignerInfo) bool {

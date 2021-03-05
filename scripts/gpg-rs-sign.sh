@@ -148,7 +148,11 @@ elif [[ $YQ_VERSION == "4" ]]; then
         done
 fi
 
-sed -i '$ s/---//g' $OUTPUT_FILE
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    sed -i '$ s/---//g' $OUTPUT_FILE
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' '$ s/---//g' $OUTPUT_FILE
+fi
 
 if [[ $YQ_VERSION == "3" ]]; then
    yq w -i -d* $OUTPUT_FILE spec.data.[0].message $msg
