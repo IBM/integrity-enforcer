@@ -81,10 +81,9 @@ func TestVerify(t *testing.T) {
 		t.Error(err)
 	}
 
-	verified, reasonFail, signer, err := VerifySignature([]string{testPubringPath}, decodedMessage, decodedSiganture)
-
+	verified, reasonFail, signer, fingerprint, err := VerifySignature(testPubringPath, decodedMessage, decodedSiganture)
 	if !verified {
-		t.Errorf("Failed to verify. verified: %t, reasonFail: %s, signaer: %s, err: %s", verified, reasonFail, signer, err)
+		t.Errorf("Failed to verify. verified: %t, reasonFail: %s, signer: %s, fingerprint: %s, err: %s", verified, reasonFail, signer, string(fingerprint), err)
 	}
 	_ = os.Remove(testPubringPath)
 }

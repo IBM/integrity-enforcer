@@ -17,6 +17,7 @@
 package pgp
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,7 @@ type Signer struct {
 	PostalCode         string `json:"postalCode,omitempty"`
 	CommonName         string `json:"commonName,omitempty"`
 	SerialNumber       string `json:"serialNumber,omitempty"`
+	Fingerprint        []byte `json:"finerprint"`
 }
 
 func NewSignerFromUserId(uid *packet.UserId) *Signer {
@@ -64,28 +66,32 @@ func GetFirstIdentity(signer *openpgp.Entity) *openpgp.Identity {
 	return nil
 }
 
-func VerifySignature(keyPathList []string, msg, sig string) (bool, string, *Signer, error) {
+func VerifySignature(keyPath string, msg, sig string) (bool, string, *Signer, []byte, error) {
 	if msg == "" {
-		return false, "Message to be verified is empty", nil, nil
+		return false, "Message to be verified is empty", nil, nil, nil
 	}
 	if sig == "" {
-		return false, "Signature to be verified is empty", nil, nil
+		return false, "Signature to be verified is empty", nil, nil, nil
 	}
 	cfgReader := strings.NewReader(msg)
 	sigReader := strings.NewReader(sig)
 
-	if keyRing, err := LoadKeyRing(keyPathList); err != nil {
-		return false, "Error when loading key ring", nil, err
+	if keyRing, err := LoadKeyRing(keyPath); err != nil {
+		return false, "Error when loading key ring", nil, nil, err
 	} else if signer, err := openpgp.CheckArmoredDetachedSignature(keyRing, cfgReader, sigReader); signer == nil {
 		logger.Debug("msg:", msg)
 		logger.Debug("sig:", sig)
 		if err != nil {
 			logger.Error("Signature verification error:", err.Error())
 		}
-		return false, "Signed by unauthrized subject (signer is not in public key), or invalid format signature", nil, nil
+		return false, "Signed by unauthrized subject (signer is not in public key), or invalid format signature", nil, nil, nil
 	} else {
 		idt := GetFirstIdentity(signer)
-		return true, "", NewSignerFromUserId(idt.UserId), nil
+		fingerprint := ""
+		if signer.PrimaryKey != nil {
+			fingerprint = fmt.Sprintf("%X", signer.PrimaryKey.Fingerprint)
+		}
+		return true, "", NewSignerFromUserId(idt.UserId), []byte(fingerprint), nil
 	}
 }
 
@@ -164,23 +170,19 @@ func EntityListToSlice(keyring openpgp.EntityList) []*openpgp.Entity {
 // 	return sigWriter.String(), "", nil
 // }
 
-func LoadKeyRing(keyPathList []string) (openpgp.EntityList, error) {
+func LoadKeyRing(keyPath string) (openpgp.EntityList, error) {
 	entities := []*openpgp.Entity{}
 	var retErr error
-	for _, keyPath := range keyPathList {
-		kpath := filepath.Clean(keyPath)
-		if keyRingReader, err := os.Open(kpath); err != nil {
+	kpath := filepath.Clean(keyPath)
+	if keyRingReader, err := os.Open(kpath); err != nil {
+		retErr = err
+	} else {
+		tmpList, err := openpgp.ReadKeyRing(keyRingReader)
+		if err != nil {
 			retErr = err
-			continue
-		} else {
-			tmpList, err := openpgp.ReadKeyRing(keyRingReader)
-			if err != nil {
-				retErr = err
-				continue
-			}
-			for _, tmp := range tmpList {
-				entities = append(entities, tmp)
-			}
+		}
+		for _, tmp := range tmpList {
+			entities = append(entities, tmp)
 		}
 	}
 	return openpgp.EntityList(entities), retErr
