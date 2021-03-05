@@ -209,7 +209,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	if candidateKeyCount > 0 {
 		validKeyCount := 0
 		for _, keyPath := range pgpPubkeys {
-			if loaded, _ := pgp.LoadKeyRing([]string{keyPath}); len(loaded) > 0 {
+			if loaded, _ := pgp.LoadKeyRing(keyPath); len(loaded) > 0 {
 				validKeyCount += 1
 			}
 		}
@@ -232,7 +232,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Pubkeys, self.config.KeyPathList)
 
 	// verify signature
-	sigVerifyResult, err := verifier.Verify(rsig, reqc, signingProfile)
+	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, reqc, signingProfile)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{
@@ -277,7 +277,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	signer := sigVerifyResult.Signer
 
 	// check signer config
-	signerMatched, matchedSignerConfig := self.signerConfig.Match(reqc.Namespace, signer)
+	signerMatched, matchedSignerConfig := self.signerConfig.Match(reqc.Namespace, signer, verifiedKeyPathList)
 	if signerMatched {
 		matchedSignerConfigStr := ""
 		if matchedSignerConfig != nil {
@@ -296,7 +296,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	} else {
 		reasonFail := common.ReasonCodeMap[common.REASON_NO_MATCH_SIGNER_CONFIG].Message
 		if signer != nil {
-			reasonFail = fmt.Sprintf("%s; This resource is signed by %s", reasonFail, signer.GetName())
+			reasonFail = fmt.Sprintf("%s; This resource is signed by %s", reasonFail, signer.GetNameWithFingerprint())
 		}
 		return &common.SignatureEvalResult{
 			Signer:     signer,

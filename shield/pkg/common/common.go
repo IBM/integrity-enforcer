@@ -17,6 +17,7 @@
 package common
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -338,6 +339,7 @@ type SignerInfo struct {
 	PostalCode         string
 	CommonName         string
 	SerialNumber       *big.Int
+	Fingerprint        []byte
 }
 
 func (self *SignerInfo) GetName() string {
@@ -351,6 +353,14 @@ func (self *SignerInfo) GetName() string {
 		return self.Name
 	}
 	return ""
+}
+
+func (self *SignerInfo) GetNameWithFingerprint() string {
+	name := self.GetName()
+	if self.Fingerprint != nil {
+		name = fmt.Sprintf("%s (%s)", name, self.Fingerprint)
+	}
+	return name
 }
 
 type MutationEvalResult struct {

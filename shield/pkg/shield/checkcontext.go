@@ -115,6 +115,7 @@ func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string
 			logRecord["sig.signer.email"] = r.Signer.Email
 			logRecord["sig.signer.name"] = r.Signer.Name
 			logRecord["sig.signer.comment"] = r.Signer.Comment
+			logRecord["sig.signer.fingerprint"] = r.Signer.Fingerprint
 			logRecord["sig.signer.displayName"] = r.GetSignerName()
 		}
 		logRecord["sig.allow"] = r.Allow

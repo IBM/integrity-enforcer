@@ -266,7 +266,7 @@ func LoadCertDir(certDir string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func VerifyCertificate(certPemBytes []byte, certPathList []string) (bool, string, error) {
+func VerifyCertificate(certPemBytes []byte, caCertPath string) (bool, string, error) {
 	var reasonFail string
 	var err error
 	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)
@@ -277,15 +277,7 @@ func VerifyCertificate(certPemBytes []byte, certPathList []string) (bool, string
 	}
 
 	roots := x509.NewCertPool()
-	poolCerts := []*x509.Certificate{}
-	for _, certPath := range certPathList {
-		tmpCerts, err := LoadCertDir(certPath)
-		if err != nil {
-			continue
-		}
-		poolCerts = append(poolCerts, tmpCerts...)
-	}
-
+	poolCerts, err := LoadCertDir(caCertPath)
 	if err != nil {
 		reasonFail = fmt.Sprintf("failed to load certificate pool: %s", err.Error())
 		return false, reasonFail, fmt.Errorf(reasonFail)

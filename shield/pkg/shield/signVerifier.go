@@ -39,7 +39,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error)
+	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
 }
 
 /**********************************************
@@ -64,7 +64,7 @@ func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPath
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -102,7 +102,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 					Error:  nil,
 				},
 				Signer: nil,
-			}, nil
+			}, []string{}, nil
 		}
 	}
 
@@ -136,104 +136,110 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 					Error:  nil,
 				},
 				Signer: nil,
-			}, nil
+			}, []string{}, nil
 		}
 	}
 
 	message := sig.data["message"]
 	signature := sig.data["signature"]
 	certificateStr, certFound := sig.data["certificate"]
-	if len(self.PGPKeyPathList) > 0 {
 
-		ok, reasonFail, signer, err := pgp.VerifySignature(self.PGPKeyPathList, message, signature)
-		if err != nil {
-			vcerr = &common.CheckError{
-				Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
-				Reason: reasonFail,
-				Error:  err,
-			}
-			vsinfo = nil
-			retErr = err
-		} else if ok {
-			vcerr = nil
-			vsinfo = &common.SignerInfo{
-				Email:   signer.Email,
-				Name:    signer.Name,
-				Comment: signer.Comment,
-			}
-			retErr = nil
-		} else {
-			if ok2, _, signer2, _ := pgp.VerifySignature(self.AllMountedKeyPathList, message, signature); ok2 && signer2 != nil {
-				signerAlt := &common.SignerInfo{
-					Email:   signer2.Email,
-					Name:    signer2.Name,
-					Comment: signer2.Comment,
-				}
-				vcerr = nil
-				vsinfo = signerAlt
-				retErr = nil
-			} else {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  nil,
-				}
-				vsinfo = nil
-				retErr = nil
-			}
-		}
-	}
-	if len(self.X509KeyPathList) > 0 && certFound {
-		certificate := []byte(certificateStr)
-		certOk, reasonFail, err := x509.VerifyCertificate(certificate, self.X509KeyPathList)
-		if err != nil {
-			vcerr = &common.CheckError{
-				Msg:    fmt.Sprintf("Error occured while verifying certificate in %s", sigFrom),
-				Reason: reasonFail,
-				Error:  err,
-			}
-			vsinfo = nil
-			retErr = err
-		} else if !certOk {
-			vcerr = &common.CheckError{
-				Msg:    fmt.Sprintf("Failed to verify certificate in %s", sigFrom),
-				Reason: reasonFail,
-				Error:  nil,
-			}
-			vsinfo = nil
-			retErr = nil
-		} else {
-			cert, err := x509.ParseCertificate(certificate)
-			if err != nil {
-				logger.Error("Failed to parse certificate; ", err)
-			}
-			pubKeyBytes, err := x509.GetPublicKeyFromCertificate(certificate)
-			if err != nil {
-				logger.Error("Failed to get public key from certificate; ", err)
-			}
-			message := []byte(sig.data["message"])
-			signature := []byte(sig.data["signature"])
-			sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
+	verifiedKeyPathList := []string{}
+	if len(self.PGPKeyPathList) > 0 {
+		for _, keyPath := range self.PGPKeyPathList {
+			ok, reasonFail, signer, fingerprint, err := pgp.VerifySignature(keyPath, message, signature)
 			if err != nil {
 				vcerr = &common.CheckError{
 					Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
 					Reason: reasonFail,
 					Error:  err,
 				}
-				vsinfo = nil
-				retErr = err
-			} else if sigOk {
+				return &SigVerifyResult{Error: vcerr, Signer: nil}, []string{}, err
+			} else if ok {
 				vcerr = nil
-				vsinfo = x509.NewSignerInfoFromCert(cert)
-				retErr = nil
+				vsinfo = &common.SignerInfo{
+					Email:       signer.Email,
+					Name:        signer.Name,
+					Comment:     signer.Comment,
+					Fingerprint: fingerprint,
+				}
+				verifiedKeyPathList = append(verifiedKeyPathList, keyPath)
 			} else {
 				vcerr = &common.CheckError{
 					Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
 					Reason: reasonFail,
 					Error:  nil,
 				}
+			}
+		}
+	}
+	if len(self.X509KeyPathList) > 0 && certFound {
+		for _, caCertPath := range self.X509KeyPathList {
+			certificate := []byte(certificateStr)
+			certOk, reasonFail, err := x509.VerifyCertificate(certificate, caCertPath)
+			if err != nil {
+				vcerr = &common.CheckError{
+					Msg:    fmt.Sprintf("Error occured while verifying certificate in %s", sigFrom),
+					Reason: reasonFail,
+					Error:  err,
+				}
+				return &SigVerifyResult{Error: vcerr, Signer: nil}, []string{}, err
+			} else if !certOk {
+				vcerr = &common.CheckError{
+					Msg:    fmt.Sprintf("Failed to verify certificate in %s", sigFrom),
+					Reason: reasonFail,
+					Error:  nil,
+				}
 				vsinfo = nil
-				retErr = nil
+			} else {
+				cert, err := x509.ParseCertificate(certificate)
+				if err != nil {
+					logger.Error("Failed to parse certificate; ", err)
+				}
+				pubKeyBytes, err := x509.GetPublicKeyFromCertificate(certificate)
+				if err != nil {
+					logger.Error("Failed to get public key from certificate; ", err)
+				}
+				message := []byte(sig.data["message"])
+				signature := []byte(sig.data["signature"])
+				sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
+				if err != nil {
+					vcerr = &common.CheckError{
+						Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
+						Reason: reasonFail,
+						Error:  err,
+					}
+					return &SigVerifyResult{Error: vcerr, Signer: vsinfo}, []string{}, err
+				} else if sigOk {
+					vcerr = nil
+					vsinfo = x509.NewSignerInfoFromCert(cert)
+					verifiedKeyPathList = append(verifiedKeyPathList, caCertPath)
+				} else {
+					vcerr = &common.CheckError{
+						Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
+						Reason: reasonFail,
+						Error:  nil,
+					}
+					vsinfo = nil
+				}
+			}
+		}
+	}
+
+	// additional pgp verification trial only for detail error message
+	if vsinfo == nil {
+		for _, keyPath := range self.AllMountedKeyPathList {
+			if strings.Contains(keyPath, "/pgp/") {
+				if ok2, _, signer2, fingerprint2, _ := pgp.VerifySignature(keyPath, message, signature); ok2 && signer2 != nil {
+					signerAlt := &common.SignerInfo{
+						Email:       signer2.Email,
+						Name:        signer2.Name,
+						Comment:     signer2.Comment,
+						Fingerprint: fingerprint2,
+					}
+					vsinfo = signerAlt
+					break
+				}
 			}
 		}
 	}
@@ -242,7 +248,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		Error:  vcerr,
 		Signer: vsinfo,
 	}
-	return svresult, retErr
+	return svresult, verifiedKeyPathList, retErr
 }
 
 func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope, resKind string, signType SignedResourceType, excludeDiffValue bool) (bool, string) {
@@ -494,7 +500,7 @@ type HelmVerifier struct {
 	KeyPathList []string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -512,7 +518,7 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 					Error:  nil,
 				},
 				Signer: nil,
-			}, nil
+			}, []string{}, nil
 		}
 	}
 
@@ -565,7 +571,7 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 		Error:  vcerr,
 		Signer: vsinfo,
 	}
-	return svresult, retErr
+	return svresult, []string{}, retErr
 
 }
 
