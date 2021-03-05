@@ -35,6 +35,13 @@ spec:
         - containerPort: 8443
           name: ac-api
           protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: "/health/liveness"
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
         readinessProbe:
           httpGet:
             path: "/health/readiness"
@@ -90,6 +97,16 @@ spec:
         image: quay.io/open-cluster-management/integrity-shield-logging:0.1.4
         imagePullPolicy: Always
         name: forwarder
+        livenessProbe:
+          exec:
+            command: ["ls"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["ls"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
         resources:
           limits:
             cpu: 500m

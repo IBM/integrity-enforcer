@@ -46,6 +46,12 @@ spec:
         image: controller:latest
         imagePullPolicy: Always
         name: manager
+        livenessProbe:
+          exec:
+            command: ["ls"]
+        readinessProbe:
+          exec:
+            command: ["ls"]
         resources:
           limits:
             cpu: 500m

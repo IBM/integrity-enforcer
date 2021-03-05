@@ -105,6 +105,17 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 				},
 			},
 		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/health/liveness",
+					Port:   intstr.IntOrString{IntVal: 8443},
+					Scheme: v1.URISchemeHTTPS,
+				},
+			},
+		},
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "ac-api",
@@ -144,6 +155,24 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		Image:           cr.Spec.Logger.Image,
 		ImagePullPolicy: cr.Spec.Logger.ImagePullPolicy,
 		VolumeMounts:    volumemounts,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
 		Env: []v1.EnvVar{
 			{
 				Name:  "STDOUT_ENABLED",
@@ -207,6 +236,24 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		Image:           cr.Spec.Observer.Image,
 		ImagePullPolicy: cr.Spec.Observer.ImagePullPolicy,
 		VolumeMounts:    servervolumemounts,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
 		Env: []v1.EnvVar{
 			{
 				Name:  "SHIELD_NS",
