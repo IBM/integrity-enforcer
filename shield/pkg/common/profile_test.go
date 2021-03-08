@@ -111,7 +111,7 @@ func TestKustomizePattern(t *testing.T) {
 	reqc.Name = "prefix." + reqc.Name
 
 	var kust *KustomizePattern
-	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*.","originalNamespace":"default"}`)
+	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*.","allowNamespaceChange":true}`)
 	err = json.Unmarshal(kustBytes, &kust)
 	if err != nil {
 		t.Error(err)
