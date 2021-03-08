@@ -6,4 +6,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/open-cluster-management/integrity-shield-operator
-  newTag: 0.1.4
+  newTag: 0.1.5
