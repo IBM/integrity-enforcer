@@ -5,7 +5,7 @@ metadata:
   finalizers:
   - cleanup.finalizers.integrityshield.io
 spec:
-  namespace: integrity-shield-operator-system
+  # namespace: integrity-shield-operator-system
   shieldConfig:
     inScopeNamespaceSelector:
       include:

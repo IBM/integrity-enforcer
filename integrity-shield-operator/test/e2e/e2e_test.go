@@ -46,6 +46,12 @@ var _ = Describe("Test integrity shield", func() {
 			var timeout int = 300
 			expected := "integrity-shield-server"
 			cmd_err := Kubectl("apply", "-f", integrityShieldOperatorCR, "-n", ishield_namespace)
+			if cmd_err != nil {
+				fmt.Printf("Error while creating CR; %s\n", cmd_err.Error())
+				if exitError, ok := cmd_err.(*exec.ExitError); ok {
+					fmt.Printf("stderr: %s\n", string(exitError.Stderr))
+				}
+			}
 			Expect(cmd_err).To(BeNil())
 			Eventually(func() error {
 				return CheckPodStatus(framework, ishield_namespace, expected)
