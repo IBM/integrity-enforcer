@@ -371,8 +371,88 @@ spec:
                       type: array
                   type: object
               type: object
+            ignoreAttrs:
+              items:
+                properties:
+                  attrs:
+                    items:
+                      type: string
+                    type: array
+                  match:
+                    items:
+                      properties:
+                        apiGroup:
+                          description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                          type: string
+                        apiVersion:
+                          type: string
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        operation:
+                          type: string
+                        scope:
+                          type: string
+                        usergroup:
+                          type: string
+                        username:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              type: array
             ignoreDefaultIShieldCR:
               type: boolean
+            ignoreRules:
+              items:
+                properties:
+                  exclude:
+                    items:
+                      properties:
+                        apiGroup:
+                          description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                          type: string
+                        apiVersion:
+                          type: string
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        operation:
+                          type: string
+                        scope:
+                          type: string
+                        usergroup:
+                          type: string
+                        username:
+                          type: string
+                      type: object
+                    type: array
+                  match:
+                    items:
+                      properties:
+                        apiGroup:
+                          description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                          type: string
+                        apiVersion:
+                          type: string
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        operation:
+                          type: string
+                        scope:
+                          type: string
+                        usergroup:
+                          type: string
+                        username:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              type: array
             imagePullSecrets:
               items:
                 description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
@@ -552,6 +632,112 @@ spec:
               additionalProperties:
                 type: string
               type: object
+            observer:
+              properties:
+                enabled:
+                  type: boolean
+                image:
+                  type: string
+                imagePullPolicy:
+                  description: PullPolicy describes a policy for if/when to pull a container image
+                  type: string
+                name:
+                  type: string
+                resources:
+                  description: ResourceRequirements describes the compute resource requirements.
+                  properties:
+                    limits:
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                      type: object
+                    requests:
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                      type: object
+                  type: object
+                securityContext:
+                  description: SecurityContext holds security configuration that will be applied to a container. Some fields are present in both SecurityContext and PodSecurityContext.  When both are set, the values in SecurityContext take precedence.
+                  properties:
+                    allowPrivilegeEscalation:
+                      description: 'AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN'
+                      type: boolean
+                    capabilities:
+                      description: The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime.
+                      properties:
+                        add:
+                          description: Added capabilities
+                          items:
+                            description: Capability represent POSIX capabilities type
+                            type: string
+                          type: array
+                        drop:
+                          description: Removed capabilities
+                          items:
+                            description: Capability represent POSIX capabilities type
+                            type: string
+                          type: array
+                      type: object
+                    privileged:
+                      description: Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
+                      type: boolean
+                    procMount:
+                      description: procMount denotes the type of proc mount to use for the containers. The default is DefaultProcMount which uses the container runtime defaults for readonly paths and masked paths. This requires the ProcMountType feature flag to be enabled.
+                      type: string
+                    readOnlyRootFilesystem:
+                      description: Whether this container has a read-only root filesystem. Default is false.
+                      type: boolean
+                    runAsGroup:
+                      description: The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+                      format: int64
+                      type: integer
+                    runAsNonRoot:
+                      description: Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+                      type: boolean
+                    runAsUser:
+                      description: The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+                      format: int64
+                      type: integer
+                    seLinuxOptions:
+                      description: The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container.  May also be set in PodSecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+                      properties:
+                        level:
+                          description: Level is SELinux level label that applies to the container.
+                          type: string
+                        role:
+                          description: Role is a SELinux role label that applies to the container.
+                          type: string
+                        type:
+                          description: Type is a SELinux type label that applies to the container.
+                          type: string
+                        user:
+                          description: User is a SELinux user label that applies to the container.
+                          type: string
+                      type: object
+                    windowsOptions:
+                      description: The Windows specific settings applied to all containers. If unspecified, the options from the PodSecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+                      properties:
+                        gmsaCredentialSpec:
+                          description: GMSACredentialSpec is where the GMSA admission webhook (https://github.com/kubernetes-sigs/windows-gmsa) inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field.
+                          type: string
+                        gmsaCredentialSpecName:
+                          description: GMSACredentialSpecName is the name of the GMSA credential spec to use.
+                          type: string
+                        runAsUserName:
+                          description: The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+                          type: string
+                      type: object
+                  type: object
+              type: object
             regKeySecret:
               properties:
                 name:
@@ -725,6 +911,8 @@ spec:
                         namePrefix:
                           type: string
                         nameSuffix:
+                          type: string
+                        originalNamespace:
                           type: string
                       type: object
                     type: array
@@ -1144,59 +1332,7 @@ spec:
                 chartRepo:
                   type: string
                 commonProfile:
-                  description: ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
                   properties:
-                    disabled:
-                      type: boolean
-                    forceCheckRules:
-                      items:
-                        properties:
-                          exclude:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                          match:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                        type: object
-                      type: array
                     ignoreAttrs:
                       items:
                         properties:
@@ -1277,159 +1413,6 @@ spec:
                             type: array
                         type: object
                       type: array
-                    kustomizePatterns:
-                      items:
-                        properties:
-                          match:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                          namePrefix:
-                            type: string
-                          nameSuffix:
-                            type: string
-                        type: object
-                      type: array
-                    protectAttrs:
-                      items:
-                        properties:
-                          attrs:
-                            items:
-                              type: string
-                            type: array
-                          match:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                        type: object
-                      type: array
-                    protectRules:
-                      items:
-                        properties:
-                          exclude:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                          match:
-                            items:
-                              properties:
-                                apiGroup:
-                                  description: Namespace  *RulePattern `json:"namespace,omitempty"`
-                                  type: string
-                                apiVersion:
-                                  type: string
-                                kind:
-                                  type: string
-                                name:
-                                  type: string
-                                operation:
-                                  type: string
-                                scope:
-                                  type: string
-                                usergroup:
-                                  type: string
-                                username:
-                                  type: string
-                              type: object
-                            type: array
-                        type: object
-                      type: array
-                    targetNamespaceSelector:
-                      description: '`TargetNamespaceSelector` is used only for profile in iShield NS'
-                      properties:
-                        exclude:
-                          items:
-                            type: string
-                          type: array
-                        include:
-                          items:
-                            type: string
-                          type: array
-                        labelSelector:
-                          description: A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
-                          properties:
-                            matchExpressions:
-                              description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
-                              items:
-                                description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
-                                properties:
-                                  key:
-                                    description: key is the label key that the selector applies to.
-                                    type: string
-                                  operator:
-                                    description: operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
-                                    type: string
-                                  values:
-                                    description: values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.
-                                    items:
-                                      type: string
-                                    type: array
-                                required:
-                                - key
-                                - operator
-                                type: object
-                              type: array
-                            matchLabels:
-                              additionalProperties:
-                                type: string
-                              description: matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
-                              type: object
-                          type: object
-                      type: object
                   type: object
                 iShieldAdminUserGroup:
                   type: string

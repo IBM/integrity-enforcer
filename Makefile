@@ -536,7 +536,7 @@ update-version:
 
 # Before executing this target,  change BUNDLE_REGISTRY
 
-test-e2e-bundle: check-test-bundle
+test-e2e-bundle:
 	make clean-e2e-test-log
 	make setup-olm-local
 	make setup-image # execute `make setup-image` for making sure new images exist

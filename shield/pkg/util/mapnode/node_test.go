@@ -154,7 +154,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: sampleregistry/sample-operator:0.1.4dev
+        image: sampleregistry/sample-operator:0.1.5dev
         imagePullPolicy: Always
         name: sample-operator
 `)
