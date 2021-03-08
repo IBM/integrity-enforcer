@@ -59,6 +59,14 @@ echo -----------------------------
 echo [1/4] Building bundle
 make bundle IMG=${TARGET_OPERATOR_IMG} VERSION=${VERSION}
 
+# Temporary workarround for dealing with CRD generation issue
+tmpcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshieldren.yaml"
+targetcrd="${SHIELD_OP_DIR}/config/crd/bases/apis.integrityshield.io_integrityshields.yaml"
+
+if [ -f $tmpcrd ]; then
+  sed -i 's/integrityshieldren/integrityshields/g' $tmpcrd
+  mv $tmpcrd $targetcrd
+fi
 
 csvfile="bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml"
 cat $csvfile | yq r - -j >  tmp.json
