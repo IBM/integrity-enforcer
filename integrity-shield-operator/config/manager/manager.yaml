@@ -52,6 +52,20 @@ spec:
         readinessProbe:
           exec:
             command: ["ls"]
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - bash
+              - -c
+              - "curl -sk -X PATCH https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/apis/apis.integrityshield.io/v1alpha1/namespaces/$POD_NAMESPACE/integrityshields/integrity-shield-server -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Content-Type: application/merge-patch+json\" -d '{\"metadata\":{\"finalizers\":[\"cleanup.finalizers.integrityshield.io\"]}}'"
+          preStop:
+            exec:
+              command:
+              - bash
+              - -c
+              - "curl -sk -X DELETE https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/apis/admissionregistration.k8s.io/v1/mutatingwebhookconfigurations/ishield-webhook-config -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" && curl -sk -X PATCH https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/apis/apis.integrityshield.io/v1alpha1/namespaces/$POD_NAMESPACE/integrityshields/integrity-shield-server -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Content-Type: application/merge-patch+json\" -d '{\"metadata\":{\"finalizers\":[]}}'"
+
         resources:
           limits:
             cpu: 500m
