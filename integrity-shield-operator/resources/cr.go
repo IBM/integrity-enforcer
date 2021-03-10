@@ -121,10 +121,12 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 		}
 
 		for _, ir := range cr.Spec.IgnoreRules {
-			commonProfile.IgnoreRules = append(commonProfile.IgnoreRules, &ir)
+			tmpRule := ir
+			commonProfile.IgnoreRules = append(commonProfile.IgnoreRules, &tmpRule)
 		}
 		for _, ia := range cr.Spec.IgnoreAttrs {
-			commonProfile.IgnoreAttrs = append(commonProfile.IgnoreAttrs, &ia)
+			tmpAttr := ia
+			commonProfile.IgnoreAttrs = append(commonProfile.IgnoreAttrs, &tmpAttr)
 		}
 
 		ecc.Spec.ShieldConfig.CommonProfile = commonProfile
