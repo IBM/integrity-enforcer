@@ -52,6 +52,13 @@ spec:
         readinessProbe:
           exec:
             command: ["ls"]
+        lifecycle:
+          postStart:
+            exec:
+              command: ["bash", "-c", "/ishield-op-app/scripts/poststart.sh || true"] # always return 0 to avoid pod crash triggered by postStart fail
+          preStop:
+            exec:
+              command: ["/ishield-op-app/scripts/prestop.sh"]
         resources:
           limits:
             cpu: 500m
