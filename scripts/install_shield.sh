@@ -39,7 +39,7 @@ if [ -z "$ISHIELD_REPO_ROOT" ]; then
     exit 1
 fi
 
-IMG=quay.io/open-cluster-management/integrity-shield-operator:0.1.5
+IMG=quay.io/open-cluster-management/integrity-shield-operator:0.1.6
 SHIELD_OP_DIR=${ISHIELD_REPO_ROOT}"/integrity-shield-operator/"
 
 echo ""

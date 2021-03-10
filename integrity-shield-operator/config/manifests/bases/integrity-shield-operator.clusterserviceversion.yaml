@@ -6,7 +6,7 @@ metadata:
     capabilities: Basic Install
     categories: Security
     certified: "false"
-    containerImage: quay.io/open-cluster-management/integrity-shield-operator:0.1.5
+    containerImage: quay.io/open-cluster-management/integrity-shield-operator:0.1.6
     createdAt: "2021-01-13T18:00:00Z"
     description: K8s Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads.
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
