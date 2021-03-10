@@ -55,7 +55,7 @@ spec:
       enabled: false
       endpoint: http://sample-http-server:8093/api
     esSecretName: es-tls-certs
-    image: quay.io/open-cluster-management/integrity-shield-logging:0.1.5
+    image: quay.io/open-cluster-management/integrity-shield-logging:0.1.6
     imagePullPolicy: Always
     name: forwarder
     resources:
@@ -68,7 +68,7 @@ spec:
     stdOutput: true
   observer:
     enabled: false
-    image: quay.io/open-cluster-management/integrity-shield-observer:0.1.5
+    image: quay.io/open-cluster-management/integrity-shield-observer:0.1.6
     imagePullPolicy: Always
     name: observer
     resources:
@@ -99,7 +99,7 @@ spec:
     chartBaseUrl: http://sample-chart-repo-server/charts
     contextLogEnabled: true
     shieldPolicyReloadSec: 10
-    image: quay.io/open-cluster-management/integrity-shield-server:0.1.5
+    image: quay.io/open-cluster-management/integrity-shield-server:0.1.6
     imagePullPolicy: Always
     name: server
     port: 8443
