@@ -1,8 +1,12 @@
 
 FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 
-RUN mkdir /ishield-op-app && mkdir /ishield-op-app/resources
+RUN mkdir /ishield-op-app && mkdir /ishield-op-app/resources && \
+    curl -L https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -o jq-linux64 && \
+    chmod +x jq-linux64 && \
+    mv jq-linux64 /usr/local/bin/jq
 
+ADD /scripts /ishield-op-app/scripts
 ADD /resources/common-profiles /ishield-op-app/resources/common-profiles
 ADD /resources/default-ishield-cr.yaml /ishield-op-app/resources/default-ishield-cr.yaml
 ADD /resources/webhook-rules-for-roks.yaml /ishield-op-app/resources/webhook-rules-for-roks.yaml
