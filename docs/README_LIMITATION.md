@@ -3,6 +3,13 @@
 ## Signature Protection Availability  
 
 
-Signature protection provided by Integrity Shield requires 2 veriy essential pieces - first one is of course Integrity Shield itself running in a cluster, and another one is a Kubernetes API server which is accessible from Integrity Shield.
+Integrity Shield provides signature protection to Kubernetes resources and some other artifacts, but there is a limitation in terms of availability.
 
-Therefore, signatures are not verified while Integrity Shield is not deployed or not correctly running. Also, the protection might not be triggered if the Kubernetes API server has problem or it is in some unhealthy state.
+Integrity Shield monitors Kubernetes resource request like create/update/delete as an admission controller, and an admission controller is connected to Kubernetes API server.
+
+So, when the API server and some other fundamental components are not available, signature protection cannot be performed by Integrity Shield.
+
+For example, when you are trying to upgrade the running cluster, its API server would become unavailable for a while.
+
+During this, signature protection is also unavailable. And after all components get running, it will become available again.
+
