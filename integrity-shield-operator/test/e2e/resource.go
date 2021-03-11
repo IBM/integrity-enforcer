@@ -107,6 +107,14 @@ func CheckConfigMap(framework *Framework, namespace, expected string) error {
 	return nil
 }
 
+func CheckDeployment(framework *Framework, namespace, expected string) error {
+	_, err := framework.KubeClientSet.AppsV1().Deployments(namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func LoadConfigMap(framework *Framework, namespace, expected string) (error, *corev1.ConfigMap) {
 	cm, err := framework.KubeClientSet.CoreV1().ConfigMaps(namespace).Get(goctx.TODO(), expected, metav1.GetOptions{})
 	if err != nil {
