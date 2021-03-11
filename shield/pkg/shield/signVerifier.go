@@ -277,19 +277,21 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 		mask = append(mask, addMask...)
 	}
 
+	// CASE1: direct matching
 	matched, diffStr = matchContents(orgObj, reqObj, focus, mask, allowDiffPatterns, excludeDiffValue)
 	if matched {
 		logger.Debug("matched directly")
 	}
 
-	// do not attempt to DryRun for Cluster scope resource
-	// because ishield-sa does not have role for creating "any" resource at cluster scope
+	// do not attempt to DryRun for all Cluster scope resources
+	// because ishield-sa does not have a role for creating "any" resource at cluster scope
+	// currently IShield tries dry-run only for CRD request among cluster scope resources
 	if resScope == "Cluster" && resKind != "CustomResourceDefinition" {
 		return matched, diffStr
 	}
 
-	if !matched && signType == SignedResourceTypeResource {
-
+	// CASE2: DryRun for create or for update by edit/replace
+	if !matched {
 		nsMaskedOrgBytes := orgNode.Mask([]string{"metadata.namespace"}).ToYaml()
 		simObj, err := kubeutil.DryRunCreate([]byte(nsMaskedOrgBytes), self.dryRunNamespace)
 		if err != nil {
@@ -306,8 +308,8 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 			logger.Debug("matched by DryRunCreate()")
 		}
 	}
-	if !matched && signType == SignedResourceTypeApplyingResource {
-
+	// CASE3: DryRun for update by apply
+	if !matched {
 		reqNode, _ := mapnode.NewFromBytes(reqObj)
 		reqNamespace := reqNode.GetString("metadata.namespace")
 		_, patchedBytes, err := kubeutil.GetApplyPatchBytes(orgObj, reqNamespace)
@@ -331,6 +333,7 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 			logger.Debug("matched by GetApplyPatchBytes()")
 		}
 	}
+	// CASE4: DryRun for update by patch
 	if !matched && signType == SignedResourceTypePatch {
 		patchedBytes, err := kubeutil.StrategicMergePatch(reqObj, orgObj, "")
 		if err != nil {
