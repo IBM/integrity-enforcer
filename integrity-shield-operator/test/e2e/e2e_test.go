@@ -329,6 +329,21 @@ var _ = Describe("Test integrity shield", func() {
 					return CheckConfigMap(framework, test_namespace, expected)
 				}, timeout, 1).Should(BeNil())
 			})
+			It("Prepare for deployment update test.", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-deployment"
+				cmd_err := Kubectl("apply", "-f", test_deployment, "-n", test_namespace)
+				if cmd_err != nil {
+					if cmd_exec_err, ok := cmd_err.(*exec.ExitError); ok {
+						fmt.Printf("stderr:\n %s", string(cmd_exec_err.Stderr))
+					}
+				}
+				Expect(cmd_err).To(BeNil())
+				Eventually(func() error {
+					return CheckDeployment(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
 			It("Newly added rule in RSP is effective", func() {
 				framework := initFrameWork()
 				var timeout int = 120
@@ -339,6 +354,32 @@ var _ = Describe("Test integrity shield", func() {
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
 					return CheckConfigMap(framework, test_namespace, expected)
+				}, timeout, 1).Should(BeNil())
+			})
+			It("Updating a signed deployment with kubectl apply should be allowed.", func() {
+				framework := initFrameWork()
+				var timeout int = 120
+				expected := "test-deployment"
+				cmd_err := Kubectl("apply", "-f", test_deployment_updated, "-n", test_namespace)
+				Expect(cmd_err).To(BeNil())
+				if cmd_err != nil {
+					if cmd_exec_err, ok := cmd_err.(*exec.ExitError); ok {
+						fmt.Printf("stderr:\n %s", string(cmd_exec_err.Stderr))
+					}
+				}
+				server_name := "integrity-shield-server"
+				server := GetPodName(framework, ishield_namespace, server_name)
+				Eventually(func() error {
+					// check forwarder log
+					cmdstr := "kubectl logs " + server + " -c forwarder -n " + ishield_namespace + " | grep " + expected + " | grep valid-sig | grep UPDATE"
+					out, cmd_err := exec.Command("sh", "-c", cmdstr).Output()
+					if cmd_err != nil {
+						return cmd_err
+					}
+					if len(string(out)) == 0 {
+						return fmt.Errorf("Fail to find expected forwarder log")
+					}
+					return nil
 				}, timeout, 1).Should(BeNil())
 			})
 			It("RSP should be deleted properly", func() {

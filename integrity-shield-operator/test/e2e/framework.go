@@ -67,6 +67,8 @@ var (
 	test_configmap_ignoreAtters       = deploy_dir + "test-configmap-update-ignoreAtters.yaml"
 	test_configmap_annotation         = deploy_dir + "test-configmap-annotation.yaml"
 	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
+	test_deployment                   = deploy_dir + "test-deployment.yaml"
+	test_deployment_updated           = deploy_dir + "test-deployment-update.yaml"
 	DefaultSignerConfigName           = "signer-config"
 	DefaultShieldConfigName           = "ishield-config"
 )

@@ -9,6 +9,8 @@ spec:
       name: new-configmap
     exclude:
     - name: test-configmap-excluded
+  - match:
+    - kind: Deployment
   ignoreAttrs:
   - attrs:
     - data.comment
