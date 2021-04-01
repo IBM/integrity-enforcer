@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
+	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/shield/config/loader"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
@@ -33,7 +34,7 @@ import (
 )
 
 // singleton
-var config *Config
+var config *sconfloader.Config
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -47,7 +48,7 @@ type WebhookServer struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	config = NewConfig()
+	config = sconfloader.NewConfig()
 	config.InitShieldConfig()
 	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
 	logger.Info("Integrity Shield has been started.")

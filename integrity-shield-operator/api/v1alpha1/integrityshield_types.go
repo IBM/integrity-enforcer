@@ -52,6 +52,8 @@ const (
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
 	DefaultSigstoreRootCertURL                = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
+	DefaultIShieldInspectorName               = "integrity-shield-inspector"
+	DefaultIShieldInspectorLabel              = "ishield-inspector"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
 	CommonProfilesPath                        = "./resources/common-profiles"
 	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
@@ -81,13 +83,14 @@ type IntegrityShieldSpec struct {
 	Tolerations      []v1.Toleration           `json:"tolerations,omitempty"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	IgnoreDefaultIShieldCR bool              `json:"ignoreDefaultIShieldCR,omitempty"`
-	Security               SecurityConfig    `json:"security,omitempty"`
-	KeyConfig              []KeyConfig       `json:"keyConfig,omitempty"`
-	Server                 ServerContainer   `json:"server,omitempty"`
-	Logger                 LoggerContainer   `json:"logger,omitempty"`
-	Observer               ObserverContainer `json:"observer,omitempty"`
-	RegKeySecret           RegKeySecret      `json:"regKeySecret,omitempty"`
+	IgnoreDefaultIShieldCR bool               `json:"ignoreDefaultIShieldCR,omitempty"`
+	Security               SecurityConfig     `json:"security,omitempty"`
+	KeyConfig              []KeyConfig        `json:"keyConfig,omitempty"`
+	Server                 ServerContainer    `json:"server,omitempty"`
+	Logger                 LoggerContainer    `json:"logger,omitempty"`
+	Observer               ObserverContainer  `json:"observer,omitempty"`
+	Inspector              InspectorContainer `json:"inspector,omitempty"`
+	RegKeySecret           RegKeySecret       `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
 	ShieldConfig            *iec.ShieldConfig     `json:"shieldConfig,omitempty"`
@@ -159,6 +162,15 @@ type LoggerContainer struct {
 }
 
 type ObserverContainer struct {
+	Enabled         *bool                   `json:"enabled,omitempty"`
+	Name            string                  `json:"name,omitempty"`
+	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
+	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image           string                  `json:"image,omitempty"`
+	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type InspectorContainer struct {
 	Enabled         *bool                   `json:"enabled,omitempty"`
 	Name            string                  `json:"name,omitempty"`
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
@@ -318,6 +330,14 @@ func (self *IntegrityShield) GetPodSecurityPolicyName() string {
 
 func (self *IntegrityShield) GetIShieldServerDeploymentName() string {
 	return self.Name
+}
+
+func (self *IntegrityShield) GetIShieldInspectorDeploymentName() string {
+	return DefaultIShieldInspectorName
+}
+
+func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
+	return DefaultIShieldInspectorLabel
 }
 
 func (self *IntegrityShield) GetWebhookServiceName() string {

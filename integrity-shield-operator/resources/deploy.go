@@ -335,6 +335,91 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 	}
 }
 
+func BuildInspectorDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+	labels := cr.Spec.MetaLabels
+	inspectorContainer := v1.Container{
+		Name:            cr.Spec.Inspector.Name,
+		SecurityContext: cr.Spec.Inspector.SecurityContext,
+		Image:           cr.Spec.Inspector.Image,
+		ImagePullPolicy: cr.Spec.Inspector.ImagePullPolicy,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		Env: []v1.EnvVar{
+			{
+				Name:  "SHIELD_NS",
+				Value: cr.Namespace,
+			},
+			{
+				Name:  "SHIELD_CONFIG_NAME",
+				Value: cr.GetShieldConfigCRName(),
+			},
+			{
+				Name:  "SHIELD_CM_RELOAD_SEC",
+				Value: strconv.Itoa(int(cr.Spec.Server.ShieldCmReloadSec)),
+			},
+		},
+		Resources: cr.Spec.Server.Resources,
+	}
+
+	containers := []v1.Container{
+		inspectorContainer,
+	}
+
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetIShieldInspectorDeploymentName(),
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Strategy: appsv1.DeploymentStrategy{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       cr.Spec.MaxSurge,
+					MaxUnavailable: cr.Spec.MaxUnavailable,
+				},
+			},
+			Replicas: cr.Spec.ReplicaCount,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": cr.GetIShieldInspectorSelectorLabel(),
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": cr.GetIShieldInspectorSelectorLabel(),
+					},
+				},
+				Spec: v1.PodSpec{
+					ImagePullSecrets:   cr.Spec.ImagePullSecrets,
+					ServiceAccountName: cr.GetServiceAccountName(),
+					SecurityContext:    cr.Spec.Security.PodSecurityContext,
+					Containers:         containers,
+					NodeSelector:       cr.Spec.NodeSelector,
+					Affinity:           cr.Spec.Affinity,
+					Tolerations:        cr.Spec.Tolerations,
+				},
+			},
+		},
+	}
+}
+
 // EqualDeployments returns a Boolean
 func EqualDeployments(expected *appsv1.Deployment, found *appsv1.Deployment) bool {
 	if !EqualLabels(found.ObjectMeta.Labels, expected.ObjectMeta.Labels) {

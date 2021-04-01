@@ -78,6 +78,18 @@ spec:
       requests:
         cpu: 200m
         memory: 256Mi
+  inspector:
+    enabled: false
+    image: quay.io/open-cluster-management/integrity-shield-inspector:0.1.6
+    imagePullPolicy: Always
+    name: inspector
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
   replicaCount: 1
   security:
     clusterRole: ishield-cluster-role
