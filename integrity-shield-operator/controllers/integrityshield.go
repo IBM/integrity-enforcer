@@ -1003,6 +1003,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookDeployment(instance *ap
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
+func (r *IntegrityShieldReconciler) createOrUpdateInspectorDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildInspectorDeploymentForIShield(instance)
+	return r.createOrUpdateDeployment(instance, expected)
+}
+
 /**********************************************
 
 				Service

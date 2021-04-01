@@ -220,6 +220,12 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return recResult, recErr
 	}
 
+	//InspectorDeployment
+	recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	//Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {

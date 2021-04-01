@@ -16,14 +16,16 @@ require (
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/prometheus/client_golang v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.7.0 // indirect
+	github.com/ugorji/go v1.1.4 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	k8s.io/api v0.19.3
-	k8s.io/apiextensions-apiserver v0.19.3
-	k8s.io/apimachinery v0.19.3
+	k8s.io/api v0.20.2
+	k8s.io/apiextensions-apiserver v0.20.2
+	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/klog v1.0.0
 	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/controller-tools v0.5.0 // indirect
 )
 
 replace (
