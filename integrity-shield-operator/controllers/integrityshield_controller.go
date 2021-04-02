@@ -220,10 +220,13 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return recResult, recErr
 	}
 
-	//InspectorDeployment
-	recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
+	inspectorEnabled := instance.Spec.Inspector.Enabled
+	if inspectorEnabled != nil && *inspectorEnabled {
+		//Inspector Deployment
+		recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
 	}
 
 	//Deployment

@@ -4,6 +4,10 @@ go 1.15
 
 require (
 	github.com/IBM/integrity-enforcer/shield v0.0.0-00010101000000-000000000000
+	github.com/ghodss/yaml v1.0.0
+	github.com/google/uuid v1.2.0
+	github.com/sirupsen/logrus v1.4.2
+	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.6
 )

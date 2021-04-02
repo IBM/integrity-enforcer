@@ -330,6 +330,44 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 
 func BuildInspectorDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
+
+	var volumeMounts []v1.VolumeMount
+	var volumes []v1.Volume
+
+	volumes = []v1.Volume{
+		SecretVolume("ishield-tls-certs", cr.GetWebhookServerTlsSecretName()),
+		EmptyDirVolume("log-volume"),
+		EmptyDirVolume("tmp"),
+	}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		tmpSecretVolume := SecretVolume(keyConf.Name, keyConf.SecretName)
+		volumes = append(volumes, tmpSecretVolume)
+	}
+
+	volumeMounts = []v1.VolumeMount{
+		{
+			MountPath: "/run/secrets/tls",
+			Name:      "ishield-tls-certs",
+			ReadOnly:  true,
+		},
+		{
+			MountPath: "/tmp",
+			Name:      "tmp",
+		},
+		{
+			MountPath: "/ishield-app/public",
+			Name:      "log-volume",
+		},
+	}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		sigType := keyConf.SignatureType
+		if sigType == common.SignatureTypeDefault {
+			sigType = common.SignatureTypePGP
+		}
+		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/", keyConf.Name, sigType), Name: keyConf.Name}
+		volumeMounts = append(volumeMounts, tmpVolumeMount)
+	}
+
 	inspectorContainer := v1.Container{
 		Name:            cr.Spec.Inspector.Name,
 		SecurityContext: cr.Spec.Inspector.SecurityContext,
@@ -367,7 +405,8 @@ func BuildInspectorDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1
 				Value: strconv.Itoa(int(cr.Spec.Server.ShieldCmReloadSec)),
 			},
 		},
-		Resources: cr.Spec.Server.Resources,
+		Resources:    cr.Spec.Server.Resources,
+		VolumeMounts: volumeMounts,
 	}
 
 	containers := []v1.Container{
@@ -407,6 +446,7 @@ func BuildInspectorDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1
 					NodeSelector:       cr.Spec.NodeSelector,
 					Affinity:           cr.Spec.Affinity,
 					Tolerations:        cr.Spec.Tolerations,
+					Volumes:            volumes,
 				},
 			},
 		},

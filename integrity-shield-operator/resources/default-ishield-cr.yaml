@@ -32,6 +32,10 @@ spec:
         inScope:
         - kind: '*'
       logLevel: info
+    sideEffect:
+      createDenyEvent: true
+      createIShieldResourceEvent: true
+      updateRSPStatusForDeniedRequest: true
   shieldConfigCrName: ishield-config
   imagePullSecrets: []
   globalConfig: 
