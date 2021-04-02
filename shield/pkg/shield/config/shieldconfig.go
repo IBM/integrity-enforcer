@@ -41,8 +41,9 @@ type IShieldResourceCondition struct {
 }
 
 type ShieldConfig struct {
-	Patch *PatchConfig        `json:"patch,omitempty"`
-	Log   *LoggingScopeConfig `json:"log,omitempty"`
+	Patch      *PatchConfig        `json:"patch,omitempty"`
+	Log        *LoggingScopeConfig `json:"log,omitempty"`
+	SideEffect *SideEffectConfig   `json:"sideEffect,omitempty"`
 
 	InScopeNamespaceSelector *common.NamespaceSelector `json:"inScopeNamespaceSelector,omitempty"`
 	Allow                    []common.RequestPattern   `json:"allow,omitempty"`
@@ -258,4 +259,40 @@ func (ec *ShieldConfig) GetEnabledPlugins() map[string]bool {
 
 func (ec *ShieldConfig) SigStoreEnabled() bool {
 	return ec.SigStoreConfig.Enabled
+}
+
+/**********************************************
+
+				SideEffectConfig
+
+***********************************************/
+
+type SideEffectConfig struct {
+
+	// Event
+	CreateDenyEvent            bool `json:"createDenyEvent"`
+	CreateIShieldResourceEvent bool `json:"createIShieldResourceEvent"`
+
+	// RSP
+	UpdateRSPStatusForDeniedRequest bool `json:"updateRSPStatusForDeniedRequest"`
+}
+
+func (sc *SideEffectConfig) Enabled() bool {
+	return sc.CreateEventEnabled() || sc.UpdateRSPStatusEnabled()
+}
+
+func (sc *SideEffectConfig) CreateEventEnabled() bool {
+	return (sc.CreateDenyEvent || sc.CreateIShieldResourceEvent)
+}
+
+func (sc *SideEffectConfig) CreateDenyEventEnabled() bool {
+	return sc.CreateDenyEvent
+}
+
+func (sc *SideEffectConfig) CreateIShieldResourceEventEnabled() bool {
+	return sc.CreateIShieldResourceEvent
+}
+
+func (sc *SideEffectConfig) UpdateRSPStatusEnabled() bool {
+	return sc.UpdateRSPStatusForDeniedRequest
 }

@@ -98,7 +98,7 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 					"*",
 				},
 				Verbs: []string{
-					"get",
+					"get", "list",
 				},
 			},
 			// {

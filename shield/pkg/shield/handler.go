@@ -140,11 +140,11 @@ func (self *Handler) Check() *DecisionResult {
 func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 	// report only for denying request or for IShield resource request by IShield Admin
 	shouldReport := false
-	if !self.ctx.Allow {
+	if !self.ctx.Allow && self.config.SideEffect.CreateDenyEventEnabled() {
 		shouldReport = true
 	}
 	iShieldAdmin := checkIfIShieldAdminRequest(self.reqc, self.config)
-	if self.ctx.IShieldResource && iShieldAdmin {
+	if self.ctx.IShieldResource && iShieldAdmin && self.config.SideEffect.CreateIShieldResourceEventEnabled() {
 		shouldReport = true
 	}
 
@@ -154,16 +154,20 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 	var err error
 	// create/update Event
-	err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
-	if err != nil {
-		self.requestLog.Error("Failed to create event; ", err)
-		return err
+	if self.config.SideEffect.CreateEventEnabled() {
+		err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
+		if err != nil {
+			self.requestLog.Error("Failed to create event; ", err)
+			return err
+		}
 	}
 
 	// update RSP status
-	err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
-	if err != nil {
-		self.requestLog.Error("Failed to update status; ", err)
+	if self.config.SideEffect.UpdateRSPStatusEnabled() {
+		err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
+		if err != nil {
+			self.requestLog.Error("Failed to update status; ", err)
+		}
 	}
 
 	return nil
