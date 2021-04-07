@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	priapi "github.com/IBM/integrity-enforcer/inspector/pkg/apis/protectedresourceintegrity/v1alpha1"
+	priclient "github.com/IBM/integrity-enforcer/inspector/pkg/client/protectedresourceintegrity/clientset/versioned/typed/protectedresourceintegrity/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
@@ -14,12 +17,10 @@ import (
 	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/shield/config/loader"
 	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
-	"github.com/ghodss/yaml"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,12 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	v1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 )
 
-const defaultResultConfigMapName = "integrity-shield-inspection-result"
 const timeFormat = "2006-01-02 15:04:05"
 
 type Inspector struct {
@@ -43,6 +42,11 @@ type Inspector struct {
 	dynamicClient dynamic.Interface
 }
 
+type NamespacedRule struct {
+	Rule             *common.Rule
+	TargetNamespaces []string
+}
+
 type Result struct {
 	Summary     string         `json:"summary"`
 	Details     []ResultDetail `json:"details"`
@@ -50,9 +54,19 @@ type Result struct {
 }
 
 type ResultDetail struct {
-	Resource string `json:"resource"`
-	Result   string `json:"result"`
-	Verified bool   `json:"verified"`
+	Resource ProtectedResource `json:"resource"`
+	Result   string            `json:"result"`
+	Verified bool              `json:"verified"`
+}
+
+type ProtectedResource struct {
+	unstructured.Unstructured
+	Profiles []rspapi.ResourceSigningProfile
+}
+
+type groupResourceWithTargetNS struct {
+	groupResource
+	TargetNamespaces []string
 }
 
 // groupResource contains the APIGroup and APIResource
@@ -109,11 +123,11 @@ func (self *Inspector) Run() {
 	}
 
 	// extract resources that are matched with protection rule of RSPs
-	protectedResources := []unstructured.Unstructured{}
+	protectedResources := []ProtectedResource{}
 	for _, res := range resources {
 		reqFields := makeDummyReqFields(res)
-		if protected, _, _ := self.RuleTable.CheckIfProtected(reqFields); protected {
-			protectedResources = append(protectedResources, res)
+		if protected, _, profiles := self.RuleTable.CheckIfProtected(reqFields); protected {
+			protectedResources = append(protectedResources, ProtectedResource{Unstructured: res, Profiles: profiles})
 		}
 	}
 
@@ -124,12 +138,11 @@ func (self *Inspector) Run() {
 		gvr := convertGVKToGVR(gvk, self.APIResources)
 
 		fmt.Println(resource.GetAPIVersion(), resource.GetKind(), resource.GetNamespace(), resource.GetName())
-		metaLogger, reqLog := self.getLoggersForResource(resource)
+		metaLogger, reqLog := self.getLoggersForResource(resource.Unstructured)
 		handler := shield.NewHandler(self.Config, metaLogger, reqLog)
-		dummyRequest := makeDummyAdmissionRequest(resource, gvr)
+		dummyRequest := makeDummyAdmissionRequest(resource.Unstructured, gvr)
 		resp := handler.Run(dummyRequest)
 
-		resourceInfo := fmt.Sprintf("apiVersion: %s, kind: %s, namespace: %s, name: %s", gvk.GroupVersion().String(), gvk.Kind, resource.GetNamespace(), resource.GetName())
 		tmpMsg := strings.Split(resp.Result.Message, " (Request: {")
 		resultMsg := ""
 		if len(tmpMsg) > 0 {
@@ -137,7 +150,7 @@ func (self *Inspector) Run() {
 		}
 		verified := resp.Allowed
 		results = append(results, ResultDetail{
-			Resource: resourceInfo,
+			Resource: resource,
 			Result:   resultMsg,
 			Verified: verified,
 		})
@@ -150,41 +163,88 @@ func (self *Inspector) Run() {
 
 func (self *Inspector) updateSummary(results []ResultDetail) error {
 
-	data := makeResultData(results)
-
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return err
 	}
-	client, err := kubernetes.NewForConfig(config)
+	client, err := priclient.NewForConfig(config)
 	if err != nil {
 		return err
 	}
 
-	cmNS := self.Config.Namespace
-	cmName := defaultResultConfigMapName
-	cm := &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: cmName,
-		},
-		Data: data,
-	}
-	alreadyExists := false
-	current, getErr := client.CoreV1().ConfigMaps(cmNS).Get(context.Background(), cmName, metav1.GetOptions{})
-	if current != nil && getErr == nil {
-		alreadyExists = true
-		cm = current
-		cm.Data = data
+	ishieldNS := self.Config.Namespace
+
+	for _, result := range results {
+		gvk := result.Resource.GetObjectKind().GroupVersionKind()
+		profiles := result.Resource.Profiles
+		profilesStr := ""
+		for i, prof := range profiles {
+			profNS := prof.GetNamespace()
+			profName := prof.GetName()
+			profilesStr = profilesStr + profNS + "/" + profName
+			if i != len(profiles)-1 {
+				profilesStr = profilesStr + ","
+			}
+		}
+
+		resAPIVersion := gvk.GroupVersion().String()
+		resKind := gvk.Kind
+		resNamespace := result.Resource.GetNamespace()
+		resName := result.Resource.GetName()
+
+		verified := result.Verified
+		result := result.Result
+		var lastVerified, lastUpdated metav1.Time
+		if verified {
+			lastVerified = metav1.NewTime(time.Now().UTC())
+		}
+		lastUpdated = metav1.NewTime(time.Now().UTC())
+		allowedUsernames := ""
+
+		nsPrefix := ""
+		if resNamespace != "" {
+			nsPrefix = resNamespace + "-"
+		}
+		priName := fmt.Sprintf("%s%s-%s", nsPrefix, strings.ToLower(resKind), resName)
+		priInstance := &priapi.ProtectedResourceIntegrity{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: priName,
+			},
+			Spec: priapi.ProtectedResourceIntegritySpec{
+				APIVersion: resAPIVersion,
+				Kind:       resKind,
+				Namespace:  resNamespace,
+				Name:       resName,
+			},
+			Status: priapi.ProtectedResourceIntegrityStatus{
+				Verified:         verified,
+				Result:           result,
+				LastVerified:     lastVerified,
+				LastUpdated:      lastUpdated,
+				Profiles:         profilesStr,
+				AllowedUsernames: allowedUsernames,
+			},
+		}
+		alreadyExists := false
+		current, getErr := client.ProtectedResourceIntegrities(ishieldNS).Get(context.Background(), priName, metav1.GetOptions{})
+		if current != nil && getErr == nil {
+			alreadyExists = true
+			if !verified {
+				priInstance.Status.LastVerified = current.Status.LastVerified
+			}
+			current.Status = priInstance.Status
+		}
+
+		if alreadyExists {
+			_, err = client.ProtectedResourceIntegrities(ishieldNS).Update(context.Background(), current, metav1.UpdateOptions{})
+		} else {
+			_, err = client.ProtectedResourceIntegrities(ishieldNS).Create(context.Background(), priInstance, metav1.CreateOptions{})
+		}
+		if err != nil {
+			return err
+		}
 	}
 
-	if alreadyExists {
-		_, err = client.CoreV1().ConfigMaps(cmNS).Update(context.Background(), cm, metav1.UpdateOptions{})
-	} else {
-		_, err = client.CoreV1().ConfigMaps(cmNS).Create(context.Background(), cm, metav1.CreateOptions{})
-	}
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -242,18 +302,23 @@ func (self *Inspector) getAPIResources(kubeconfig *rest.Config) error {
 }
 
 // narrow down API resources scope by checking protectRules & forceCheckRules in RSPs
-func (self *Inspector) narrowDownProtectedAPIResources() []groupResource {
-	rules := []*common.Rule{}
+func (self *Inspector) narrowDownProtectedAPIResources() []groupResourceWithTargetNS {
+	rules := []NamespacedRule{}
 	for _, ruleItem := range self.RuleTable.Items {
-		rules = append(rules, ruleItem.Profile.Spec.ProtectRules...)
-		rules = append(rules, ruleItem.Profile.Spec.ForceCheckRules...)
+		for _, rule := range ruleItem.Profile.Spec.ProtectRules {
+			rules = append(rules, NamespacedRule{Rule: rule, TargetNamespaces: ruleItem.TargetNamespaces})
+		}
+		for _, rule := range ruleItem.Profile.Spec.ForceCheckRules {
+			rules = append(rules, NamespacedRule{Rule: rule, TargetNamespaces: ruleItem.TargetNamespaces})
+		}
 	}
 
-	possibleProtectedGVKs := []groupResource{}
+	possibleProtectedGVKs := []groupResourceWithTargetNS{}
 	for _, apiResource := range self.APIResources {
 		for _, rule := range rules {
-			if checkIfRuleMatchWithGVK(rule, apiResource) {
-				possibleProtectedGVKs = append(possibleProtectedGVKs, apiResource)
+			if checkIfRuleMatchWithGVK(rule.Rule, apiResource) {
+				tmp := groupResourceWithTargetNS{groupResource: apiResource, TargetNamespaces: rule.TargetNamespaces}
+				possibleProtectedGVKs = append(possibleProtectedGVKs, tmp)
 				break
 			}
 		}
@@ -298,26 +363,38 @@ func checkIfRuleMatchWithGVK(rule *common.Rule, gvk groupResource) bool {
 	return matched
 }
 
-func (self *Inspector) getAllResoucesByGroupResource(gResource groupResource) ([]unstructured.Unstructured, error) {
-	var resources *unstructured.UnstructuredList
+func (self *Inspector) getAllResoucesByGroupResource(gResourceWithTargetNS groupResourceWithTargetNS) ([]unstructured.Unstructured, error) {
+	var resources []unstructured.Unstructured
 	var err error
+	var gResource groupResource
+	gResource = gResourceWithTargetNS.groupResource
+	targetNSs := gResourceWithTargetNS.TargetNamespaces
 	namespaced := gResource.APIResource.Namespaced
 	gvr := schema.GroupVersionResource{
 		Group:    gResource.APIGroup,
 		Version:  gResource.APIVersion,
 		Resource: gResource.APIResource.Name,
 	}
+	var tmpResourceList *unstructured.UnstructuredList
 	if namespaced {
-		resources, err = self.dynamicClient.Resource(gvr).Namespace("").List(context.Background(), metav1.ListOptions{})
+		for _, ns := range targetNSs {
+			tmpResourceList, err = self.dynamicClient.Resource(gvr).Namespace(ns).List(context.Background(), metav1.ListOptions{})
+			if err != nil {
+				break
+			}
+			resources = append(resources, tmpResourceList.Items...)
+		}
+
 	} else {
-		resources, err = self.dynamicClient.Resource(gvr).List(context.Background(), metav1.ListOptions{})
+		tmpResourceList, err = self.dynamicClient.Resource(gvr).List(context.Background(), metav1.ListOptions{})
+		resources = append(resources, tmpResourceList.Items...)
 	}
 	if err != nil {
 		// ignore RBAC error - IShield SA
 		fmt.Println("RBAC error when listing resources; error:", err.Error())
 		return []unstructured.Unstructured{}, nil
 	}
-	return resources.Items, nil
+	return resources, nil
 }
 
 func (self *Inspector) getLoggersForResource(resource unstructured.Unstructured) (*log.Logger, *log.Entry) {
@@ -413,27 +490,4 @@ func makeDummyAdmissionRequest(resource unstructured.Unstructured, gvr schema.Gr
 		},
 		DryRun: &dryRun,
 	}
-}
-
-func makeResultData(results []ResultDetail) map[string]string {
-	totalNum := len(results)
-	verifiedCount := 0
-	for _, r := range results {
-		if r.Verified {
-			verifiedCount++
-		}
-	}
-	summary := fmt.Sprintf("verified: %v / %v", verifiedCount, totalNum)
-	lastUpdated := time.Now().UTC().Format(timeFormat)
-
-	res := Result{
-		Summary:     summary,
-		Details:     results,
-		LastUpdated: lastUpdated,
-	}
-	resultStr, _ := yaml.Marshal(res)
-	data := map[string]string{
-		"result.yaml": string(resultStr),
-	}
-	return data
 }

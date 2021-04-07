@@ -45,6 +45,7 @@ const (
 	DefaultResourceSignatureCRDName           = "resourcesignatures.apis.integrityshield.io"
 	DefaultResourceSigningProfileCRDName      = "resourcesigningprofiles.apis.integrityshield.io"
 	DefaultHelmReleaseMetadataCRDName         = "helmreleasemetadatas.apis.integrityshield.io"
+	DefaultProtectedResourceIntegrityCRDName  = "protectedresourceintegrities.apis.integrityshield.io"
 	DefaultSignerConfigCRName                 = "signer-config"
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
@@ -259,6 +260,10 @@ func (self *IntegrityShield) GetResourceSignatureCRDName() string {
 
 func (self *IntegrityShield) GetResourceSigningProfileCRDName() string {
 	return DefaultResourceSigningProfileCRDName
+}
+
+func (self *IntegrityShield) GetProtectedResourceIntegrityCRDName() string {
+	return DefaultProtectedResourceIntegrityCRDName
 }
 
 func (self *IntegrityShield) GetHelmReleaseMetadataCRDName() string {
