@@ -230,6 +230,12 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 
 	inspectorEnabled := instance.Spec.Inspector.Enabled
 	if inspectorEnabled != nil && *inspectorEnabled {
+		//ProtectedResourceIntegrity CRD
+		recResult, recErr = r.createOrUpdateProtectedResourceIntegrityCRD(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
 		//Inspector Deployment
 		recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
 		if recErr != nil || recResult.Requeue {
@@ -311,6 +317,14 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 	enabledPulgins := instance.Spec.ShieldConfig.GetEnabledPlugins()
 	if enabledPulgins["helm"] {
 		_, err = r.deleteHelmReleaseMetadataCRD(instance)
+		if err != nil {
+			return err
+		}
+	}
+
+	inspectorEnabled := instance.Spec.Inspector.Enabled
+	if inspectorEnabled != nil && *inspectorEnabled {
+		_, err = r.deleteProtectedResourceIntegrityCRD(instance)
 		if err != nil {
 			return err
 		}
