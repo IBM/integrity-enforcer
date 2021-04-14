@@ -25,7 +25,8 @@ import (
 	"fmt"
 
 	"github.com/ghodss/yaml"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	oapi "k8s.io/kube-openapi/pkg/util/proto"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/scheme"
 	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/openapi"
@@ -121,7 +121,7 @@ func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte,
 	} else {
 		currentObj, err = gvClient.Namespace(namespace).Get(context.Background(), claimedName, metav1.GetOptions{})
 	}
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return nil, fmt.Errorf("Error in getting current obj; %s", err.Error())
 	}
 	currentObjBytes, err := json.Marshal(currentObj)
@@ -193,24 +193,24 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 	} else {
 		currentObj, err = gvClient.Namespace(namespace).Get(context.Background(), claimedName, metav1.GetOptions{})
 	}
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return nil, nil, fmt.Errorf("Error in getting current obj; %s", err.Error())
 	}
 	currentObjBytes, err := json.Marshal(currentObj)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in converting current obj to json; %s", err.Error())
 	}
-	sourceFileName := "/tmp/obj.yaml"
+	//sourceFileName := "/tmp/obj.yaml"
 	var originalObjBytes []byte
 	if currentObj != nil {
 		originalObjBytes, err = util.GetOriginalConfiguration(currentObj)
 		if err != nil {
-			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("retrieving original configuration from:\n%v\nfor:", obj), sourceFileName, err)
+			return nil, nil, errors.Wrap(err, fmt.Sprintf("error while retrieving original configuration from:\n%v\n", obj))
 		}
 	}
 	modifiedBytes, err := util.GetModifiedConfiguration(obj, true, unstructured.UnstructuredJSONScheme)
 	if err != nil {
-		return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf("retrieving modified configuration from:\n%s\nfor:", claimedName), sourceFileName, err)
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("error while retrieving modified configuration from:\n%s\n", claimedName))
 	}
 
 	var patch []byte
@@ -235,11 +235,11 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 	if patch == nil {
 		lookupPatchMeta, err = strategicpatch.NewPatchMetaFromStruct(versionedObject)
 		if err != nil {
-			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, originalObjBytes, modifiedBytes, currentObjBytes), sourceFileName, err)
+			return nil, nil, errors.Wrap(err, fmt.Sprintf(createPatchErrFormat, originalObjBytes, modifiedBytes, currentObjBytes))
 		}
 		patch, err = strategicpatch.CreateThreeWayMergePatch(originalObjBytes, modifiedBytes, currentObjBytes, lookupPatchMeta, overwrite)
 		if err != nil {
-			return nil, nil, cmdutil.AddSourceToErr(fmt.Sprintf(createPatchErrFormat, originalObjBytes, modifiedBytes, currentObjBytes), sourceFileName, err)
+			return nil, nil, errors.Wrap(err, fmt.Sprintf(createPatchErrFormat, originalObjBytes, modifiedBytes, currentObjBytes))
 		}
 	}
 

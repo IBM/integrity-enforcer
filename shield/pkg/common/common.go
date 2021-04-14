@@ -81,9 +81,10 @@ const (
 type SignatureType string
 
 const (
-	SignatureTypeDefault = ""
-	SignatureTypePGP     = "pgp"
-	SignatureTypeX509    = "x509"
+	SignatureTypeDefault  = ""
+	SignatureTypePGP      = "pgp"
+	SignatureTypeX509     = "x509"
+	SignatureTypeSigStore = "sigstore"
 )
 
 type DecisionType string

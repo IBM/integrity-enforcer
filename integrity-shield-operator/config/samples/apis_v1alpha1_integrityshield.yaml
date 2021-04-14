@@ -29,4 +29,9 @@ spec:
       - email: "*"
   keyConfig:
   - name: sample-signer-keyconfig
-    secretName: keyring-secret
+    useDefaultRootCert: true
+    signatureType: sigstore
+  server:
+    image: localhost:5000/integrity-shield-server:0.1.6
+  logger:
+    image: localhost:5000/integrity-shield-logging:0.1.6

@@ -81,6 +81,14 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 				// specify only mounted dir name in case of x509
 				keyPath := fmt.Sprintf("/%s/%s/", keyConf.Name, sigType)
 				keyPathList = append(keyPathList, keyPath)
+			} else if sigType == common.SignatureTypeSigStore {
+				// specify sigstore secret (if default root cert, empty filename)
+				fileName := keyConf.FileName
+				if fileName == "" {
+					fileName = apiv1alpha1.DefaultCertFilename
+				}
+				keyPath := fmt.Sprintf("/%s/%s/%s", keyConf.Name, sigType, fileName)
+				keyPathList = append(keyPathList, keyPath)
 			}
 
 		}

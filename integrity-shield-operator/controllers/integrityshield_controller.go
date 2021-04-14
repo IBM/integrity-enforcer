@@ -151,6 +151,14 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		}
 	}
 
+	//Secret SigStore default root cert
+	if instance.CheckIfAnyKeyConfigUseDefaultSigStoreRootCert() {
+		recResult, recErr = r.createOrUpdateSigStoreRootCertSecret(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+	}
+
 	//Secret
 	recResult, recErr = r.createOrUpdateTlsSecret(instance)
 	if recErr != nil || recResult.Requeue {

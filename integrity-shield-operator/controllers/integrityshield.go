@@ -36,7 +36,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	cert "github.com/IBM/integrity-enforcer/integrity-shield-operator/cert"
 
@@ -803,7 +803,13 @@ func (r *IntegrityShieldReconciler) isKeyRingReady(instance *apiv1alpha1.Integri
 	found := &corev1.Secret{}
 	okCount := 0
 	nonReadyKey := ""
+	namedKeyCount := 0
 	for _, keyConf := range instance.Spec.KeyConfig {
+		if keyConf.SecretName == "" {
+			continue
+		}
+
+		namedKeyCount += 1
 		err := r.Get(ctx, types.NamespacedName{Name: keyConf.SecretName, Namespace: instance.Namespace}, found)
 		if err == nil {
 			okCount += 1
@@ -812,11 +818,11 @@ func (r *IntegrityShieldReconciler) isKeyRingReady(instance *apiv1alpha1.Integri
 			break
 		}
 	}
-	ok := (okCount == len(instance.Spec.KeyConfig))
+	ok := (okCount == namedKeyCount)
 	return ok, nonReadyKey
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateCertSecret(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
 
@@ -834,8 +840,6 @@ func (r *IntegrityShieldReconciler) createOrUpdateCertSecret(instance *apiv1alph
 
 	// If CRD does not exist, create it and requeue
 	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	expected = addCertValues(instance, expected)
 
 	if err != nil && errors.IsNotFound(err) {
 
@@ -888,7 +892,14 @@ func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secre
 func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildTlsSecretForIShield(instance)
-	return r.createOrUpdateCertSecret(instance, expected)
+	expected = addCertValues(instance, expected)
+	return r.createOrUpdateSecret(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) createOrUpdateSigStoreRootCertSecret(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildSigStoreDefaultRootSecretForIShield(instance)
+	return r.createOrUpdateSecret(instance, expected)
 }
 
 /**********************************************

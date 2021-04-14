@@ -115,18 +115,23 @@ func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace st
 		}
 	}
 	candidateKeys := map[SignatureType][]string{
-		SignatureTypePGP:  {},
-		SignatureTypeX509: {},
+		SignatureTypePGP:      {},
+		SignatureTypeX509:     {},
+		SignatureTypeSigStore: {},
 	}
 	for _, keyPath := range keyPathList {
 		for _, keyConfName := range candidates {
 			pgpPattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypePGP))
 			x509Pattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypeX509))
+			sigStorePattern := fmt.Sprintf("/%s/%s/", keyConfName, string(SignatureTypeSigStore))
 			if strings.Contains(keyPath, pgpPattern) {
 				candidateKeys[SignatureTypePGP] = append(candidateKeys[SignatureTypePGP], keyPath)
 				break
 			} else if strings.Contains(keyPath, x509Pattern) {
 				candidateKeys[SignatureTypeX509] = append(candidateKeys[SignatureTypeX509], keyPath)
+				break
+			} else if strings.Contains(keyPath, sigStorePattern) {
+				candidateKeys[SignatureTypeSigStore] = append(candidateKeys[SignatureTypeSigStore], keyPath)
 				break
 			}
 		}

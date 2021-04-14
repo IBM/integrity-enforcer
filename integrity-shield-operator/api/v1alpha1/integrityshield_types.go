@@ -50,10 +50,12 @@ const (
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
+	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
 	CommonProfilesPath                        = "./resources/common-profiles"
 	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
 	DefaultKeyringFilename                    = "pubring.gpg"
+	DefaultCertFilename                       = "root.pem"
 	DefaultIShieldWebhookTimeout              = 10
 	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
@@ -123,10 +125,11 @@ type CertPoolConfig struct {
 }
 
 type KeyConfig struct {
-	Name          string               `json:"name,omitempty"`
-	FileName      string               `json:"fileName,omitempty"`
-	SecretName    string               `json:"secretName,omitempty"`
-	SignatureType common.SignatureType `json:"signatureType,omitempty"`
+	Name               string               `json:"name,omitempty"`
+	FileName           string               `json:"fileName,omitempty"`
+	SecretName         string               `json:"secretName,omitempty"`
+	SignatureType      common.SignatureType `json:"signatureType,omitempty"`
+	UseDefaultRootCert bool                 `json:"useDefaultRootCert,omitempty"`
 }
 
 type ServerContainer struct {
@@ -269,6 +272,10 @@ func (self *IntegrityShield) GetWebhookServerTlsSecretName() string {
 	return self.Spec.WebhookServerTlsSecretName
 }
 
+func (self *IntegrityShield) GetSigStoreDefaultRootSecretName() string {
+	return DefaultIShieldSigStoreRootCertSecretName
+}
+
 func (self *IntegrityShield) GetServiceAccountName() string {
 	return self.Spec.Security.ServiceAccountName
 }
@@ -319,6 +326,15 @@ func (self *IntegrityShield) GetWebhookServiceName() string {
 
 func (self *IntegrityShield) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName
+}
+
+func (self *IntegrityShield) CheckIfAnyKeyConfigUseDefaultSigStoreRootCert() bool {
+	for _, keyConf := range self.Spec.KeyConfig {
+		if keyConf.UseDefaultRootCert {
+			return true
+		}
+	}
+	return false
 }
 
 func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {

@@ -51,7 +51,14 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		EmptyDirVolume("tmp"),
 	}
 	for _, keyConf := range cr.Spec.KeyConfig {
-		tmpSecretVolume := SecretVolume(keyConf.Name, keyConf.SecretName)
+		secretName := keyConf.SecretName
+		if keyConf.UseDefaultRootCert {
+			secretName = cr.GetSigStoreDefaultRootSecretName()
+		}
+		if secretName == "" {
+			continue
+		}
+		tmpSecretVolume := SecretVolume(keyConf.Name, secretName)
 		volumes = append(volumes, tmpSecretVolume)
 	}
 

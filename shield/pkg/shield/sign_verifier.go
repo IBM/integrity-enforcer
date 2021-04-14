@@ -29,6 +29,7 @@ import (
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
 	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 )
 
@@ -50,14 +51,15 @@ type VerifierInterface interface {
 
 type ResourceVerifier struct {
 	PGPKeyPathList        []string
-	X509KeyPathList       []string
+	X509CertPathList      []string
+	SigStoreCertPathList  []string
 	AllMountedKeyPathList []string
 	dryRunNamespace       string // namespace for dryrun; should be empty for cluster scope request
 }
 
-func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509KeyPathList, allKeyPathList []string) VerifierInterface {
+func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509CertPathList, sigStoreCertPathList, allKeyPathList []string) VerifierInterface {
 	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
-		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509KeyPathList: x509KeyPathList, AllMountedKeyPathList: allKeyPathList}
+		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509CertPathList: x509CertPathList, SigStoreCertPathList: sigStoreCertPathList, AllMountedKeyPathList: allKeyPathList}
 	} else if signType == SignedResourceTypeHelm {
 		return &HelmVerifier{Namespace: dryRunNamespace, KeyPathList: pgpKeyPathList}
 	}
@@ -173,8 +175,8 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			}
 		}
 	}
-	if len(self.X509KeyPathList) > 0 && certFound {
-		for _, caCertPath := range self.X509KeyPathList {
+	if len(self.X509CertPathList) > 0 && certFound {
+		for _, caCertPath := range self.X509CertPathList {
 			certificate := []byte(certificateStr)
 			certOk, reasonFail, err := x509.VerifyCertificate(certificate, caCertPath)
 			if err != nil {
@@ -222,6 +224,37 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 					}
 					vsinfo = nil
 				}
+			}
+		}
+	}
+
+	if len(self.SigStoreCertPathList) > 0 && certFound {
+		for _, rootCertPath := range self.SigStoreCertPathList {
+			sigOk, err := sigstore.Verify([]byte(message), []byte(signature), []byte(certificateStr), &rootCertPath)
+			if err != nil {
+				reasonFail := fmt.Sprintf("Error occured while verifying signature in %s", sigFrom)
+				vcerr = &common.CheckError{
+					Msg:    reasonFail,
+					Reason: reasonFail,
+					Error:  err,
+				}
+				return &SigVerifyResult{Error: vcerr, Signer: vsinfo}, []string{}, err
+			} else if sigOk {
+				cert, err := x509.ParseCertificate([]byte(certificateStr))
+				if err != nil {
+					logger.Error("Failed to parse certificate; ", err)
+				}
+				vcerr = nil
+				vsinfo = x509.NewSignerInfoFromCert(cert)
+				verifiedKeyPathList = append(verifiedKeyPathList, rootCertPath)
+			} else {
+				reasonFail := fmt.Sprintf("Failed to verify signature in %s", sigFrom)
+				vcerr = &common.CheckError{
+					Msg:    reasonFail,
+					Reason: reasonFail,
+					Error:  nil,
+				}
+				vsinfo = nil
 			}
 		}
 	}

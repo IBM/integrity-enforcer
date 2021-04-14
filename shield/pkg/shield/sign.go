@@ -27,6 +27,7 @@ import (
 	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
 	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 	ishieldyaml "github.com/IBM/integrity-enforcer/shield/pkg/util/yaml"
 )
@@ -202,10 +203,11 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 
 	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
-	x509Pubkeys := candidatePubkeys[common.SignatureTypeX509]
+	x509Certs := candidatePubkeys[common.SignatureTypeX509]
+	sigStoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
 
 	keyLoadingError := false
-	candidateKeyCount := len(pgpPubkeys) + len(x509Pubkeys)
+	candidateKeyCount := len(pgpPubkeys) + len(x509Certs)
 	if candidateKeyCount > 0 {
 		validKeyCount := 0
 		for _, keyPath := range pgpPubkeys {
@@ -214,8 +216,14 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			}
 		}
 
-		for _, certDir := range x509Pubkeys {
+		for _, certDir := range x509Certs {
 			if loaded, _ := x509.LoadCertDir(certDir); len(loaded) > 0 {
+				validKeyCount += 1
+			}
+		}
+
+		for _, certPath := range sigStoreCerts {
+			if loaded, _ := sigstore.LoadCert(certPath); len(loaded) > 0 {
 				validKeyCount += 1
 			}
 		}
@@ -229,7 +237,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	if reqc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Pubkeys, self.config.KeyPathList)
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigStoreCerts, self.config.KeyPathList)
 
 	// verify signature
 	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, reqc, signingProfile)

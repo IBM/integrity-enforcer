@@ -17,10 +17,15 @@
 package resources
 
 import (
+	_ "embed"
+
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+//go:embed fulcio.pem
+var SigStoreDefaultRootPem string
 
 //regkey.yaml
 func BuildRegKeySecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
@@ -51,6 +56,20 @@ func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
 			"ca.crt":                empty,
 		},
 		Type: corev1.SecretTypeTLS,
+	}
+	return sec
+}
+
+// ishield-sigstore-root-cert
+func BuildSigStoreDefaultRootSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetSigStoreDefaultRootSecretName(),
+			Namespace: cr.Namespace,
+		},
+		Data: map[string][]byte{
+			apiv1alpha1.DefaultCertFilename: []byte(SigStoreDefaultRootPem),
+		},
 	}
 	return sec
 }
