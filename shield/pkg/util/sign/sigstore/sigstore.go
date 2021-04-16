@@ -34,6 +34,7 @@ func init() {
 
 func Verify(message, signature, certPem []byte, rootPemPath *string) (bool, error) {
 
+	// clean up temporary files at the end of verification
 	defer deleteTmpYamls()
 
 	err := createTmpYamls(message, signature, certPem)

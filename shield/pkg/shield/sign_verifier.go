@@ -74,6 +74,13 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	excludeDiffValue := reqc.ExcludeDiffValue()
 
 	kustomizeList := signingProfile.Kustomize(reqc.Map())
+	allowNSChange := false
+	for _, k := range kustomizeList {
+		if k.AllowNamespaceChange {
+			allowNSChange = true
+			break
+		}
+	}
 	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
 
 	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
@@ -94,7 +101,20 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			message = yamlBytes
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, reqc.Kind, sig.SignType, excludeDiffValue)
+		// if allowNamespaceChange is true in KustomizePattern, overwrite namespace in message with requested one
+		if allowNSChange {
+			messageNode, err := mapnode.NewFromYamlBytes([]byte(message))
+			if err == nil {
+				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, reqc.Namespace)
+				overwriteNode, _ := mapnode.NewFromBytes([]byte(overwriteJson))
+				newMessageNode, err := messageNode.Merge(overwriteNode)
+				if err == nil {
+					message = newMessageNode.ToYaml()
+				}
+			}
+		}
+
+		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, reqc.Kind, reqc.Operation, sig.SignType, excludeDiffValue)
 		if !matched {
 			msg := fmt.Sprintf("The message for this signature in %s is not identical with the requested object. diff: %s", sigFrom, diffStr)
 			return &SigVerifyResult{
@@ -284,7 +304,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	return svresult, verifiedKeyPathList, retErr
 }
 
-func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope, resKind string, signType SignedResourceType, excludeDiffValue bool) (bool, string) {
+func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs, ignoreAttrs []*common.AttrsPattern, allowDiffPatterns []*mapnode.DiffPattern, resScope, resKind, reqOp string, signType SignedResourceType, excludeDiffValue bool) (bool, string) {
 	var mask, focus []string
 	matched := false
 	diffStr := ""
@@ -319,8 +339,16 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 	// do not attempt to DryRun for all Cluster scope resources
 	// because ishield-sa does not have a role for creating "any" resource at cluster scope
 	// currently IShield tries dry-run only for CRD request among cluster scope resources
-	if resScope == "Cluster" && resKind != "CustomResourceDefinition" {
-		return matched, diffStr
+	if resScope == "Cluster" {
+		if resKind == "CustomResourceDefinition" {
+			// for CRD, additional mask is required for dryrun
+			addMask = append(addMask, "spec.names")
+			addMask = append(addMask, "spec.validation")
+			addMask = append(addMask, "spec.versions")
+			addMask = append(addMask, "spec.version")
+		} else {
+			return matched, diffStr
+		}
 	}
 
 	// CASE2: DryRun for create or for update by edit/replace
@@ -632,4 +660,5 @@ var CommonMessageMask = []string{
 	"metadata.resourceVersion",
 	"metadata.selfLink",
 	"metadata.uid",
+	"status",
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
 	yaml "gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -34,8 +35,18 @@ type ResourceInfo struct {
 }
 
 func FindSingleYaml(message []byte, apiVersion, kind, name, namespace string) (bool, []byte) {
+	gv, err := schema.ParseGroupVersion(apiVersion)
+	if err != nil {
+		return false, nil
+	}
+	apiGroup := gv.Group
 	for _, ri := range ParseMessage(message) {
-		if common.MatchPattern(apiVersion, ri.ApiVersion) &&
+		riGv, err := schema.ParseGroupVersion(ri.ApiVersion)
+		if err != nil {
+			continue
+		}
+		riApiGroup := riGv.Group
+		if common.MatchPattern(apiGroup, riApiGroup) &&
 			common.MatchPattern(kind, ri.Kind) &&
 			common.MatchPattern(name, ri.Name) &&
 			(common.MatchPattern(namespace, ri.Namespace) || ri.Namespace == "") {

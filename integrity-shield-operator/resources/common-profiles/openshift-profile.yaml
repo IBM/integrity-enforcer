@@ -1,3 +1,11 @@
+ignoreAttrs:
+- attrs:
+  - metadata.labels.olm.api.*
+  - metadata.labels.operators.coreos.com/*
+  - metadata.annotations.*
+  - spec.install.spec.deployments.*.spec.template.spec.containers.*.resources.limits.cpu
+  match:
+  - kind: ClusterServiceVersion
 ignoreRules: 
 - match:
   - username: system:serviceaccount:openshift-marketplace:marketplace-operator
@@ -27,7 +35,6 @@ ignoreRules:
   - username: system:serviceaccount:openshift-service-ca:service-ca
   - username: system:serviceaccount:openshift-config-operator:openshift-config-operator
   - username: system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
-  - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
   - username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
 - match: 
   - namespace: openshift-service-ca, openshift-network-operator
@@ -78,7 +85,7 @@ ignoreRules:
     kind: Pod
     username: system:node:*
 - match: 
-  - kind: ClusterServiceVersion, ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
+  - kind: ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
     username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
 - match: 
   - kind: InstallPlan, Role, RoleBinding, Deployment

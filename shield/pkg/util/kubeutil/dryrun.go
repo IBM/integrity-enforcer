@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -65,7 +66,25 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 	}
 	gvk := obj.GroupVersionKind()
 
-	if gvk.Kind != "CustomResourceDefinition" {
+	if gvk.Kind == "CustomResourceDefinition" {
+		var crdObj *extv1.CustomResourceDefinition
+		err := json.Unmarshal(objJsonBytes, &crdObj)
+		if err == nil {
+			crdObj.Spec.Names.Kind = "Sim" + crdObj.Spec.Names.Kind
+			crdObj.Spec.Names.ListKind = "Sim" + crdObj.Spec.Names.ListKind
+			crdObj.Spec.Names.Singular = "sim" + crdObj.Spec.Names.Singular
+			crdObj.Spec.Names.Plural = "sim" + crdObj.Spec.Names.Plural
+			crdObj.ObjectMeta.Name = "sim" + crdObj.ObjectMeta.Name
+			crdObjBytes, err := json.Marshal(crdObj)
+			if err == nil {
+				tmpObj := &unstructured.Unstructured{}
+				err = tmpObj.UnmarshalJSON(crdObjBytes)
+				if err == nil {
+					obj = tmpObj
+				}
+			}
+		}
+	} else {
 		obj.SetName(fmt.Sprintf("%s-dry-run", obj.GetName()))
 	}
 
@@ -129,6 +148,9 @@ func StrategicMergePatch(objBytes, patchBytes []byte, namespace string) ([]byte,
 		return nil, fmt.Errorf("Error in converting current obj to json; %s", err.Error())
 	}
 	creator := scheme.Scheme
+	if !creator.Recognizes(gvk) {
+		creator.AddKnownTypeWithName(gvk, obj)
+	}
 	mocObj, err := creator.New(gvk)
 	if err != nil {
 		return nil, fmt.Errorf("Error in getting moc obj; %s", err.Error())
@@ -219,7 +241,11 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 	overwrite := true
 	errout := bytes.NewBufferString("")
 	createPatchErrFormat := "creating patch with:\noriginal:\n%s\nmodified:\n%s\ncurrent:\n%s\nfor:"
-	versionedObject, err := scheme.Scheme.New(obj.GroupVersionKind())
+	creator := scheme.Scheme
+	if !creator.Recognizes(gvk) {
+		creator.AddKnownTypeWithName(gvk, obj)
+	}
+	versionedObject, err := creator.New(gvk)
 
 	if openAPISchema != nil {
 		if schema = openAPISchema.LookupResource(obj.GroupVersionKind()); schema != nil {
@@ -243,13 +269,17 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 		}
 	}
 
-	creator := scheme.Scheme
 	mocObj, err := creator.New(gvk)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in getting moc obj; %s", err.Error())
 	}
-	patched, err := strategicpatch.StrategicMergePatch(currentObjBytes, patch, mocObj)
+	patched, err := strategicpatch.StrategicMergePatchUsingLookupPatchMeta(currentObjBytes, patch, lookupPatchMeta)
 	if err != nil {
+		fmt.Println("[DEBUG]", "gvk: ", gvk.String())
+		fmt.Println("[DEBUG]", "currentObjBytes: ", string(currentObjBytes))
+		fmt.Println("[DEBUG]", "patch: ", string(patch))
+		fmt.Println("[DEBUG]", "mocObj: ", mocObj)
+		fmt.Printf("[DEBUG] type(mocObj): %T\n", mocObj)
 		return nil, nil, fmt.Errorf("Error in patching to obj; %s", err.Error())
 	}
 	patchedObj := &unstructured.Unstructured{}
