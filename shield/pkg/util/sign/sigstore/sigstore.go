@@ -68,7 +68,7 @@ func Verify(message, signature, certPem []byte, rootPemPath *string) (bool, erro
 	}
 
 	fpath := path.Join(tmpDir, tmpSignedFileName)
-	p, err := cosign.Verify(context.Background(), nil, co, fpath)
+	p, err := cosign.VerifyYaml(context.Background(), co, fpath)
 	if err != nil {
 		return false, err
 	}

@@ -99,6 +99,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 			signature := ishieldyaml.Base64decode(sigAnnotations.Signature)
 			certificate := ishieldyaml.Base64decode(sigAnnotations.Certificate)
+			certificate = ishieldyaml.Decompress(certificate)
 			signType := SignedResourceTypeResource
 			if sigAnnotations.SignatureType == vrsig.SignatureTypeApplyingResource {
 				signType = SignedResourceTypeApplyingResource
@@ -119,6 +120,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		if found {
 			signature := ishieldyaml.Base64decode(si.Signature)
 			certificate := ishieldyaml.Base64decode(si.Certificate)
+			certificate = ishieldyaml.Decompress(certificate)
 			message := ishieldyaml.Base64decode(si.Message)
 			message = ishieldyaml.Decompress(message)
 			mutableAttrs := si.MutableAttrs
