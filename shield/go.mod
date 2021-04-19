@@ -5,7 +5,6 @@ replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503
 go 1.16
 
 require (
-	github.com/gajananan/cosign v0.2.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
@@ -14,6 +13,7 @@ require (
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/r3labs/diff v0.0.0-20191120142937-b4ed99a31f5a
+	github.com/sigstore/cosign v0.2.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tidwall/gjson v1.6.7
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
@@ -30,7 +30,7 @@ require (
 
 replace (
 	github.com/IBM/integrity-enforcer/shield => ./
-	github.com/gajananan/cosign => ../../../gajananan/cosign
+	github.com/sigstore/cosign => ../../../sigstore/cosign
 	google.golang.org/grpc => google.golang.org/grpc v1.29.0
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0

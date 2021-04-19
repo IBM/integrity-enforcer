@@ -107,6 +107,7 @@ spec:
       enabled: true
     plugin:
     - name: helm
+    sigstoreConfig: {}
   shieldConfigCrName: ishield-config
   signerConfig:
     policies:

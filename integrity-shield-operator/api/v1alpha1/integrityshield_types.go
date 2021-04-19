@@ -51,6 +51,7 @@ const (
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
+	DefaultSigstoreRootCertURL                = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
 	CommonProfilesPath                        = "./resources/common-profiles"
 	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
@@ -125,11 +126,10 @@ type CertPoolConfig struct {
 }
 
 type KeyConfig struct {
-	Name               string               `json:"name,omitempty"`
-	FileName           string               `json:"fileName,omitempty"`
-	SecretName         string               `json:"secretName,omitempty"`
-	SignatureType      common.SignatureType `json:"signatureType,omitempty"`
-	UseDefaultRootCert bool                 `json:"useDefaultRootCert,omitempty"`
+	Name          string               `json:"name,omitempty"`
+	FileName      string               `json:"fileName,omitempty"`
+	SecretName    string               `json:"secretName,omitempty"`
+	SignatureType common.SignatureType `json:"signatureType,omitempty"`
 }
 
 type ServerContainer struct {
@@ -328,13 +328,12 @@ func (self *IntegrityShield) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName
 }
 
-func (self *IntegrityShield) CheckIfAnyKeyConfigUseDefaultSigStoreRootCert() bool {
-	for _, keyConf := range self.Spec.KeyConfig {
-		if keyConf.UseDefaultRootCert {
-			return true
-		}
-	}
-	return false
+func (self *IntegrityShield) SigStoreEnabled() bool {
+	return self.Spec.ShieldConfig.SigStoreConfig.Enabled
+}
+
+func (self *IntegrityShield) UseDefaultSigStoreRootCert() bool {
+	return self.Spec.ShieldConfig.SigStoreConfig.UseDefaultRootCert
 }
 
 func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {

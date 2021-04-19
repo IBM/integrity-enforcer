@@ -17,15 +17,13 @@
 package resources
 
 import (
-	_ "embed"
+	"io/ioutil"
+	"net/http"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-//go:embed fulcio.pem
-var SigStoreDefaultRootPem string
 
 //regkey.yaml
 func BuildRegKeySecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
@@ -61,15 +59,27 @@ func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
 }
 
 // ishield-sigstore-root-cert
-func BuildSigStoreDefaultRootSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+func BuildSigStoreDefaultRootSecretForIShield(cr *apiv1alpha1.IntegrityShield) (*corev1.Secret, error) {
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.GetSigStoreDefaultRootSecretName(),
 			Namespace: cr.Namespace,
 		},
-		Data: map[string][]byte{
-			apiv1alpha1.DefaultCertFilename: []byte(SigStoreDefaultRootPem),
-		},
+		Data: map[string][]byte{},
 	}
-	return sec
+	cert, err := download(apiv1alpha1.DefaultSigstoreRootCertURL)
+	sec.Data[apiv1alpha1.DefaultCertFilename] = cert
+	return sec, err
+}
+
+func download(url string) ([]byte, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }

@@ -3,10 +3,10 @@ package sigstore
 import (
 	"context"
 	"crypto/x509"
-	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 
@@ -16,7 +16,7 @@ import (
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
 	"github.com/pkg/errors"
 
-	"github.com/gajananan/cosign/pkg/cosign"
+	"github.com/sigstore/cosign/pkg/cosign"
 )
 
 const tmpDir = "/tmp"
@@ -25,12 +25,7 @@ const tmpSignedFileName = "tmp.yaml.signed"
 
 const DefaultRootPemPath = "/tmp/root.pem"
 
-//go:embed fulcio.pem
-var defaultRootPem string
-
-func init() {
-	_ = ioutil.WriteFile(DefaultRootPemPath, []byte(defaultRootPem), 0644)
-}
+const defaultRootPemURL = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
 
 func Verify(message, signature, certPem []byte, rootPemPath *string) (bool, error) {
 
@@ -45,8 +40,17 @@ func Verify(message, signature, certPem []byte, rootPemPath *string) (bool, erro
 	cp := x509.NewCertPool()
 
 	if rootPemPath == nil {
-		var pemPath string
-		pemPath = DefaultRootPemPath
+		pemPath := DefaultRootPemPath
+		if !exists(pemPath) {
+			rootPemBytes, err := download(defaultRootPemURL)
+			if err != nil {
+				return false, errors.Wrap(err, "failed to downalod root cert pem data")
+			}
+			err = ioutil.WriteFile(pemPath, rootPemBytes, 0644)
+			if err != nil {
+				return false, errors.Wrap(err, "failed to create root cert pem file")
+			}
+		}
 		rootPemPath = &pemPath
 	}
 	rootPem, err := ioutil.ReadFile(*rootPemPath)
@@ -140,4 +144,21 @@ func base64decode(in []byte) string {
 	}
 	dec := string(decBytes)
 	return dec
+}
+
+func download(url string) ([]byte, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+func exists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }

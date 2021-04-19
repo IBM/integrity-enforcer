@@ -475,8 +475,6 @@ spec:
                       type: string
                     signatureType:
                       type: string
-                    useDefaultRootCert:
-                      type: boolean
                   type: object
                 type: array
               labels:
@@ -1744,6 +1742,15 @@ spec:
                     type: string
                   signatureNamespace:
                     type: string
+                  sigstoreConfig:
+                    properties:
+                      enabled:
+                        type: boolean
+                      rekorServerURL:
+                        type: string
+                      useDefaultRootCert:
+                        type: boolean
+                    type: object
                 type: object
               shieldConfigCrName:
                 type: string

@@ -232,12 +232,14 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 		}
 	}
 
+	sigstoreEnabled := self.config.SigStoreEnabled()
+
 	// create verifier
 	dryRunNamespace := ""
 	if reqc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigStoreCerts, self.config.KeyPathList)
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigStoreCerts, self.config.KeyPathList, sigstoreEnabled)
 
 	// verify signature
 	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, reqc, signingProfile)

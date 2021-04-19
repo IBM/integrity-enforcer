@@ -898,7 +898,14 @@ func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
 
 func (r *IntegrityShieldReconciler) createOrUpdateSigStoreRootCertSecret(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildSigStoreDefaultRootSecretForIShield(instance)
+	expected, err := res.BuildSigStoreDefaultRootSecretForIShield(instance)
+	if err != nil {
+		reqLogger := r.Log.WithValues(
+			"Instance.Name", instance.Name,
+			"Secret.Name", expected.Name,
+		)
+		reqLogger.Error(err, "Error occured while downloading root cert. The creating secret will have empty value.")
+	}
 	return r.createOrUpdateSecret(instance, expected)
 }
 

@@ -26,29 +26,7 @@ spec:
     - name: "SampleSigner"
       keyConfig: sample-signer-keyconfig
       subjects:
-      - commonName: "*"
-  # resourceSigningProfiles:
-  # - name: operator-csv-rsp
-  #   targetNamespaceSelector:
-  #     include:
-  #     - "*"
-  #     exclude: 
-  #     - "kube-*"
-  #     - "openshift-*"
-  #     - "open-*"
-  #     - "olm"
-  #   protectRules:
-  #   - match:
-  #     - kind: ClusterServiceVersion
-  #   kustomizePatterns:
-  #   - match:
-  #     - kind: ClusterServiceVersion
-  #     allowNamespaceChange: true
+      - email: "*"
   keyConfig:
   - name: sample-signer-keyconfig
-    useDefaultRootCert: true
-    signatureType: sigstore
-  # server:
-  #   image: localhost:5000/integrity-shield-server:0.1.6
-  # logger:
-  #   image: localhost:5000/integrity-shield-logging:0.1.6
+    secretName: keyring-secret

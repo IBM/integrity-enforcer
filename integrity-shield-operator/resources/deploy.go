@@ -52,7 +52,7 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 	}
 	for _, keyConf := range cr.Spec.KeyConfig {
 		secretName := keyConf.SecretName
-		if keyConf.UseDefaultRootCert {
+		if secretName == "" && keyConf.SignatureType == common.SignatureTypeSigStore {
 			secretName = cr.GetSigStoreDefaultRootSecretName()
 		}
 		if secretName == "" {

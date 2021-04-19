@@ -41,10 +41,6 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-var (
-	warningNoLastAppliedConfigAnnotation = "Warning: %[1]s apply should be used on resource created by either %[1]s create --save-config or %[1]s apply\n"
-)
-
 func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 	config, err := GetKubeConfig()
 	if err != nil {
@@ -269,17 +265,11 @@ func GetApplyPatchBytes(objBytes []byte, namespace string) ([]byte, []byte, erro
 		}
 	}
 
-	mocObj, err := creator.New(gvk)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error in getting moc obj; %s", err.Error())
 	}
 	patched, err := strategicpatch.StrategicMergePatchUsingLookupPatchMeta(currentObjBytes, patch, lookupPatchMeta)
 	if err != nil {
-		fmt.Println("[DEBUG]", "gvk: ", gvk.String())
-		fmt.Println("[DEBUG]", "currentObjBytes: ", string(currentObjBytes))
-		fmt.Println("[DEBUG]", "patch: ", string(patch))
-		fmt.Println("[DEBUG]", "mocObj: ", mocObj)
-		fmt.Printf("[DEBUG] type(mocObj): %T\n", mocObj)
 		return nil, nil, fmt.Errorf("Error in patching to obj; %s", err.Error())
 	}
 	patchedObj := &unstructured.Unstructured{}

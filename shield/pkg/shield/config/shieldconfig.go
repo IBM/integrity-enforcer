@@ -49,6 +49,7 @@ type ShieldConfig struct {
 	Ignore                   []common.RequestPattern   `json:"ignore,omitempty"`
 	Mode                     IntegrityShieldMode       `json:"mode,omitempty"`
 	Plugin                   []PluginConfig            `json:"plugin,omitempty"`
+	SigStoreConfig           SigStoreConfig            `json:"sigstoreConfig,omitempty"`
 	CommonProfile            *common.CommonProfile     `json:"commonProfile,omitempty"`
 
 	Namespace          string   `json:"namespace,omitempty"`
@@ -83,6 +84,12 @@ type LoggingScopeConfig struct {
 type PluginConfig struct {
 	Name    string `json:"name,omitempty"`
 	Enabled bool   `json:"enabled,omitempty"`
+}
+
+type SigStoreConfig struct {
+	Enabled            bool   `json:"enabled,omitempty"`
+	RekorServerURL     string `json:"rekorServerURL,omitempty"`
+	UseDefaultRootCert bool   `json:"useDefaultRootCert,omitempty"`
 }
 
 func (self *IShieldResourceCondition) IsOperatorResource(ref *common.ResourceRef) bool {
@@ -247,4 +254,8 @@ func (ec *ShieldConfig) GetEnabledPlugins() map[string]bool {
 		}
 	}
 	return plugins
+}
+
+func (ec *ShieldConfig) SigStoreEnabled() bool {
+	return ec.SigStoreConfig.Enabled
 }

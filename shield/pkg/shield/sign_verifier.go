@@ -55,11 +55,12 @@ type ResourceVerifier struct {
 	SigStoreCertPathList  []string
 	AllMountedKeyPathList []string
 	dryRunNamespace       string // namespace for dryrun; should be empty for cluster scope request
+	sigstoreEnabled       bool
 }
 
-func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509CertPathList, sigStoreCertPathList, allKeyPathList []string) VerifierInterface {
+func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509CertPathList, sigStoreCertPathList, allKeyPathList []string, sigstoreEnabled bool) VerifierInterface {
 	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
-		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509CertPathList: x509CertPathList, SigStoreCertPathList: sigStoreCertPathList, AllMountedKeyPathList: allKeyPathList}
+		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509CertPathList: x509CertPathList, SigStoreCertPathList: sigStoreCertPathList, AllMountedKeyPathList: allKeyPathList, sigstoreEnabled: sigstoreEnabled}
 	} else if signType == SignedResourceTypeHelm {
 		return &HelmVerifier{Namespace: dryRunNamespace, KeyPathList: pgpKeyPathList}
 	}
@@ -248,7 +249,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		}
 	}
 
-	if len(self.SigStoreCertPathList) > 0 && certFound {
+	if self.sigstoreEnabled && len(self.SigStoreCertPathList) > 0 && certFound {
 		for _, rootCertPath := range self.SigStoreCertPathList {
 			sigOk, err := sigstore.Verify([]byte(message), []byte(signature), []byte(certificateStr), &rootCertPath)
 			if err != nil {
