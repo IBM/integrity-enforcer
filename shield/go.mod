@@ -30,7 +30,7 @@ require (
 
 replace (
 	github.com/IBM/integrity-enforcer/shield => ./
-	github.com/sigstore/cosign => ../../../sigstore/cosign
+	github.com/sigstore/cosign => ../../../gajananan/cosign
 	google.golang.org/grpc => google.golang.org/grpc v1.29.0
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0

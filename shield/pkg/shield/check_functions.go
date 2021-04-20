@@ -101,7 +101,7 @@ func iShieldResourceCheck(reqc *common.ReqContext, config *config.ShieldConfig, 
 	serverReq := checkIfIShieldServerRequest(reqc, config)
 	operatorReq := checkIfIShieldOperatorRequest(reqc, config)
 	gcReq := checkIfGarbageCollectorRequest(reqc)
-	spSAReq := checkIfSpecialServiceAccountRequest(reqc)
+	spSAReq := checkIfSpecialServiceAccountRequest(reqc) && (reqc.Kind != "ClusterServiceVersion")
 
 	if (iShieldOperatorResource && (adminReq || operatorReq || gcReq || spSAReq)) || (iShieldServerResource && (operatorReq || serverReq || gcReq || spSAReq)) {
 		ctx.Allow = true

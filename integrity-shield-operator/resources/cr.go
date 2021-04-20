@@ -124,7 +124,7 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 			operatorSAPattern := common.RulePattern(operatorSA)
 			ignoreRules := commonProfile.IgnoreRules
 
-			ignoreRules = append(ignoreRules, &common.Rule{Match: []*common.RequestPattern{{UserName: &operatorSAPattern}}})
+			ignoreRules = append(ignoreRules, &common.Rule{Match: []*common.RequestPatternWithNamespace{{RequestPattern: &common.RequestPattern{UserName: &operatorSAPattern}}}})
 			commonProfile.IgnoreRules = ignoreRules
 		}
 

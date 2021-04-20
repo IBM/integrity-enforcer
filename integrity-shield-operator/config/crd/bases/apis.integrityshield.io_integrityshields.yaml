@@ -392,6 +392,8 @@ spec:
                             type: string
                           name:
                             type: string
+                          namespace:
+                            type: string
                           operation:
                             type: string
                           scope:
@@ -421,6 +423,8 @@ spec:
                             type: string
                           name:
                             type: string
+                          namespace:
+                            type: string
                           operation:
                             type: string
                           scope:
@@ -442,6 +446,8 @@ spec:
                           kind:
                             type: string
                           name:
+                            type: string
+                          namespace:
                             type: string
                           operation:
                             type: string
@@ -795,6 +801,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -816,6 +824,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -848,6 +858,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -875,6 +887,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -896,6 +910,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -963,6 +979,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -990,6 +1008,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -1011,6 +1031,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -1084,6 +1106,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -1402,6 +1426,8 @@ spec:
                                     type: string
                                   name:
                                     type: string
+                                  namespace:
+                                    type: string
                                   operation:
                                     type: string
                                   scope:
@@ -1429,6 +1455,8 @@ spec:
                                     type: string
                                   name:
                                     type: string
+                                  namespace:
+                                    type: string
                                   operation:
                                     type: string
                                   scope:
@@ -1450,6 +1478,8 @@ spec:
                                   kind:
                                     type: string
                                   name:
+                                    type: string
+                                  namespace:
                                     type: string
                                   operation:
                                     type: string

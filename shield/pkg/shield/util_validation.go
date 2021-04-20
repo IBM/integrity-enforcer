@@ -81,6 +81,29 @@ func ValidateResourceSigningProfile(reqc *common.ReqContext, shieldNamespace str
 	if reqc.Namespace != shieldNamespace && data.Spec.TargetNamespaceSelector != nil {
 		return false, fmt.Errorf("%s.Spec.TargetNamespaceSelector is allowed only for %s in %s.", common.ProfileCustomResourceKind, common.ProfileCustomResourceKind, shieldNamespace)
 	}
+	if reqc.Namespace != shieldNamespace {
+		rules := data.Spec.ProtectRules
+		rules = append(rules, data.Spec.IgnoreRules...)
+		rules = append(rules, data.Spec.ForceCheckRules...)
+		for _, r := range rules {
+			for _, m := range r.Match {
+				if m.Namespace != nil {
+					return false, fmt.Errorf("namespace condition is not allowed in RSP.")
+				}
+			}
+		}
+
+		attrs := data.Spec.IgnoreAttrs
+		attrs = append(attrs, data.Spec.UnprotectAttrs...)
+		attrs = append(attrs, data.Spec.ProtectAttrs...)
+		for _, a := range attrs {
+			for _, m := range a.Match {
+				if m.Namespace != nil {
+					return false, fmt.Errorf("namespace condition is not allowed in RSP.")
+				}
+			}
+		}
+	}
 	return true, nil
 }
 
