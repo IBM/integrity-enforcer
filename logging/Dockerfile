@@ -15,7 +15,7 @@
 #
 
 
-FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi7/ubi-minimal:7.8
 
 RUN REPOLIST=ubi-7,ubi-7-rhscl,ubi-7-rhah,ubi-7-optional,ubi-7-server-beta-rpms,ubi-7-server-extras-rpms,ubi-7-server-optional-rpms,ubi-server-rhscl-7-rpms \
     INSTALL_PACKAGES="system-logos openssl-devel zlib-devel gcc make git bzip2 rh-ruby25-ruby rh-ruby25-ruby-devel rh-ruby25-rubygems rh-ruby25-rubygems-devel rh-ruby25 hostname shadow-utils" && \
