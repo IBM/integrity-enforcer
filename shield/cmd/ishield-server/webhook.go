@@ -23,8 +23,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
 	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
-	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/shield/config/loader"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"

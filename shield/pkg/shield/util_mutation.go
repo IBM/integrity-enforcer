@@ -25,7 +25,7 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
+	Eval(vreqc *common.VRequestContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct{}
@@ -34,13 +34,13 @@ func NewMutationChecker() MutationChecker {
 	return &ConcreteMutationChecker{}
 }
 
-func MutationCheck(reqc *common.ReqContext) (*common.MutationEvalResult, error) {
+func MutationCheck(vreqc *common.VRequestContext) (*common.MutationEvalResult, error) {
 	checker := NewMutationChecker()
 	dummyProf := rspapi.ResourceSigningProfile{}
-	return checker.Eval(reqc, dummyProf)
+	return checker.Eval(vreqc, dummyProf)
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(vreqc *common.VRequestContext, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -63,14 +63,14 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 
 	var oldObj, newObj map[string]interface{}
 	// oldObj from reqc.RawOldObject
-	if reqc.RawOldObject == nil {
+	if vreqc.RawOldObject == nil {
 		maResult.Error = &common.CheckError{
 			Reason: "no old object in request",
 		}
 		return maResult, nil
 	}
 
-	if v, err := mapnode.NewFromBytes(reqc.RawOldObject); err != nil || v == nil {
+	if v, err := mapnode.NewFromBytes(vreqc.RawOldObject); err != nil || v == nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "fail to parse old object in request",
@@ -82,14 +82,14 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 	}
 
 	// newObj from reqc.RawObject
-	if reqc.RawObject == nil {
+	if vreqc.RawObject == nil {
 		maResult.Error = &common.CheckError{
 			Reason: "no (claimed) object in request",
 		}
 		return maResult, nil
 	}
 
-	if v, err := mapnode.NewFromBytes(reqc.RawObject); err != nil || v == nil {
+	if v, err := mapnode.NewFromBytes(vreqc.RawObject); err != nil || v == nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "fail to parse (claimed) object in request",
@@ -100,10 +100,10 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.ReqContext, signingProfil
 		newObj = v.ToMap()
 	}
 
-	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj)
+	ma4kInput := NewMa4kInput(vreqc.Namespace, vreqc.Kind, vreqc.Name, vreqc.UserName, vreqc.UserGroups, oldObj, newObj)
 
-	reqFields := reqc.Map()
-	excludeDiffValue := reqc.ExcludeDiffValue()
+	reqFields := vreqc.Map()
+	excludeDiffValue := vreqc.ExcludeDiffValue()
 
 	ignoreAttrsList := signingProfile.IgnoreAttrs(reqFields)
 

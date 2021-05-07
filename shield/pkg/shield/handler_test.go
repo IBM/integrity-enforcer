@@ -45,7 +45,7 @@ import (
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	scc "github.com/openshift/api/security/v1"
@@ -62,9 +62,9 @@ var schemes *runtime.Scheme
 var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
-func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
+func getTestData(num int) (*common.VRequestContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
 
-	var reqc *common.ReqContext
+	var vreqc *common.VRequestContext
 
 	var data *RunData
 	var cfg *config.ShieldConfig
@@ -80,7 +80,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	//drBytes, _ := ioutil.ReadFile(testDrFile)
 	profBytes, _ := ioutil.ReadFile(testFileName(testProfFile, num))
 	drBytes, _ := ioutil.ReadFile(testFileName(testDrFile, num))
-	_ = json.Unmarshal(reqcBytes, &reqc)
+	_ = json.Unmarshal(reqcBytes, &vreqc)
 	_ = json.Unmarshal(configBytes, &cfg)
 	_ = json.Unmarshal(dataBytes, &data)
 	_ = json.Unmarshal(ctxBytes, &ctx)
@@ -91,15 +91,15 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 		Type: common.DecisionUndetermined,
 	}
 	var req *admv1.AdmissionRequest
-	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
+	_ = json.Unmarshal([]byte(vreqc.RequestJsonStr), &req)
 	if req != nil {
-		reqc2 := common.NewReqContext(req)
-		reqc.RawObject = reqc2.RawObject
-		reqc.RawOldObject = reqc2.RawOldObject
-		reqc.OrgMetadata = reqc2.OrgMetadata
-		reqc.ClaimedMetadata = reqc2.ClaimedMetadata
+		vreqc2 := common.NewVRequestContext(req)
+		vreqc.RawObject = vreqc2.RawObject
+		vreqc.RawOldObject = vreqc2.RawOldObject
+		vreqc.OrgMetadata = vreqc2.OrgMetadata
+		vreqc.ClaimedMetadata = vreqc2.ClaimedMetadata
 	}
-	return reqc, cfg, data, ctx, dr0, prof, dr
+	return vreqc, cfg, data, ctx, dr0, prof, dr
 }
 
 func getChangedRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {

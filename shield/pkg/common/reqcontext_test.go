@@ -33,20 +33,20 @@ func TestReqContext(t *testing.T) {
 		t.Error(err)
 	}
 
-	var reqc *ReqContext
-	err = json.Unmarshal(reqcBytes, &reqc)
+	var vreqc *VRequestContext
+	err = json.Unmarshal(reqcBytes, &vreqc)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	var req *admv1.AdmissionRequest
-	err = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
+	err = json.Unmarshal([]byte(vreqc.RequestJsonStr), &req)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	actualReqc := NewReqContext(req)
+	actualReqc := NewVRequestContext(req)
 	actualReqcBytes, err := json.Marshal(actualReqc)
 	if err != nil {
 		t.Error(err)

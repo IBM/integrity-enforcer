@@ -23,7 +23,7 @@ import (
 	"time"
 
 	ecfgclient "github.com/IBM/integrity-enforcer/shield/pkg/client/shieldconfig/clientset/versioned/typed/shieldconfig/v1alpha1"
-	sconfig "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	sconfig "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"

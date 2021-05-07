@@ -22,7 +22,7 @@ import (
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -53,9 +53,9 @@ func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
 	return self.SignerConfig
 }
 
-func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSignatureList {
+func (self *RunData) GetResSigList(v2resc *common.V2ResourceContext) *rsigapi.ResourceSignatureList {
 	if self.ResSigList == nil && self.loader != nil {
-		self.ResSigList = self.loader.ResourceSignature.GetData(reqc, true)
+		self.ResSigList = self.loader.ResourceSignature.GetData(v2resc, true)
 	}
 	return self.ResSigList
 }
@@ -102,7 +102,7 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 	return self.ruleTable
 }
 
-func (self *RunData) Init(reqc *common.ReqContext, conf *config.ShieldConfig) {
+func (self *RunData) Init(conf *config.ShieldConfig) {
 	self.RSPList, _ = self.loader.RSP.GetData(false)
 	self.NSList, _ = self.loader.Namespace.GetData(false)
 	self.commonProfile = conf.CommonProfile

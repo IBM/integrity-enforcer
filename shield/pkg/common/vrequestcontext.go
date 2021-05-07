@@ -26,40 +26,41 @@ import (
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	admv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type ReqContext struct {
-	ResourceScope   string          `json:"resourceScope,omitempty"`
-	DryRun          bool            `json:"dryRun"`
-	RawObject       []byte          `json:"-"`
-	RawOldObject    []byte          `json:"-"`
-	RequestJsonStr  string          `json:"request"`
-	RequestUid      string          `json:"requestUid"`
-	Namespace       string          `json:"namespace"`
-	Name            string          `json:"name"`
-	ApiGroup        string          `json:"apiGroup"`
-	ApiVersion      string          `json:"apiVersion"`
-	Kind            string          `json:"kind"`
-	Operation       string          `json:"operation"`
-	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
-	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
-	UserInfo        string          `json:"userInfo"`
-	ObjLabels       string          `json:"objLabels"`
-	ObjMetaName     string          `json:"objMetaName"`
-	UserName        string          `json:"userName"`
-	UserGroups      []string        `json:"userGroups"`
-	Type            string          `json:"Type"`
-	ObjectHashType  string          `json:"objectHashType"`
-	ObjectHash      string          `json:"objectHash"`
+type VRequestContext struct {
+	ResourceScope   string           `json:"resourceScope,omitempty"`
+	DryRun          bool             `json:"dryRun"`
+	RawObject       []byte           `json:"-"`
+	RawOldObject    []byte           `json:"-"`
+	RequestJsonStr  string           `json:"request"`
+	RequestUid      string           `json:"requestUid"`
+	Namespace       string           `json:"namespace"`
+	Name            string           `json:"name"`
+	ApiGroup        string           `json:"apiGroup"`
+	ApiVersion      string           `json:"apiVersion"`
+	Kind            string           `json:"kind"`
+	Operation       string           `json:"operation"`
+	OrgMetadata     *VObjectMetadata `json:"orgMetadata"`
+	ClaimedMetadata *VObjectMetadata `json:"claimedMetadata"`
+	UserInfo        string           `json:"userInfo"`
+	ObjLabels       string           `json:"objLabels"`
+	ObjMetaName     string           `json:"objMetaName"`
+	UserName        string           `json:"userName"`
+	UserGroups      []string         `json:"userGroups"`
+	Type            string           `json:"Type"`
+	ObjectHashType  string           `json:"objectHashType"`
+	ObjectHash      string           `json:"objectHash"`
 }
 
-type ObjectMetadata struct {
+type VObjectMetadata struct {
 	Annotations *ResourceAnnotation `json:"annotations"`
 	Labels      *ResourceLabel      `json:"labels"`
 }
 
-func (reqc *ReqContext) ResourceRef() *ResourceRef {
+func (reqc *VRequestContext) ResourceRef() *ResourceRef {
 	gv := schema.GroupVersion{
 		Group:   reqc.ApiGroup,
 		Version: reqc.ApiVersion,
@@ -72,9 +73,9 @@ func (reqc *ReqContext) ResourceRef() *ResourceRef {
 	}
 }
 
-func (reqc *ReqContext) Map() map[string]string {
+func (vreqc *VRequestContext) Map() map[string]string {
 	m := map[string]string{}
-	v := reflect.Indirect(reflect.ValueOf(reqc))
+	v := reflect.Indirect(reflect.ValueOf(vreqc))
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		f := v.Field(i)
@@ -89,59 +90,65 @@ func (reqc *ReqContext) Map() map[string]string {
 	return m
 }
 
-func (reqc *ReqContext) Info(m map[string]string) string {
+func (vreqc *VRequestContext) Info(m map[string]string) string {
 	if m == nil {
 		m = map[string]string{}
 	}
-	m["operation"] = reqc.Operation
-	m["kind"] = reqc.Kind
-	m["scope"] = reqc.ResourceScope
-	m["namespace"] = reqc.Namespace
-	m["name"] = reqc.Name
-	m["userName"] = reqc.UserName
-	m["request.uid"] = reqc.RequestUid
+	m["operation"] = vreqc.Operation
+	m["kind"] = vreqc.Kind
+	m["scope"] = vreqc.ResourceScope
+	m["namespace"] = vreqc.Namespace
+	m["name"] = vreqc.Name
+	m["userName"] = vreqc.UserName
+	m["request.uid"] = vreqc.RequestUid
 	infoBytes, _ := json.Marshal(m)
 	return string(infoBytes)
 }
 
-func (reqc *ReqContext) GroupVersion() string {
-	return schema.GroupVersion{Group: reqc.ApiGroup, Version: reqc.ApiVersion}.String()
+func (vreqc *VRequestContext) GroupVersion() string {
+	return schema.GroupVersion{Group: vreqc.ApiGroup, Version: vreqc.ApiVersion}.String()
 }
 
-func (rc *ReqContext) IsUpdateRequest() bool {
+func (rc *VRequestContext) IsUpdateRequest() bool {
 	return rc.Operation == "UPDATE"
 }
 
-func (rc *ReqContext) IsCreateRequest() bool {
+func (rc *VRequestContext) IsCreateRequest() bool {
 	return rc.Operation == "CREATE"
 }
 
-func (rc *ReqContext) IsDeleteRequest() bool {
+func (rc *VRequestContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
 }
 
-func (rc *ReqContext) IsSecret() bool {
+func (rc *VRequestContext) IsSecret() bool {
 	return rc.Kind == "Secret" && rc.GroupVersion() == "v1"
 }
 
-func (rc *ReqContext) IsServiceAccount() bool {
+func (rc *VRequestContext) IsServiceAccount() bool {
 	return rc.Kind == "ServiceAccount" && rc.GroupVersion() == "v1"
 }
 
-func (rc *ReqContext) ExcludeDiffValue() bool {
+func (rc *VRequestContext) ExcludeDiffValue() bool {
 	if rc.Kind == "Secret" {
 		return true
 	}
 	return false
 }
 
-type ParsedRequest struct {
+func (vreqc *VRequestContext) ToV2ResourceContext() *V2ResourceContext {
+	var obj *unstructured.Unstructured
+	_ = json.Unmarshal(vreqc.RawObject, &obj)
+	return NewV2ResourceContext(obj)
+}
+
+type VParsedRequest struct {
 	UID     string
 	JsonStr string
 }
 
-func NewParsedRequest(request *admv1.AdmissionRequest) *ParsedRequest {
-	var pr = &ParsedRequest{
+func NewVParsedRequest(request *admv1.AdmissionRequest) *VParsedRequest {
+	var pr = &VParsedRequest{
 		UID: string(request.UID),
 	}
 	if reqBytes, err := json.Marshal(request); err != nil {
@@ -155,7 +162,7 @@ func NewParsedRequest(request *admv1.AdmissionRequest) *ParsedRequest {
 	return pr
 }
 
-func (pr *ParsedRequest) getValue(path string) string {
+func (pr *VParsedRequest) getValue(path string) string {
 	var v string
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v = w.String()
@@ -163,7 +170,7 @@ func (pr *ParsedRequest) getValue(path string) string {
 	return v
 }
 
-func (pr *ParsedRequest) getArrayValue(path string) []string {
+func (pr *VParsedRequest) getArrayValue(path string) []string {
 	var v []string
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		x := w.Array()
@@ -174,7 +181,7 @@ func (pr *ParsedRequest) getArrayValue(path string) []string {
 	return v
 }
 
-func (pr *ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
+func (pr *VParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	var r map[string]string = map[string]string{}
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		m := w.Map()
@@ -188,7 +195,7 @@ func (pr *ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	}
 }
 
-func (pr *ParsedRequest) getLabels(path string) *ResourceLabel {
+func (pr *VParsedRequest) getLabels(path string) *ResourceLabel {
 	var r map[string]string = map[string]string{}
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		m := w.Map()
@@ -202,7 +209,7 @@ func (pr *ParsedRequest) getLabels(path string) *ResourceLabel {
 	}
 }
 
-func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
+func (pr *VParsedRequest) getBool(path string, defaultValue bool) bool {
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v := w.String()
 		if b, err := strconv.ParseBool(v); err != nil {
@@ -214,9 +221,9 @@ func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewReqContext(req *admv1.AdmissionRequest) *ReqContext {
+func NewVRequestContext(req *admv1.AdmissionRequest) *VRequestContext {
 
-	pr := NewParsedRequest(req)
+	pr := NewVParsedRequest(req)
 
 	name := pr.getValue("name")
 	if name == "" {
@@ -231,12 +238,12 @@ func NewReqContext(req *admv1.AdmissionRequest) *ReqContext {
 		namespace = pr.getValue("object.metdata.namespace")
 	}
 
-	orgMetadata := &ObjectMetadata{
+	orgMetadata := &VObjectMetadata{
 		Annotations: pr.getAnnotations("oldObject.metadata.annotations"),
 		Labels:      pr.getLabels("oldObject.metadata.labels"),
 	}
 
-	claimedMetadata := &ObjectMetadata{
+	claimedMetadata := &VObjectMetadata{
 		Annotations: pr.getAnnotations("object.metadata.annotations"),
 		Labels:      pr.getLabels("object.metadata.labels"),
 	}
@@ -248,7 +255,7 @@ func NewReqContext(req *admv1.AdmissionRequest) *ReqContext {
 		resourceScope = "Cluster"
 	}
 
-	rc := &ReqContext{
+	rc := &VRequestContext{
 		DryRun:          *req.DryRun,
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,

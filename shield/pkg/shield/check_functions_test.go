@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	"github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
 const (
@@ -68,8 +68,8 @@ func testFileName(fname string, num int) string {
 }
 
 func testInScopeCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := inScopeCheck(reqc, config, data, ctx)
+	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := inScopeCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -81,8 +81,8 @@ func testInScopeCheck(t *testing.T, caseNum int) {
 }
 
 func testFormatCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := formatCheck(reqc, config, data, ctx)
+	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := formatCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -94,8 +94,8 @@ func testFormatCheck(t *testing.T, caseNum int) {
 }
 
 func testIShieldResourceCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := iShieldResourceCheck(reqc, config, data, ctx)
+	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := iShieldResourceCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -107,8 +107,8 @@ func testIShieldResourceCheck(t *testing.T, caseNum int) {
 }
 
 func testDeleteCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := deleteCheck(reqc, config, data, ctx)
+	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := deleteCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -120,8 +120,8 @@ func testDeleteCheck(t *testing.T, caseNum int) {
 }
 
 func testProtectedCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
-	actualDr, actualMatchedProfiles := protectedCheck(reqc, config, data, ctx)
+	vreqc, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
+	actualDr, actualMatchedProfiles := protectedCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -138,8 +138,8 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 }
 
 func testRSPCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
-	actualDr := resourceSigningProfileCheck(prof, reqc, config, data, ctx)
+	vreqc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
+	actualDr := resourceSigningProfileCheck(prof, vreqc, config, data, ctx)
 	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {

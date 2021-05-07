@@ -21,7 +21,7 @@ import (
 	"time"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
 /**********************************************
@@ -68,25 +68,25 @@ func InitCheckContext(config *config.ShieldConfig) *CheckContext {
 	return cc
 }
 
-func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string]interface{} {
+func (self *CheckContext) convertToLogRecord(vreqc *common.VRequestContext) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
 		// request context
-		"namespace":    reqc.Namespace,
-		"name":         reqc.Name,
-		"apiGroup":     reqc.ApiGroup,
-		"apiVersion":   reqc.ApiVersion,
-		"kind":         reqc.Kind,
-		"operation":    reqc.Operation,
-		"userInfo":     reqc.UserInfo,
-		"objLabels":    reqc.ObjLabels,
-		"objMetaName":  reqc.ObjMetaName,
-		"userName":     reqc.UserName,
-		"request.uid":  reqc.RequestUid,
-		"type":         reqc.Type,
+		"namespace":    vreqc.Namespace,
+		"name":         vreqc.Name,
+		"apiGroup":     vreqc.ApiGroup,
+		"apiVersion":   vreqc.ApiVersion,
+		"kind":         vreqc.Kind,
+		"operation":    vreqc.Operation,
+		"userInfo":     vreqc.UserInfo,
+		"objLabels":    vreqc.ObjLabels,
+		"objMetaName":  vreqc.ObjMetaName,
+		"userName":     vreqc.UserName,
+		"request.uid":  vreqc.RequestUid,
+		"type":         vreqc.Type,
 		"request.dump": "",
-		"requestScope": reqc.ResourceScope,
+		"requestScope": vreqc.ResourceScope,
 
 		//context
 		"ignoreSA":        self.IgnoredSA,
@@ -151,8 +151,97 @@ func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string
 
 	}
 
-	logRecord["request.objectHashType"] = reqc.ObjectHashType
-	logRecord["request.objectHash"] = reqc.ObjectHash
+	logRecord["request.objectHashType"] = vreqc.ObjectHashType
+	logRecord["request.objectHash"] = vreqc.ObjectHash
+
+	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
+
+	currentTime := time.Now()
+	ts := currentTime.Format("2006-01-02T15:04:05.000Z")
+
+	logRecord["timestamp"] = ts
+
+	return logRecord
+
+}
+
+func (self *CheckContext) convertToLogRecordByResource(v2resc *common.V2ResourceContext) map[string]interface{} {
+
+	// cc := self
+	logRecord := map[string]interface{}{
+		// request context
+		"namespace":    v2resc.Namespace,
+		"name":         v2resc.Name,
+		"apiGroup":     v2resc.ApiGroup,
+		"apiVersion":   v2resc.ApiVersion,
+		"kind":         v2resc.Kind,
+		"objLabels":    v2resc.ObjLabels,
+		"objMetaName":  v2resc.ObjMetaName,
+		"request.dump": "",
+		"requestScope": v2resc.ResourceScope,
+
+		//context
+		"ignoreSA":        self.IgnoredSA,
+		"protected":       self.Protected,
+		"iShieldResource": self.IShieldResource,
+		"allowed":         self.Allow,
+		"verified":        self.Verified,
+		"aborted":         self.Aborted,
+		"abortReason":     self.AbortReason,
+		"msg":             self.Message,
+		"breakglass":      self.BreakGlassModeEnabled,
+		"detectOnly":      self.DetectOnlyModeEnabled,
+
+		//reason code
+		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
+	}
+
+	if self.Error != nil {
+		logRecord["error"] = self.Error.Error()
+	}
+
+	//context from sign policy eval
+	if self.SignatureEvalResult != nil {
+		r := self.SignatureEvalResult
+		if r.Signer != nil {
+			logRecord["sig.signer.email"] = r.Signer.Email
+			logRecord["sig.signer.name"] = r.Signer.Name
+			logRecord["sig.signer.comment"] = r.Signer.Comment
+			logRecord["sig.signer.fingerprint"] = r.Signer.Fingerprint
+			logRecord["sig.signer.displayName"] = r.GetSignerName()
+		}
+		logRecord["sig.allow"] = r.Allow
+		if r.Error != nil {
+			logRecord["sig.errOccured"] = true
+			logRecord["sig.errMsg"] = r.Error.Msg
+			logRecord["sig.errReason"] = r.Error.Reason
+			if r.Error.Error != nil {
+				logRecord["sig.error"] = r.Error.Error.Error()
+			}
+		} else {
+			logRecord["sig.errOccured"] = false
+		}
+	}
+
+	//context from mutation eval
+	if self.MutationEvalResult != nil {
+		r := self.MutationEvalResult
+		if r.Error != nil {
+			logRecord["ma.errOccured"] = true
+			logRecord["ma.errMsg"] = r.Error.Msg
+			logRecord["ma.errReason"] = r.Error.Reason
+			if r.Error.Error != nil {
+				logRecord["ma.error"] = r.Error.Error.Error()
+			}
+		} else {
+			logRecord["ma.errOccured"] = false
+		}
+		logRecord["ma.mutated"] = strconv.FormatBool(r.IsMutated)
+		logRecord["ma.diff"] = r.Diff
+		logRecord["ma.filtered"] = r.Filtered
+		logRecord["ma.checked"] = strconv.FormatBool(r.Checked)
+
+	}
 
 	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
 

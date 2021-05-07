@@ -40,7 +40,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
+	Verify(sig *GeneralSignature, v2resc *common.V2ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
 }
 
 /**********************************************
@@ -67,14 +67,14 @@ func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPath
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, v2resc *common.V2ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
 
-	excludeDiffValue := reqc.ExcludeDiffValue()
+	excludeDiffValue := v2resc.ExcludeDiffValue()
 
-	kustomizeList := signingProfile.Kustomize(reqc.Map())
+	kustomizeList := signingProfile.Kustomize(v2resc.Map())
 	allowNSChange := false
 	for _, k := range kustomizeList {
 		if k.AllowNamespaceChange {
@@ -82,10 +82,10 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			break
 		}
 	}
-	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
+	allowDiffPatterns := makeAllowDiffPatterns(v2resc, kustomizeList)
 
-	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
-	ignoreAttrsList := signingProfile.IgnoreAttrs(reqc.Map())
+	protectAttrsList := signingProfile.ProtectAttrs(v2resc.Map())
+	ignoreAttrsList := signingProfile.IgnoreAttrs(v2resc.Map())
 
 	resSigUID := sig.data["resourceSignatureUID"]
 	sigFrom := ""
@@ -106,7 +106,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		if allowNSChange {
 			messageNode, err := mapnode.NewFromYamlBytes([]byte(message))
 			if err == nil {
-				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, reqc.Namespace)
+				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, v2resc.Namespace)
 				overwriteNode, _ := mapnode.NewFromBytes([]byte(overwriteJson))
 				newMessageNode, err := messageNode.Merge(overwriteNode)
 				if err == nil {
@@ -115,7 +115,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			}
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, reqc.Kind, sig.SignType, excludeDiffValue)
+		matched, diffStr := self.MatchMessage([]byte(message), v2resc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, v2resc.ResourceScope, v2resc.Kind, sig.SignType, excludeDiffValue)
 		if !matched {
 			msg := fmt.Sprintf("The message for this signature in %s is not identical with the requested object. diff: %s", sigFrom, diffStr)
 			return &SigVerifyResult{
@@ -132,25 +132,27 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	if sig.option["scopedSignature"] {
 		isValidScopeSignature := false
 		scopeDenyMsg := ""
-		if reqc.IsCreateRequest() {
-			// for CREATE request, this boolean flag will be true.
-			// because signature verification will work as value check in the case of scopedSignature.
-			isValidScopeSignature = true
-		} else if reqc.IsUpdateRequest() {
-			// for UPDATE request, IShield will confirm that no value is modified except attributes in `scope`.
-			// if there is any modification, the request will be denied.
-			if reqc.OrgMetadata.Labels.IntegrityVerified() {
-				scope, _ := sig.data["scope"]
-				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope, excludeDiffValue)
-				if diffIsInMessageScope {
-					isValidScopeSignature = true
-				} else {
-					scopeDenyMsg = fmt.Sprintf("messageScope of the signature in %s does not cover all changed attributes in this update", sigFrom)
-				}
-			} else {
-				scopeDenyMsg = fmt.Sprintf("Original object must be integrityVerified to allow UPDATE request with scope signature specified in %s", sigFrom)
-			}
-		}
+
+		// TODO: support scopedSignature after refactoring
+		// if reqc.IsCreateRequest() {
+		// 	// for CREATE request, this boolean flag will be true.
+		// 	// because signature verification will work as value check in the case of scopedSignature.
+		// 	isValidScopeSignature = true
+		// } else if reqc.IsUpdateRequest() {
+		// 	// for UPDATE request, IShield will confirm that no value is modified except attributes in `scope`.
+		// 	// if there is any modification, the request will be denied.
+		// 	if reqc.OrgMetadata.Labels.IntegrityVerified() {
+		// 		scope, _ := sig.data["scope"]
+		// 		diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope, excludeDiffValue)
+		// 		if diffIsInMessageScope {
+		// 			isValidScopeSignature = true
+		// 		} else {
+		// 			scopeDenyMsg = fmt.Sprintf("messageScope of the signature in %s does not cover all changed attributes in this update", sigFrom)
+		// 		}
+		// 	} else {
+		// 		scopeDenyMsg = fmt.Sprintf("Original object must be integrityVerified to allow UPDATE request with scope signature specified in %s", sigFrom)
+		// 	}
+		// }
 		if !isValidScopeSignature {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
@@ -525,9 +527,9 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 	return message
 }
 
-func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
-	ref := reqc.ResourceRef()
-	name := reqc.Name
+func makeAllowDiffPatterns(v2resc *common.V2ResourceContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
+	ref := v2resc.ResourceRef()
+	name := v2resc.Name
 	kustomizedName := name
 	for _, pattern := range kustomizeList {
 		newRef := pattern.Override(ref)
@@ -565,7 +567,7 @@ type HelmVerifier struct {
 	KeyPathList []string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, v2resc *common.V2ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
