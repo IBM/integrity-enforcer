@@ -12,8 +12,7 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/sirupsen/logrus v1.7.0 // indirect
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 	k8s.io/api v0.20.2
 	k8s.io/apiextensions-apiserver v0.20.1
 	k8s.io/apimachinery v0.20.2

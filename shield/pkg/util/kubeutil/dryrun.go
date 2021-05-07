@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -63,14 +62,35 @@ func DryRunCreate(objBytes []byte, namespace string) ([]byte, error) {
 	gvk := obj.GroupVersionKind()
 
 	if gvk.Kind == "CustomResourceDefinition" {
-		var crdObj *extv1.CustomResourceDefinition
+		var crdObj map[string]interface{}
 		err := json.Unmarshal(objJsonBytes, &crdObj)
 		if err == nil {
-			crdObj.Spec.Names.Kind = "Sim" + crdObj.Spec.Names.Kind
-			crdObj.Spec.Names.ListKind = "Sim" + crdObj.Spec.Names.ListKind
-			crdObj.Spec.Names.Singular = "sim" + crdObj.Spec.Names.Singular
-			crdObj.Spec.Names.Plural = "sim" + crdObj.Spec.Names.Plural
-			crdObj.ObjectMeta.Name = "sim" + crdObj.ObjectMeta.Name
+			specMapIf, _ := crdObj["spec"]
+			specMap, _ := specMapIf.(map[string]interface{})
+			namesMapIf, _ := specMap["names"]
+			namesMap, _ := namesMapIf.(map[string]interface{})
+			if namesMap["kind"] != nil {
+				namesMap["kind"] = "Sim" + namesMap["kind"].(string)
+			}
+			if namesMap["listKind"] != nil {
+				namesMap["listKind"] = "Sim" + namesMap["listKind"].(string)
+			}
+			if namesMap["singular"] != nil {
+				namesMap["singular"] = "sim" + namesMap["singular"].(string)
+			}
+			if namesMap["plural"] != nil {
+				namesMap["plural"] = "sim" + namesMap["plural"].(string)
+			}
+			specMap["names"] = namesMap
+			crdObj["spec"] = specMap
+
+			metaMapIf, _ := crdObj["metadata"]
+			metaMap, _ := metaMapIf.(map[string]interface{})
+			if metaMap["name"] != nil {
+				metaMap["name"] = "sim" + metaMap["name"].(string)
+			}
+			crdObj["metadata"] = metaMap
+
 			crdObjBytes, err := json.Marshal(crdObj)
 			if err == nil {
 				tmpObj := &unstructured.Unstructured{}
