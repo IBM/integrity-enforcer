@@ -26,7 +26,7 @@ import (
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
-	econf "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	econf "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

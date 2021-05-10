@@ -1038,6 +1038,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateInspectorDeployment(instance *
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
+func (r *IntegrityShieldReconciler) createOrUpdateCheckerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildCheckerDeploymentForIShield(instance)
+	return r.createOrUpdateDeployment(instance, expected)
+}
+
 /**********************************************
 
 				Service
@@ -1088,6 +1093,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateService(instance *apiv1alpha1.
 
 func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildServiceForIShield(instance)
+	return r.createOrUpdateService(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) createOrUpdateCheckerService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildCheckerServiceForIShield(instance)
 	return r.createOrUpdateService(instance, expected)
 }
 

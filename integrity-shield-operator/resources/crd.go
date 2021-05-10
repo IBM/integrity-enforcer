@@ -126,49 +126,49 @@ func BuildProtectedResourceIntegrityCRD(cr *apiv1alpha1.IntegrityShield) *extv1.
 		ShortNames: []string{"pri", "pris"},
 	}
 	crd := buildCRD(cr.GetProtectedResourceIntegrityCRDName(), cr.Namespace, crdNames)
-	crd.Spec.AdditionalPrinterColumns = []extv1.CustomResourceColumnDefinition{
-		{
-			Name:        "Profiles",
-			Type:        "string",
-			Description: "ResourceSigningProfiles that cover this resource",
-			JSONPath:    ".status.profiles",
-			Priority:    0,
-		},
-		{
-			Name:        "Verified",
-			Type:        "boolean",
-			Description: "A boolean value represents if a signature for this resource is verified or not",
-			JSONPath:    ".status.verified",
-			Priority:    0,
-		},
-		{
-			Name:        "LastVerified",
-			Type:        "date",
-			Description: "The latest timestamp when its signature was verified by inspector",
-			JSONPath:    ".status.lastVerified",
-			Priority:    0,
-		},
-		{
-			Name:        "LastUpdated",
-			Type:        "date",
-			Description: "The latest timestamp when signature verification was done by inspector",
-			JSONPath:    ".status.lastUpdated",
-			Priority:    0,
-		},
-		{
-			Name:        "Result",
-			Type:        "string",
-			Description: "A result from a verification of integrity-shield-server",
-			JSONPath:    ".status.result",
-			Priority:    1,
-		},
-		{
-			Name:        "AllowedUsernames",
-			Type:        "string",
-			Description: "Usernames that are allowed to change this resource without signature",
-			JSONPath:    ".status.allowedUsernames",
-			Priority:    1,
-		},
-	}
+	// crd.Spec.AdditionalPrinterColumns = []extv1.CustomResourceColumnDefinition{
+	// 	{
+	// 		Name:        "Profiles",
+	// 		Type:        "string",
+	// 		Description: "ResourceSigningProfiles that cover this resource",
+	// 		JSONPath:    ".status.profiles",
+	// 		Priority:    0,
+	// 	},
+	// 	{
+	// 		Name:        "Verified",
+	// 		Type:        "boolean",
+	// 		Description: "A boolean value represents if a signature for this resource is verified or not",
+	// 		JSONPath:    ".status.verified",
+	// 		Priority:    0,
+	// 	},
+	// 	{
+	// 		Name:        "LastVerified",
+	// 		Type:        "date",
+	// 		Description: "The latest timestamp when its signature was verified by inspector",
+	// 		JSONPath:    ".status.lastVerified",
+	// 		Priority:    0,
+	// 	},
+	// 	{
+	// 		Name:        "LastUpdated",
+	// 		Type:        "date",
+	// 		Description: "The latest timestamp when signature verification was done by inspector",
+	// 		JSONPath:    ".status.lastUpdated",
+	// 		Priority:    0,
+	// 	},
+	// 	{
+	// 		Name:        "Result",
+	// 		Type:        "string",
+	// 		Description: "A result from a verification of integrity-shield-server",
+	// 		JSONPath:    ".status.result",
+	// 		Priority:    1,
+	// 	},
+	// 	{
+	// 		Name:        "AllowedUsernames",
+	// 		Type:        "string",
+	// 		Description: "Usernames that are allowed to change this resource without signature",
+	// 		JSONPath:    ".status.allowedUsernames",
+	// 		Priority:    1,
+	// 	},
+	// }
 	return crd
 }

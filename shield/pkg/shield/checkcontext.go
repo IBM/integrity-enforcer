@@ -73,15 +73,15 @@ func (self *CheckContext) convertToLogRecord(vreqc *common.VRequestContext) map[
 	// cc := self
 	logRecord := map[string]interface{}{
 		// request context
-		"namespace":    vreqc.Namespace,
-		"name":         vreqc.Name,
-		"apiGroup":     vreqc.ApiGroup,
-		"apiVersion":   vreqc.ApiVersion,
-		"kind":         vreqc.Kind,
-		"operation":    vreqc.Operation,
-		"userInfo":     vreqc.UserInfo,
-		"objLabels":    vreqc.ObjLabels,
-		"objMetaName":  vreqc.ObjMetaName,
+		"namespace":  vreqc.Namespace,
+		"name":       vreqc.Name,
+		"apiGroup":   vreqc.ApiGroup,
+		"apiVersion": vreqc.ApiVersion,
+		"kind":       vreqc.Kind,
+		"operation":  vreqc.Operation,
+		"userInfo":   vreqc.UserInfo,
+		// "objLabels":    vreqc.ObjLabels,
+		// "objMetaName":  vreqc.ObjMetaName,
 		"userName":     vreqc.UserName,
 		"request.uid":  vreqc.RequestUid,
 		"type":         vreqc.Type,
@@ -151,8 +151,8 @@ func (self *CheckContext) convertToLogRecord(vreqc *common.VRequestContext) map[
 
 	}
 
-	logRecord["request.objectHashType"] = vreqc.ObjectHashType
-	logRecord["request.objectHash"] = vreqc.ObjectHash
+	// logRecord["request.objectHashType"] = vreqc.ObjectHashType
+	// logRecord["request.objectHash"] = vreqc.ObjectHash
 
 	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
 

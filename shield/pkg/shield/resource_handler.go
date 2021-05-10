@@ -74,15 +74,21 @@ func (self *ResourceHandler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
+	dr = inScopeCheckByResource(self.v2resc, self.config, self.data, self.ctx)
+	if !dr.IsUndetermined() {
+		return dr
+	}
+	self.logInScope = true
+
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	dr, matchedProfiles = protectedCheckByResource(self.v2resc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	for _, prof := range matchedProfiles {
 		dr = resourceSigningProfileSignatureCheck(prof, self.v2resc, self.config, self.data, self.ctx)
-		if dr.isAllowed() {
+		if dr.IsAllowed() {
 			// this RSP allowed the request. will check next RSP.
 		} else {
 			// this RSP denied the request. return the result and will make AdmissionResponse.
@@ -90,7 +96,7 @@ func (self *ResourceHandler) Check() *DecisionResult {
 		}
 	}
 
-	if dr.isUndetermined() {
+	if dr.IsUndetermined() {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,

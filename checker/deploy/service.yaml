@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-server
+spec:
+  selector:
+    app: sample-server
+  ports:
+  - port: 8080
+    targetPort: 8080

@@ -46,7 +46,7 @@ func TestReqContext(t *testing.T) {
 		return
 	}
 
-	actualReqc := NewVRequestContext(req)
+	actualReqc, _ := NewVRequestContext(req)
 	actualReqcBytes, err := json.Marshal(actualReqc)
 	if err != nil {
 		t.Error(err)

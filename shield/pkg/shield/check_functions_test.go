@@ -68,7 +68,7 @@ func testFileName(fname string, num int) string {
 }
 
 func testInScopeCheck(t *testing.T, caseNum int) {
-	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := inScopeCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -81,8 +81,8 @@ func testInScopeCheck(t *testing.T, caseNum int) {
 }
 
 func testFormatCheck(t *testing.T, caseNum int) {
-	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := formatCheck(vreqc, config, data, ctx)
+	vreqc, vreqobj, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := formatCheck(vreqc, vreqobj, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -94,7 +94,7 @@ func testFormatCheck(t *testing.T, caseNum int) {
 }
 
 func testIShieldResourceCheck(t *testing.T, caseNum int) {
-	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := iShieldResourceCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -107,7 +107,7 @@ func testIShieldResourceCheck(t *testing.T, caseNum int) {
 }
 
 func testDeleteCheck(t *testing.T, caseNum int) {
-	vreqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := deleteCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -120,7 +120,7 @@ func testDeleteCheck(t *testing.T, caseNum int) {
 }
 
 func testProtectedCheck(t *testing.T, caseNum int) {
-	vreqc, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
+	vreqc, _, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
 	actualDr, actualMatchedProfiles := protectedCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -138,8 +138,8 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 }
 
 func testRSPCheck(t *testing.T, caseNum int) {
-	vreqc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
-	actualDr := resourceSigningProfileCheck(prof, vreqc, config, data, ctx)
+	vreqc, vreqobj, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
+	actualDr := resourceSigningProfileCheck(prof, vreqc, vreqobj, config, data, ctx)
 	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {

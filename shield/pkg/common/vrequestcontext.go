@@ -31,28 +31,29 @@ import (
 )
 
 type VRequestContext struct {
-	ResourceScope   string           `json:"resourceScope,omitempty"`
-	DryRun          bool             `json:"dryRun"`
+	ResourceScope  string   `json:"resourceScope,omitempty"`
+	DryRun         bool     `json:"dryRun"`
+	RequestJsonStr string   `json:"request"`
+	RequestUid     string   `json:"requestUid"`
+	Namespace      string   `json:"namespace"`
+	Name           string   `json:"name"`
+	ApiGroup       string   `json:"apiGroup"`
+	ApiVersion     string   `json:"apiVersion"`
+	Kind           string   `json:"kind"`
+	Operation      string   `json:"operation"`
+	UserInfo       string   `json:"userInfo"`
+	UserName       string   `json:"userName"`
+	UserGroups     []string `json:"userGroups"`
+	Type           string   `json:"Type"`
+}
+
+type VRequestObject struct {
 	RawObject       []byte           `json:"-"`
 	RawOldObject    []byte           `json:"-"`
-	RequestJsonStr  string           `json:"request"`
-	RequestUid      string           `json:"requestUid"`
-	Namespace       string           `json:"namespace"`
-	Name            string           `json:"name"`
-	ApiGroup        string           `json:"apiGroup"`
-	ApiVersion      string           `json:"apiVersion"`
-	Kind            string           `json:"kind"`
-	Operation       string           `json:"operation"`
 	OrgMetadata     *VObjectMetadata `json:"orgMetadata"`
 	ClaimedMetadata *VObjectMetadata `json:"claimedMetadata"`
-	UserInfo        string           `json:"userInfo"`
 	ObjLabels       string           `json:"objLabels"`
 	ObjMetaName     string           `json:"objMetaName"`
-	UserName        string           `json:"userName"`
-	UserGroups      []string         `json:"userGroups"`
-	Type            string           `json:"Type"`
-	ObjectHashType  string           `json:"objectHashType"`
-	ObjectHash      string           `json:"objectHash"`
 }
 
 type VObjectMetadata struct {
@@ -136,9 +137,9 @@ func (rc *VRequestContext) ExcludeDiffValue() bool {
 	return false
 }
 
-func (vreqc *VRequestContext) ToV2ResourceContext() *V2ResourceContext {
+func AdmissionRequestToV2ResourceContext(request *admv1.AdmissionRequest) *V2ResourceContext {
 	var obj *unstructured.Unstructured
-	_ = json.Unmarshal(vreqc.RawObject, &obj)
+	_ = json.Unmarshal(request.Object.Raw, &obj)
 	return NewV2ResourceContext(obj)
 }
 
@@ -221,7 +222,7 @@ func (pr *VParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewVRequestContext(req *admv1.AdmissionRequest) *VRequestContext {
+func NewVRequestContext(req *admv1.AdmissionRequest) (*VRequestContext, *VRequestObject) {
 
 	pr := NewVParsedRequest(req)
 
@@ -256,27 +257,29 @@ func NewVRequestContext(req *admv1.AdmissionRequest) *VRequestContext {
 	}
 
 	rc := &VRequestContext{
-		DryRun:          *req.DryRun,
+		DryRun:         *req.DryRun,
+		ResourceScope:  resourceScope,
+		RequestUid:     pr.UID,
+		RequestJsonStr: pr.JsonStr,
+		Name:           name,
+		Operation:      pr.getValue("operation"),
+		ApiGroup:       pr.getValue("kind.group"),
+		ApiVersion:     pr.getValue("kind.version"),
+		Kind:           kind,
+		Namespace:      namespace,
+		UserInfo:       pr.getValue("userInfo"),
+		UserName:       pr.getValue("userInfo.username"),
+		UserGroups:     pr.getArrayValue("userInfo.groups"),
+		Type:           pr.getValue("object.type"),
+	}
+	ro := &VRequestObject{
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
-		ResourceScope:   resourceScope,
-		RequestUid:      pr.UID,
-		RequestJsonStr:  pr.JsonStr,
-		Name:            name,
-		Operation:       pr.getValue("operation"),
-		ApiGroup:        pr.getValue("kind.group"),
-		ApiVersion:      pr.getValue("kind.version"),
-		Kind:            kind,
-		Namespace:       namespace,
-		UserInfo:        pr.getValue("userInfo"),
 		ObjLabels:       pr.getValue("object.metadata.labels"),
 		ObjMetaName:     pr.getValue("object.metadata.name"),
-		UserName:        pr.getValue("userInfo.username"),
-		UserGroups:      pr.getArrayValue("userInfo.groups"),
-		Type:            pr.getValue("object.type"),
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
 	}
-	return rc
+	return rc, ro
 
 }

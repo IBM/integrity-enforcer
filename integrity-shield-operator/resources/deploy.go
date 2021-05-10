@@ -34,32 +34,12 @@ import (
 func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
 
-	var volumemounts []v1.VolumeMount
-	var servervolumemounts []v1.VolumeMount
 	var volumes []v1.Volume
-
-	volumemounts = []v1.VolumeMount{
-		{
-			MountPath: "/ishield-app/public",
-			Name:      "log-volume",
-		},
-	}
+	var servervolumemounts []v1.VolumeMount
 
 	volumes = []v1.Volume{
 		SecretVolume("ishield-tls-certs", cr.GetWebhookServerTlsSecretName()),
-		EmptyDirVolume("log-volume"),
 		EmptyDirVolume("tmp"),
-	}
-	for _, keyConf := range cr.Spec.KeyConfig {
-		secretName := keyConf.SecretName
-		if secretName == "" && keyConf.SignatureType == common.SignatureTypeSigStore {
-			secretName = cr.GetSigStoreDefaultRootSecretName()
-		}
-		if secretName == "" {
-			continue
-		}
-		tmpSecretVolume := SecretVolume(keyConf.Name, secretName)
-		volumes = append(volumes, tmpSecretVolume)
 	}
 
 	servervolumemounts = []v1.VolumeMount{
@@ -72,29 +52,9 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 			MountPath: "/tmp",
 			Name:      "tmp",
 		},
-		{
-			MountPath: "/ishield-app/public",
-			Name:      "log-volume",
-		},
-	}
-	for _, keyConf := range cr.Spec.KeyConfig {
-		sigType := keyConf.SignatureType
-		if sigType == common.SignatureTypeDefault {
-			sigType = common.SignatureTypePGP
-		}
-		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/", keyConf.Name, sigType), Name: keyConf.Name}
-		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
 	}
 
-	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
-		tlsVolMnt := v1.VolumeMount{
-			MountPath: "/run/secrets/es_tls",
-			Name:      "es-tls-certs",
-			ReadOnly:  true,
-		}
-		volumemounts = append(volumemounts, tlsVolMnt)
-		volumes = append(volumes, SecretVolume("es-tls-certs", cr.Spec.Logger.EsSecretName))
-	}
+	chckerAPIBaseURL := "http://" + cr.GetCheckerServiceName() + ":8080"
 
 	serverContainer := v1.Container{
 		Name:            cr.Spec.Server.Name,
@@ -133,6 +93,144 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		VolumeMounts: servervolumemounts,
 		Env: []v1.EnvVar{
 			{
+				Name:  "CHECKER_API_BASE_URL",
+				Value: chckerAPIBaseURL,
+			},
+		},
+		Resources: cr.Spec.Server.Resources,
+	}
+
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetIShieldServerDeploymentName(),
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Strategy: appsv1.DeploymentStrategy{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       cr.Spec.MaxSurge,
+					MaxUnavailable: cr.Spec.MaxUnavailable,
+				},
+			},
+			Replicas: cr.Spec.ReplicaCount,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: cr.Spec.SelectorLabels,
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: cr.Spec.SelectorLabels,
+				},
+				Spec: v1.PodSpec{
+					ImagePullSecrets:   cr.Spec.ImagePullSecrets,
+					ServiceAccountName: cr.GetServiceAccountName(),
+					SecurityContext:    cr.Spec.Security.PodSecurityContext,
+					Containers: []v1.Container{
+						serverContainer,
+					},
+					NodeSelector: cr.Spec.NodeSelector,
+					Affinity:     cr.Spec.Affinity,
+					Tolerations:  cr.Spec.Tolerations,
+
+					Volumes: volumes,
+				},
+			},
+		},
+	}
+}
+
+//deployment
+func BuildCheckerDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+
+	var volumemounts []v1.VolumeMount
+	var servervolumemounts []v1.VolumeMount
+	var volumes []v1.Volume
+
+	volumemounts = []v1.VolumeMount{
+		{
+			MountPath: "/ishield-app/public",
+			Name:      "log-volume",
+		},
+	}
+
+	volumes = []v1.Volume{
+		EmptyDirVolume("log-volume"),
+		EmptyDirVolume("tmp"),
+	}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		secretName := keyConf.SecretName
+		if secretName == "" && keyConf.SignatureType == common.SignatureTypeSigStore {
+			secretName = cr.GetSigStoreDefaultRootSecretName()
+		}
+		if secretName == "" {
+			continue
+		}
+		tmpSecretVolume := SecretVolume(keyConf.Name, secretName)
+		volumes = append(volumes, tmpSecretVolume)
+	}
+
+	servervolumemounts = []v1.VolumeMount{
+		{
+			MountPath: "/tmp",
+			Name:      "tmp",
+		},
+		{
+			MountPath: "/ishield-app/public",
+			Name:      "log-volume",
+		},
+	}
+	for _, keyConf := range cr.Spec.KeyConfig {
+		sigType := keyConf.SignatureType
+		if sigType == common.SignatureTypeDefault {
+			sigType = common.SignatureTypePGP
+		}
+		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/", keyConf.Name, sigType), Name: keyConf.Name}
+		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
+	}
+
+	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
+		tlsVolMnt := v1.VolumeMount{
+			MountPath: "/run/secrets/es_tls",
+			Name:      "es-tls-certs",
+			ReadOnly:  true,
+		}
+		volumemounts = append(volumemounts, tlsVolMnt)
+		volumes = append(volumes, SecretVolume("es-tls-certs", cr.Spec.Logger.EsSecretName))
+	}
+
+	serverContainer := v1.Container{
+		Name:            cr.Spec.Checker.Name,
+		SecurityContext: cr.Spec.Checker.SecurityContext,
+		Image:           cr.Spec.Checker.Image,
+		ImagePullPolicy: cr.Spec.Checker.ImagePullPolicy,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "checker-api",
+				ContainerPort: cr.Spec.Checker.Port,
+				Protocol:      v1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: servervolumemounts,
+		Env: []v1.EnvVar{
+			{
 				Name:  "SHIELD_NS",
 				Value: cr.Namespace,
 			},
@@ -142,18 +240,18 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 			},
 			{
 				Name:  "CHART_BASE_URL",
-				Value: cr.Spec.Server.ChartBaseUrl,
+				Value: cr.Spec.Checker.ChartBaseUrl,
 			},
 			{
 				Name:  "SHIELD_CM_RELOAD_SEC",
-				Value: strconv.Itoa(int(cr.Spec.Server.ShieldCmReloadSec)),
+				Value: strconv.Itoa(int(cr.Spec.Checker.ShieldCmReloadSec)),
 			},
 			{
 				Name:  "SHIELD_POLICY_RELOAD_SEC",
-				Value: strconv.Itoa(int(cr.Spec.Server.EnforcePolicyReloadSec)),
+				Value: strconv.Itoa(int(cr.Spec.Checker.EnforcePolicyReloadSec)),
 			},
 		},
-		Resources: cr.Spec.Server.Resources,
+		Resources: cr.Spec.Checker.Resources,
 	}
 
 	loggerContainer := v1.Container{
@@ -300,9 +398,11 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetIShieldServerDeploymentName(),
+			Name:      cr.GetIShieldCheckerDeploymentName(),
 			Namespace: cr.Namespace,
-			Labels:    labels,
+			Labels: map[string]string{
+				"app": cr.GetIShieldCheckerSelectorLabel(),
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Strategy: appsv1.DeploymentStrategy{
@@ -313,11 +413,15 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 			},
 			Replicas: cr.Spec.ReplicaCount,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: cr.Spec.SelectorLabels,
+				MatchLabels: map[string]string{
+					"app": cr.GetIShieldCheckerSelectorLabel(),
+				},
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: cr.Spec.SelectorLabels,
+					Labels: map[string]string{
+						"app": cr.GetIShieldCheckerSelectorLabel(),
+					},
 				},
 				Spec: v1.PodSpec{
 					ImagePullSecrets:   cr.Spec.ImagePullSecrets,

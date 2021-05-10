@@ -31,7 +31,7 @@ import (
 
 // check if request is inScope or not
 func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	reqNamespace := getRequestNamespaceFromReqContext(vreqc)
+	reqNamespace := getRequestNamespaceFromVRequestContext(vreqc)
 
 	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
@@ -59,7 +59,7 @@ func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, da
 		}
 	}
 
-	if checkIfUnprocessedInIShield(vreqc, config) {
+	if checkIfUnprocessedInIShield(vreqc.Map(), config) {
 		msg := "request is not processed by IShield"
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
@@ -74,8 +74,41 @@ func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, da
 	return undeterminedDescision()
 }
 
-func formatCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if ok, msg := ValidateResource(vreqc, config.Namespace); !ok {
+// check if request is inScope or not
+func inScopeCheckByResource(v2resc *common.V2ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	reqNamespace := getRequestNamespaceFromV2ResourceContext(v2resc)
+
+	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
+	// this check is done only for Namespaced request, and skip this for Cluster-scope request
+	if reqNamespace != "" && !checkIfInScopeNamespace(reqNamespace, config) && !checkIfProfileTargetNamespace(reqNamespace, config.Namespace, data) {
+		msg := "this namespace is not monitored"
+		ctx.Allow = true
+		ctx.ReasonCode = common.REASON_INTERNAL
+		ctx.Message = msg
+		return &DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_INTERNAL,
+			Message:    msg,
+		}
+	}
+
+	if checkIfUnprocessedInIShield(v2resc.Map(), config) {
+		msg := "request is not processed by IShield"
+		ctx.Allow = true
+		ctx.ReasonCode = common.REASON_INTERNAL
+		ctx.Message = msg
+		return &DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_INTERNAL,
+			Message:    msg,
+		}
+	}
+
+	return undeterminedDescision()
+}
+
+func formatCheck(vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	if ok, msg := ValidateResource(vreqc, vreqobj, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
@@ -237,13 +270,13 @@ func protectedCheckByResource(v2resc *common.V2ResourceContext, config *config.S
 	return undeterminedDescision(), matchedProfiles
 }
 
-func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
 	var mutResult *common.MutationEvalResult
 
-	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, vreqc, config)
+	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, vreqc, vreqobj, config)
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -261,12 +294,15 @@ func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, vr
 			Message:    evalMessage,
 		}
 	} else {
-		return &DecisionResult{
-			Type:       common.DecisionDeny,
-			ReasonCode: evalReason,
-			Message:    evalMessage,
-			denyRSP:    &singleProfile,
-		}
+		// return undetermined DecisionResult to trigger resource checker
+		return undeterminedDescision()
+
+		// return &DecisionResult{
+		// 	Type:       common.DecisionDeny,
+		// 	ReasonCode: evalReason,
+		// 	Message:    evalMessage,
+		// 	denyRSP:    &singleProfile,
+		// }
 	}
 }
 
@@ -306,11 +342,11 @@ func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningPr
 	}
 }
 
-func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
+func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
 	var mutResult *common.MutationEvalResult
 	var err error
 	if vreqc.IsUpdateRequest() {
-		mutResult, err = NewMutationChecker().Eval(vreqc, singleProfile)
+		mutResult, err = NewMutationChecker().Eval(vreqc, vreqobj, singleProfile)
 		if err != nil {
 			return false, common.REASON_ERROR, err.Error(), mutResult
 		}

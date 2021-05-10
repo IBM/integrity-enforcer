@@ -35,11 +35,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, vreqc *common.VRequestContext, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, vreqc *common.VRequestContext, vreqobj *common.VRequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 	var patchBytes []byte
 	if conf.PatchEnabled(vreqc) {
 		// `patchBytes` will be nil if no patch
-		patchBytes = generatePatchBytes(vreqc, ctx)
+		patchBytes = generatePatchBytes(vreqc, vreqobj, ctx)
 	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, vreqc.Info(nil))
 	resp := &admv1.AdmissionResponse{
@@ -195,9 +195,9 @@ func checkIfDryRunAdmission(vreqc *common.VRequestContext) bool {
 	return vreqc.DryRun
 }
 
-func checkIfUnprocessedInIShield(vreqc *common.VRequestContext, config *config.ShieldConfig) bool {
+func checkIfUnprocessedInIShield(reqFeilds map[string]string, config *config.ShieldConfig) bool {
 	for _, d := range config.Ignore {
-		if d.Match(vreqc.Map()) {
+		if d.Match(reqFeilds) {
 			return true
 		}
 	}
@@ -212,10 +212,18 @@ func getRequestNamespace(req *admv1.AdmissionRequest) string {
 	return reqNamespace
 }
 
-func getRequestNamespaceFromReqContext(vreqc *common.VRequestContext) string {
+func getRequestNamespaceFromVRequestContext(vreqc *common.VRequestContext) string {
 	reqNamespace := ""
 	if vreqc.Kind != "Namespace" && vreqc.Namespace != "" {
 		reqNamespace = vreqc.Namespace
+	}
+	return reqNamespace
+}
+
+func getRequestNamespaceFromV2ResourceContext(v2resc *common.V2ResourceContext) string {
+	reqNamespace := ""
+	if v2resc.Kind != "Namespace" && v2resc.Namespace != "" {
+		reqNamespace = v2resc.Namespace
 	}
 	return reqNamespace
 }

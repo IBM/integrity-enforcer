@@ -17,15 +17,15 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 
-	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
-	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +33,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// singleton
-var config *sconfloader.Config
+const (
+	apiBaseURLEnvKey  = "CHECKER_API_BASE_URL"
+	defaultAPIBaseURL = "http://integrity-shield-checker:8080"
+)
+
+var apiBaseURL string
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -48,40 +52,100 @@ type WebhookServer struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	config = sconfloader.NewConfig()
-	config.InitShieldConfig()
-	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
-	logger.Info("Integrity Shield has been started.")
-
-	cfgBytes, _ := json.Marshal(config)
-	logger.Trace(string(cfgBytes))
-	logger.Info("ShieldConfig is loaded.")
+	apiBaseURL = os.Getenv(apiBaseURLEnvKey)
+	if apiBaseURL == "" {
+		apiBaseURL = defaultAPIBaseURL
+	}
 }
+
+// func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
+
+// 	_ = config.InitShieldConfig()
+
+// 	gv := metav1.GroupVersion{Group: admissionReviewReq.Request.Kind.Group, Version: admissionReviewReq.Request.Kind.Version}
+// 	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+// 	reqLog := metaLogger.WithFields(
+// 		log.Fields{
+// 			"namespace":  admissionReviewReq.Request.Namespace,
+// 			"name":       admissionReviewReq.Request.Name,
+// 			"apiVersion": gv.String(),
+// 			"kind":       admissionReviewReq.Request.Kind,
+// 			"operation":  admissionReviewReq.Request.Operation,
+// 			"requestUID": string(admissionReviewReq.Request.UID),
+// 		},
+// 	)
+// 	reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, reqLog)
+// 	admissionRequest := admissionReviewReq.Request
+
+// 	//process request
+// 	admissionResponse := reqHandler.Run(admissionRequest)
+
+// 	return admissionResponse
+
+// }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
 
-	_ = config.InitShieldConfig()
-
-	gv := metav1.GroupVersion{Group: admissionReviewReq.Request.Kind.Group, Version: admissionReviewReq.Request.Kind.Version}
-	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	reqLog := metaLogger.WithFields(
-		log.Fields{
-			"namespace":  admissionReviewReq.Request.Namespace,
-			"name":       admissionReviewReq.Request.Name,
-			"apiVersion": gv.String(),
-			"kind":       admissionReviewReq.Request.Kind,
-			"operation":  admissionReviewReq.Request.Operation,
-			"requestUID": string(admissionReviewReq.Request.UID),
-		},
-	)
-	reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, reqLog)
 	admissionRequest := admissionReviewReq.Request
+	adReqBytes, _ := json.Marshal(admissionRequest)
 
-	//process request
-	admissionResponse := reqHandler.Run(admissionRequest)
+	// Call Request Checker API
+	var dr1 *shield.DecisionResult
+	resp1, err1 := http.Post(apiBaseURL+"/check/request", "application/json", bytes.NewReader(adReqBytes))
+	if err1 != nil {
+		log.Error("resp1 err:", err1.Error())
+	} else if resp1.Body != nil {
+		result1Bytes, _ := ioutil.ReadAll(resp1.Body)
+		err := json.Unmarshal(result1Bytes, &dr1)
+		if err != nil {
+			log.Error("dr1 unmarhsal err;", err.Error())
+		}
+		log.Info("[DEBUG] result1:", string(result1Bytes))
+	}
 
-	return admissionResponse
+	// Return an AdmissionResponse if dr1 is not undetermined
+	if !dr1.IsUndetermined() {
+		allowed := true
+		if dr1.IsDenied() || dr1.IsErrorOccurred() {
+			allowed = false
+		}
+		return &admv1.AdmissionResponse{
+			UID:     admissionReviewReq.Request.UID,
+			Allowed: allowed,
+			Result: &metav1.Status{
+				Message: dr1.Message,
+			},
+		}
+	}
 
+	resourceBytes := admissionRequest.Object.Raw
+
+	// Call Resource Checker API
+	var dr2 *shield.DecisionResult
+	resp2, err2 := http.Post(apiBaseURL+"/check/resource", "application/json", bytes.NewReader(resourceBytes))
+	if err2 != nil {
+		log.Error("resp2 err:", err2.Error())
+	} else if resp2.Body != nil {
+		result2Bytes, _ := ioutil.ReadAll(resp2.Body)
+		err := json.Unmarshal(result2Bytes, &dr2)
+		if err != nil {
+			log.Error("dr1 unmarhsal err;", err.Error())
+		}
+		log.Info("[DEBUG] result2:", string(result2Bytes))
+	}
+
+	// Return an AdmissionResponse based on dr2
+	allowed := true
+	if dr2.IsDenied() || dr2.IsErrorOccurred() || dr2.IsUndetermined() {
+		allowed = false
+	}
+	return &admv1.AdmissionResponse{
+		UID:     admissionReviewReq.Request.UID,
+		Allowed: allowed,
+		Result: &metav1.Status{
+			Message: dr2.Message,
+		},
+	}
 }
 
 func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +154,12 @@ func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Reques
 }
 
 func (server *WebhookServer) checkReadiness(w http.ResponseWriter, r *http.Request) {
+	_, err := http.Get(apiBaseURL + "/probe/readiness")
+	if err != nil {
+		http.Error(w, "not ready", http.StatusInternalServerError)
+		return
+	}
+
 	msg := "readiness ok"
 	_, _ = w.Write([]byte(msg))
 }

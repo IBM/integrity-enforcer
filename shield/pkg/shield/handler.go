@@ -39,6 +39,7 @@ type Handler struct {
 	config        *config.ShieldConfig
 	ctx           *CheckContext
 	vreqc         *common.VRequestContext
+	vreqobj       *common.VRequestObject
 	v2resc        *common.V2ResourceContext
 	data          *RunData
 	serverLogger  *log.Logger
@@ -51,7 +52,28 @@ func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
 }
 
-func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
+func (self *Handler) Run(req *admv1.AdmissionRequest) *DecisionResult {
+
+	// init ctx, reqc and data & init logger
+	self.initialize(req)
+
+	// make DecisionResult based on reqc, config and data
+	dr := self.Check()
+
+	// overwrite DecisionResult if needed (DetectMode & BreakGlass)
+	dr = self.overwriteDecision(dr)
+
+	// log results
+	self.logResponse(req, dr)
+	self.logContext()
+
+	// clear some cache if needed
+	self.finalize(dr)
+
+	return dr
+}
+
+func (self *Handler) DirectRun(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 
 	// init ctx, reqc and data & init logger
 	self.initialize(req)
@@ -65,23 +87,23 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	// make AdmissionResponse based on DecisionResult
 	resp := &admv1.AdmissionResponse{}
 
-	if dr.isUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.vreqc, self.ctx, self.config)
-	} else if dr.isErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message, self.vreqc, self.ctx, self.config)
+	if dr.IsUndetermined() {
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.vreqc, self.vreqobj, self.ctx, self.config)
+	} else if dr.IsErrorOccurred() {
+		resp = createAdmissionResponse(false, dr.Message, self.vreqc, self.vreqobj, self.ctx, self.config)
 	} else {
-		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.vreqc, self.ctx, self.config)
+		resp = createAdmissionResponse(dr.IsAllowed(), dr.Message, self.vreqc, self.vreqobj, self.ctx, self.config)
 	}
 
 	// log results
-	self.logResponse(req, resp)
+	self.logResponse(req, dr)
 	self.logContext()
 
 	// create Event & update RSP status
 	_ = self.Report(dr.denyRSP)
 
 	// clear some cache if needed
-	self.finalize(resp)
+	self.finalize(dr)
 
 	return resp
 }
@@ -91,36 +113,36 @@ func (self *Handler) Check() *DecisionResult {
 	dr = undeterminedDescision()
 
 	dr = inScopeCheck(self.vreqc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
-	dr = formatCheck(self.vreqc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	dr = formatCheck(self.vreqc, self.vreqobj, self.config, self.data, self.ctx)
+	if !dr.IsUndetermined() {
 
 		return dr
 	}
 
 	dr = iShieldResourceCheck(self.vreqc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	dr = deleteCheck(self.vreqc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	dr, matchedProfiles = protectedCheck(self.vreqc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	for _, prof := range matchedProfiles {
-		dr = resourceSigningProfileCheck(prof, self.vreqc, self.config, self.data, self.ctx)
-		if dr.isAllowed() {
+		dr = resourceSigningProfileCheck(prof, self.vreqc, self.vreqobj, self.config, self.data, self.ctx)
+		if dr.IsAllowed() {
 			// this RSP allowed the request. will check next RSP.
 		} else {
 			// this RSP denied the request. return the result and will make AdmissionResponse.
@@ -128,7 +150,7 @@ func (self *Handler) Check() *DecisionResult {
 		}
 	}
 
-	if dr.isUndetermined() {
+	if dr.IsUndetermined() {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,
@@ -181,11 +203,11 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 
 	reqNamespace := getRequestNamespace(req)
 
-	// init RequestContext
-	self.vreqc = common.NewVRequestContext(req)
+	// init RequestContext & RequestObject
+	self.vreqc, self.vreqobj = common.NewVRequestContext(req)
 
 	// init ResourceContext
-	self.v2resc = self.vreqc.ToV2ResourceContext()
+	self.v2resc = common.AdmissionRequestToV2ResourceContext(req)
 
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
 	self.logEntry()
@@ -206,7 +228,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 		return dr
 	}
 
-	if !dr.isAllowed() && isDetectMode {
+	if !dr.IsAllowed() && isDetectMode {
 		self.ctx.Allow = true
 		self.ctx.DetectOnlyModeEnabled = true
 		self.ctx.ReasonCode = common.REASON_DETECTION
@@ -215,7 +237,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 		dr.Verified = false
 		dr.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		dr.ReasonCode = common.REASON_DETECTION
-	} else if !dr.isAllowed() && isBreakGlass {
+	} else if !dr.IsAllowed() && isBreakGlass {
 		self.ctx.Allow = true
 		self.ctx.BreakGlassModeEnabled = true
 		self.ctx.ReasonCode = common.REASON_BREAK_GLASS
@@ -228,14 +250,14 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 	return dr
 }
 
-func (self *Handler) finalize(resp *admv1.AdmissionResponse) {
-	if resp.Allowed {
+func (self *Handler) finalize(dr *DecisionResult) {
+	if dr.IsAllowed() {
 		resetRuleTableCache := false
 		iShieldServer := checkIfIShieldServerRequest(self.vreqc, self.config)
 		iShieldOperator := checkIfIShieldOperatorRequest(self.vreqc, self.config)
 		if self.vreqc.Kind == "Namespace" {
 			if self.vreqc.IsUpdateRequest() {
-				mtResult, _ := MutationCheck(self.vreqc)
+				mtResult, _ := MutationCheck(self.vreqc, self.vreqobj)
 				if mtResult != nil && mtResult.IsMutated {
 					self.requestLog.Debug("[DEBUG] namespace mutation: ", mtResult.Diff)
 					resetRuleTableCache = true
@@ -293,16 +315,16 @@ func (self *Handler) logExit() {
 	}
 }
 
-func (self *Handler) logResponse(req *admv1.AdmissionRequest, resp *admv1.AdmissionResponse) {
+func (self *Handler) logResponse(req *admv1.AdmissionRequest, dr *DecisionResult) {
 	if self.config.Log.LogAllResponse {
 		respData := map[string]interface{}{}
-		respData["allowed"] = resp.Allowed
+		respData["allowed"] = dr.IsAllowed()
 		respData["operation"] = req.Operation
 		respData["kind"] = req.Kind
 		respData["namespace"] = req.Namespace
 		respData["name"] = req.Name
-		respData["message"] = resp.Result.Message
-		respData["patch"] = resp.Patch
+		respData["message"] = dr.Message
+		// respData["patch"] = resp.Patch
 		respDataBytes, err := json.Marshal(respData)
 		if err != nil {
 			self.requestLog.Error(err.Error())

@@ -41,18 +41,18 @@ func undeterminedDescision() *DecisionResult {
 	return &DecisionResult{Type: common.DecisionUndetermined}
 }
 
-func (self *DecisionResult) isAllowed() bool {
+func (self *DecisionResult) IsAllowed() bool {
 	return self.Type == common.DecisionAllow
 }
 
-func (self *DecisionResult) isDenied() bool {
+func (self *DecisionResult) IsDenied() bool {
 	return self.Type == common.DecisionDeny
 }
 
-func (self *DecisionResult) isUndetermined() bool {
+func (self *DecisionResult) IsUndetermined() bool {
 	return self.Type == common.DecisionUndetermined
 }
 
-func (self *DecisionResult) isErrorOccurred() bool {
+func (self *DecisionResult) IsErrorOccurred() bool {
 	return self.Type == common.DecisionError
 }

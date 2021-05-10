@@ -27,7 +27,7 @@ import (
 
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	iec "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	iec "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
@@ -54,7 +54,9 @@ const (
 	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
 	DefaultSigstoreRootCertURL                = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
 	DefaultIShieldInspectorName               = "integrity-shield-inspector"
+	DefaultIShieldCheckerName                 = "integrity-shield-checker"
 	DefaultIShieldInspectorLabel              = "ishield-inspector"
+	DefaultIShieldCheckerLabel                = "ishield-checker"
 	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
 	CommonProfilesPath                        = "./resources/common-profiles"
 	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
@@ -91,6 +93,7 @@ type IntegrityShieldSpec struct {
 	Logger                 LoggerContainer    `json:"logger,omitempty"`
 	Observer               ObserverContainer  `json:"observer,omitempty"`
 	Inspector              InspectorContainer `json:"inspector,omitempty"`
+	Checker                CheckerContainer   `json:"checker,omitempty"`
 	RegKeySecret           RegKeySecret       `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
@@ -178,6 +181,21 @@ type InspectorContainer struct {
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type CheckerContainer struct {
+	// Enabled         *bool                   `json:"enabled,omitempty"`
+	Name                   string                  `json:"name,omitempty"`
+	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
+	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image                  string                  `json:"image,omitempty"`
+	Port                   int32                   `json:"port,omitempty"`
+	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
+	ChartBaseUrl           string                  `json:"chartBaseUrl,omitempty"`
+	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
+	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
+	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
+	ServiceName            string                  `json:"serviceName,omitempty"`
 }
 
 type EsConfig struct {
@@ -341,12 +359,24 @@ func (self *IntegrityShield) GetIShieldInspectorDeploymentName() string {
 	return DefaultIShieldInspectorName
 }
 
+func (self *IntegrityShield) GetIShieldCheckerDeploymentName() string {
+	return DefaultIShieldCheckerName
+}
+
 func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
 	return DefaultIShieldInspectorLabel
 }
 
+func (self *IntegrityShield) GetIShieldCheckerSelectorLabel() string {
+	return DefaultIShieldCheckerLabel
+}
+
 func (self *IntegrityShield) GetWebhookServiceName() string {
 	return self.Spec.WebhookServiceName
+}
+
+func (self *IntegrityShield) GetCheckerServiceName() string {
+	return self.Spec.Checker.ServiceName
 }
 
 func (self *IntegrityShield) GetWebhookConfigName() string {
