@@ -48,7 +48,9 @@ type ResourceHandler struct {
 }
 
 func NewResourceHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *ResourceHandler {
-	return &ResourceHandler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
+	data := &RunData{}
+	data.EnableForceInitialize() // Resource Handler will load profiles on every run
+	return &ResourceHandler{config: config, data: data, serverLogger: metaLogger, requestLog: reqLog}
 }
 
 func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult {

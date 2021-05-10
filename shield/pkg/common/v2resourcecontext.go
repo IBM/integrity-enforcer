@@ -195,15 +195,25 @@ func NewV2ResourceContext(res *unstructured.Unstructured) *V2ResourceContext {
 
 	namespace := pr.getValue("namespace")
 	if namespace == "" {
-		namespace = pr.getValue("metdata.namespace")
+		namespace = pr.getValue("metadata.namespace")
 	}
 
 	claimedMetadata := &V2ObjectMetadata{
 		Annotations: pr.getAnnotations("metadata.annotations"),
 		Labels:      pr.getLabels("metadata.labels"),
 	}
+	metaLabelObj := claimedMetadata.Labels
+	labelsBytes, _ := json.Marshal(metaLabelObj.values)
+	labelsStr := ""
+	if labelsBytes != nil {
+		labelsStr = string(labelsBytes)
+	}
 
 	kind := pr.getValue("kind")
+	groupVersion := pr.getValue("apiVersion")
+	gv, _ := schema.ParseGroupVersion(groupVersion)
+	apiGroup := gv.Group
+	apiVersion := gv.Version
 
 	resourceScope := "Namespaced"
 	if namespace == "" {
@@ -216,12 +226,12 @@ func NewV2ResourceContext(res *unstructured.Unstructured) *V2ResourceContext {
 		RawObject:       resBytes,
 		ResourceScope:   resourceScope,
 		Name:            name,
-		ApiGroup:        pr.getValue("kind.group"),
-		ApiVersion:      pr.getValue("kind.version"),
+		ApiGroup:        apiGroup,
+		ApiVersion:      apiVersion,
 		Kind:            kind,
 		Namespace:       namespace,
-		ObjLabels:       pr.getValue("object.metadata.labels"),
-		ObjMetaName:     pr.getValue("object.metadata.name"),
+		ObjLabels:       labelsStr,
+		ObjMetaName:     name,
 		ClaimedMetadata: claimedMetadata,
 	}
 	return rc

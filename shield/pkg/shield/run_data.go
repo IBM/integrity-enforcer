@@ -41,9 +41,20 @@ type RunData struct {
 	SignerConfig *sigconfapi.SignerConfig        `json:"signerConfig,omitempty"`
 	ResSigList   *rsigapi.ResourceSignatureList  `json:"resSigList,omitempty"`
 
-	loader        *Loader               `json:"-"`
-	commonProfile *common.CommonProfile `json:"-"`
-	ruleTable     *RuleTable            `json:"-"`
+	loader          *Loader               `json:"-"`
+	commonProfile   *common.CommonProfile `json:"-"`
+	ruleTable       *RuleTable            `json:"-"`
+	forceInitialize bool                  `json:"-"`
+}
+
+func (self *RunData) EnableForceInitialize() {
+	self.forceInitialize = true
+	return
+}
+
+func (self *RunData) DisableForceInitialize() {
+	self.forceInitialize = false
+	return
 }
 
 func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
@@ -103,10 +114,23 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 }
 
 func (self *RunData) Init(conf *config.ShieldConfig) {
-	self.RSPList, _ = self.loader.RSP.GetData(false)
-	self.NSList, _ = self.loader.Namespace.GetData(false)
+	force := false
+	if self.forceInitialize {
+		force = false
+	}
+
+	self.RSPList, _ = self.loader.RSP.GetData(force)
+	self.NSList, _ = self.loader.Namespace.GetData(force)
 	self.commonProfile = conf.CommonProfile
 	rtInited := self.setRuleTable(conf.Namespace)
+	rtB, err := json.Marshal(self.ruleTable)
+	if err != nil {
+		logger.Info("[DEBUG] RuleTable marshaling err: ", err.Error())
+	} else {
+		logger.Info("[DEBUG] RuleTable:", string(rtB))
+		rlB, _ := json.Marshal(self.RSPList)
+		logger.Info("[DEBUG] RSPList:", string(rlB))
+	}
 	if rtInited {
 		// logger.Trace("RuleTable is initialized.")
 	}
