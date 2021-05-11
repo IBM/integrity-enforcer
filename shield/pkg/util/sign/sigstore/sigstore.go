@@ -62,7 +62,7 @@ func Verify(message, signature, certPem []byte, rootPemPath *string) (bool, erro
 		return false, fmt.Errorf("error creating root cert pool")
 	}
 
-	co := cosign.CheckOpts{
+	co := &cosign.CheckOpts{
 		Tlog:  true,
 		Roots: cp,
 	}
