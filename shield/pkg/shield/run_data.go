@@ -123,14 +123,6 @@ func (self *RunData) Init(conf *config.ShieldConfig) {
 	self.NSList, _ = self.loader.Namespace.GetData(force)
 	self.commonProfile = conf.CommonProfile
 	rtInited := self.setRuleTable(conf.Namespace)
-	rtB, err := json.Marshal(self.ruleTable)
-	if err != nil {
-		logger.Info("[DEBUG] RuleTable marshaling err: ", err.Error())
-	} else {
-		logger.Info("[DEBUG] RuleTable:", string(rtB))
-		rlB, _ := json.Marshal(self.RSPList)
-		logger.Info("[DEBUG] RSPList:", string(rlB))
-	}
 	if rtInited {
 		// logger.Trace("RuleTable is initialized.")
 	}

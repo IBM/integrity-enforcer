@@ -53,6 +53,12 @@ func NewResourceHandler(config *config.ShieldConfig, metaLogger *log.Logger, req
 	return &ResourceHandler{config: config, data: data, serverLogger: metaLogger, requestLog: reqLog}
 }
 
+func NewResourceHandlerWithContext(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry, ctx *CheckContext) *ResourceHandler {
+	resHandler := NewResourceHandler(config, metaLogger, reqLog)
+	resHandler.ctx = ctx
+	return resHandler
+}
+
 func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult {
 
 	// init ctx, reqc and data & init logger
@@ -109,7 +115,9 @@ func (self *ResourceHandler) Check() *DecisionResult {
 // load resoruces / set default values
 func (self *ResourceHandler) initialize(res *unstructured.Unstructured) *DecisionResult {
 
-	self.ctx = InitCheckContext(self.config)
+	if self.ctx == nil {
+		self.ctx = InitCheckContext(self.config)
+	}
 
 	reqNamespace := res.GetNamespace()
 

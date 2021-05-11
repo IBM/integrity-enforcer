@@ -27,6 +27,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 /**********************************************
@@ -46,13 +47,15 @@ type Handler struct {
 	requestLog    *log.Entry
 	contextLogger *logger.ContextLogger
 	logInScope    bool
+
+	resHandler *ResourceHandler
 }
 
 func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *Handler {
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
 }
 
-func (self *Handler) Run(req *admv1.AdmissionRequest) *DecisionResult {
+func (self *Handler) StepRun(req *admv1.AdmissionRequest) *DecisionResult {
 
 	// init ctx, reqc and data & init logger
 	self.initialize(req)
@@ -73,7 +76,7 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *DecisionResult {
 	return dr
 }
 
-func (self *Handler) DirectRun(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
+func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 
 	// init ctx, reqc and data & init logger
 	self.initialize(req)
@@ -140,15 +143,14 @@ func (self *Handler) Check() *DecisionResult {
 		return dr
 	}
 
-	for _, prof := range matchedProfiles {
-		dr = resourceSigningProfileCheck(prof, self.vreqc, self.vreqobj, self.config, self.data, self.ctx)
-		if dr.IsAllowed() {
-			// this RSP allowed the request. will check next RSP.
-		} else {
-			// this RSP denied the request. return the result and will make AdmissionResponse.
-			return dr
-		}
+	dr = mutationCheck(matchedProfiles, self.vreqc, self.vreqobj, self.config, self.data, self.ctx)
+	if !dr.IsUndetermined() {
+		return dr
 	}
+
+	var obj *unstructured.Unstructured
+	_ = json.Unmarshal(self.vreqobj.RawObject, &obj)
+	dr = self.resHandler.Run(obj)
 
 	if dr.IsUndetermined() {
 		dr = &DecisionResult{
@@ -199,7 +201,11 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 // load resoruces / set default values
 func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 
+	// init CheckContext
 	self.ctx = InitCheckContext(self.config)
+
+	// init resource handler with shared CheckContext
+	self.resHandler = NewResourceHandlerWithContext(self.config, self.serverLogger, self.requestLog, self.ctx)
 
 	reqNamespace := getRequestNamespace(req)
 
@@ -259,7 +265,6 @@ func (self *Handler) finalize(dr *DecisionResult) {
 			if self.vreqc.IsUpdateRequest() {
 				mtResult, _ := MutationCheck(self.vreqc, self.vreqobj)
 				if mtResult != nil && mtResult.IsMutated {
-					self.requestLog.Debug("[DEBUG] namespace mutation: ", mtResult.Diff)
 					resetRuleTableCache = true
 				}
 			} else {

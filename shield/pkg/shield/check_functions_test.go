@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	testReqcFile   = "testdata/reqc_NUM.json"
+	testAdReqFile = "testdata/adreq_NUM.json"
+	//testReqcFile   = "testdata/reqc_NUM.json"
 	testConfigFile = "testdata/config_NUM.json"
 	testDataFile   = "testdata/data_NUM.json"
 	testCtxFile    = "testdata/ctx_NUM.json"
@@ -53,7 +54,8 @@ func TestCheckFunctions(t *testing.T) {
 		testIShieldResourceCheck(t, i)
 		testDeleteCheck(t, i)
 		testProtectedCheck(t, i)
-		testRSPCheck(t, i)
+		testSingleMutationCheck(t, i)
+		testSingleSignatureCheck(t, i)
 	}
 }
 
@@ -68,7 +70,7 @@ func testFileName(fname string, num int) string {
 }
 
 func testInScopeCheck(t *testing.T, caseNum int) {
-	vreqc, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, _, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := inScopeCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -81,7 +83,7 @@ func testInScopeCheck(t *testing.T, caseNum int) {
 }
 
 func testFormatCheck(t *testing.T, caseNum int) {
-	vreqc, vreqobj, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, vreqobj, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := formatCheck(vreqc, vreqobj, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -94,7 +96,7 @@ func testFormatCheck(t *testing.T, caseNum int) {
 }
 
 func testIShieldResourceCheck(t *testing.T, caseNum int) {
-	vreqc, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, _, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := iShieldResourceCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -107,7 +109,7 @@ func testIShieldResourceCheck(t *testing.T, caseNum int) {
 }
 
 func testDeleteCheck(t *testing.T, caseNum int) {
-	vreqc, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	vreqc, _, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := deleteCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -120,7 +122,7 @@ func testDeleteCheck(t *testing.T, caseNum int) {
 }
 
 func testProtectedCheck(t *testing.T, caseNum int) {
-	vreqc, _, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
+	vreqc, _, _, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
 	actualDr, actualMatchedProfiles := protectedCheck(vreqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -137,16 +139,36 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 	}
 }
 
-func testRSPCheck(t *testing.T, caseNum int) {
-	vreqc, vreqobj, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
+func testSingleMutationCheck(t *testing.T, caseNum int) {
+	vreqc, vreqobj, _, config, data, ctx, initialDr, prof, expectedDr := getTestData(caseNum)
 	actualDr := resourceSigningProfileCheck(prof, vreqc, vreqobj, config, data, ctx)
+	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
+	if strings.Contains(expectedDr.Message, "no mutation") {
+		initialDr = expectedDr
+	}
+
+	if !reflect.DeepEqual(actualDr, initialDr) {
+		actDrBytes, _ := json.Marshal(initialDr)
+		expDrBytes, _ := json.Marshal(initialDr)
+		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
+	} else {
+		t.Logf("[Case %s] Test for resourceSigningProfileCheck() passed.", strconv.Itoa(caseNum))
+	}
+}
+
+func testSingleSignatureCheck(t *testing.T, caseNum int) {
+	_, _, v2resc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
+	if strings.Contains(expectedDr.Message, "no mutation") {
+		return
+	}
+	actualDr := resourceSigningProfileSignatureCheck(prof, v2resc, config, data, ctx)
 	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
+		t.Errorf("[Case %s] Test failed for resourceSigningProfileSignatureCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
-		t.Logf("[Case %s] Test for resourceSigningProfileCheck() passed.", strconv.Itoa(caseNum))
+		t.Logf("[Case %s] Test for resourceSigningProfileSignatureCheck() passed.", strconv.Itoa(caseNum))
 	}
 }

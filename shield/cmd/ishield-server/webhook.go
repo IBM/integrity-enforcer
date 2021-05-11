@@ -29,7 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
@@ -84,42 +83,8 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 	admissionRequest := admissionReviewReq.Request
 
 	// Run Request Handler
-	dr1 := requestHandler.Run(admissionRequest)
-
-	// Return an AdmissionResponse if dr1 is determined
-	if !dr1.IsUndetermined() {
-		allowed := true
-		if dr1.IsDenied() || dr1.IsErrorOccurred() {
-			allowed = false
-		}
-		return &admv1.AdmissionResponse{
-			UID:     admissionReviewReq.Request.UID,
-			Allowed: allowed,
-			Result: &metav1.Status{
-				Message: dr1.Message,
-			},
-		}
-	}
-
-	resourceHandler := shield.NewResourceHandler(config.ShieldConfig, metaLogger, reqLog)
-	var resource *unstructured.Unstructured
-	_ = json.Unmarshal(admissionRequest.Object.Raw, &resource)
-
-	// Run Resource Handler
-	dr2 := resourceHandler.Run(resource)
-
-	// Return an AdmissionResponse based on dr2
-	allowed := true
-	if dr2.IsDenied() || dr2.IsErrorOccurred() || dr2.IsUndetermined() {
-		allowed = false
-	}
-	return &admv1.AdmissionResponse{
-		UID:     admissionReviewReq.Request.UID,
-		Allowed: allowed,
-		Result: &metav1.Status{
-			Message: dr2.Message,
-		},
-	}
+	admissionResponse := requestHandler.Run(admissionRequest)
+	return admissionResponse
 }
 
 func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Request) {

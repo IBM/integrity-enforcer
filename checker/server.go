@@ -49,7 +49,7 @@ func handleRequest(admissionReq *admv1.AdmissionRequest) *shield.DecisionResult 
 	admissionRequest := admissionReq
 
 	//process request
-	result := reqHandler.Run(admissionRequest)
+	result := reqHandler.StepRun(admissionRequest)
 
 	return result
 
