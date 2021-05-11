@@ -28,8 +28,9 @@ import (
 	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
+	sign "github.com/IBM/integrity-enforcer/shield/pkg/util/sign"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
-	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
+	sigstore "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
 	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 )
 
@@ -165,135 +166,48 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, v2resc *common.V2Res
 		}
 	}
 
-	message := sig.data["message"]
-	signature := sig.data["signature"]
+	message := []byte(sig.data["message"])
+	signature := []byte(sig.data["signature"])
 	certificateStr, certFound := sig.data["certificate"]
+	certificate := []byte(certificateStr)
+
+	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .
+	// Then you can add your function here.
+	verifiers := map[string]*sign.Verifier{
+		"pgp":      sign.NewVerifier(pgp.Verify, self.PGPKeyPathList, sigFrom),
+		"x509":     sign.NewVerifier(x509.Verify, self.X509CertPathList, sigFrom),
+		"sigstore": sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom),
+		// "custom": sign.NewVerifier(custom.Verify, nil, sigFrom),
+	}
+	certRequired := map[string]bool{
+		"pgp":      false,
+		"x509":     true,
+		"sigstore": true,
+	}
 
 	verifiedKeyPathList := []string{}
-	if len(self.PGPKeyPathList) > 0 {
-		for _, keyPath := range self.PGPKeyPathList {
-			ok, reasonFail, signer, fingerprint, err := pgp.VerifySignature(keyPath, message, signature)
-			if err != nil {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  err,
-				}
-				return &SigVerifyResult{Error: vcerr, Signer: nil}, []string{}, err
-			} else if ok {
-				vcerr = nil
-				vsinfo = &common.SignerInfo{
-					Email:       signer.Email,
-					Name:        signer.Name,
-					Comment:     signer.Comment,
-					Fingerprint: fingerprint,
-				}
-				verifiedKeyPathList = append(verifiedKeyPathList, keyPath)
-			} else {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  nil,
-				}
-			}
+	for sigType, verifier := range verifiers {
+		// skip this verifier because no valid key path is configured
+		if !verifier.HasAnyKey() {
+			continue
 		}
-	}
-	if len(self.X509CertPathList) > 0 && certFound {
-		for _, caCertPath := range self.X509CertPathList {
-			certificate := []byte(certificateStr)
-			certOk, reasonFail, err := x509.VerifyCertificate(certificate, caCertPath)
-			if err != nil {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Error occured while verifying certificate in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  err,
-				}
-				return &SigVerifyResult{Error: vcerr, Signer: nil}, []string{}, err
-			} else if !certOk {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Failed to verify certificate in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  nil,
-				}
-				vsinfo = nil
-			} else {
-				cert, err := x509.ParseCertificate(certificate)
-				if err != nil {
-					logger.Error("Failed to parse certificate; ", err)
-				}
-				pubKeyBytes, err := x509.GetPublicKeyFromCertificate(certificate)
-				if err != nil {
-					logger.Error("Failed to get public key from certificate; ", err)
-				}
-				message := []byte(sig.data["message"])
-				signature := []byte(sig.data["signature"])
-				sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
-				if err != nil {
-					vcerr = &common.CheckError{
-						Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
-						Reason: reasonFail,
-						Error:  err,
-					}
-					return &SigVerifyResult{Error: vcerr, Signer: vsinfo}, []string{}, err
-				} else if sigOk {
-					vcerr = nil
-					vsinfo = x509.NewSignerInfoFromCert(cert)
-					verifiedKeyPathList = append(verifiedKeyPathList, caCertPath)
-				} else {
-					vcerr = &common.CheckError{
-						Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
-						Reason: reasonFail,
-						Error:  nil,
-					}
-					vsinfo = nil
-				}
-			}
+		// skip this because certificate is required for this verification but not found
+		if certRequired[sigType] && !certFound {
+			continue
 		}
-	}
-
-	if self.sigstoreEnabled && len(self.SigStoreCertPathList) > 0 && certFound {
-		for _, rootCertPath := range self.SigStoreCertPathList {
-			sigOk, err := sigstore.Verify([]byte(message), []byte(signature), []byte(certificateStr), &rootCertPath)
-			if err != nil {
-				reasonFail := fmt.Sprintf("Error occured while verifying signature in %s", sigFrom)
-				vcerr = &common.CheckError{
-					Msg:    reasonFail,
-					Reason: reasonFail,
-					Error:  err,
-				}
-				return &SigVerifyResult{Error: vcerr, Signer: vsinfo}, []string{}, err
-			} else if sigOk {
-				cert, err := x509.ParseCertificate([]byte(certificateStr))
-				if err != nil {
-					logger.Error("Failed to parse certificate; ", err)
-				}
-				vcerr = nil
-				vsinfo = x509.NewSignerInfoFromCert(cert)
-				verifiedKeyPathList = append(verifiedKeyPathList, rootCertPath)
-			} else {
-				reasonFail := fmt.Sprintf("Failed to verify signature in %s", sigFrom)
-				vcerr = &common.CheckError{
-					Msg:    reasonFail,
-					Reason: reasonFail,
-					Error:  nil,
-				}
-				vsinfo = nil
-			}
-		}
+		// try verifying
+		sigErr, sigInfo, okPathList := verifier.Verify(message, signature, certificate)
+		vcerr = sigErr
+		vsinfo = sigInfo
+		verifiedKeyPathList = append(verifiedKeyPathList, okPathList...)
 	}
 
 	// additional pgp verification trial only for detail error message
 	if vsinfo == nil {
 		for _, keyPath := range self.AllMountedKeyPathList {
 			if strings.Contains(keyPath, "/pgp/") {
-				if ok2, _, signer2, fingerprint2, _ := pgp.VerifySignature(keyPath, message, signature); ok2 && signer2 != nil {
-					signerAlt := &common.SignerInfo{
-						Email:       signer2.Email,
-						Name:        signer2.Name,
-						Comment:     signer2.Comment,
-						Fingerprint: fingerprint2,
-					}
-					vsinfo = signerAlt
+				if ok2, signer2, _, _ := pgp.Verify(message, signature, nil, keyPath); ok2 && signer2 != nil {
+					vsinfo = signer2
 					break
 				}
 			}

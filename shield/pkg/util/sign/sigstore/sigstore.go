@@ -14,6 +14,7 @@ import (
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
+	ishieldx509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 	"github.com/pkg/errors"
 
 	"github.com/sigstore/cosign/pkg/cosign"
@@ -27,7 +28,21 @@ const DefaultRootPemPath = "/tmp/root.pem"
 
 const defaultRootPemURL = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
 
-func Verify(message, signature, certPem []byte, rootPemPath *string) (bool, error) {
+func Verify(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error) {
+	ok, err := verify(message, signature, certificate, &path)
+	if !ok {
+		return false, nil, "Failed to verify sigstore signature", err
+	}
+
+	cert, err := ishieldx509.ParseCertificate(certificate)
+	if err != nil {
+		return false, nil, "Failed to parse certificate", err
+	}
+	signerInfo := ishieldx509.NewSignerInfoFromCert(cert)
+	return true, signerInfo, "", nil
+}
+
+func verify(message, signature, certPem []byte, rootPemPath *string) (bool, error) {
 
 	// clean up temporary files at the end of verification
 	defer deleteTmpYamls()

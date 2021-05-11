@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/packet"
@@ -66,7 +67,21 @@ func GetFirstIdentity(signer *openpgp.Entity) *openpgp.Identity {
 	return nil
 }
 
-func VerifySignature(keyPath string, msg, sig string) (bool, string, *Signer, []byte, error) {
+func Verify(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error) {
+	var signerInfo *common.SignerInfo
+	ok, reasonFail, signer, fingerprint, err := verifySignature(path, string(message), string(signature))
+	if signer != nil {
+		signerInfo = &common.SignerInfo{
+			Email:       signer.Email,
+			Name:        signer.Name,
+			Comment:     signer.Comment,
+			Fingerprint: fingerprint,
+		}
+	}
+	return ok, signerInfo, reasonFail, err
+}
+
+func verifySignature(keyPath string, msg, sig string) (bool, string, *Signer, []byte, error) {
 	if msg == "" {
 		return false, "Message to be verified is empty", nil, nil, nil
 	}

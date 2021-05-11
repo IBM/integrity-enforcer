@@ -59,13 +59,13 @@ func TestEndToEndCAVerification(t *testing.T) {
 		t.Error(err)
 	}
 
-	sigOk, _, err := VerifySignature(msg, sig, servicePubKeyBytes)
+	sigOk, _, err := verifySignature(msg, sig, servicePubKeyBytes)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log("signature verification result:", sigOk)
 
-	certOk, _, err := VerifyCertificate(serviceCertificate, testCertPoolDir)
+	certOk, _, err := verifyCertificate(serviceCertificate, testCertPoolDir)
 	if err != nil {
 		t.Error(err)
 	}
