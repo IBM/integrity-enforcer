@@ -48,15 +48,15 @@ type RequestContext struct {
 }
 
 type VRequestObject struct {
-	RawObject       []byte           `json:"-"`
-	RawOldObject    []byte           `json:"-"`
-	OrgMetadata     *VObjectMetadata `json:"orgMetadata"`
-	ClaimedMetadata *VObjectMetadata `json:"claimedMetadata"`
-	ObjLabels       string           `json:"objLabels"`
-	ObjMetaName     string           `json:"objMetaName"`
+	RawObject       []byte          `json:"-"`
+	RawOldObject    []byte          `json:"-"`
+	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
+	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
+	ObjLabels       string          `json:"objLabels"`
+	ObjMetaName     string          `json:"objMetaName"`
 }
 
-type VObjectMetadata struct {
+type ObjectMetadata struct {
 	Annotations *ResourceAnnotation `json:"annotations"`
 	Labels      *ResourceLabel      `json:"labels"`
 }
@@ -143,13 +143,13 @@ func AdmissionRequestToResourceContext(request *admv1.AdmissionRequest) *Resourc
 	return NewResourceContext(obj)
 }
 
-type VParsedRequest struct {
+type ParsedRequest struct {
 	UID     string
 	JsonStr string
 }
 
-func NewVParsedRequest(request *admv1.AdmissionRequest) *VParsedRequest {
-	var pr = &VParsedRequest{
+func NewParsedRequest(request *admv1.AdmissionRequest) *ParsedRequest {
+	var pr = &ParsedRequest{
 		UID: string(request.UID),
 	}
 	if reqBytes, err := json.Marshal(request); err != nil {
@@ -163,7 +163,7 @@ func NewVParsedRequest(request *admv1.AdmissionRequest) *VParsedRequest {
 	return pr
 }
 
-func (pr *VParsedRequest) getValue(path string) string {
+func (pr *ParsedRequest) getValue(path string) string {
 	var v string
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v = w.String()
@@ -171,7 +171,7 @@ func (pr *VParsedRequest) getValue(path string) string {
 	return v
 }
 
-func (pr *VParsedRequest) getArrayValue(path string) []string {
+func (pr *ParsedRequest) getArrayValue(path string) []string {
 	var v []string
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		x := w.Array()
@@ -182,7 +182,7 @@ func (pr *VParsedRequest) getArrayValue(path string) []string {
 	return v
 }
 
-func (pr *VParsedRequest) getAnnotations(path string) *ResourceAnnotation {
+func (pr *ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	var r map[string]string = map[string]string{}
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		m := w.Map()
@@ -196,7 +196,7 @@ func (pr *VParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	}
 }
 
-func (pr *VParsedRequest) getLabels(path string) *ResourceLabel {
+func (pr *ParsedRequest) getLabels(path string) *ResourceLabel {
 	var r map[string]string = map[string]string{}
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		m := w.Map()
@@ -210,7 +210,7 @@ func (pr *VParsedRequest) getLabels(path string) *ResourceLabel {
 	}
 }
 
-func (pr *VParsedRequest) getBool(path string, defaultValue bool) bool {
+func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v := w.String()
 		if b, err := strconv.ParseBool(v); err != nil {
@@ -224,7 +224,7 @@ func (pr *VParsedRequest) getBool(path string, defaultValue bool) bool {
 
 func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *VRequestObject) {
 
-	pr := NewVParsedRequest(req)
+	pr := NewParsedRequest(req)
 
 	name := pr.getValue("name")
 	if name == "" {
@@ -239,12 +239,12 @@ func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *VRequestO
 		namespace = pr.getValue("object.metdata.namespace")
 	}
 
-	orgMetadata := &VObjectMetadata{
+	orgMetadata := &ObjectMetadata{
 		Annotations: pr.getAnnotations("oldObject.metadata.annotations"),
 		Labels:      pr.getLabels("oldObject.metadata.labels"),
 	}
 
-	claimedMetadata := &VObjectMetadata{
+	claimedMetadata := &ObjectMetadata{
 		Annotations: pr.getAnnotations("object.metadata.annotations"),
 		Labels:      pr.getLabels("object.metadata.labels"),
 	}

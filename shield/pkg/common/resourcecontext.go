@@ -30,21 +30,16 @@ import (
 )
 
 type ResourceContext struct {
-	ResourceScope   string            `json:"resourceScope,omitempty"`
-	RawObject       []byte            `json:"-"`
-	Namespace       string            `json:"namespace"`
-	Name            string            `json:"name"`
-	ApiGroup        string            `json:"apiGroup"`
-	ApiVersion      string            `json:"apiVersion"`
-	Kind            string            `json:"kind"`
-	ClaimedMetadata *V2ObjectMetadata `json:"claimedMetadata"`
-	ObjLabels       string            `json:"objLabels"`
-	ObjMetaName     string            `json:"objMetaName"`
-}
-
-type V2ObjectMetadata struct {
-	Annotations *ResourceAnnotation `json:"annotations"`
-	Labels      *ResourceLabel      `json:"labels"`
+	ResourceScope   string          `json:"resourceScope,omitempty"`
+	RawObject       []byte          `json:"-"`
+	Namespace       string          `json:"namespace"`
+	Name            string          `json:"name"`
+	ApiGroup        string          `json:"apiGroup"`
+	ApiVersion      string          `json:"apiVersion"`
+	Kind            string          `json:"kind"`
+	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
+	ObjLabels       string          `json:"objLabels"`
+	ObjMetaName     string          `json:"objMetaName"`
 }
 
 func (resc *ResourceContext) ResourceRef() *ResourceRef {
@@ -108,12 +103,12 @@ func (rc *ResourceContext) ExcludeDiffValue() bool {
 	return false
 }
 
-type V2ParsedRequest struct {
+type ParsedResource struct {
 	JsonStr string
 }
 
-func NewV2ParsedRequest(resource *unstructured.Unstructured) *V2ParsedRequest {
-	var pr = &V2ParsedRequest{}
+func NewParsedResource(resource *unstructured.Unstructured) *ParsedResource {
+	var pr = &ParsedResource{}
 	if resBytes, err := json.Marshal(resource); err != nil {
 		logger.WithFields(log.Fields{
 			"err": err,
@@ -125,7 +120,7 @@ func NewV2ParsedRequest(resource *unstructured.Unstructured) *V2ParsedRequest {
 	return pr
 }
 
-func (pr *V2ParsedRequest) getValue(path string) string {
+func (pr *ParsedResource) getValue(path string) string {
 	var v string
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v = w.String()
@@ -133,7 +128,7 @@ func (pr *V2ParsedRequest) getValue(path string) string {
 	return v
 }
 
-func (pr *V2ParsedRequest) getArrayValue(path string) []string {
+func (pr *ParsedResource) getArrayValue(path string) []string {
 	var v []string
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		x := w.Array()
@@ -144,7 +139,7 @@ func (pr *V2ParsedRequest) getArrayValue(path string) []string {
 	return v
 }
 
-func (pr *V2ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
+func (pr *ParsedResource) getAnnotations(path string) *ResourceAnnotation {
 	var r map[string]string = map[string]string{}
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		m := w.Map()
@@ -158,7 +153,7 @@ func (pr *V2ParsedRequest) getAnnotations(path string) *ResourceAnnotation {
 	}
 }
 
-func (pr *V2ParsedRequest) getLabels(path string) *ResourceLabel {
+func (pr *ParsedResource) getLabels(path string) *ResourceLabel {
 	var r map[string]string = map[string]string{}
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		m := w.Map()
@@ -172,7 +167,7 @@ func (pr *V2ParsedRequest) getLabels(path string) *ResourceLabel {
 	}
 }
 
-func (pr *V2ParsedRequest) getBool(path string, defaultValue bool) bool {
+func (pr *ParsedResource) getBool(path string, defaultValue bool) bool {
 	if w := gjson.Get(pr.JsonStr, path); w.Exists() {
 		v := w.String()
 		if b, err := strconv.ParseBool(v); err != nil {
@@ -186,7 +181,7 @@ func (pr *V2ParsedRequest) getBool(path string, defaultValue bool) bool {
 
 func NewResourceContext(res *unstructured.Unstructured) *ResourceContext {
 
-	pr := NewV2ParsedRequest(res)
+	pr := NewParsedResource(res)
 
 	name := pr.getValue("name")
 	if name == "" {
@@ -198,7 +193,7 @@ func NewResourceContext(res *unstructured.Unstructured) *ResourceContext {
 		namespace = pr.getValue("metadata.namespace")
 	}
 
-	claimedMetadata := &V2ObjectMetadata{
+	claimedMetadata := &ObjectMetadata{
 		Annotations: pr.getAnnotations("metadata.annotations"),
 		Labels:      pr.getLabels("metadata.labels"),
 	}
