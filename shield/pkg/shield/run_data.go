@@ -116,7 +116,7 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 func (self *RunData) Init(conf *config.ShieldConfig) {
 	force := false
 	if self.forceInitialize {
-		force = false
+		force = true
 	}
 
 	self.RSPList, _ = self.loader.RSP.GetData(force)

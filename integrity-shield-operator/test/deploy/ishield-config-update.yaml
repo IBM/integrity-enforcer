@@ -94,33 +94,43 @@ spec:
           username: system:serviceaccount:kube-system:daemon-set-controller
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-ca, openshift-network-operator
           username: system:serviceaccount:openshift-service-ca:configmap-cabundle-injector-sa
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-ca-operator
           username: system:serviceaccount:openshift-service-ca-operator:service-ca-operator
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-catalog-controller-manager-operator
           username: system:serviceaccount:openshift-service-catalog-controller-manager-operator:openshift-service-catalog-controller-manager-operator
       - match:
-        - username: system:serviceaccount:openshift-console-operator:console-operator
+        - namespace: openshift-console-operator, openshift-console
+          username: system:serviceaccount:openshift-console-operator:console-operator
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-ca
           username: system:serviceaccount:openshift-service-ca:apiservice-cabundle-injector-sa
         - kind: ConfigMap
+          namespace: openshift-service-ca
           username: system:serviceaccount:openshift-service-ca:service-serving-cert-signer-sa
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-catalog-apiserver-operator
           username: system:serviceaccount:openshift-service-catalog-apiserver-operator:openshift-service-catalog-apiserver-operator
       - match:
-        - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+        - namespace: openshift-operator-lifecycle-manager
+          username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
       - match:
         - kind: Pod, PersistentVolumeClaim
           username: system:serviceaccount:kube-system:persistent-volume-binder
       - match:
         - kind: ConfigMap,DaemonSet
+          namespace: openshift-cluster-node-tuning-operator
           username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
       - match:
         - kind: Secret
+          namespace: openshift
           username: system:serviceaccount:openshift-cluster-samples-operator:cluster-samples-operator
       - match:
         - kind: ReplicaSet
@@ -133,12 +143,14 @@ spec:
           username: system:serviceaccount:kube-system:statefulset-controller
       - match:
         - kind: Deployment
+          namespace: openshift-ingress
           username: system:serviceaccount:openshift-ingress-operator:ingress-operator
       - match:
         - kind: ServiceAccount, Secret
           username: system:serviceaccount:openshift-infra:serviceaccount-pull-secrets-controller
       - match:
         - kind: Pod
+          namespace: openshift-marketplace
           username: system:node:*
       - match:
         - kind: ServiceAccount
@@ -270,8 +282,8 @@ spec:
       include:
       - '*'
     keyPathList:
-    - /keyring-secret/pgp/pubring.gpg
-    - /keyring-secret-signer2/pgp/pubring.gpg
+    - /sample-signer-keyconfig/pgp/pubring.gpg
+    - /sample-signer-keyconfig-2/pgp/pubring.gpg
     log:
       consoleLog:
         enabled: true
@@ -283,13 +295,14 @@ spec:
         - kind: '*'
       logAllResponse: true
       logLevel: trace
-    namespace: integrity-shield-operator-system
+    sideEffect:
+      createDenyEvent: true
+      createIShieldResourceEvent: true
+      updateRSPStatusForDeniedRequest: true
     patch:
       enabled: true
     plugin:
     - name: helm
-    profileNamespace: integrity-shield-operator-system
-    signatureNamespace: integrity-shield-operator-system
 status:
   message: ""
   state: ""

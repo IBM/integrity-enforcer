@@ -17,11 +17,13 @@
 package shield
 
 import (
+	"encoding/json"
 	"strings"
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
@@ -222,6 +224,8 @@ func protectedCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, 
 
 func protectedCheckByResource(v2resc *common.V2ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := v2resc.Map()
+	rfB, _ := json.Marshal(reqFields)
+	logger.Info("[DEBUG] reqFields:", string(rfB))
 
 	ruleTable := data.GetRuleTable(config.Namespace)
 	if ruleTable == nil {
@@ -236,7 +240,9 @@ func protectedCheckByResource(v2resc *common.V2ResourceContext, config *config.S
 			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
 		}, nil
 	}
+	logger.Info("[DEBUG] ruleTable is found.")
 	protected, ignoreMatched, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
+	logger.Info("[DEBUG] protected:", protected, "ignoreMatched:", ignoreMatched)
 	if !protected {
 		ctx.Allow = true
 		ctx.Verified = true

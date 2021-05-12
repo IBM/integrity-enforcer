@@ -148,8 +148,13 @@ func (self *Handler) Check() *DecisionResult {
 		return dr
 	}
 
+	logger.Info("[DEBUG] resource object; ", string(self.vreqobj.RawObject))
+
 	var obj *unstructured.Unstructured
 	_ = json.Unmarshal(self.vreqobj.RawObject, &obj)
+	// For the case that RawObject does not have metadata.namespace
+	obj.SetNamespace(self.vreqc.Namespace)
+
 	dr = self.resHandler.Run(obj)
 
 	if dr.IsUndetermined() {
@@ -169,7 +174,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 		shouldReport = true
 	}
 	iShieldAdmin := checkIfIShieldAdminRequest(self.vreqc, self.config)
-	if self.ctx.IShieldResource && iShieldAdmin && self.config.SideEffect.CreateIShieldResourceEventEnabled() {
+	if self.ctx.IShieldResource && !iShieldAdmin && self.config.SideEffect.CreateIShieldResourceEventEnabled() {
 		shouldReport = true
 	}
 
@@ -205,7 +210,7 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 	self.ctx = InitCheckContext(self.config)
 
 	// init resource handler with shared CheckContext
-	self.resHandler = NewResourceHandlerWithContext(self.config, self.serverLogger, self.requestLog, self.ctx)
+	self.resHandler = NewResourceHandlerWithContext(self.config, self.serverLogger, self.requestLog, self.ctx, self.data)
 
 	reqNamespace := getRequestNamespace(req)
 

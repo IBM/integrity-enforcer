@@ -341,7 +341,7 @@ create-ns:
 create-key-ring:
 	@echo creating keyring-secret
 	kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
-	# kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
+	kubectl create -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
 	# kubectl create -f $(SHIELD_OP_DIR)test/deploy/certpool_secret.yaml -n $(ISHIELD_OP_NS)
 
 install-crds:

@@ -53,9 +53,10 @@ func NewResourceHandler(config *config.ShieldConfig, metaLogger *log.Logger, req
 	return &ResourceHandler{config: config, data: data, serverLogger: metaLogger, requestLog: reqLog}
 }
 
-func NewResourceHandlerWithContext(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry, ctx *CheckContext) *ResourceHandler {
+func NewResourceHandlerWithContext(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry, ctx *CheckContext, data *RunData) *ResourceHandler {
 	resHandler := NewResourceHandler(config, metaLogger, reqLog)
 	resHandler.ctx = ctx
+	resHandler.data = data
 	return resHandler
 }
 
@@ -124,14 +125,13 @@ func (self *ResourceHandler) initialize(res *unstructured.Unstructured) *Decisio
 	// init RequestContext
 	self.v2resc = common.NewV2ResourceContext(res)
 
-	// init ResourceContext
-	self.v2resc = common.NewV2ResourceContext(res)
-
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
 	self.logEntry()
 
-	runDataLoader := NewLoader(self.config, reqNamespace)
-	self.data.loader = runDataLoader
+	if self.data.loader == nil {
+		runDataLoader := NewLoader(self.config, reqNamespace)
+		self.data.loader = runDataLoader
+	}
 	self.data.Init(self.config)
 
 	return &DecisionResult{Type: common.DecisionUndetermined}
