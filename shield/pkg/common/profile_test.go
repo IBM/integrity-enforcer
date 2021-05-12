@@ -28,8 +28,8 @@ func TestProfile(t *testing.T) {
 		t.Error(err)
 	}
 
-	var vreqc *VRequestContext
-	err = json.Unmarshal(reqcBytes, &vreqc)
+	var reqc *RequestContext
+	err = json.Unmarshal(reqcBytes, &reqc)
 	if err != nil {
 		t.Error(err)
 		return
@@ -41,14 +41,14 @@ func TestProfile(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	reqFields := vreqc.Map()
+	reqFields := reqc.Map()
 	ok1 := rule.MatchWithRequest(reqFields)
 	ruleStr := rule.String()
 
 	// t.Log(reqFields)
 	// t.Log(ruleStr)
 	if !ok1 {
-		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, vreqc.ResourceRef())
+		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, reqc.ResourceRef())
 		return
 	}
 
@@ -71,7 +71,7 @@ func TestProfile(t *testing.T) {
 	// t.Log(reqFields)
 	// t.Log(ruleStr)
 	if ok2 {
-		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, vreqc.ResourceRef())
+		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, reqc.ResourceRef())
 		return
 	}
 
@@ -80,12 +80,12 @@ func TestProfile(t *testing.T) {
 	ok3 := rule.MatchWithRequest(reqFields)
 	ruleStr = rule.String()
 	if !ok3 {
-		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, vreqc.ResourceRef())
+		t.Errorf("Rule does not match; Rule: %s, RequestRef: %s", ruleStr, reqc.ResourceRef())
 		return
 	}
 
-	request1 := NewRequestFromReqContext(vreqc)
-	request2 := NewRequestFromReqContext(vreqc)
+	request1 := NewRequestFromReqContext(reqc)
+	request2 := NewRequestFromReqContext(reqc)
 	request1Str := request1.String()
 	request2Str := request2.String()
 	if !request1.Equal(request2) {
@@ -101,14 +101,14 @@ func TestKustomizePattern(t *testing.T) {
 		t.Error(err)
 	}
 
-	var vreqc *VRequestContext
-	err = json.Unmarshal(reqcBytes, &vreqc)
+	var reqc *RequestContext
+	err = json.Unmarshal(reqcBytes, &reqc)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	originalName := vreqc.Name
-	vreqc.Name = "prefix." + vreqc.Name
+	originalName := reqc.Name
+	reqc.Name = "prefix." + reqc.Name
 
 	var kust *KustomizePattern
 	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*.","allowNamespaceChange":true}`)
@@ -117,12 +117,12 @@ func TestKustomizePattern(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	reqFields := vreqc.Map()
+	reqFields := reqc.Map()
 	if ok := kust.MatchWith(reqFields); !ok {
 		t.Errorf("ReqContext does not match with KustomizePattern: %s", string(kustBytes))
 		return
 	}
-	rawRef := vreqc.ResourceRef()
+	rawRef := reqc.ResourceRef()
 	kustRef := kust.Override(rawRef)
 	if kustRef.Name != originalName {
 		t.Errorf("OverrideName() returns wrong result; expected: %s, actual: %s", originalName, kustRef.Name)

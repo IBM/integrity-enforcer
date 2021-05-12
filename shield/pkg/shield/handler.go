@@ -39,9 +39,9 @@ import (
 type Handler struct {
 	config        *config.ShieldConfig
 	ctx           *CheckContext
-	vreqc         *common.VRequestContext
+	reqc          *common.RequestContext
 	vreqobj       *common.VRequestObject
-	v2resc        *common.V2ResourceContext
+	resc          *common.ResourceContext
 	data          *RunData
 	serverLogger  *log.Logger
 	requestLog    *log.Entry
@@ -91,11 +91,11 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	resp := &admv1.AdmissionResponse{}
 
 	if dr.IsUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.vreqc, self.vreqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.vreqobj, self.ctx, self.config)
 	} else if dr.IsErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message, self.vreqc, self.vreqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.vreqobj, self.ctx, self.config)
 	} else {
-		resp = createAdmissionResponse(dr.IsAllowed(), dr.Message, self.vreqc, self.vreqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(dr.IsAllowed(), dr.Message, self.reqc, self.vreqobj, self.ctx, self.config)
 	}
 
 	// log results
@@ -115,45 +115,43 @@ func (self *Handler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
-	dr = inScopeCheck(self.vreqc, self.config, self.data, self.ctx)
+	dr = inScopeCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
-	dr = formatCheck(self.vreqc, self.vreqobj, self.config, self.data, self.ctx)
+	dr = formatCheck(self.reqc, self.vreqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 
 		return dr
 	}
 
-	dr = iShieldResourceCheck(self.vreqc, self.config, self.data, self.ctx)
+	dr = iShieldResourceCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 
-	dr = deleteCheck(self.vreqc, self.config, self.data, self.ctx)
+	dr = deleteCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
-	dr, matchedProfiles = protectedCheck(self.vreqc, self.config, self.data, self.ctx)
+	dr, matchedProfiles = protectedCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 
-	dr = mutationCheck(matchedProfiles, self.vreqc, self.vreqobj, self.config, self.data, self.ctx)
+	dr = mutationCheck(matchedProfiles, self.reqc, self.vreqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
-
-	logger.Info("[DEBUG] resource object; ", string(self.vreqobj.RawObject))
 
 	var obj *unstructured.Unstructured
 	_ = json.Unmarshal(self.vreqobj.RawObject, &obj)
 	// For the case that RawObject does not have metadata.namespace
-	obj.SetNamespace(self.vreqc.Namespace)
+	obj.SetNamespace(self.reqc.Namespace)
 
 	dr = self.resHandler.Run(obj)
 
@@ -173,7 +171,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 	if !self.ctx.Allow && self.config.SideEffect.CreateDenyEventEnabled() {
 		shouldReport = true
 	}
-	iShieldAdmin := checkIfIShieldAdminRequest(self.vreqc, self.config)
+	iShieldAdmin := checkIfIShieldAdminRequest(self.reqc, self.config)
 	if self.ctx.IShieldResource && !iShieldAdmin && self.config.SideEffect.CreateIShieldResourceEventEnabled() {
 		shouldReport = true
 	}
@@ -185,7 +183,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 	var err error
 	// create/update Event
 	if self.config.SideEffect.CreateEventEnabled() {
-		err = createOrUpdateEvent(self.vreqc, self.ctx, self.config, denyRSP)
+		err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
 		if err != nil {
 			self.requestLog.Error("Failed to create event; ", err)
 			return err
@@ -194,7 +192,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 	// update RSP status
 	if self.config.SideEffect.UpdateRSPStatusEnabled() {
-		err = updateRSPStatus(denyRSP, self.vreqc, self.ctx.Message)
+		err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
 		if err != nil {
 			self.requestLog.Error("Failed to update status; ", err)
 		}
@@ -215,10 +213,10 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 	reqNamespace := getRequestNamespace(req)
 
 	// init RequestContext & RequestObject
-	self.vreqc, self.vreqobj = common.NewVRequestContext(req)
+	self.reqc, self.vreqobj = common.NewRequestContext(req)
 
 	// init ResourceContext
-	self.v2resc = common.AdmissionRequestToV2ResourceContext(req)
+	self.resc = common.AdmissionRequestToResourceContext(req)
 
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
 	self.logEntry()
@@ -232,7 +230,7 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 
 func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 	sigConf := self.data.GetSignerConfig()
-	isBreakGlass := checkIfBreakGlassEnabled(self.vreqc, sigConf)
+	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, sigConf)
 	isDetectMode := checkIfDetectOnly(self.config)
 
 	if !isBreakGlass && !isDetectMode {
@@ -264,18 +262,18 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 func (self *Handler) finalize(dr *DecisionResult) {
 	if dr.IsAllowed() {
 		resetRuleTableCache := false
-		iShieldServer := checkIfIShieldServerRequest(self.vreqc, self.config)
-		iShieldOperator := checkIfIShieldOperatorRequest(self.vreqc, self.config)
-		if self.vreqc.Kind == "Namespace" {
-			if self.vreqc.IsUpdateRequest() {
-				mtResult, _ := MutationCheck(self.vreqc, self.vreqobj)
+		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
+		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
+		if self.reqc.Kind == "Namespace" {
+			if self.reqc.IsUpdateRequest() {
+				mtResult, _ := MutationCheck(self.reqc, self.vreqobj)
 				if mtResult != nil && mtResult.IsMutated {
 					resetRuleTableCache = true
 				}
 			} else {
 				resetRuleTableCache = true
 			}
-		} else if self.vreqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
+		} else if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
 			resetRuleTableCache = true
 		}
 		if resetRuleTableCache {
@@ -288,7 +286,7 @@ func (self *Handler) finalize(dr *DecisionResult) {
 }
 
 func (self *Handler) logEntry() {
-	if ok, levelStr := self.config.ConsoleLogEnabled(self.v2resc); ok {
+	if ok, levelStr := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(levelStr) // change singleton logger level; this might be overwritten by parallel handler instance
 		lvl, _ := log.ParseLevel(levelStr)
 		self.serverLogger.SetLevel(lvl) // set custom log level for this request
@@ -297,30 +295,30 @@ func (self *Handler) logEntry() {
 }
 
 func (self *Handler) logContext() {
-	if self.config.ContextLogEnabled(self.v2resc) && self.logInScope {
+	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
-		logRecord := self.ctx.convertToLogRecord(self.vreqc)
-		if self.config.Log.IncludeRequest && !self.vreqc.IsSecret() {
-			logRecord["request.dump"] = self.vreqc.RequestJsonStr
+		logRecord := self.ctx.convertToLogRecord(self.reqc)
+		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
+			logRecord["request.dump"] = self.reqc.RequestJsonStr
 		}
 		logBytes, err := json.Marshal(logRecord)
 		if err != nil {
 			self.requestLog.Error(err)
 			logBytes = []byte("")
 		}
-		if self.vreqc.ResourceScope == "Namespaced" || (self.vreqc.ResourceScope == "Cluster" && self.ctx.Protected) {
+		if self.reqc.ResourceScope == "Namespaced" || (self.reqc.ResourceScope == "Cluster" && self.ctx.Protected) {
 			self.contextLogger.SendLog(logBytes)
 		}
 	}
 }
 
 func (self *Handler) logExit() {
-	if ok, _ := self.config.ConsoleLogEnabled(self.v2resc); ok {
+	if ok, _ := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(self.config.Log.LogLevel)
 		self.requestLog.WithFields(log.Fields{
 			"allowed":    self.ctx.Allow,
 			"aborted":    self.ctx.Aborted,
-			"requestUID": self.vreqc.RequestUid,
+			"requestUID": self.reqc.RequestUid,
 		}).Trace("New Admission Request Sent")
 	}
 }

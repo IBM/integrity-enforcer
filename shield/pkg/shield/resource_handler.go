@@ -39,7 +39,7 @@ import (
 type ResourceHandler struct {
 	config        *config.ShieldConfig
 	ctx           *CheckContext
-	v2resc        *common.V2ResourceContext
+	resc          *common.ResourceContext
 	data          *RunData
 	serverLogger  *log.Logger
 	requestLog    *log.Entry
@@ -81,20 +81,20 @@ func (self *ResourceHandler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
-	dr = inScopeCheckByResource(self.v2resc, self.config, self.data, self.ctx)
+	dr = inScopeCheckByResource(self.resc, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
-	dr, matchedProfiles = protectedCheckByResource(self.v2resc, self.config, self.data, self.ctx)
+	dr, matchedProfiles = protectedCheckByResource(self.resc, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	for _, prof := range matchedProfiles {
-		dr = resourceSigningProfileSignatureCheck(prof, self.v2resc, self.config, self.data, self.ctx)
+		dr = resourceSigningProfileSignatureCheck(prof, self.resc, self.config, self.data, self.ctx)
 		if dr.IsAllowed() {
 			// this RSP allowed the request. will check next RSP.
 		} else {
@@ -123,7 +123,7 @@ func (self *ResourceHandler) initialize(res *unstructured.Unstructured) *Decisio
 	reqNamespace := res.GetNamespace()
 
 	// init RequestContext
-	self.v2resc = common.NewV2ResourceContext(res)
+	self.resc = common.NewResourceContext(res)
 
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
 	self.logEntry()
@@ -143,7 +143,7 @@ func (self *ResourceHandler) finalize() {
 }
 
 func (self *ResourceHandler) logEntry() {
-	if ok, levelStr := self.config.ConsoleLogEnabled(self.v2resc); ok {
+	if ok, levelStr := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(levelStr) // change singleton logger level; this might be overwritten by parallel handler instance
 		lvl, _ := log.ParseLevel(levelStr)
 		self.serverLogger.SetLevel(lvl) // set custom log level for this request
@@ -152,22 +152,22 @@ func (self *ResourceHandler) logEntry() {
 }
 
 func (self *ResourceHandler) logContext() {
-	if self.config.ContextLogEnabled(self.v2resc) && self.logInScope {
+	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
-		logRecord := self.ctx.convertToLogRecordByResource(self.v2resc)
+		logRecord := self.ctx.convertToLogRecordByResource(self.resc)
 		logBytes, err := json.Marshal(logRecord)
 		if err != nil {
 			self.requestLog.Error(err)
 			logBytes = []byte("")
 		}
-		if self.v2resc.ResourceScope == "Namespaced" || (self.v2resc.ResourceScope == "Cluster" && self.ctx.Protected) {
+		if self.resc.ResourceScope == "Namespaced" || (self.resc.ResourceScope == "Cluster" && self.ctx.Protected) {
 			self.contextLogger.SendLog(logBytes)
 		}
 	}
 }
 
 func (self *ResourceHandler) logExit() {
-	if ok, _ := self.config.ConsoleLogEnabled(self.v2resc); ok {
+	if ok, _ := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(self.config.Log.LogLevel)
 		self.requestLog.WithFields(log.Fields{
 			"allowed": self.ctx.Allow,

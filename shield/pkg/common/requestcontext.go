@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type VRequestContext struct {
+type RequestContext struct {
 	ResourceScope  string   `json:"resourceScope,omitempty"`
 	DryRun         bool     `json:"dryRun"`
 	RequestJsonStr string   `json:"request"`
@@ -61,7 +61,7 @@ type VObjectMetadata struct {
 	Labels      *ResourceLabel      `json:"labels"`
 }
 
-func (reqc *VRequestContext) ResourceRef() *ResourceRef {
+func (reqc *RequestContext) ResourceRef() *ResourceRef {
 	gv := schema.GroupVersion{
 		Group:   reqc.ApiGroup,
 		Version: reqc.ApiVersion,
@@ -74,9 +74,9 @@ func (reqc *VRequestContext) ResourceRef() *ResourceRef {
 	}
 }
 
-func (vreqc *VRequestContext) Map() map[string]string {
+func (reqc *RequestContext) Map() map[string]string {
 	m := map[string]string{}
-	v := reflect.Indirect(reflect.ValueOf(vreqc))
+	v := reflect.Indirect(reflect.ValueOf(reqc))
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		f := v.Field(i)
@@ -91,56 +91,56 @@ func (vreqc *VRequestContext) Map() map[string]string {
 	return m
 }
 
-func (vreqc *VRequestContext) Info(m map[string]string) string {
+func (reqc *RequestContext) Info(m map[string]string) string {
 	if m == nil {
 		m = map[string]string{}
 	}
-	m["operation"] = vreqc.Operation
-	m["kind"] = vreqc.Kind
-	m["scope"] = vreqc.ResourceScope
-	m["namespace"] = vreqc.Namespace
-	m["name"] = vreqc.Name
-	m["userName"] = vreqc.UserName
-	m["request.uid"] = vreqc.RequestUid
+	m["operation"] = reqc.Operation
+	m["kind"] = reqc.Kind
+	m["scope"] = reqc.ResourceScope
+	m["namespace"] = reqc.Namespace
+	m["name"] = reqc.Name
+	m["userName"] = reqc.UserName
+	m["request.uid"] = reqc.RequestUid
 	infoBytes, _ := json.Marshal(m)
 	return string(infoBytes)
 }
 
-func (vreqc *VRequestContext) GroupVersion() string {
-	return schema.GroupVersion{Group: vreqc.ApiGroup, Version: vreqc.ApiVersion}.String()
+func (reqc *RequestContext) GroupVersion() string {
+	return schema.GroupVersion{Group: reqc.ApiGroup, Version: reqc.ApiVersion}.String()
 }
 
-func (rc *VRequestContext) IsUpdateRequest() bool {
+func (rc *RequestContext) IsUpdateRequest() bool {
 	return rc.Operation == "UPDATE"
 }
 
-func (rc *VRequestContext) IsCreateRequest() bool {
+func (rc *RequestContext) IsCreateRequest() bool {
 	return rc.Operation == "CREATE"
 }
 
-func (rc *VRequestContext) IsDeleteRequest() bool {
+func (rc *RequestContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
 }
 
-func (rc *VRequestContext) IsSecret() bool {
+func (rc *RequestContext) IsSecret() bool {
 	return rc.Kind == "Secret" && rc.GroupVersion() == "v1"
 }
 
-func (rc *VRequestContext) IsServiceAccount() bool {
+func (rc *RequestContext) IsServiceAccount() bool {
 	return rc.Kind == "ServiceAccount" && rc.GroupVersion() == "v1"
 }
 
-func (rc *VRequestContext) ExcludeDiffValue() bool {
+func (rc *RequestContext) ExcludeDiffValue() bool {
 	if rc.Kind == "Secret" {
 		return true
 	}
 	return false
 }
 
-func AdmissionRequestToV2ResourceContext(request *admv1.AdmissionRequest) *V2ResourceContext {
+func AdmissionRequestToResourceContext(request *admv1.AdmissionRequest) *ResourceContext {
 	var obj *unstructured.Unstructured
 	_ = json.Unmarshal(request.Object.Raw, &obj)
-	return NewV2ResourceContext(obj)
+	return NewResourceContext(obj)
 }
 
 type VParsedRequest struct {
@@ -222,7 +222,7 @@ func (pr *VParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewVRequestContext(req *admv1.AdmissionRequest) (*VRequestContext, *VRequestObject) {
+func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *VRequestObject) {
 
 	pr := NewVParsedRequest(req)
 
@@ -256,7 +256,7 @@ func NewVRequestContext(req *admv1.AdmissionRequest) (*VRequestContext, *VReques
 		resourceScope = "Cluster"
 	}
 
-	rc := &VRequestContext{
+	rc := &RequestContext{
 		DryRun:         *req.DryRun,
 		ResourceScope:  resourceScope,
 		RequestUid:     pr.UID,

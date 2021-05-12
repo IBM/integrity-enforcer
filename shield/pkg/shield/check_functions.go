@@ -17,21 +17,19 @@
 package shield
 
 import (
-	"encoding/json"
 	"strings"
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
 // check if request is inScope or not
-func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	reqNamespace := getRequestNamespaceFromVRequestContext(vreqc)
+func inScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	reqNamespace := getRequestNamespaceFromRequestContext(reqc)
 
 	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
@@ -47,7 +45,7 @@ func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, da
 		}
 	}
 
-	if checkIfDryRunAdmission(vreqc) {
+	if checkIfDryRunAdmission(reqc) {
 		msg := "request is dry run"
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
@@ -59,7 +57,7 @@ func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, da
 		}
 	}
 
-	if checkIfUnprocessedInIShield(vreqc.Map(), config) {
+	if checkIfUnprocessedInIShield(reqc.Map(), config) {
 		msg := "request is not processed by IShield"
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
@@ -75,8 +73,8 @@ func inScopeCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, da
 }
 
 // check if request is inScope or not
-func inScopeCheckByResource(v2resc *common.V2ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	reqNamespace := getRequestNamespaceFromV2ResourceContext(v2resc)
+func inScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	reqNamespace := getRequestNamespaceFromResourceContext(resc)
 
 	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
@@ -92,7 +90,7 @@ func inScopeCheckByResource(v2resc *common.V2ResourceContext, config *config.Shi
 		}
 	}
 
-	if checkIfUnprocessedInIShield(v2resc.Map(), config) {
+	if checkIfUnprocessedInIShield(resc.Map(), config) {
 		msg := "request is not processed by IShield"
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
@@ -107,8 +105,8 @@ func inScopeCheckByResource(v2resc *common.V2ResourceContext, config *config.Shi
 	return undeterminedDescision()
 }
 
-func formatCheck(vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if ok, msg := ValidateResource(vreqc, vreqobj, config.Namespace); !ok {
+func formatCheck(reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	if ok, msg := ValidateResource(reqc, vreqobj, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
@@ -121,8 +119,8 @@ func formatCheck(vreqc *common.VRequestContext, vreqobj *common.VRequestObject, 
 	return undeterminedDescision()
 }
 
-func iShieldResourceCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	reqRef := vreqc.ResourceRef()
+func iShieldResourceCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	reqRef := reqc.ResourceRef()
 	iShieldOperatorResource := config.IShieldResourceCondition.IsOperatorResource(reqRef)
 	iShieldServerResource := config.IShieldResourceCondition.IsServerResource(reqRef)
 
@@ -132,11 +130,11 @@ func iShieldResourceCheck(vreqc *common.VRequestContext, config *config.ShieldCo
 		ctx.IShieldResource = true
 	}
 
-	adminReq := checkIfIShieldAdminRequest(vreqc, config)
-	serverReq := checkIfIShieldServerRequest(vreqc, config)
-	operatorReq := checkIfIShieldOperatorRequest(vreqc, config)
-	gcReq := checkIfGarbageCollectorRequest(vreqc)
-	spSAReq := checkIfSpecialServiceAccountRequest(vreqc) && (vreqc.Kind != "ClusterServiceVersion")
+	adminReq := checkIfIShieldAdminRequest(reqc, config)
+	serverReq := checkIfIShieldServerRequest(reqc, config)
+	operatorReq := checkIfIShieldOperatorRequest(reqc, config)
+	gcReq := checkIfGarbageCollectorRequest(reqc)
+	spSAReq := checkIfSpecialServiceAccountRequest(reqc) && (reqc.Kind != "ClusterServiceVersion")
 
 	if (iShieldOperatorResource && (adminReq || operatorReq || gcReq || spSAReq)) || (iShieldServerResource && (operatorReq || serverReq || gcReq || spSAReq)) {
 		ctx.Allow = true
@@ -163,8 +161,8 @@ func iShieldResourceCheck(vreqc *common.VRequestContext, config *config.ShieldCo
 	}
 }
 
-func deleteCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if vreqc.IsDeleteRequest() {
+func deleteCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	if reqc.IsDeleteRequest() {
 		ctx.Allow = true
 		ctx.Verified = true
 		ctx.ReasonCode = common.REASON_SKIP_DELETE
@@ -179,8 +177,8 @@ func deleteCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, dat
 	return undeterminedDescision()
 }
 
-func protectedCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
-	reqFields := vreqc.Map()
+func protectedCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
+	reqFields := reqc.Map()
 	ruleTable := data.GetRuleTable(config.Namespace)
 	if ruleTable == nil {
 		ctx.Allow = true
@@ -222,10 +220,8 @@ func protectedCheck(vreqc *common.VRequestContext, config *config.ShieldConfig, 
 	return undeterminedDescision(), matchedProfiles
 }
 
-func protectedCheckByResource(v2resc *common.V2ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
-	reqFields := v2resc.Map()
-	rfB, _ := json.Marshal(reqFields)
-	logger.Info("[DEBUG] reqFields:", string(rfB))
+func protectedCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
+	reqFields := resc.Map()
 
 	ruleTable := data.GetRuleTable(config.Namespace)
 	if ruleTable == nil {
@@ -240,9 +236,7 @@ func protectedCheckByResource(v2resc *common.V2ResourceContext, config *config.S
 			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
 		}, nil
 	}
-	logger.Info("[DEBUG] ruleTable is found.")
 	protected, ignoreMatched, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
-	logger.Info("[DEBUG] protected:", protected, "ignoreMatched:", ignoreMatched)
 	if !protected {
 		ctx.Allow = true
 		ctx.Verified = true
@@ -270,11 +264,11 @@ func protectedCheckByResource(v2resc *common.V2ResourceContext, config *config.S
 	return undeterminedDescision(), matchedProfiles
 }
 
-func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	mutationCheckPassedCount := 0
 	var dr *DecisionResult
 	for _, prof := range matchedProfiles {
-		tmpdr := resourceSigningProfileCheck(prof, vreqc, vreqobj, config, data, ctx)
+		tmpdr := resourceSigningProfileCheck(prof, reqc, vreqobj, config, data, ctx)
 		if tmpdr.IsAllowed() {
 			// no mutations are found
 			dr = tmpdr
@@ -294,13 +288,13 @@ func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, vreqc *commo
 	return undeterminedDescision()
 }
 
-func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
 	var mutResult *common.MutationEvalResult
 
-	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, vreqc, vreqobj, config)
+	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, reqc, vreqobj, config)
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -330,16 +324,16 @@ func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, vr
 	}
 }
 
-func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, v2resc *common.V2ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
 	var sigResult *common.SignatureEvalResult
 
 	sigConf := data.GetSignerConfig()
-	rsigList := data.GetResSigList(v2resc)
+	rsigList := data.GetResSigList(resc)
 
-	allowed, evalReason, evalMessage, sigResult = singleProfileSignatureCheck(singleProfile, v2resc, config, sigConf, rsigList)
+	allowed, evalReason, evalMessage, sigResult = singleProfileSignatureCheck(singleProfile, resc, config, sigConf, rsigList)
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -366,11 +360,11 @@ func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningPr
 	}
 }
 
-func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *common.VRequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
+func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
 	var mutResult *common.MutationEvalResult
 	var err error
-	if vreqc.IsUpdateRequest() {
-		mutResult, err = NewMutationChecker().Eval(vreqc, vreqobj, singleProfile)
+	if reqc.IsUpdateRequest() {
+		mutResult, err = NewMutationChecker().Eval(reqc, vreqobj, singleProfile)
 		if err != nil {
 			return false, common.REASON_ERROR, err.Error(), mutResult
 		}
@@ -382,7 +376,7 @@ func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, vreqc *comm
 	return false, common.REASON_UNEXPECTED, "mutation found. this request should be checked by siganture", mutResult
 }
 
-func singleProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, v2resc *common.V2ResourceContext, config *config.ShieldConfig, sigConfRes *sigconfapi.SignerConfig, rsigList *rsigapi.ResourceSignatureList) (bool, int, string, *common.SignatureEvalResult) {
+func singleProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, sigConfRes *sigconfapi.SignerConfig, rsigList *rsigapi.ResourceSignatureList) (bool, int, string, *common.SignatureEvalResult) {
 	var sigResult *common.SignatureEvalResult
 	var err error
 
@@ -392,7 +386,7 @@ func singleProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, v2
 	if err != nil {
 		return false, common.REASON_ERROR, err.Error(), nil
 	}
-	sigResult, err = evaluator.Eval(v2resc, rsigList, singleProfile)
+	sigResult, err = evaluator.Eval(resc, rsigList, singleProfile)
 	if err != nil {
 		return false, common.REASON_ERROR, err.Error(), sigResult
 	}

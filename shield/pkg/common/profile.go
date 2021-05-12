@@ -316,15 +316,15 @@ func (self *Request) Equal(req *Request) bool {
 	return reflect.DeepEqual(self, req)
 }
 
-func NewRequestFromReqContext(vreqc *VRequestContext) *Request {
+func NewRequestFromReqContext(reqc *RequestContext) *Request {
 	req := &Request{
-		Operation:  vreqc.Operation,
-		Namespace:  vreqc.Namespace,
-		ApiGroup:   vreqc.ApiGroup,
-		ApiVersion: vreqc.ApiVersion,
-		Kind:       vreqc.Kind,
-		Name:       vreqc.Name,
-		UserName:   vreqc.UserName,
+		Operation:  reqc.Operation,
+		Namespace:  reqc.Namespace,
+		ApiGroup:   reqc.ApiGroup,
+		ApiVersion: reqc.ApiVersion,
+		Kind:       reqc.Kind,
+		Name:       reqc.Name,
+		UserName:   reqc.UserName,
 	}
 	return req
 }

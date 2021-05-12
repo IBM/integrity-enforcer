@@ -41,7 +41,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, v2resc *common.V2ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
+	Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
 }
 
 /**********************************************
@@ -68,14 +68,14 @@ func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPath
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, v2resc *common.V2ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
 
-	excludeDiffValue := v2resc.ExcludeDiffValue()
+	excludeDiffValue := resc.ExcludeDiffValue()
 
-	kustomizeList := signingProfile.Kustomize(v2resc.Map())
+	kustomizeList := signingProfile.Kustomize(resc.Map())
 	allowNSChange := false
 	for _, k := range kustomizeList {
 		if k.AllowNamespaceChange {
@@ -83,10 +83,10 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, v2resc *common.V2Res
 			break
 		}
 	}
-	allowDiffPatterns := makeAllowDiffPatterns(v2resc, kustomizeList)
+	allowDiffPatterns := makeAllowDiffPatterns(resc, kustomizeList)
 
-	protectAttrsList := signingProfile.ProtectAttrs(v2resc.Map())
-	ignoreAttrsList := signingProfile.IgnoreAttrs(v2resc.Map())
+	protectAttrsList := signingProfile.ProtectAttrs(resc.Map())
+	ignoreAttrsList := signingProfile.IgnoreAttrs(resc.Map())
 
 	resSigUID := sig.data["resourceSignatureUID"]
 	sigFrom := ""
@@ -107,7 +107,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, v2resc *common.V2Res
 		if allowNSChange {
 			messageNode, err := mapnode.NewFromYamlBytes([]byte(message))
 			if err == nil {
-				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, v2resc.Namespace)
+				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, resc.Namespace)
 				overwriteNode, _ := mapnode.NewFromBytes([]byte(overwriteJson))
 				newMessageNode, err := messageNode.Merge(overwriteNode)
 				if err == nil {
@@ -116,7 +116,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, v2resc *common.V2Res
 			}
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), v2resc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, v2resc.ResourceScope, v2resc.Kind, sig.SignType, excludeDiffValue)
+		matched, diffStr := self.MatchMessage([]byte(message), resc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, resc.ResourceScope, resc.Kind, sig.SignType, excludeDiffValue)
 		if !matched {
 			msg := fmt.Sprintf("The message for this signature in %s is not identical with the requested object. diff: %s", sigFrom, diffStr)
 			return &SigVerifyResult{
@@ -441,9 +441,9 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 	return message
 }
 
-func makeAllowDiffPatterns(v2resc *common.V2ResourceContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
-	ref := v2resc.ResourceRef()
-	name := v2resc.Name
+func makeAllowDiffPatterns(resc *common.ResourceContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
+	ref := resc.ResourceRef()
+	name := resc.Name
 	kustomizedName := name
 	for _, pattern := range kustomizeList {
 		newRef := pattern.Override(ref)
@@ -481,7 +481,7 @@ type HelmVerifier struct {
 	KeyPathList []string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, v2resc *common.V2ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error

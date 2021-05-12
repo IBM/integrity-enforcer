@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type V2ResourceContext struct {
+type ResourceContext struct {
 	ResourceScope   string            `json:"resourceScope,omitempty"`
 	RawObject       []byte            `json:"-"`
 	Namespace       string            `json:"namespace"`
@@ -47,22 +47,22 @@ type V2ObjectMetadata struct {
 	Labels      *ResourceLabel      `json:"labels"`
 }
 
-func (v2resc *V2ResourceContext) ResourceRef() *ResourceRef {
+func (resc *ResourceContext) ResourceRef() *ResourceRef {
 	gv := schema.GroupVersion{
-		Group:   v2resc.ApiGroup,
-		Version: v2resc.ApiVersion,
+		Group:   resc.ApiGroup,
+		Version: resc.ApiVersion,
 	}
 	return &ResourceRef{
-		Name:       v2resc.Name,
-		Namespace:  v2resc.Namespace,
-		Kind:       v2resc.Kind,
+		Name:       resc.Name,
+		Namespace:  resc.Namespace,
+		Kind:       resc.Kind,
 		ApiVersion: gv.String(),
 	}
 }
 
-func (v2resc *V2ResourceContext) Map() map[string]string {
+func (resc *ResourceContext) Map() map[string]string {
 	m := map[string]string{}
-	v := reflect.Indirect(reflect.ValueOf(v2resc))
+	v := reflect.Indirect(reflect.ValueOf(resc))
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		f := v.Field(i)
@@ -77,31 +77,31 @@ func (v2resc *V2ResourceContext) Map() map[string]string {
 	return m
 }
 
-func (v2resc *V2ResourceContext) Info(m map[string]string) string {
+func (resc *ResourceContext) Info(m map[string]string) string {
 	if m == nil {
 		m = map[string]string{}
 	}
-	m["kind"] = v2resc.Kind
-	m["scope"] = v2resc.ResourceScope
-	m["namespace"] = v2resc.Namespace
-	m["name"] = v2resc.Name
+	m["kind"] = resc.Kind
+	m["scope"] = resc.ResourceScope
+	m["namespace"] = resc.Namespace
+	m["name"] = resc.Name
 	infoBytes, _ := json.Marshal(m)
 	return string(infoBytes)
 }
 
-func (v2resc *V2ResourceContext) GroupVersion() string {
-	return schema.GroupVersion{Group: v2resc.ApiGroup, Version: v2resc.ApiVersion}.String()
+func (resc *ResourceContext) GroupVersion() string {
+	return schema.GroupVersion{Group: resc.ApiGroup, Version: resc.ApiVersion}.String()
 }
 
-func (rc *V2ResourceContext) IsSecret() bool {
+func (rc *ResourceContext) IsSecret() bool {
 	return rc.Kind == "Secret" && rc.GroupVersion() == "v1"
 }
 
-func (rc *V2ResourceContext) IsServiceAccount() bool {
+func (rc *ResourceContext) IsServiceAccount() bool {
 	return rc.Kind == "ServiceAccount" && rc.GroupVersion() == "v1"
 }
 
-func (rc *V2ResourceContext) ExcludeDiffValue() bool {
+func (rc *ResourceContext) ExcludeDiffValue() bool {
 	if rc.Kind == "Secret" {
 		return true
 	}
@@ -184,7 +184,7 @@ func (pr *V2ParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewV2ResourceContext(res *unstructured.Unstructured) *V2ResourceContext {
+func NewResourceContext(res *unstructured.Unstructured) *ResourceContext {
 
 	pr := NewV2ParsedRequest(res)
 
@@ -222,7 +222,7 @@ func NewV2ResourceContext(res *unstructured.Unstructured) *V2ResourceContext {
 
 	resBytes, _ := json.Marshal(res)
 
-	rc := &V2ResourceContext{
+	rc := &ResourceContext{
 		RawObject:       resBytes,
 		ResourceScope:   resourceScope,
 		Name:            name,

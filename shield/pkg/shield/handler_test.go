@@ -62,11 +62,11 @@ var schemes *runtime.Scheme
 var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
-func getTestData(num int) (*common.VRequestContext, *common.VRequestObject, *common.V2ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
+func getTestData(num int) (*common.RequestContext, *common.VRequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
 
-	var vreqc *common.VRequestContext
+	var reqc *common.RequestContext
 	var vreqobj *common.VRequestObject
-	var v2resc *common.V2ResourceContext
+	var resc *common.ResourceContext
 
 	var data *RunData
 	var cfg *config.ShieldConfig
@@ -80,8 +80,8 @@ func getTestData(num int) (*common.VRequestContext, *common.VRequestObject, *com
 	adreqBytes, _ := ioutil.ReadFile(testFileName(testAdReqFile, num))
 	_ = json.Unmarshal(adreqBytes, &adreq)
 	if adreq != nil {
-		vreqc, vreqobj = common.NewVRequestContext(adreq)
-		v2resc = common.AdmissionRequestToV2ResourceContext(adreq)
+		reqc, vreqobj = common.NewRequestContext(adreq)
+		resc = common.AdmissionRequestToResourceContext(adreq)
 	}
 	configBytes, _ := ioutil.ReadFile(testFileName(testConfigFile, num))
 	dataBytes, _ := ioutil.ReadFile(testFileName(testDataFile, num))
@@ -98,7 +98,7 @@ func getTestData(num int) (*common.VRequestContext, *common.VRequestObject, *com
 	dr0 = &DecisionResult{
 		Type: common.DecisionUndetermined,
 	}
-	return vreqc, vreqobj, v2resc, cfg, data, ctx, dr0, prof, dr
+	return reqc, vreqobj, resc, cfg, data, ctx, dr0, prof, dr
 }
 
 func getChangedRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {

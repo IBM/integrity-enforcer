@@ -64,9 +64,9 @@ func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
 	return self.SignerConfig
 }
 
-func (self *RunData) GetResSigList(v2resc *common.V2ResourceContext) *rsigapi.ResourceSignatureList {
+func (self *RunData) GetResSigList(resc *common.ResourceContext) *rsigapi.ResourceSignatureList {
 	if self.ResSigList == nil && self.loader != nil {
-		self.ResSigList = self.loader.ResourceSignature.GetData(v2resc, true)
+		self.ResSigList = self.loader.ResourceSignature.GetData(resc, true)
 	}
 	return self.ResSigList
 }

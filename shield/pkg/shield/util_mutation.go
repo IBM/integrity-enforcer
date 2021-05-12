@@ -25,7 +25,7 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(vreqc *common.VRequestContext, vreqobj *common.VRequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.RequestContext, vreqobj *common.VRequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct{}
@@ -34,13 +34,13 @@ func NewMutationChecker() MutationChecker {
 	return &ConcreteMutationChecker{}
 }
 
-func MutationCheck(vreqc *common.VRequestContext, vreqobj *common.VRequestObject) (*common.MutationEvalResult, error) {
+func MutationCheck(reqc *common.RequestContext, vreqobj *common.VRequestObject) (*common.MutationEvalResult, error) {
 	checker := NewMutationChecker()
 	dummyProf := rspapi.ResourceSigningProfile{}
-	return checker.Eval(vreqc, vreqobj, dummyProf)
+	return checker.Eval(reqc, vreqobj, dummyProf)
 }
 
-func (self *ConcreteMutationChecker) Eval(vreqc *common.VRequestContext, vreqobj *common.VRequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, vreqobj *common.VRequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -100,10 +100,10 @@ func (self *ConcreteMutationChecker) Eval(vreqc *common.VRequestContext, vreqobj
 		newObj = v.ToMap()
 	}
 
-	ma4kInput := NewMa4kInput(vreqc.Namespace, vreqc.Kind, vreqc.Name, vreqc.UserName, vreqc.UserGroups, oldObj, newObj)
+	ma4kInput := NewMa4kInput(reqc.Namespace, reqc.Kind, reqc.Name, reqc.UserName, reqc.UserGroups, oldObj, newObj)
 
-	reqFields := vreqc.Map()
-	excludeDiffValue := vreqc.ExcludeDiffValue()
+	reqFields := reqc.Map()
+	excludeDiffValue := reqc.ExcludeDiffValue()
 
 	ignoreAttrsList := signingProfile.IgnoreAttrs(reqFields)
 

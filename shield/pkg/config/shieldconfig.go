@@ -128,11 +128,11 @@ type LogScopeConfig struct {
 	Ignore  []LogRequestPattern `json:"ignore,omitempty"`
 }
 
-func (sc *LogScopeConfig) IsInScope(v2resc *common.V2ResourceContext) (bool, string) {
+func (sc *LogScopeConfig) IsInScope(resc *common.ResourceContext) (bool, string) {
 	if !sc.Enabled {
 		return false, ""
 	}
-	reqFields := v2resc.Map()
+	reqFields := resc.Map()
 	isInScope := false
 	level := ""
 	if sc.InScope != nil {
@@ -157,9 +157,9 @@ func (sc *LogScopeConfig) IsInScope(v2resc *common.V2ResourceContext) (bool, str
 	return (isInScope && !isIgnored), level
 }
 
-func (ec *ShieldConfig) PatchEnabled(vreqc *common.VRequestContext) bool {
+func (ec *ShieldConfig) PatchEnabled(reqc *common.RequestContext) bool {
 	// TODO: make this configurable
-	if vreqc.Kind == "Policy" && vreqc.ApiGroup == "policy.open-cluster-management.io" {
+	if reqc.Kind == "Policy" && reqc.ApiGroup == "policy.open-cluster-management.io" {
 		return false
 	}
 	if ec.Patch == nil {
@@ -236,14 +236,14 @@ func (ec *ShieldConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
 }
 
-func (ec *ShieldConfig) ConsoleLogEnabled(v2resc *common.V2ResourceContext) (bool, string) {
-	enabled, level := ec.Log.ConsoleLog.IsInScope(v2resc)
+func (ec *ShieldConfig) ConsoleLogEnabled(resc *common.ResourceContext) (bool, string) {
+	enabled, level := ec.Log.ConsoleLog.IsInScope(resc)
 	level = logger.GetGreaterLevel(ec.Log.LogLevel, level)
 	return enabled, level
 }
 
-func (ec *ShieldConfig) ContextLogEnabled(v2resc *common.V2ResourceContext) bool {
-	enabled, _ := ec.Log.ContextLog.IsInScope(v2resc)
+func (ec *ShieldConfig) ContextLogEnabled(resc *common.ResourceContext) bool {
+	enabled, _ := ec.Log.ContextLog.IsInScope(resc)
 	return enabled
 }
 

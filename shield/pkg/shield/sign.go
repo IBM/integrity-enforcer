@@ -61,7 +61,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(v2resc *common.V2ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error)
+	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
@@ -78,9 +78,9 @@ func NewSignatureEvaluator(config *config.ShieldConfig, signerConfig *common.Sig
 	}, nil
 }
 
-func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.ResourceRef, v2resc *common.V2ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
+func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.ResourceRef, resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
 
-	sigAnnotations := v2resc.ClaimedMetadata.Annotations.SignatureAnnotations()
+	sigAnnotations := resc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
 	//1. pick ResourceSignature from metadata.annotation if available
 	if sigAnnotations.Signature != "" {
@@ -93,7 +93,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			matchRequired := true
 			scopedSignature := false
 			if message == "" && messageScope != "" {
-				message = GenerateMessageFromRawObj(v2resc.RawObject, messageScope, mutableAttrs)
+				message = GenerateMessageFromRawObj(resc.RawObject, messageScope, mutableAttrs)
 				matchRequired = false  // skip matching because the message is generated from Requested Object
 				scopedSignature = true // enable checking if the signature is for patch
 			}
@@ -127,7 +127,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			matchRequired := true
 			scopedSignature := false
 			if si.Message == "" && si.MessageScope != "" {
-				message = GenerateMessageFromRawObj(v2resc.RawObject, si.MessageScope, mutableAttrs)
+				message = GenerateMessageFromRawObj(resc.RawObject, si.MessageScope, mutableAttrs)
 				matchRequired = false  // skip matching because the message is generated from Requested Object
 				scopedSignature = true // enable checking if the signature is for patch
 			}
@@ -149,7 +149,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 
 	//4. helm resource (release secret, helm cahrt resources)
 	if ok := self.plugins["helm"]; ok {
-		rsecBytes, err := helm.FindReleaseSecret(v2resc.Namespace, v2resc.Kind, v2resc.Name, v2resc.RawObject)
+		rsecBytes, err := helm.FindReleaseSecret(resc.Namespace, resc.Kind, resc.Name, resc.RawObject)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error occured in finding helm release secret; %s", err.Error()))
 			return nil
@@ -179,19 +179,19 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(v2resc *common.V2ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
-	ref := v2resc.ResourceRef()
+	ref := resc.ResourceRef()
 
 	// override ref name if there is kustomize pattern for this
-	kustPatterns := signingProfile.Kustomize(v2resc.Map())
+	kustPatterns := signingProfile.Kustomize(resc.Map())
 	if len(kustPatterns) > 0 {
 		ref = kustPatterns[0].Override(ref)
 	}
 
 	// find signature
-	rsig := self.GetResourceSignature(ref, v2resc, resSigList)
+	rsig := self.GetResourceSignature(ref, resc, resSigList)
 	if rsig == nil {
 		return &common.SignatureEvalResult{
 			Allow:   false,
@@ -203,7 +203,7 @@ func (self *ConcreteSignatureEvaluator) Eval(v2resc *common.V2ResourceContext, r
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
-	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, v2resc.Namespace)
+	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, resc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
 	sigStoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
@@ -238,13 +238,13 @@ func (self *ConcreteSignatureEvaluator) Eval(v2resc *common.V2ResourceContext, r
 
 	// create verifier
 	dryRunNamespace := ""
-	if v2resc.ResourceScope == string(common.ScopeNamespaced) {
+	if resc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
 	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigStoreCerts, self.config.KeyPathList, sigstoreEnabled)
 
 	// verify signature
-	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, v2resc, signingProfile)
+	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, signingProfile)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{
@@ -289,7 +289,7 @@ func (self *ConcreteSignatureEvaluator) Eval(v2resc *common.V2ResourceContext, r
 	signer := sigVerifyResult.Signer
 
 	// check signer config
-	signerMatched, matchedSignerConfig := self.signerConfig.Match(v2resc.Namespace, signer, verifiedKeyPathList)
+	signerMatched, matchedSignerConfig := self.signerConfig.Match(resc.Namespace, signer, verifiedKeyPathList)
 	if signerMatched {
 		matchedSignerConfigStr := ""
 		if matchedSignerConfig != nil {
@@ -323,8 +323,8 @@ func (self *ConcreteSignatureEvaluator) Eval(v2resc *common.V2ResourceContext, r
 	}
 }
 
-func findAttrsPattern(vreqc *common.VRequestContext, v2resc *common.V2ResourceContext, attrs []*common.AttrsPattern) []string {
-	reqFields := v2resc.Map()
+func findAttrsPattern(reqc *common.RequestContext, resc *common.ResourceContext, attrs []*common.AttrsPattern) []string {
+	reqFields := resc.Map()
 	masks := []string{}
 	for _, attr := range attrs {
 		if attr.MatchWith(reqFields) {

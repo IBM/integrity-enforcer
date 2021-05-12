@@ -68,25 +68,25 @@ func InitCheckContext(config *config.ShieldConfig) *CheckContext {
 	return cc
 }
 
-func (self *CheckContext) convertToLogRecord(vreqc *common.VRequestContext) map[string]interface{} {
+func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
 		// request context
-		"namespace":  vreqc.Namespace,
-		"name":       vreqc.Name,
-		"apiGroup":   vreqc.ApiGroup,
-		"apiVersion": vreqc.ApiVersion,
-		"kind":       vreqc.Kind,
-		"operation":  vreqc.Operation,
-		"userInfo":   vreqc.UserInfo,
-		// "objLabels":    vreqc.ObjLabels,
-		// "objMetaName":  vreqc.ObjMetaName,
-		"userName":     vreqc.UserName,
-		"request.uid":  vreqc.RequestUid,
-		"type":         vreqc.Type,
+		"namespace":  reqc.Namespace,
+		"name":       reqc.Name,
+		"apiGroup":   reqc.ApiGroup,
+		"apiVersion": reqc.ApiVersion,
+		"kind":       reqc.Kind,
+		"operation":  reqc.Operation,
+		"userInfo":   reqc.UserInfo,
+		// "objLabels":    reqc.ObjLabels,
+		// "objMetaName":  reqc.ObjMetaName,
+		"userName":     reqc.UserName,
+		"request.uid":  reqc.RequestUid,
+		"type":         reqc.Type,
 		"request.dump": "",
-		"requestScope": vreqc.ResourceScope,
+		"requestScope": reqc.ResourceScope,
 
 		//context
 		"ignoreSA":        self.IgnoredSA,
@@ -151,8 +151,8 @@ func (self *CheckContext) convertToLogRecord(vreqc *common.VRequestContext) map[
 
 	}
 
-	// logRecord["request.objectHashType"] = vreqc.ObjectHashType
-	// logRecord["request.objectHash"] = vreqc.ObjectHash
+	// logRecord["request.objectHashType"] = reqc.ObjectHashType
+	// logRecord["request.objectHash"] = reqc.ObjectHash
 
 	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
 
@@ -165,20 +165,20 @@ func (self *CheckContext) convertToLogRecord(vreqc *common.VRequestContext) map[
 
 }
 
-func (self *CheckContext) convertToLogRecordByResource(v2resc *common.V2ResourceContext) map[string]interface{} {
+func (self *CheckContext) convertToLogRecordByResource(resc *common.ResourceContext) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
 		// request context
-		"namespace":    v2resc.Namespace,
-		"name":         v2resc.Name,
-		"apiGroup":     v2resc.ApiGroup,
-		"apiVersion":   v2resc.ApiVersion,
-		"kind":         v2resc.Kind,
-		"objLabels":    v2resc.ObjLabels,
-		"objMetaName":  v2resc.ObjMetaName,
+		"namespace":    resc.Namespace,
+		"name":         resc.Name,
+		"apiGroup":     resc.ApiGroup,
+		"apiVersion":   resc.ApiVersion,
+		"kind":         resc.Kind,
+		"objLabels":    resc.ObjLabels,
+		"objMetaName":  resc.ObjMetaName,
 		"request.dump": "",
-		"requestScope": v2resc.ResourceScope,
+		"requestScope": resc.ResourceScope,
 
 		//context
 		"ignoreSA":        self.IgnoredSA,
