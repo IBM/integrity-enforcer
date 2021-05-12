@@ -356,7 +356,7 @@ delete-keyring-secret:
 	@echo
 	@echo deleting keyring-secret
 	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret.yaml -n $(ISHIELD_OP_NS)
-	# kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/keyring_secret2.yaml -n $(ISHIELD_OP_NS)
 
 install-operator:
 	@echo
