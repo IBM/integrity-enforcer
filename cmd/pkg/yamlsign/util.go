@@ -36,37 +36,50 @@ func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.Sign
 		certAnnoKey := IntegrityShieldAnnotationCertificate
 		bundAnnoKey := IntegrityShieldAnnotationBundle
 
-		decodedMsg, _ := base64.StdEncoding.DecodeString(mPayloadAnnotationMap[msgAnnoKey].(string))
+		var decodedMsg []byte
+		encodedMsgIf := mPayloadAnnotationMap[msgAnnoKey]
+		if encodedMsgIf != nil {
+			encodedMsg := encodedMsgIf.(string)
+			decodedMsg, _ = base64.StdEncoding.DecodeString(encodedMsg)
+		}
+
 		payloadOrig, _ := gyaml.YAMLToJSON(decodedMsg)
 		base64sig := fmt.Sprint(mPayloadAnnotationMap[sigAnnoKey])
 
-		decodedBundle, _ := base64.StdEncoding.DecodeString(mPayloadAnnotationMap[bundAnnoKey].(string))
-
+		var decodedBundle []byte
+		encodedBundleIf := mPayloadAnnotationMap[bundAnnoKey]
+		if encodedBundleIf != nil {
+			encodedBundle := encodedBundleIf.(string)
+			decodedBundle, _ = base64.StdEncoding.DecodeString(encodedBundle)
+		}
 		decodedBundle = gzipDecompress(decodedBundle)
 
-		bundle := cosign.Bundle{}
-		err := json.Unmarshal(decodedBundle, &bundle)
-		if err != nil {
-			fmt.Println("decode error:", err)
-			return nil, err
+		var bundle *cosign.Bundle
+		if decodedBundle != nil {
+			err := json.Unmarshal(decodedBundle, &bundle)
+			if err != nil {
+				fmt.Println("decode error:", err)
+				return nil, err
+			}
 		}
 
 		sp := cosign.SignedPayload{
 			Payload:         payloadOrig,
 			Base64Signature: base64sig,
-			Bundle:          &bundle,
+		}
+		if bundle != nil {
+			sp.Bundle = bundle
 		}
 
-		encoded := mPayloadAnnotationMap[certAnnoKey].(string)
-
-		decoded, err := base64.StdEncoding.DecodeString(encoded)
-		if err != nil {
-			fmt.Println("decode error:", err)
-			return nil, err
+		var decodedCert []byte
+		encodedCertIf := mPayloadAnnotationMap[certAnnoKey]
+		if encodedCertIf != nil {
+			encodedCert := encodedCertIf.(string)
+			decodedCert, _ = base64.StdEncoding.DecodeString(encodedCert)
 		}
-		decoded = gzipDecompress(decoded)
+		decodedCert = gzipDecompress(decodedCert)
 
-		certPem := string(decoded)
+		certPem := string(decodedCert)
 
 		if certPem != "" {
 			certs, err := cosign.LoadCerts(certPem)

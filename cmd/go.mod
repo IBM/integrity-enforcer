@@ -1,9 +1,8 @@
-module github.com/ibm/integrity-enforcer/cmd
+module github.com/IBM/integrity-enforcer/cmd
 
 go 1.16
 
 require (
-	github.com/IBM/integrity-enforcer/cmd v0.0.0-00010101000000-000000000000
 	github.com/IBM/integrity-enforcer/shield v0.0.0-00010101000000-000000000000
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-containerregistry v0.5.0
