@@ -7,35 +7,6 @@ metadata:
   name: integrity-shield-server
 spec:
   affinity: {}
-  checker:
-    chartBaseUrl: http://sample-chart-repo-server/charts
-    contextLogEnabled: true
-    image: quay.io/open-cluster-management/integrity-shield-checker:0.1.6
-    imagePullPolicy: Always
-    name: server
-    port: 8080
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
-    securityContext: {}
-    serviceName: integrity-shield-checker
-    shieldPolicyReloadSec: 10
-  inspector:
-    enabled: false
-    image: quay.io/open-cluster-management/integrity-shield-inspector:0.1.6
-    imagePullPolicy: Always
-    name: inspector
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
   keyConfig:
   - name: sample-signer-keyconfig
     secretName: keyring-secret
@@ -140,7 +111,9 @@ spec:
       createDenyEvent: true
       createIShieldResourceEvent: true
       updateRSPStatusForDeniedRequest: true
-    sigstoreConfig: {}
+    sigstoreConfig:
+      defaultRootCertURL: https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem
+      useDefaultRootCert: true
   shieldConfigCrName: ishield-config
   signerConfig:
     policies:

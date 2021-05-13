@@ -85,7 +85,7 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 				// specify sigstore secret (if default root cert, empty filename)
 				fileName := keyConf.FileName
 				if fileName == "" {
-					fileName = apiv1alpha1.DefaultCertFilename
+					fileName = apiv1alpha1.DefaultSigstoreRootCertFilename
 				}
 				keyPath := fmt.Sprintf("/%s/%s/%s", keyConf.Name, sigType, fileName)
 				keyPathList = append(keyPathList, keyPath)

@@ -174,15 +174,19 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .
 	// Then you can add your function here.
 	verifiers := map[string]*sign.Verifier{
-		"pgp":      sign.NewVerifier(pgp.Verify, self.PGPKeyPathList, sigFrom),
-		"x509":     sign.NewVerifier(x509.Verify, self.X509CertPathList, sigFrom),
-		"sigstore": sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom),
+		"pgp":  sign.NewVerifier(pgp.Verify, self.PGPKeyPathList, sigFrom),
+		"x509": sign.NewVerifier(x509.Verify, self.X509CertPathList, sigFrom),
 		// "custom": sign.NewVerifier(custom.Verify, nil, sigFrom),
 	}
 	certRequired := map[string]bool{
-		"pgp":      false,
-		"x509":     true,
-		"sigstore": true,
+		"pgp":  false,
+		"x509": true,
+		// "custom": false,
+	}
+
+	if self.sigstoreEnabled {
+		verifiers["sigstore"] = sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom)
+		certRequired["sigstore"] = true
 	}
 
 	verifiedKeyPathList := []string{}

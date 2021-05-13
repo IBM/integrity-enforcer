@@ -67,8 +67,8 @@ func BuildSigStoreDefaultRootSecretForIShield(cr *apiv1alpha1.IntegrityShield) (
 		},
 		Data: map[string][]byte{},
 	}
-	cert, err := download(apiv1alpha1.DefaultSigstoreRootCertURL)
-	sec.Data[apiv1alpha1.DefaultCertFilename] = cert
+	cert, err := download(cr.GetSigStoreDefaultRootCertURL())
+	sec.Data[apiv1alpha1.DefaultSigstoreRootCertFilename] = cert
 	return sec, err
 }
 

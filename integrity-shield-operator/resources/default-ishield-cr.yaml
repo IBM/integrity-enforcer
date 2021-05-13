@@ -36,6 +36,11 @@ spec:
       createDenyEvent: true
       createIShieldResourceEvent: true
       updateRSPStatusForDeniedRequest: true
+    sigstoreConfig:
+      enabled: false
+      rekorServerURL: ""
+      useDefaultRootCert: true
+      defaultRootCertURL: "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
   shieldConfigCrName: ishield-config
   imagePullSecrets: []
   globalConfig: 
@@ -82,18 +87,18 @@ spec:
       requests:
         cpu: 200m
         memory: 256Mi
-  inspector:
-    enabled: false
-    image: quay.io/open-cluster-management/integrity-shield-inspector:0.1.6
-    imagePullPolicy: Always
-    name: inspector
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
+  # inspector:
+  #   enabled: false
+  #   image: quay.io/open-cluster-management/integrity-shield-inspector:0.1.6
+  #   imagePullPolicy: Always
+  #   name: inspector
+  #   resources:
+  #     limits:
+  #       cpu: 500m
+  #       memory: 512Mi
+  #     requests:
+  #       cpu: 200m
+  #       memory: 256Mi
   replicaCount: 1
   security:
     clusterRole: ishield-cluster-role
@@ -127,23 +132,23 @@ spec:
         cpu: 200m
         memory: 256Mi
     securityContext: {}
-  checker:
-    chartBaseUrl: http://sample-chart-repo-server/charts
-    contextLogEnabled: true
-    shieldPolicyReloadSec: 10
-    image: quay.io/open-cluster-management/integrity-shield-checker:0.1.6
-    imagePullPolicy: Always
-    name: server
-    serviceName: integrity-shield-checker
-    port: 8080
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
-    securityContext: {}
+  # checker:
+  #   chartBaseUrl: http://sample-chart-repo-server/charts
+  #   contextLogEnabled: true
+  #   shieldPolicyReloadSec: 10
+  #   image: quay.io/open-cluster-management/integrity-shield-checker:0.1.6
+  #   imagePullPolicy: Always
+  #   name: server
+  #   serviceName: integrity-shield-checker
+  #   port: 8080
+  #   resources:
+  #     limits:
+  #       cpu: 500m
+  #       memory: 512Mi
+  #     requests:
+  #       cpu: 200m
+  #       memory: 256Mi
+  #   securityContext: {}
   webhookConfigName: ishield-webhook-config
   webhookServerTlsSecretName: ishield-server-tls
   webhookServiceName: ishield-server
