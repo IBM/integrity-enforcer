@@ -1,18 +1,3 @@
-//
-// Copyright 2021 The Sigstore Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cli
 
 import (
@@ -25,15 +10,15 @@ import (
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 
-	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
+	yamlsignaudit "github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign/audit"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// VerifyCommand verifies a signature on a supplied container image
-type VerifyYamlCommand struct {
+// AuditCommand verifies a signature on a supplied container image
+type AuditYamlCommand struct {
 	CheckClaims bool
 	KeyRef      string
 	Sk          bool
@@ -41,18 +26,26 @@ type VerifyYamlCommand struct {
 	Annotations *map[string]interface{}
 	PayloadPath string
 	Yaml        bool
+	APIVersion  string
+	Kind        string
+	Namespace   string
+	Name        string
 }
 
-// Verify builds and returns an ffcli command
-func VerifyYaml() *ffcli.Command {
-	cmd := VerifyYamlCommand{}
-	flagset := flag.NewFlagSet("yamlsign verify", flag.ExitOnError)
+// Audit builds and returns an ffcli command
+func AuditYaml() *ffcli.Command {
+	cmd := AuditYamlCommand{}
+	flagset := flag.NewFlagSet("ishieldctl audit", flag.ExitOnError)
 	annotations := annotationsMap{}
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
 	flagset.BoolVar(&cmd.CheckClaims, "check-claims", true, "whether to check the claims found")
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
+	flagset.StringVar(&cmd.APIVersion, "apiversion", "v1", "apiversion to specify a resource. Default v1.")
+	flagset.StringVar(&cmd.Kind, "kind", "ConfigMap", "kind to specify a resource. Default ConfigMap.")
+	flagset.StringVar(&cmd.Namespace, "namespace", "default", "namespace to specify a resource. Default default.")
+	flagset.StringVar(&cmd.Name, "name", "no-name", "name to specify a resource. Default no-name.")
 	flagset.StringVar(&cmd.PayloadPath, "payload", "", "path to the yaml file")
 	flagset.BoolVar(&cmd.Yaml, "yaml", true, "if it is yaml file")
 
@@ -61,30 +54,30 @@ func VerifyYaml() *ffcli.Command {
 	cmd.Annotations = &annotations.annotations
 
 	return &ffcli.Command{
-		Name:       "verify",
-		ShortUsage: "yamlsign verify -key <key path>|<key url>|<kms uri> <signed yaml file>",
-		ShortHelp:  "Verify a signature on the supplied yaml file",
-		LongHelp: `Verify signature and annotations on the supplied yaml file by checking the claims
+		Name:       "audit",
+		ShortUsage: "ishieldctl audit -key <key path>|<key url>|<kms uri> <signed yaml file>",
+		ShortHelp:  "Audit a signature on the supplied yaml file",
+		LongHelp: `Audit signature and annotations on the supplied yaml file by checking the claims
 against the transparency log.
 
 EXAMPLES
-  # verify cosign claims and signing certificates on the yaml file
-  yamlsign verify -payload <signed yaml file>
+  # audit cosign claims and signing certificates on the yaml file
+  ishieldctl audit -payload <signed yaml file>
 
   # additionally verify specified annotations
-  yamlsign verify -a key1=val1 -a key2=val2 -payload <signed yaml file> 
+  ishieldctl audit -a key1=val1 -a key2=val2 -payload <signed yaml file> 
 
   # (experimental) additionally, verify with the transparency log
-  yamlsign verify -payload <signed yaml file>
+  ishieldctl audit -payload <signed yaml file>
 
   # verify image with public key
-  yamlsign verify -key <FILE> -payload <signed yaml file>
+  ishieldctl audit -key <FILE> -payload <signed yaml file>
 
   # verify image with public key provided by URL
-  yamlsign verify -key https://host.for/<FILE> -payload <signed yaml file>
+  ishieldctl audit -key https://host.for/<FILE> -payload <signed yaml file>
 
   # verify image with public key stored in Google Cloud KMS
-  yamlsign verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <signed yaml file>`,
+  ishieldctl audit -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <signed yaml file>`,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}
@@ -92,7 +85,7 @@ EXAMPLES
 }
 
 // Exec runs the verification command
-func (c *VerifyYamlCommand) Exec(ctx context.Context, args []string) error {
+func (c *AuditYamlCommand) Exec(ctx context.Context, args []string) error {
 
 	co := &cosign.CheckOpts{
 		Annotations: *c.Annotations,
@@ -117,18 +110,18 @@ func (c *VerifyYamlCommand) Exec(ctx context.Context, args []string) error {
 		co.PubKey = pubKey
 	}
 
-	verified, err := yamlsign.VerifyYaml(ctx, co, c.PayloadPath)
+	dr, err := yamlsignaudit.AuditYaml(ctx, c.APIVersion, c.Kind, c.Namespace, c.Name)
 	if err != nil {
 		return err
 	}
-
-	c.printVerification(verified, co)
+	result, _ := json.Marshal(dr)
+	fmt.Println(string(result))
 
 	return nil
 }
 
 // printVerification logs details about the verification to stdout
-func (c *VerifyYamlCommand) printVerification(verified []cosign.SignedPayload, co *cosign.CheckOpts) {
+func (c *AuditYamlCommand) printVerification(verified []cosign.SignedPayload, co *cosign.CheckOpts) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", c.PayloadPath)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {

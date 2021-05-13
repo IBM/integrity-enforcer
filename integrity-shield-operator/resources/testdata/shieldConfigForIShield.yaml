@@ -191,7 +191,7 @@ spec:
       include:
       - '*'
     keyPathList:
-    - /sample-signer-keyconfig/pgp/pubring.gpg
+    - /sample-signer-keyconfig/keyring-secret/pgp/pubring.gpg
     log:
       consoleLog:
         enabled: true

@@ -24,10 +24,13 @@ import (
 
 	ecfgclient "github.com/IBM/integrity-enforcer/shield/pkg/client/shieldconfig/clientset/versioned/typed/shieldconfig/v1alpha1"
 	sconfig "github.com/IBM/integrity-enforcer/shield/pkg/config"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 )
+
+const defaultShieldNS = "integrity-shield-operator-system"
+const defaultShieldConfigName = "ishield-config"
 
 type Config struct {
 	ShieldConfig *sconfig.ShieldConfig
@@ -62,7 +65,13 @@ func (conf *Config) InitShieldConfig() bool {
 
 	if renew {
 		shieldNs := os.Getenv("SHIELD_NS")
+		if shieldNs == "" {
+			shieldNs = defaultShieldNS
+		}
 		shieldConfigName := os.Getenv("SHIELD_CONFIG_NAME")
+		if shieldConfigName == "" {
+			shieldConfigName = defaultShieldConfigName
+		}
 		shieldConfig := LoadShieldConfig(shieldNs, shieldConfigName)
 		if shieldConfig == nil {
 			if conf.ShieldConfig == nil {
@@ -90,7 +99,7 @@ func (conf *Config) InitShieldConfig() bool {
 
 func LoadShieldConfig(namespace, cmname string) *sconfig.ShieldConfig {
 
-	config, err := rest.InClusterConfig()
+	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return nil
 	}

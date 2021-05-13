@@ -22,6 +22,7 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.4-0.20200207053602-7439e774c9e9+incompatible
+	github.com/IBM/integrity-enforcer/cmd => ../cmd
 	github.com/IBM/integrity-enforcer/integrity-shield-operator => ./
 	github.com/IBM/integrity-enforcer/shield => ../shield
 	k8s.io/api => k8s.io/api v0.20.2

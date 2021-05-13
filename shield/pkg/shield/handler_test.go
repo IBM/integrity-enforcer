@@ -391,7 +391,7 @@ func handlerTest() {
 			var test2Config *config.ShieldConfig
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
-			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/pgp/miss-configured-pubring"}
+			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/keyring-secret/pgp/miss-configured-pubring"}
 			metaLogger, reqLog := getTestLogger(changedReq, test2Config)
 			testHandler := NewHandler(test2Config, metaLogger, reqLog)
 			resp := testHandler.Run(changedReq)

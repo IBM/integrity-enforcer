@@ -44,8 +44,9 @@ func (self *Verifier) Verify(message, signature, certificate []byte) (*common.Ch
 			sumSig = signer
 			verifiedKeyPathList = append(verifiedKeyPathList, keyPath)
 		} else {
+			reasonFail = fmt.Sprintf("Failed to verify signature in %s; %s", self.sigFrom, reasonFail)
 			sumErr = &common.CheckError{
-				Msg:    fmt.Sprintf("Failed to verify signature in %s", self.sigFrom),
+				Msg:    reasonFail,
 				Reason: reasonFail,
 				Error:  nil,
 			}

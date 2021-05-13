@@ -25,6 +25,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
@@ -242,6 +243,14 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 		dryRunNamespace = self.config.Namespace
 	}
 	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigStoreCerts, self.config.KeyPathList, sigstoreEnabled)
+
+	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
+	if !kubeutil.IsInCluster() {
+		err := verifier.LoadSecrets(self.config.Namespace)
+		if err != nil {
+			logger.Warn("Error while loading pubkey secrets;", err.Error())
+		}
+	}
 
 	// verify signature
 	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, signingProfile)

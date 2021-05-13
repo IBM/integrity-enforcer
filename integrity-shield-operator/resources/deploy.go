@@ -82,7 +82,11 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		if sigType == common.SignatureTypeDefault {
 			sigType = common.SignatureTypePGP
 		}
-		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/", keyConf.Name, sigType), Name: keyConf.Name}
+		secretName := keyConf.SecretName
+		if secretName == "" && sigType == common.SignatureTypeSigStore {
+			secretName = cr.GetSigStoreDefaultRootSecretName()
+		}
+		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/%s/", keyConf.Name, secretName, sigType), Name: keyConf.Name}
 		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
 	}
 

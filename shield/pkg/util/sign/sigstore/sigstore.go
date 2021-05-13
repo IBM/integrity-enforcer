@@ -16,8 +16,9 @@ import (
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
 	ishieldx509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 	"github.com/pkg/errors"
-
 	"github.com/sigstore/cosign/pkg/cosign"
+
+	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
 )
 
 const tmpDir = "/tmp"
@@ -30,13 +31,15 @@ const defaultRootPemURL = "https://raw.githubusercontent.com/sigstore/fulcio/mai
 
 func Verify(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error) {
 	ok, err := verify(message, signature, certificate, &path)
-	if !ok {
-		return false, nil, "Failed to verify sigstore signature", err
+	if err != nil {
+		return false, nil, fmt.Sprintf("Failed to verify sigstore signature; %s", err.Error()), err
+	} else if !ok {
+		return false, nil, "Failed to verify sigstore signature; no error", nil
 	}
 
 	cert, err := ishieldx509.ParseCertificate(certificate)
 	if err != nil {
-		return false, nil, "Failed to parse certificate", err
+		return false, nil, fmt.Sprintf("Failed to parse certificate; %s", err.Error()), err
 	}
 	signerInfo := ishieldx509.NewSignerInfoFromCert(cert)
 	return true, signerInfo, "", nil
@@ -83,7 +86,7 @@ func verify(message, signature, certPem []byte, rootPemPath *string) (bool, erro
 	}
 
 	fpath := path.Join(tmpDir, tmpSignedFileName)
-	p, err := cosign.VerifyYaml(context.Background(), co, fpath)
+	p, err := yamlsign.VerifyYaml(context.Background(), co, fpath)
 	if err != nil {
 		return false, err
 	}
