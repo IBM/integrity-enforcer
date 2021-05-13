@@ -46,7 +46,7 @@ type VerifyYamlCommand struct {
 // Verify builds and returns an ffcli command
 func VerifyYaml() *ffcli.Command {
 	cmd := VerifyYamlCommand{}
-	flagset := flag.NewFlagSet("yamlsign verify", flag.ExitOnError)
+	flagset := flag.NewFlagSet("ishieldctl verify", flag.ExitOnError)
 	annotations := annotationsMap{}
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
@@ -62,29 +62,29 @@ func VerifyYaml() *ffcli.Command {
 
 	return &ffcli.Command{
 		Name:       "verify",
-		ShortUsage: "yamlsign verify -key <key path>|<key url>|<kms uri> <signed yaml file>",
+		ShortUsage: "ishieldctl verify -key <key path>|<key url>|<kms uri> <signed yaml file>",
 		ShortHelp:  "Verify a signature on the supplied yaml file",
 		LongHelp: `Verify signature and annotations on the supplied yaml file by checking the claims
 against the transparency log.
 
 EXAMPLES
   # verify cosign claims and signing certificates on the yaml file
-  yamlsign verify -payload <signed yaml file>
+  ishieldctl verify -payload <signed yaml file>
 
   # additionally verify specified annotations
-  yamlsign verify -a key1=val1 -a key2=val2 -payload <signed yaml file> 
+  ishieldctl verify -a key1=val1 -a key2=val2 -payload <signed yaml file> 
 
   # (experimental) additionally, verify with the transparency log
-  yamlsign verify -payload <signed yaml file>
+  ishieldctl verify -payload <signed yaml file>
 
   # verify image with public key
-  yamlsign verify -key <FILE> -payload <signed yaml file>
+  ishieldctl verify -key <FILE> -payload <signed yaml file>
 
   # verify image with public key provided by URL
-  yamlsign verify -key https://host.for/<FILE> -payload <signed yaml file>
+  ishieldctl verify -key https://host.for/<FILE> -payload <signed yaml file>
 
   # verify image with public key stored in Google Cloud KMS
-  yamlsign verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <signed yaml file>`,
+  ishieldctl verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <signed yaml file>`,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}

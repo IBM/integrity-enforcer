@@ -4,11 +4,10 @@ import (
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	gyaml "github.com/ghodss/yaml"
@@ -16,16 +15,14 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
+	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
-
-const IntegrityShieldAnnotationMessage = "integrityshield.io/message"
-const IntegrityShieldAnnotationSignature = "integrityshield.io/signature"
-const IntegrityShieldAnnotationCertificate = "integrityshield.io/certificate"
 
 // VerifyCommand verifies a signature on a supplied container image
 type SignYamlCommand struct {
@@ -65,7 +62,7 @@ func (a *annotationsMap) String() string {
 func SignYaml() *ffcli.Command {
 
 	cmd := SignYamlCommand{}
-	flagset := flag.NewFlagSet("yamlsign sign", flag.ExitOnError)
+	flagset := flag.NewFlagSet("ishieldctl sign", flag.ExitOnError)
 	annotations := annotationsMap{}
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
@@ -76,22 +73,22 @@ func SignYaml() *ffcli.Command {
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
-		ShortUsage: "yamlsign sign -key <key path>|<kms uri> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
+		ShortUsage: "ishieldctl sign -key <key path>|<kms uri> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
 		ShortHelp:  `Sign the supplied yaml file.`,
 		LongHelp: `Sign the supplied yaml file.
 
 EXAMPLES
   # sign a yaml file with Google sign-in 
-  yamlsign sign -payload <yaml file> 
+  ishieldctl sign -payload <yaml file> 
 
   # sign a yaml file with a local key pair file
-  yamlsign sign -key key.pub -payload <yaml file> 
+  ishieldctl sign -key key.pub -payload <yaml file> 
 
   # sign a yaml file and add annotations
-  yamlsign sign -key key.pub -a key1=value1 -a key2=value2 -payload <yaml file>
+  ishieldctl sign -key key.pub -a key1=value1 -a key2=value2 -payload <yaml file>
 
   # sign a yaml file with a key pair stored in Google Cloud KMS
-  yamlsign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <yaml file>`,
+  ishieldctl sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <yaml file>`,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}
@@ -100,59 +97,21 @@ EXAMPLES
 
 func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 
-	keyRef := c.KeyRef
 	payloadPath := c.PayloadPath
 
-	// The payload can be specified via a flag to skip generation.
-	var payload []byte
-	var payloadYaml []byte
-
-	payloadYaml, err := ioutil.ReadFile(filepath.Clean(payloadPath))
-
-	mPayload := make(map[interface{}]interface{})
-	err = yaml.Unmarshal([]byte(payloadYaml), &mPayload)
-	if err != nil {
-		fmt.Errorf("error: %v", err)
-	}
-	mPayloadMeta, ok := mPayload["metadata"]
-	if !ok {
-		return fmt.Errorf("there is no `metadata` in this payload")
-	}
-	mPayloadMetaMap, ok := mPayloadMeta.(map[interface{}]interface{})
-	if !ok {
-		return fmt.Errorf("`metadata` in this payload is not a yaml object")
-	}
-	mPayloadAnnotation, ok := mPayloadMetaMap["annotations"]
-	if !ok {
-		mPayloadAnnotation = make(map[interface{}]interface{})
-	}
-
-	mPayloadAnnotationMap, ok := mPayloadAnnotation.(map[interface{}]interface{})
-	if !ok {
-		return fmt.Errorf("`metadata.annotations` in this payload is not a yaml object")
-	}
-
-	msgAnnoKey := IntegrityShieldAnnotationMessage
-	sigAnnoKey := IntegrityShieldAnnotationSignature
-	certAnnoKey := IntegrityShieldAnnotationCertificate
-
-	delete(mPayloadAnnotationMap, msgAnnoKey)
-	delete(mPayloadAnnotationMap, sigAnnoKey)
-	delete(mPayloadAnnotationMap, certAnnoKey)
-
-	if len(mPayloadAnnotationMap) == 0 {
-		delete(mPayload["metadata"].(map[interface{}]interface{}), "annotations")
-	} else {
-		mPayload["metadata"].(map[interface{}]interface{})["annotations"] = mPayloadAnnotationMap
-	}
+	mPayload, _ := yamlsign.FetchYamlContent(payloadPath)
 
 	cleanPayloadYaml, err := yaml.Marshal(mPayload)
 
-	payload, _ = gyaml.YAMLToJSON(cleanPayloadYaml)
-	fmt.Println("payload")
-	fmt.Println(string(payload))
+	// The payload can be specified via a flag to skip generation.
+	var payloadJson []byte
+	payloadJson, _ = gyaml.YAMLToJSON(cleanPayloadYaml)
+
+	fmt.Println("payloadJson")
+	fmt.Println(string(payloadJson))
+
 	if err != nil {
-		return errors.Wrap(err, "payload")
+		return errors.Wrap(err, "payloadJson")
 	}
 
 	var signer signature.Signer
@@ -187,7 +146,7 @@ func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 		pemBytes = []byte(cert)
 	}
 
-	sig, _, err := signer.Sign(ctx, payload)
+	sig, _, err := signer.Sign(ctx, payloadJson)
 	if err != nil {
 		return errors.Wrap(err, "signing")
 	}
@@ -201,50 +160,6 @@ func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 	fmt.Println("Yaml Signing Completed !!!")
 	fmt.Println("----------------------")
 
-	m := make(map[interface{}]interface{})
-
-	err = yaml.Unmarshal([]byte(cleanPayloadYaml), &m)
-	if err != nil {
-		fmt.Errorf("error: %v", err)
-	}
-	mMeta, ok := m["metadata"]
-	if !ok {
-		return fmt.Errorf("there is no `metadata` in this payload")
-	}
-	mMetaMap, ok := mMeta.(map[interface{}]interface{})
-	if !ok {
-		return fmt.Errorf("`metadata` in this payload is not a yaml object")
-	}
-	mAnnotation, ok := mMetaMap["annotations"]
-	if !ok {
-		mAnnotation = make(map[interface{}]interface{})
-	}
-	mAnnotationMap, ok := mAnnotation.(map[interface{}]interface{})
-	if !ok {
-		return fmt.Errorf("`metadata.annotations` in this payload is not a yaml object")
-	}
-
-	mAnnotationMap[sigAnnoKey] = base64.StdEncoding.EncodeToString(sig)
-	mAnnotationMap[msgAnnoKey] = base64.StdEncoding.EncodeToString(cleanPayloadYaml)
-
-	if keyRef == "" {
-		mAnnotationMap[certAnnoKey] = base64.StdEncoding.EncodeToString(pemBytes)
-	}
-	m["metadata"].(map[interface{}]interface{})["annotations"] = mAnnotationMap
-
-	mapBytes, err := yaml.Marshal(m)
-
-	err = ioutil.WriteFile(filepath.Clean(payloadPath+".signed"), mapBytes, 0644)
-
-	out := make(map[interface{}]interface{})
-
-	signed, _ := ioutil.ReadFile(filepath.Clean(payloadPath + ".signed"))
-
-	err = yaml.Unmarshal(signed, &out)
-	if err != nil {
-		panic(err)
-	}
-
 	// Upload the cert or the public key, depending on what we have
 	var rekorBytes []byte
 	if cert != "" {
@@ -257,26 +172,26 @@ func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 		rekorBytes = pemBytes
 	}
 
-	entry, err := cosign.UploadTLog(sig, payload, rekorBytes)
+	entry, err := cosign.UploadTLog(sig, payloadJson, rekorBytes)
 	if err != nil {
 		return err
 	}
 	fmt.Println("tlog entry created with index: ", *entry.LogIndex)
-	/*
-		bund, err := bundle(entry)
-		if err != nil {
-			return errors.Wrap(err, "bundle")
-		}
-			uo.Bundle = bund
-			uo.AdditionalAnnotations = annotations(entry)
-			if _, err = cosign.Upload(ctx, sig, payload, dstRef, uo); err != nil {
-				return errors.Wrap(err, "uploading")
-			}
-	*/
+
+	bund, err := bundle(entry)
+	if err != nil {
+		return errors.Wrap(err, "bundle")
+	}
+
+	bundleJson, err := json.Marshal(bund)
+
+	fmt.Println("bundleJson", string(bundleJson))
+
+	yamlsign.WriteYamlContent(sig, pemBytes, bundleJson, mPayload, payloadPath)
+
 	return nil
 }
 
-/*
 func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
 	if entry.Verification == nil {
 		return nil, nil
@@ -288,13 +203,3 @@ func bundle(entry *models.LogEntryAnon) (*cosign.Bundle, error) {
 		LogIndex:             entry.LogIndex,
 	}, nil
 }
-
-func annotations(entry *models.LogEntryAnon) map[string]string {
-	annts := map[string]string{}
-	if bund, err := bundle(entry); err == nil && bund != nil {
-		contents, _ := json.Marshal(bund)
-		annts[cosign.BundleKey] = string(contents)
-	}
-	return annts
-}
-*/
