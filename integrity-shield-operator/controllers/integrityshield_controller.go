@@ -228,20 +228,20 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return recResult, recErr
 	}
 
-	inspectorEnabled := instance.Spec.Inspector.Enabled
-	if inspectorEnabled != nil && *inspectorEnabled {
-		//ProtectedResourceIntegrity CRD
-		recResult, recErr = r.createOrUpdateProtectedResourceIntegrityCRD(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
+	// inspectorEnabled := instance.Spec.Inspector.Enabled
+	// if inspectorEnabled != nil && *inspectorEnabled {
+	// 	//ProtectedResourceIntegrity CRD
+	// 	recResult, recErr = r.createOrUpdateProtectedResourceIntegrityCRD(instance)
+	// 	if recErr != nil || recResult.Requeue {
+	// 		return recResult, recErr
+	// 	}
 
-		//Inspector Deployment
-		recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
-	}
+	// 	//Inspector Deployment
+	// 	recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
+	// 	if recErr != nil || recResult.Requeue {
+	// 		return recResult, recErr
+	// 	}
+	// }
 
 	// // checker Deployment
 	// recResult, recErr = r.createOrUpdateCheckerDeployment(instance)
@@ -334,13 +334,13 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 		}
 	}
 
-	inspectorEnabled := instance.Spec.Inspector.Enabled
-	if inspectorEnabled != nil && *inspectorEnabled {
-		_, err = r.deleteProtectedResourceIntegrityCRD(instance)
-		if err != nil {
-			return err
-		}
-	}
+	// inspectorEnabled := instance.Spec.Inspector.Enabled
+	// if inspectorEnabled != nil && *inspectorEnabled {
+	// 	_, err = r.deleteProtectedResourceIntegrityCRD(instance)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	_, err = r.deleteResourceSigningProfileCRD(instance)
 	if err != nil {

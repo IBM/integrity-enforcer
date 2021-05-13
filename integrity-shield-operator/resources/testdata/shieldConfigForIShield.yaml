@@ -206,6 +206,9 @@ spec:
       createDenyEvent: true
       createIShieldResourceEvent: true
       updateRSPStatusForDeniedRequest: true
+    sigstoreConfig:
+      useDefaultRootCert: true
+      defaultRootCertURL: https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem
     patch:
       enabled: true
     plugin:

@@ -33,13 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// const (
-// 	apiBaseURLEnvKey  = "CHECKER_API_BASE_URL"
-// 	defaultAPIBaseURL = "http://integrity-shield-checker:8080"
-// )
-
-// var apiBaseURL string
-
 var config *sconfloder.Config
 
 var (
@@ -56,11 +49,6 @@ func init() {
 	_ = config.InitShieldConfig()
 
 	log.SetFormatter(&log.JSONFormatter{})
-
-	// apiBaseURL = os.Getenv(apiBaseURLEnvKey)
-	// if apiBaseURL == "" {
-	// 	apiBaseURL = defaultAPIBaseURL
-	// }
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
@@ -93,11 +81,6 @@ func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Reques
 }
 
 func (server *WebhookServer) checkReadiness(w http.ResponseWriter, r *http.Request) {
-	// _, err := http.Get(apiBaseURL + "/probe/readiness")
-	// if err != nil {
-	// 	http.Error(w, "not ready", http.StatusInternalServerError)
-	// 	return
-	// }
 
 	msg := "readiness ok"
 	_, _ = w.Write([]byte(msg))
