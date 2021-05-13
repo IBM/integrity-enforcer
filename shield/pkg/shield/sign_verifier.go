@@ -712,6 +712,7 @@ var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.CertificateAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.BundleAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),
