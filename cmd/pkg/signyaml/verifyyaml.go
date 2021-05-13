@@ -13,6 +13,7 @@ import (
 
 	_ "embed" // To enable the `go:embed` directive.
 
+	gyaml "github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
@@ -21,11 +22,8 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	"gopkg.in/yaml.v2"
 )
-
-const IntegrityShieldAnnotationMessage = "integrityshield.io/message"
-const IntegrityShieldAnnotationSignature = "integrityshield.io/signature"
-const IntegrityShieldAnnotationCertificate = "integrityshield.io/certificate"
 
 func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParams()
@@ -96,10 +94,15 @@ func VerifyYaml(ctx context.Context, co *cosign.CheckOpts, payloadPath string) (
 				continue
 			}
 
-			/*if err := sp.VerifyClaims(desc, ss); err != nil {
-				validationErrs = append(validationErrs, err.Error())
+			mPayload, _ := FetchYamlContent(payloadPath)
+			cleanPayloadYaml, _ := yaml.Marshal(mPayload)
+
+			payloadJson, _ := gyaml.YAMLToJSON(cleanPayloadYaml)
+
+			if string(payloadJson) != string(sp.Payload) {
+				validationErrs = append(validationErrs, "`annotation.message` in this payload does not matcch with yaml content")
 				continue
-			}*/
+			}
 
 			if co.Annotations != nil {
 				if !correctAnnotations(co.Annotations, ss.Optional) {
@@ -110,6 +113,7 @@ func VerifyYaml(ctx context.Context, co *cosign.CheckOpts, payloadPath string) (
 		}
 
 		verified, err := sp.VerifyBundle()
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
 		}
