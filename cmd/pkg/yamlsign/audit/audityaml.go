@@ -21,10 +21,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
-const IntegrityShieldAnnotationMessage = "integrityshield.io/message"
-const IntegrityShieldAnnotationSignature = "integrityshield.io/signature"
-const IntegrityShieldAnnotationCertificate = "integrityshield.io/certificate"
-
 var config *sconfloder.Config
 
 func init() {
