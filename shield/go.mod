@@ -31,6 +31,7 @@ require (
 replace (
 	github.com/IBM/integrity-enforcer/cmd => ../cmd
 	github.com/IBM/integrity-enforcer/shield => ./
+	github.com/sigstore/cosign => github.com/sigstore/cosign v0.4.1-0.20210513202038-96a92e0d5c84
 	google.golang.org/grpc => google.golang.org/grpc v1.36.1
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0

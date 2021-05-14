@@ -67,7 +67,7 @@ func GetFirstIdentity(signer *openpgp.Entity) *openpgp.Identity {
 	return nil
 }
 
-func Verify(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error) {
+func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
 	var signerInfo *common.SignerInfo
 	ok, reasonFail, signer, fingerprint, err := verifySignature(path, string(message), string(signature))
 	if signer != nil {

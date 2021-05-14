@@ -219,7 +219,7 @@ func GenerateSignature(msg, prvKeyPemBytes []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func Verify(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error) {
+func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
 	var signerInfo *common.SignerInfo
 
 	certOk, reasonFail, err := verifyCertificate(certificate, path)

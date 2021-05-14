@@ -154,12 +154,13 @@ func (ssl *ResourceSignatureList) FindSignItem(apiVersion, kind, name, namespace
 }
 
 type SignItem struct {
-	Message      string `json:"message,omitempty"`
-	MessageScope string `json:"messageScope,omitempty"`
-	MutableAttrs string `json:"mutableAttrs,omitempty"`
-	Signature    string `json:"signature"`
-	Certificate  string `json:"certificate"`
-	Type         string `json:"type"`
+	Message        string `json:"message,omitempty"`
+	MessageScope   string `json:"messageScope,omitempty"`
+	MutableAttrs   string `json:"mutableAttrs,omitempty"`
+	Signature      string `json:"signature"`
+	Certificate    string `json:"certificate"`
+	SigStoreBundle string `json:"sigstoreBundle"`
+	Type           string `json:"type"`
 }
 
 type ResourceInfo struct {

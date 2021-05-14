@@ -14,7 +14,7 @@ type Verifier struct {
 
 // VerifierFunc type is just an alias of verifier function type.
 // Function should be implemented for each verification type like gpg, x509 and etc.
-type VerifierFunc func(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error)
+type VerifierFunc func(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error)
 
 // NewVerifier create Verifier instance. This object is used as a wrapper of verifierFunc.
 func NewVerifier(verifierFunc VerifierFunc, pathList []string, sigFrom string) *Verifier {
@@ -26,13 +26,13 @@ func NewVerifier(verifierFunc VerifierFunc, pathList []string, sigFrom string) *
 }
 
 // Verify() calls verifierFunc and create Integrity Shield error object and signer info object
-func (self *Verifier) Verify(message, signature, certificate []byte) (*common.CheckError, *common.SignerInfo, []string) {
+func (self *Verifier) Verify(message, signature, certificate []byte, opts map[string]string) (*common.CheckError, *common.SignerInfo, []string) {
 	var sumErr *common.CheckError
 	var sumSig *common.SignerInfo
 
 	verifiedKeyPathList := []string{}
 	for _, keyPath := range self.keyPathList {
-		ok, signer, reasonFail, err := self.verifierFunc(message, signature, certificate, keyPath)
+		ok, signer, reasonFail, err := self.verifierFunc(message, signature, certificate, keyPath, opts)
 		if err != nil {
 			sumErr = &common.CheckError{
 				Msg:    fmt.Sprintf("Error occured while verifying signature in %s", self.sigFrom),

@@ -309,6 +309,12 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	signature := []byte(sig.data["signature"])
 	certificateStr, certFound := sig.data["certificate"]
 	certificate := []byte(certificateStr)
+	sigstoreBundleStr, bundleFound := sig.data["sigstoreBundle"]
+
+	opts := map[string]string{}
+	if self.sigstoreEnabled && bundleFound {
+		opts["sigstoreBundle"] = sigstoreBundleStr
+	}
 
 	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .
 	// Then you can add your function here.
@@ -339,7 +345,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 			continue
 		}
 		// try verifying
-		sigErr, sigInfo, okPathList := verifier.Verify(message, signature, certificate)
+		sigErr, sigInfo, okPathList := verifier.Verify(message, signature, certificate, opts)
 		vcerr = sigErr
 		vsinfo = sigInfo
 		verifiedKeyPathList = append(verifiedKeyPathList, okPathList...)
@@ -349,7 +355,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	if vsinfo == nil {
 		for _, keyPath := range self.AllMountedKeyPathList {
 			if strings.Contains(keyPath, "/pgp/") {
-				if ok2, signer2, _, _ := pgp.Verify(message, signature, nil, keyPath); ok2 && signer2 != nil {
+				if ok2, signer2, _, _ := pgp.Verify(message, signature, nil, keyPath, nil); ok2 && signer2 != nil {
 					vsinfo = signer2
 					break
 				}

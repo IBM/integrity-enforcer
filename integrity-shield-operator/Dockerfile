@@ -1,5 +1,5 @@
 
-FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi7/ubi-minimal:7.8
 
 RUN mkdir /ishield-op-app && mkdir /ishield-op-app/resources && \
     curl -L https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -o jq-linux64 && \

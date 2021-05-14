@@ -45,10 +45,16 @@ type WebhookServer struct {
 }
 
 func init() {
-	config = sconfloder.NewConfig()
-	_ = config.InitShieldConfig()
-
 	log.SetFormatter(&log.JSONFormatter{})
+
+	config = sconfloder.NewConfig()
+	config.InitShieldConfig()
+	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
+	logger.Info("Integrity Shield has been started.")
+
+	cfgBytes, _ := json.Marshal(config)
+	logger.Trace(string(cfgBytes))
+	logger.Info("ShieldConfig is loaded.")
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {

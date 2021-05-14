@@ -19,6 +19,7 @@ require (
 replace (
 	github.com/IBM/integrity-enforcer/cmd => ./
 	github.com/IBM/integrity-enforcer/shield => ../shield
+	github.com/sigstore/cosign => github.com/sigstore/cosign v0.4.1-0.20210513202038-96a92e0d5c84
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.0
