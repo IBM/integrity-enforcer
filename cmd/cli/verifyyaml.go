@@ -1,17 +1,18 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2020 IBM Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 package cli
 
@@ -38,7 +39,6 @@ type VerifyYamlCommand struct {
 	KeyRef      string
 	Sk          bool
 	Output      string
-	Annotations *map[string]interface{}
 	PayloadPath string
 	Yaml        bool
 }
@@ -47,7 +47,6 @@ type VerifyYamlCommand struct {
 func VerifyYaml() *ffcli.Command {
 	cmd := VerifyYamlCommand{}
 	flagset := flag.NewFlagSet("ishieldctl verify", flag.ExitOnError)
-	annotations := annotationsMap{}
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
 	flagset.BoolVar(&cmd.Sk, "sk", false, "whether to use a hardware security key")
@@ -55,10 +54,6 @@ func VerifyYaml() *ffcli.Command {
 	flagset.StringVar(&cmd.Output, "output", "json", "output the signing image information. Default JSON.")
 	flagset.StringVar(&cmd.PayloadPath, "payload", "", "path to the yaml file")
 	flagset.BoolVar(&cmd.Yaml, "yaml", true, "if it is yaml file")
-
-	// parse annotations
-	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
-	cmd.Annotations = &annotations.annotations
 
 	return &ffcli.Command{
 		Name:       "verify",
@@ -69,22 +64,19 @@ against the transparency log.
 
 EXAMPLES
   # verify cosign claims and signing certificates on the yaml file
-  ishieldctl verify -payload <signed yaml file>
-
-  # additionally verify specified annotations
-  ishieldctl verify -a key1=val1 -a key2=val2 -payload <signed yaml file> 
+  ishieldctl verify -payload <signed yaml FILE>
 
   # (experimental) additionally, verify with the transparency log
-  ishieldctl verify -payload <signed yaml file>
+  ishieldctl verify -payload <signed yaml FILE>
 
   # verify image with public key
-  ishieldctl verify -key <FILE> -payload <signed yaml file>
+  ishieldctl verify -key <FILE> -payload <signed yaml FILE>
 
   # verify image with public key provided by URL
-  ishieldctl verify -key https://host.for/<FILE> -payload <signed yaml file>
+  ishieldctl verify -key https://host.for/<FILE> -payload <signed yaml FILE>
 
   # verify image with public key stored in Google Cloud KMS
-  ishieldctl verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <signed yaml file>`,
+  ishieldctl verify -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <signed yaml FILE>`,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}
@@ -95,16 +87,15 @@ EXAMPLES
 func (c *VerifyYamlCommand) Exec(ctx context.Context, args []string) error {
 
 	co := &cosign.CheckOpts{
-		Annotations: *c.Annotations,
-		Claims:      c.CheckClaims,
-		Tlog:        true,
-		Roots:       fulcio.Roots,
+		Claims: c.CheckClaims,
+		Tlog:   true,
+		Roots:  fulcio.Roots,
 	}
 	keyRef := c.KeyRef
 
 	// Keys are optional!
 	if keyRef != "" {
-		pubKey, err := publicKeyFromKeyRef(ctx, keyRef)
+		pubKey, err := cosign.LoadPublicKey(ctx, keyRef)
 		if err != nil {
 			return errors.Wrap(err, "loading public key")
 		}
@@ -118,6 +109,7 @@ func (c *VerifyYamlCommand) Exec(ctx context.Context, args []string) error {
 	}
 
 	verified, err := yamlsign.VerifyYaml(ctx, co, c.PayloadPath)
+
 	if err != nil {
 		return err
 	}
@@ -128,7 +120,7 @@ func (c *VerifyYamlCommand) Exec(ctx context.Context, args []string) error {
 }
 
 // printVerification logs details about the verification to stdout
-func (c *VerifyYamlCommand) printVerification(verified []cosign.SignedPayload, co *cosign.CheckOpts) {
+func (c *VerifyYamlCommand) printVerification(verified *cosign.SignedPayload, co *cosign.CheckOpts) {
 	fmt.Fprintf(os.Stderr, "\nVerification for %s --\n", c.PayloadPath)
 	fmt.Fprintln(os.Stderr, "The following checks were performed on each of these signatures:")
 	if co.Claims {
@@ -150,38 +142,37 @@ func (c *VerifyYamlCommand) printVerification(verified []cosign.SignedPayload, c
 
 	switch c.Output {
 	case "text":
-		for _, vp := range verified {
-			if vp.Cert != nil {
-				fmt.Println("Certificate common name: ", vp.Cert.Subject.CommonName)
-			}
 
-			fmt.Println(string(vp.Payload))
+		if verified.Cert != nil {
+			fmt.Println("Certificate common name: ", verified.Cert.Subject.CommonName)
 		}
+
+		fmt.Println(string(verified.Payload))
+
 	default:
 		var outputKeys []payload.SimpleContainerImage
-		for _, vp := range verified {
-			ss := payload.SimpleContainerImage{}
-			err := json.Unmarshal(vp.Payload, &ss)
-			if err != nil {
-				fmt.Println("error decoding the payload:", err.Error())
-				return
-			}
 
-			if vp.Cert != nil {
-				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
-				}
-				ss.Optional["CommonName"] = vp.Cert.Subject.CommonName
-			}
-			if vp.Bundle != nil {
-				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
-				}
-				ss.Optional["Bundle"] = vp.Bundle
-			}
-
-			outputKeys = append(outputKeys, ss)
+		ss := payload.SimpleContainerImage{}
+		err := json.Unmarshal(verified.Payload, &ss)
+		if err != nil {
+			fmt.Println("error decoding the payload:", err.Error())
+			return
 		}
+
+		if verified.Cert != nil {
+			if ss.Optional == nil {
+				ss.Optional = make(map[string]interface{})
+			}
+			ss.Optional["CommonName"] = verified.Cert.Subject.CommonName
+		}
+		if verified.Bundle != nil {
+			if ss.Optional == nil {
+				ss.Optional = make(map[string]interface{})
+			}
+			ss.Optional["Bundle"] = verified.Bundle
+		}
+
+		outputKeys = append(outputKeys, ss)
 
 		b, err := json.Marshal(outputKeys)
 		if err != nil {

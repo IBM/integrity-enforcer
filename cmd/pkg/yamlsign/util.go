@@ -1,3 +1,19 @@
+//
+// Copyright 2020 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package yamlsign
 
 import (
@@ -21,10 +37,9 @@ const IntegrityShieldAnnotationSignature = "integrityshield.io/signature"
 const IntegrityShieldAnnotationCertificate = "integrityshield.io/certificate"
 const IntegrityShieldAnnotationBundle = "integrityshield.io/bundle"
 
-func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.SignedPayload, error) {
+func FetchSignedYamlPayload(ctx context.Context, payloadPath string) (*cosign.SignedPayload, error) {
 
-	signatures := make([]cosign.SignedPayload, 1)
-
+	var sp *cosign.SignedPayload
 	if payloadPath != "" {
 
 		mPayload, _ := readPayload(payloadPath)
@@ -63,7 +78,7 @@ func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.Sign
 			}
 		}
 
-		sp := cosign.SignedPayload{
+		sp = &cosign.SignedPayload{
 			Payload:         payloadOrig,
 			Base64Signature: base64sig,
 		}
@@ -84,15 +99,14 @@ func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.Sign
 		if certPem != "" {
 			certs, err := cosign.LoadCerts(certPem)
 			if err != nil {
-				return nil, err
+				return sp, err
 			}
 			sp.Cert = certs[0]
 		}
 
-		signatures[0] = sp
 	}
 
-	return signatures, nil
+	return sp, nil
 }
 
 func WriteYamlContent(signature []byte, pemBytes []byte, bundleJson []byte, mPayload map[interface{}]interface{}, payloadPath string) error {
