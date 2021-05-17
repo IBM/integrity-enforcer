@@ -16,6 +16,10 @@ spec:
     sigstoreConfig:
       enabled: true
       useDefaultRootCert: true
+    imageVerificationConfig:
+      enabled: true
+      verificationURL: "<COSIGN VERIFIER API URL>"
+      options: {}
   signerConfig:
     policies:
     - namespaces:

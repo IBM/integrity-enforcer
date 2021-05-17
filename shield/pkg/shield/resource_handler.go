@@ -68,6 +68,12 @@ func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult
 	// make DecisionResult based on reqc, config and data
 	dr := self.Check()
 
+	if self.config.ImageVerificationEnabled() {
+		// apiURL := self.config.GetImageVerificationURL()
+		// TODO: call cosign verify API here
+
+	}
+
 	// log results
 	self.logContext()
 

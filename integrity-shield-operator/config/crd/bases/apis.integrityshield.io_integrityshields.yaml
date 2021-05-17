@@ -1568,6 +1568,17 @@ spec:
                           type: string
                       type: object
                     type: array
+                  imageVerificationConfig:
+                    properties:
+                      enabled:
+                        type: boolean
+                      options:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      verificationURL:
+                        type: string
+                    type: object
                   inScopeNamespaceSelector:
                     properties:
                       exclude:

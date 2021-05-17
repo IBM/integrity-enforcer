@@ -51,6 +51,7 @@ type ShieldConfig struct {
 	Mode                     IntegrityShieldMode       `json:"mode,omitempty"`
 	Plugin                   []PluginConfig            `json:"plugin,omitempty"`
 	SigStoreConfig           SigStoreConfig            `json:"sigstoreConfig,omitempty"`
+	ImageVerificationConfig  ImageVerificationConfig   `json:"imageVerificationConfig,omitempty"`
 	CommonProfile            *common.CommonProfile     `json:"commonProfile,omitempty"`
 
 	Namespace          string   `json:"namespace,omitempty"`
@@ -92,6 +93,12 @@ type SigStoreConfig struct {
 	RekorServerURL     string `json:"rekorServerURL,omitempty"`
 	UseDefaultRootCert bool   `json:"useDefaultRootCert,omitempty"`
 	DefaultRootCertURL string `json:"defaultRootCertURL,omitempty"`
+}
+
+type ImageVerificationConfig struct {
+	Enabled         bool              `json:"enabled,omitempty"`
+	VerificationURL string            `json:"verificationURL,omitempty"`
+	Options         map[string]string `json:"options,omitempty"`
 }
 
 func (self *IShieldResourceCondition) IsOperatorResource(ref *common.ResourceRef) bool {
@@ -260,6 +267,14 @@ func (ec *ShieldConfig) GetEnabledPlugins() map[string]bool {
 
 func (ec *ShieldConfig) SigStoreEnabled() bool {
 	return ec.SigStoreConfig.Enabled
+}
+
+func (ec *ShieldConfig) ImageVerificationEnabled() bool {
+	return ec.ImageVerificationConfig.Enabled
+}
+
+func (ec *ShieldConfig) GetImageVerificationURL() string {
+	return ec.ImageVerificationConfig.VerificationURL
 }
 
 /**********************************************
