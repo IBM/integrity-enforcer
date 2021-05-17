@@ -19,7 +19,6 @@ require (
 replace (
 	github.com/IBM/integrity-enforcer/observer => ./
 	github.com/IBM/integrity-enforcer/shield => ../shield
-	github.com/gajananan/cosign => ../../../gajananan/cosign
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0
