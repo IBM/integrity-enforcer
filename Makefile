@@ -91,7 +91,7 @@ else
 endif
 
 
-.PHONY: config int fmt lint test coverage build build-images
+.PHONY: config int fmt lint test coverage build build-images build-cli
 
 
 config:
@@ -162,6 +162,13 @@ push-images:
 
 pull-images:
 		${ISHIELD_REPO_ROOT}/build/pull_images.sh
+
+############################################################
+# cli section
+############################################################
+
+build-cli:
+	cd ${CLI_DIR} && go mod tidy && go build -o build/ishieldctl main.go
 
 ############################################################
 # bundle section

@@ -56,6 +56,7 @@ const (
 	SignatureAnnotationKey     = "integrityshield.io/signature"
 	MessageAnnotationKey       = "integrityshield.io/message"
 	CertificateAnnotationKey   = "integrityshield.io/certificate"
+	BundleAnnotationKey        = "integrityshield.io/bundle"
 	SignatureTypeAnnotationKey = "integrityshield.io/signatureType"
 	MessageScopeAnnotationKey  = "integrityshield.io/messageScope"
 	MutableAttrsAnnotationKey  = "integrityshield.io/mutableAttrs"
@@ -257,22 +258,24 @@ type ResourceAnnotation struct {
 }
 
 type SignatureAnnotation struct {
-	SignatureType string
-	Signature     string
-	Certificate   string
-	Message       string
-	MessageScope  string
-	MutableAttrs  string
+	SignatureType  string
+	Signature      string
+	Certificate    string
+	Message        string
+	MessageScope   string
+	MutableAttrs   string
+	SigStoreBundle string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
-		Signature:     self.getString(SignatureAnnotationKey),
-		SignatureType: self.getString(SignatureTypeAnnotationKey),
-		Certificate:   self.getString(CertificateAnnotationKey),
-		Message:       self.getString(MessageAnnotationKey),
-		MessageScope:  self.getString(MessageScopeAnnotationKey),
-		MutableAttrs:  self.getString(MutableAttrsAnnotationKey),
+		Signature:      self.getString(SignatureAnnotationKey),
+		SignatureType:  self.getString(SignatureTypeAnnotationKey),
+		Certificate:    self.getString(CertificateAnnotationKey),
+		Message:        self.getString(MessageAnnotationKey),
+		MessageScope:   self.getString(MessageScopeAnnotationKey),
+		MutableAttrs:   self.getString(MutableAttrsAnnotationKey),
+		SigStoreBundle: self.getString(BundleAnnotationKey),
 	}
 }
 

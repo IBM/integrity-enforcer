@@ -1033,15 +1033,15 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookDeployment(instance *ap
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateInspectorDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildInspectorDeploymentForIShield(instance)
-	return r.createOrUpdateDeployment(instance, expected)
-}
+// func (r *IntegrityShieldReconciler) createOrUpdateInspectorDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+// 	expected := res.BuildInspectorDeploymentForIShield(instance)
+// 	return r.createOrUpdateDeployment(instance, expected)
+// }
 
-func (r *IntegrityShieldReconciler) createOrUpdateCheckerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildCheckerDeploymentForIShield(instance)
-	return r.createOrUpdateDeployment(instance, expected)
-}
+// func (r *IntegrityShieldReconciler) createOrUpdateCheckerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+// 	expected := res.BuildCheckerDeploymentForIShield(instance)
+// 	return r.createOrUpdateDeployment(instance, expected)
+// }
 
 /**********************************************
 
@@ -1096,10 +1096,10 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1
 	return r.createOrUpdateService(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateCheckerService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildCheckerServiceForIShield(instance)
-	return r.createOrUpdateService(instance, expected)
-}
+// func (r *IntegrityShieldReconciler) createOrUpdateCheckerService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+// 	expected := res.BuildCheckerServiceForIShield(instance)
+// 	return r.createOrUpdateService(instance, expected)
+// }
 
 /**********************************************
 

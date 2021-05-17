@@ -25,6 +25,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
@@ -100,6 +101,11 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			signature := ishieldyaml.Base64decode(sigAnnotations.Signature)
 			certificate := ishieldyaml.Base64decode(sigAnnotations.Certificate)
 			certificate = ishieldyaml.Decompress(certificate)
+			sigstoreBundle := ""
+			if sigAnnotations.SigStoreBundle != "" {
+				sigstoreBundle = ishieldyaml.Base64decode(sigAnnotations.SigStoreBundle)
+				sigstoreBundle = ishieldyaml.Decompress(sigstoreBundle)
+			}
 			signType := SignedResourceTypeResource
 			if sigAnnotations.SignatureType == vrsig.SignatureTypeApplyingResource {
 				signType = SignedResourceTypeApplyingResource
@@ -108,7 +114,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": messageScope},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": messageScope, "sigstoreBundle": sigstoreBundle},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -121,6 +127,11 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			signature := ishieldyaml.Base64decode(si.Signature)
 			certificate := ishieldyaml.Base64decode(si.Certificate)
 			certificate = ishieldyaml.Decompress(certificate)
+			sigstoreBundle := ""
+			if si.SigStoreBundle != "" {
+				sigstoreBundle = ishieldyaml.Base64decode(si.SigStoreBundle)
+				sigstoreBundle = ishieldyaml.Decompress(sigstoreBundle)
+			}
 			message := ishieldyaml.Base64decode(si.Message)
 			message = ishieldyaml.Decompress(message)
 			mutableAttrs := si.MutableAttrs
@@ -139,7 +150,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "resourceSignatureUID": resSigUID},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "sigstoreBundle": sigstoreBundle, "resourceSignatureUID": resSigUID},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -206,7 +217,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, resc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
-	sigStoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
+	sigstoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
 
 	keyLoadingError := false
 	candidateKeyCount := len(pgpPubkeys) + len(x509Certs)
@@ -224,7 +235,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 			}
 		}
 
-		for _, certPath := range sigStoreCerts {
+		for _, certPath := range sigstoreCerts {
 			if loaded, _ := sigstore.LoadCert(certPath); len(loaded) > 0 {
 				validKeyCount += 1
 			}
@@ -241,7 +252,15 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	if resc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigStoreCerts, self.config.KeyPathList, sigstoreEnabled)
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
+
+	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
+	if !kubeutil.IsInCluster() {
+		err := verifier.LoadSecrets(self.config.Namespace)
+		if err != nil {
+			logger.Warn("Error while loading pubkey secrets;", err.Error())
+		}
+	}
 
 	// verify signature
 	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, signingProfile)

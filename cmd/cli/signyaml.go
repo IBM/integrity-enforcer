@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"github.com/IBM/integrity-enforcer/cmd/pkg/signyaml"
+	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -62,7 +62,7 @@ func (a *annotationsMap) String() string {
 func SignYaml() *ffcli.Command {
 
 	cmd := SignYamlCommand{}
-	flagset := flag.NewFlagSet("yamlsign sign", flag.ExitOnError)
+	flagset := flag.NewFlagSet("ishieldctl sign", flag.ExitOnError)
 	annotations := annotationsMap{}
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
@@ -73,22 +73,22 @@ func SignYaml() *ffcli.Command {
 	flagset.Var(&annotations, "a", "extra key=value pairs to sign")
 	return &ffcli.Command{
 		Name:       "sign",
-		ShortUsage: "yamlsign sign -key <key path>|<kms uri> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
+		ShortUsage: "ishieldctl sign -key <key path>|<kms uri> [-payload <path>] [-a key=value] [-upload=true|false] [-f] <image uri>",
 		ShortHelp:  `Sign the supplied yaml file.`,
 		LongHelp: `Sign the supplied yaml file.
 
 EXAMPLES
   # sign a yaml file with Google sign-in 
-  yamlsign sign -payload <yaml file> 
+  ishieldctl sign -payload <yaml file> 
 
   # sign a yaml file with a local key pair file
-  yamlsign sign -key key.pub -payload <yaml file> 
+  ishieldctl sign -key key.pub -payload <yaml file> 
 
   # sign a yaml file and add annotations
-  yamlsign sign -key key.pub -a key1=value1 -a key2=value2 -payload <yaml file>
+  ishieldctl sign -key key.pub -a key1=value1 -a key2=value2 -payload <yaml file>
 
   # sign a yaml file with a key pair stored in Google Cloud KMS
-  yamlsign sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <yaml file>`,
+  ishieldctl sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <yaml file>`,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}
@@ -99,7 +99,7 @@ func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 
 	payloadPath := c.PayloadPath
 
-	mPayload, _ := signyaml.FetchYamlContent(payloadPath)
+	mPayload, _ := yamlsign.FetchYamlContent(payloadPath)
 
 	cleanPayloadYaml, err := yaml.Marshal(mPayload)
 
@@ -187,7 +187,7 @@ func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 
 	fmt.Println("bundleJson", string(bundleJson))
 
-	signyaml.WriteYamlContent(sig, pemBytes, bundleJson, mPayload, payloadPath)
+	yamlsign.WriteYamlContent(sig, pemBytes, bundleJson, mPayload, payloadPath)
 
 	return nil
 }

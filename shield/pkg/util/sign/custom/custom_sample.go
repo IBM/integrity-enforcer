@@ -35,7 +35,7 @@ func init() {
 	ensureVerifyFunc = Verify
 }
 
-func Verify(message, signature, certificate []byte, path string) (bool, *common.SignerInfo, string, error) {
+func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
 	var signerInfo *common.SignerInfo
 	ok, err := verify(message, signature, certificate, path)
 	return ok, signerInfo, "Failed to verify signature with custom Verify() function", err

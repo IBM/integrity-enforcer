@@ -91,6 +91,7 @@ type SigStoreConfig struct {
 	Enabled            bool   `json:"enabled,omitempty"`
 	RekorServerURL     string `json:"rekorServerURL,omitempty"`
 	UseDefaultRootCert bool   `json:"useDefaultRootCert,omitempty"`
+	DefaultRootCertURL string `json:"defaultRootCertURL,omitempty"`
 }
 
 func (self *IShieldResourceCondition) IsOperatorResource(ref *common.ResourceRef) bool {

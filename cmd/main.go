@@ -13,17 +13,17 @@ import (
 )
 
 var (
-	rootFlagSet    = flag.NewFlagSet("yamlsign", flag.ExitOnError)
+	rootFlagSet    = flag.NewFlagSet("ishieldctl", flag.ExitOnError)
 	debug          = rootFlagSet.Bool("d", false, "log debug output")
 	outputFilename = rootFlagSet.String("output-file", "", "log output to a file")
 )
 
 func main() {
 	root := &ffcli.Command{
-		ShortUsage: "yamlsign [flags] <subcommand>",
+		ShortUsage: "ishieldctl [flags] <subcommand>",
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
-			cli.SignYaml(), cli.VerifyYaml()},
+			cli.SignYaml(), cli.VerifyYaml(), cli.AuditYaml()},
 		Exec: func(context.Context, []string) error {
 			return flag.ErrHelp
 		},

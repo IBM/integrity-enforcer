@@ -96,7 +96,7 @@ func (cxLogger *ContextLogger) SendLog(logBytes []byte) {
 	if err != nil {
 		simpleLogger.WithFields(log.Fields{
 			"err": err,
-		}).Warn("Context log file dump err")
+		}).Debug("Context log file dump err")
 		return
 	}
 

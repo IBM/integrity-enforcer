@@ -19,6 +19,9 @@ package shield
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
@@ -32,6 +35,7 @@ import (
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
 	sigstore "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
 	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
+	corev1 "k8s.io/api/core/v1"
 )
 
 /**********************************************
@@ -42,6 +46,7 @@ import (
 
 type VerifierInterface interface {
 	Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
+	LoadSecrets(ishieldNS string) error
 }
 
 /**********************************************
@@ -66,6 +71,140 @@ func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPath
 		return &HelmVerifier{Namespace: dryRunNamespace, KeyPathList: pgpKeyPathList}
 	}
 	return nil
+}
+
+func (self *ResourceVerifier) LoadSecrets(ishieldNS string) error {
+	replace := map[string]string{}
+	for _, keyPath := range self.AllMountedKeyPathList {
+		// if secret is found, skip loading
+		if exists(keyPath) {
+			continue
+		}
+		// otherwise, try getting secret and save it as tmp local file, and then update keyPathList at the end
+		keyPathParts := parseKeyPath(keyPath)
+		secretName := keyPathParts["secret"]
+		if secretName == "" {
+			continue
+		}
+		// get secret
+		obj, err := kubeutil.GetResource("v1", "Secret", ishieldNS, secretName)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to get secret `%s`; %s", secretName, err.Error()))
+			continue
+		}
+		objBytes, _ := json.Marshal(obj)
+		var res corev1.Secret
+		_ = json.Unmarshal(objBytes, &res)
+
+		// save it in a tmp dir
+		keyPathParts["base"] = "./tmp"
+		newPath := filepath.Clean(joinKeyPathParts(keyPathParts))
+		newPathDir := filepath.Dir(newPath)
+		newPathFile := filepath.Base(newPath)
+		err = os.MkdirAll(newPathDir, 0755)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to create a directory for secret `%s`; %s", secretName, err.Error()))
+			continue
+		}
+		pubKeyBytes, ok := res.Data[newPathFile]
+		if !ok {
+			logger.Warn(fmt.Sprintf("Failed to get a pubKeyBytes from secret `%s`, file %s", secretName, newPathFile))
+			continue
+		}
+		err = ioutil.WriteFile(newPath, pubKeyBytes, 0755)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to save a secret as a file `%s`; %s", secretName, err.Error()))
+			continue
+		}
+
+		replace[keyPath] = newPath
+	}
+	// replace all key path list with the saved filepath
+	for i, keyPath := range self.AllMountedKeyPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.AllMountedKeyPathList[i] = newPath
+		}
+	}
+	for i, keyPath := range self.PGPKeyPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.PGPKeyPathList[i] = newPath
+		}
+	}
+	for i, keyPath := range self.X509CertPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.X509CertPathList[i] = newPath
+		}
+	}
+	for i, keyPath := range self.SigStoreCertPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.SigStoreCertPathList[i] = newPath
+		}
+	}
+	return nil
+}
+
+func parseKeyPath(keyPath string) map[string]string {
+	m := map[string]string{
+		"base":      "",
+		"keyConfig": "",
+		"secret":    "",
+		"sigType":   "",
+		"file":      "",
+	}
+	sigType := ""
+	if strings.Contains(keyPath, "/pgp/") {
+		sigType = "/pgp/"
+	} else if strings.Contains(keyPath, "/x509/") {
+		sigType = "/x509/"
+	} else if strings.Contains(keyPath, "/sigstore/") {
+		sigType = "/sigstore/"
+	}
+	if sigType == "" {
+		return m
+	}
+
+	m["sigType"] = sigType
+	parts1 := strings.Split(keyPath, sigType)
+	parts2 := strings.Split(parts1[0], "/")
+	if len(parts1) >= 2 {
+		m["file"] = parts1[1]
+	}
+	if len(parts2) >= 1 {
+		m["secret"] = parts2[len(parts2)-1]
+	}
+	keyConfig := ""
+	if len(parts2) >= 2 {
+		keyConfig = parts2[len(parts2)-2]
+	}
+
+	if keyConfig == "" {
+		return m
+	}
+
+	m["keyConfig"] = keyConfig
+	parts3 := strings.Split(keyPath, keyConfig)
+	if len(parts2) >= 1 {
+		m["base"] = parts3[0]
+	}
+	return m
+}
+
+func joinKeyPathParts(m map[string]string) string {
+	keys := []string{"base", "keyConfig", "secret", "sigType", "file"}
+	parts := []string{}
+	for _, key := range keys {
+		if v, ok := m[key]; ok {
+			parts = append(parts, v)
+		} else {
+			return ""
+		}
+	}
+	return strings.Join(parts, "/")
+}
+
+func exists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }
 
 func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
@@ -170,19 +309,29 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	signature := []byte(sig.data["signature"])
 	certificateStr, certFound := sig.data["certificate"]
 	certificate := []byte(certificateStr)
+	sigstoreBundleStr, bundleFound := sig.data["sigstoreBundle"]
+
+	opts := map[string]string{}
+	if self.sigstoreEnabled && bundleFound {
+		opts["sigstoreBundle"] = sigstoreBundleStr
+	}
 
 	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .
 	// Then you can add your function here.
 	verifiers := map[string]*sign.Verifier{
-		"pgp":      sign.NewVerifier(pgp.Verify, self.PGPKeyPathList, sigFrom),
-		"x509":     sign.NewVerifier(x509.Verify, self.X509CertPathList, sigFrom),
-		"sigstore": sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom),
+		"pgp":  sign.NewVerifier(pgp.Verify, self.PGPKeyPathList, sigFrom),
+		"x509": sign.NewVerifier(x509.Verify, self.X509CertPathList, sigFrom),
 		// "custom": sign.NewVerifier(custom.Verify, nil, sigFrom),
 	}
 	certRequired := map[string]bool{
-		"pgp":      false,
-		"x509":     true,
-		"sigstore": true,
+		"pgp":  false,
+		"x509": true,
+		// "custom": false,
+	}
+
+	if self.sigstoreEnabled {
+		verifiers["sigstore"] = sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom)
+		certRequired["sigstore"] = true
 	}
 
 	verifiedKeyPathList := []string{}
@@ -196,7 +345,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 			continue
 		}
 		// try verifying
-		sigErr, sigInfo, okPathList := verifier.Verify(message, signature, certificate)
+		sigErr, sigInfo, okPathList := verifier.Verify(message, signature, certificate, opts)
 		vcerr = sigErr
 		vsinfo = sigInfo
 		verifiedKeyPathList = append(verifiedKeyPathList, okPathList...)
@@ -206,7 +355,7 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	if vsinfo == nil {
 		for _, keyPath := range self.AllMountedKeyPathList {
 			if strings.Contains(keyPath, "/pgp/") {
-				if ok2, signer2, _, _ := pgp.Verify(message, signature, nil, keyPath); ok2 && signer2 != nil {
+				if ok2, signer2, _, _ := pgp.Verify(message, signature, nil, keyPath, nil); ok2 && signer2 != nil {
 					vsinfo = signer2
 					break
 				}
@@ -556,6 +705,11 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, resc *common.ResourceCon
 
 }
 
+func (self *HelmVerifier) LoadSecrets(ishieldNS string) error {
+	// TODO: implement
+	return nil
+}
+
 var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.labels.\"%s\"", common.ResourceIntegrityLabelKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignedByAnnotationKey),
@@ -564,6 +718,7 @@ var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.CertificateAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.BundleAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),

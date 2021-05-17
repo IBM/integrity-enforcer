@@ -13,6 +13,9 @@ spec:
       exclude:
       - "kube-*"
       - "openshift-*"
+    sigstoreConfig:
+      enabled: true
+      useDefaultRootCert: true
   signerConfig:
     policies:
     - namespaces:
@@ -26,7 +29,11 @@ spec:
     - name: "SampleSigner"
       keyConfig: sample-signer-keyconfig
       subjects:
-      - email: "*"
+      - commonName: "*"
   keyConfig:
   - name: sample-signer-keyconfig
-    secretName: keyring-secret
+    signatureType: sigstore
+  server:
+    image: localhost:5000/integrity-shield-server:0.1.6
+  logger:
+    image: localhost:5000/integrity-shield-logging:0.1.6

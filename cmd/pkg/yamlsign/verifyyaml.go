@@ -1,4 +1,4 @@
-package signyaml
+package yamlsign
 
 import (
 	"context"

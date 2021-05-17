@@ -52,18 +52,17 @@ const (
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
-	DefaultSigstoreRootCertURL                = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
-	DefaultIShieldInspectorName               = "integrity-shield-inspector"
-	DefaultIShieldCheckerName                 = "integrity-shield-checker"
-	DefaultIShieldInspectorLabel              = "ishield-inspector"
-	DefaultIShieldCheckerLabel                = "ishield-checker"
-	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
-	CommonProfilesPath                        = "./resources/common-profiles"
-	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
-	DefaultKeyringFilename                    = "pubring.gpg"
-	DefaultCertFilename                       = "root.pem"
-	DefaultIShieldWebhookTimeout              = 10
-	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	// DefaultIShieldInspectorName               = "integrity-shield-inspector"
+	// DefaultIShieldCheckerName                 = "integrity-shield-checker"
+	// DefaultIShieldInspectorLabel              = "ishield-inspector"
+	// DefaultIShieldCheckerLabel                = "ishield-checker"
+	DefaultIShieldCRYamlPath        = "./resources/default-ishield-cr.yaml"
+	CommonProfilesPath              = "./resources/common-profiles"
+	WebhookRulesForRoksYamlPath     = "./resources/webhook-rules-for-roks.yaml"
+	DefaultKeyringFilename          = "pubring.gpg"
+	DefaultSigstoreRootCertFilename = "root.pem"
+	DefaultIShieldWebhookTimeout    = 10
+	SATokenPath                     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
 	CleanupFinalizerName = "cleanup.finalizers.integrityshield.io"
 )
@@ -86,15 +85,15 @@ type IntegrityShieldSpec struct {
 	Tolerations      []v1.Toleration           `json:"tolerations,omitempty"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	IgnoreDefaultIShieldCR bool               `json:"ignoreDefaultIShieldCR,omitempty"`
-	Security               SecurityConfig     `json:"security,omitempty"`
-	KeyConfig              []KeyConfig        `json:"keyConfig,omitempty"`
-	Server                 ServerContainer    `json:"server,omitempty"`
-	Logger                 LoggerContainer    `json:"logger,omitempty"`
-	Observer               ObserverContainer  `json:"observer,omitempty"`
-	Inspector              InspectorContainer `json:"inspector,omitempty"`
-	Checker                CheckerContainer   `json:"checker,omitempty"`
-	RegKeySecret           RegKeySecret       `json:"regKeySecret,omitempty"`
+	IgnoreDefaultIShieldCR bool              `json:"ignoreDefaultIShieldCR,omitempty"`
+	Security               SecurityConfig    `json:"security,omitempty"`
+	KeyConfig              []KeyConfig       `json:"keyConfig,omitempty"`
+	Server                 ServerContainer   `json:"server,omitempty"`
+	Logger                 LoggerContainer   `json:"logger,omitempty"`
+	Observer               ObserverContainer `json:"observer,omitempty"`
+	// Inspector              InspectorContainer `json:"inspector,omitempty"`
+	// Checker                CheckerContainer   `json:"checker,omitempty"`
+	RegKeySecret RegKeySecret `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
 	ShieldConfig            *iec.ShieldConfig     `json:"shieldConfig,omitempty"`
@@ -174,29 +173,29 @@ type ObserverContainer struct {
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-type InspectorContainer struct {
-	Enabled         *bool                   `json:"enabled,omitempty"`
-	Name            string                  `json:"name,omitempty"`
-	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
-	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-	Image           string                  `json:"image,omitempty"`
-	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
-}
+// type InspectorContainer struct {
+// 	Enabled         *bool                   `json:"enabled,omitempty"`
+// 	Name            string                  `json:"name,omitempty"`
+// 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
+// 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+// 	Image           string                  `json:"image,omitempty"`
+// 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
+// }
 
-type CheckerContainer struct {
-	// Enabled         *bool                   `json:"enabled,omitempty"`
-	Name                   string                  `json:"name,omitempty"`
-	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
-	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-	Image                  string                  `json:"image,omitempty"`
-	Port                   int32                   `json:"port,omitempty"`
-	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
-	ChartBaseUrl           string                  `json:"chartBaseUrl,omitempty"`
-	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
-	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
-	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
-	ServiceName            string                  `json:"serviceName,omitempty"`
-}
+// type CheckerContainer struct {
+// 	// Enabled         *bool                   `json:"enabled,omitempty"`
+// 	Name                   string                  `json:"name,omitempty"`
+// 	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
+// 	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+// 	Image                  string                  `json:"image,omitempty"`
+// 	Port                   int32                   `json:"port,omitempty"`
+// 	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
+// 	ChartBaseUrl           string                  `json:"chartBaseUrl,omitempty"`
+// 	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
+// 	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
+// 	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
+// 	ServiceName            string                  `json:"serviceName,omitempty"`
+// }
 
 type EsConfig struct {
 	Enabled     bool   `json:"enabled,omitempty"`
@@ -355,29 +354,29 @@ func (self *IntegrityShield) GetIShieldServerDeploymentName() string {
 	return self.Name
 }
 
-func (self *IntegrityShield) GetIShieldInspectorDeploymentName() string {
-	return DefaultIShieldInspectorName
-}
+// func (self *IntegrityShield) GetIShieldInspectorDeploymentName() string {
+// 	return DefaultIShieldInspectorName
+// }
 
-func (self *IntegrityShield) GetIShieldCheckerDeploymentName() string {
-	return DefaultIShieldCheckerName
-}
+// func (self *IntegrityShield) GetIShieldCheckerDeploymentName() string {
+// 	return DefaultIShieldCheckerName
+// }
 
-func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
-	return DefaultIShieldInspectorLabel
-}
+// func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
+// 	return DefaultIShieldInspectorLabel
+// }
 
-func (self *IntegrityShield) GetIShieldCheckerSelectorLabel() string {
-	return DefaultIShieldCheckerLabel
-}
+// func (self *IntegrityShield) GetIShieldCheckerSelectorLabel() string {
+// 	return DefaultIShieldCheckerLabel
+// }
 
 func (self *IntegrityShield) GetWebhookServiceName() string {
 	return self.Spec.WebhookServiceName
 }
 
-func (self *IntegrityShield) GetCheckerServiceName() string {
-	return self.Spec.Checker.ServiceName
-}
+// func (self *IntegrityShield) GetCheckerServiceName() string {
+// 	return self.Spec.Checker.ServiceName
+// }
 
 func (self *IntegrityShield) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName
@@ -389,6 +388,10 @@ func (self *IntegrityShield) SigStoreEnabled() bool {
 
 func (self *IntegrityShield) UseDefaultSigStoreRootCert() bool {
 	return self.Spec.ShieldConfig.SigStoreConfig.UseDefaultRootCert
+}
+
+func (self *IntegrityShield) GetSigStoreDefaultRootCertURL() string {
+	return self.Spec.ShieldConfig.SigStoreConfig.DefaultRootCertURL
 }
 
 func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {
