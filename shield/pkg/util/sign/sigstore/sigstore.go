@@ -143,7 +143,6 @@ func createTmpYamls(msg, sig, cert, bndl []byte) error {
 	}
 	f2path := path.Clean(path.Join(tmpDir, tmpSignedFileName))
 	signedYamlBytes := n.ToYaml()
-	fmt.Println("[DEBUG] signedYamlBytes: ", signedYamlBytes)
 	err = ioutil.WriteFile(f2path, []byte(signedYamlBytes), 0644)
 	if err != nil {
 		return err

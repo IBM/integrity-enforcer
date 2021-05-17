@@ -44,6 +44,7 @@ spec:
     imageVerificationConfig:
       enabled: false
       verificationURL: ""
+      options: {}
   shieldConfigCrName: ishield-config
   imagePullSecrets: []
   globalConfig: 

@@ -87,6 +87,7 @@ spec:
     - kind: TokenReview
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
+    imageVerificationConfig: {}
     inScopeNamespaceSelector:
       exclude:
       - kube-*
