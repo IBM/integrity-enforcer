@@ -10,7 +10,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/cosign v0.4.0
 	github.com/sigstore/rekor v0.1.2-0.20210428010952-9e3e56d52dd0
-	github.com/sigstore/sigstore v0.0.0-20210427115853-11e6eaab7cdc
+	github.com/sigstore/sigstore v0.0.0-20210516171352-bee6a385d4af
 	github.com/sirupsen/logrus v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.20.2
