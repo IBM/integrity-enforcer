@@ -69,12 +69,12 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	// make AdmissionResponse based on DecisionResult
 	resp := &admv1.AdmissionResponse{}
 
-	if dr.IsUndetermined() {
+	if dr.isUndetermined() {
 		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.reqobj, self.ctx, self.config)
-	} else if dr.IsErrorOccurred() {
+	} else if dr.isErrorOccurred() {
 		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
 	} else {
-		resp = createAdmissionResponse(dr.IsAllowed(), dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
 	}
 
 	// log results
@@ -95,35 +95,35 @@ func (self *Handler) Check() *DecisionResult {
 	dr = undeterminedDescision()
 
 	dr = inScopeCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
 	dr = formatCheck(self.reqc, self.reqobj, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 
 		return dr
 	}
 
 	dr = iShieldResourceCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 
 	dr = deleteCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	dr, matchedProfiles = protectedCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 
 	dr = mutationCheck(matchedProfiles, self.reqc, self.reqobj, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 
@@ -134,7 +134,7 @@ func (self *Handler) Check() *DecisionResult {
 
 	dr = self.resHandler.Run(obj)
 
-	if dr.IsUndetermined() {
+	if dr.isUndetermined() {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,
@@ -216,7 +216,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 		return dr
 	}
 
-	if !dr.IsAllowed() && isDetectMode {
+	if !dr.isAllowed() && isDetectMode {
 		self.ctx.Allow = true
 		self.ctx.DetectOnlyModeEnabled = true
 		self.ctx.ReasonCode = common.REASON_DETECTION
@@ -225,7 +225,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 		dr.Verified = false
 		dr.Message = common.ReasonCodeMap[common.REASON_DETECTION].Message
 		dr.ReasonCode = common.REASON_DETECTION
-	} else if !dr.IsAllowed() && isBreakGlass {
+	} else if !dr.isAllowed() && isBreakGlass {
 		self.ctx.Allow = true
 		self.ctx.BreakGlassModeEnabled = true
 		self.ctx.ReasonCode = common.REASON_BREAK_GLASS
@@ -239,7 +239,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 }
 
 func (self *Handler) finalize(dr *DecisionResult) {
-	if dr.IsAllowed() {
+	if dr.isAllowed() {
 		resetRuleTableCache := false
 		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
 		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
@@ -305,7 +305,7 @@ func (self *Handler) logExit() {
 func (self *Handler) logResponse(req *admv1.AdmissionRequest, dr *DecisionResult) {
 	if self.config.Log.LogAllResponse {
 		respData := map[string]interface{}{}
-		respData["allowed"] = dr.IsAllowed()
+		respData["allowed"] = dr.isAllowed()
 		respData["operation"] = req.Operation
 		respData["kind"] = req.Kind
 		respData["namespace"] = req.Namespace

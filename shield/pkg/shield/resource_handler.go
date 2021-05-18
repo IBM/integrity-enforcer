@@ -67,9 +67,16 @@ func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *DecisionR
 	dr := self.Check()
 
 	if self.config.ImageVerificationEnabled() {
+		resourceDecisionResult := dr
+		resourceAllowed := resourceDecisionResult.isAllowed()
 		self.resourceLog.Trace("ImageVerificationEnabled")
-		idr := self.ImageCheck()
-		self.resourceLog.Trace("image check result: ", idr)
+		imageDecisionResult := self.ImageCheck()
+		self.resourceLog.Trace("image check result: ", imageDecisionResult)
+		imageDenied := imageDecisionResult.isDenied() || imageDecisionResult.isErrorOccurred()
+		// overwride existing DecisionResult only when resource is allowed & image is denied
+		if resourceAllowed && imageDenied {
+			dr = imageDecisionResult
+		}
 	}
 
 	// log results
@@ -86,20 +93,20 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 	dr = undeterminedDescision()
 
 	dr = inScopeCheckByResource(self.resc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	dr, matchedProfiles = protectedCheckByResource(self.resc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	if !dr.isUndetermined() {
 		return dr
 	}
 
 	for _, prof := range matchedProfiles {
 		dr = resourceSigningProfileSignatureCheck(prof, self.resc, self.config, self.data, self.ctx)
-		if dr.IsAllowed() {
+		if dr.isAllowed() {
 			// this RSP allowed the resource. will check next RSP.
 		} else {
 			// this RSP denied the resource. return the result.
@@ -107,7 +114,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 		}
 	}
 
-	if dr.IsUndetermined() {
+	if dr.isUndetermined() {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,
@@ -118,15 +125,10 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 }
 
 // image
-func (self *ResourceCheckHandler) ImageCheck() *ImageDecisionResult {
-	idr := &ImageDecisionResult{}
-	idr.Type = common.DecisionUndetermined
-	sigcheck, imageToVerify, msg := requestCheckForImageCheck(self.resc)
-	if !sigcheck {
-		idr.Verified = false
-		idr.Allowed = true
-		idr.Type = common.DecisionAllow
-		idr.Message = msg
+func (self *ResourceCheckHandler) ImageCheck() *DecisionResult {
+	idr := undeterminedDescision()
+	needSigCheck, imageToVerify, _ := requestCheckForImageCheck(self.resc)
+	if !needSigCheck {
 		return idr
 	}
 	imageToVerify.imageSignatureCheck()
