@@ -123,8 +123,12 @@ func (self *ResourceHandler) Check() *DecisionResult {
 // image
 func (self *ResourceHandler) ImageCheck() *ImageDecisionResult {
 	idr := &ImageDecisionResult{}
+	idr.Type = common.DecisionUndetermined
 	sigcheck, imageToVerify, msg := requestCheckForImageCheck(self.resc)
 	if !sigcheck {
+		idr.Verified = false
+		idr.Allowed = true
+		idr.Type = common.DecisionAllow
 		idr.Message = msg
 		return idr
 	}

@@ -41,6 +41,7 @@ import (
 type ImageDecisionResult struct {
 	Type     common.DecisionType `json:"type,omitempty"`
 	Verified bool                `json:"verified,omitempty"`
+	Allowed  bool                `json:"allowed,omitempty"`
 	Message  string              `json:"message,omitempty"`
 }
 
@@ -110,18 +111,31 @@ func (sci *SigCheckImages) imageVerifiedResultCheckByProfile() {
 func makeImageCheckResult(images *SigCheckImages) *ImageDecisionResult {
 	res := &ImageDecisionResult{}
 	for _, img := range images.ImagesToVerify {
+		if img.Result.Error != nil {
+			res.Type = common.DecisionError
+			res.Allowed = false
+			res.Verified = true
+			res.Message = img.Result.Error.Error()
+			return res
+		}
 		if !img.Result.Allowed {
-			res.Verified = false
+			res.Type = common.DecisionDeny
+			res.Allowed = false
+			res.Verified = true
 			res.Message = img.Result.Reason
 			return res
 		}
 		if !img.ProfileCheckResult {
-			res.Verified = false
+			res.Type = common.DecisionDeny
+			res.Allowed = false
+			res.Verified = true
 			res.Message = "no image profile matches with this commonName:" + strings.Join(img.Result.CommonNames, ",")
 			return res
 		}
 	}
+	res.Allowed = true
 	res.Verified = true
+	res.Type = common.DecisionAllow
 	res.Message = "image " + images.ImagesToVerify[0].Result.Digest + " is signed by " + images.ImagesToVerify[0].Profile.CommonName
 	return res
 }
