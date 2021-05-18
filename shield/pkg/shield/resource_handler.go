@@ -67,15 +67,20 @@ func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *DecisionR
 	dr := self.Check()
 
 	if self.config.ImageVerificationEnabled() {
-		resourceDecisionResult := dr
-		resourceAllowed := resourceDecisionResult.isAllowed()
-		self.resourceLog.Trace("ImageVerificationEnabled")
-		imageDecisionResult := self.ImageCheck()
-		self.resourceLog.Trace("image check result: ", imageDecisionResult)
-		imageDenied := imageDecisionResult.isDenied() || imageDecisionResult.isErrorOccurred()
-		// overwride existing DecisionResult only when resource is allowed & image is denied
-		if resourceAllowed && imageDenied {
-			dr = imageDecisionResult
+		// TODO: support pgp/x509 image signature
+		if self.config.SigStoreEnabled() {
+			resourceDecisionResult := dr
+			resourceAllowed := resourceDecisionResult.isAllowed()
+
+			self.resourceLog.Trace("ImageVerificationEnabled")
+			imageDecisionResult := self.ImageCheck()
+			self.resourceLog.Trace("image check result: ", imageDecisionResult)
+			imageDenied := imageDecisionResult.isDenied() || imageDecisionResult.isErrorOccurred()
+
+			// overwride existing DecisionResult only when resource is allowed & image is denied
+			if resourceAllowed && imageDenied {
+				dr = imageDecisionResult
+			}
 		}
 	}
 
