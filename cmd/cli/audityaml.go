@@ -38,7 +38,7 @@ against the transparency log.
 
 EXAMPLES
   # audit cosign claims and signing certificates on the yaml file
-  ishieldctl audit -apiversion -kind -namespace -name
+  ishieldctl audit -apiversion <API version, e.g. v1 > -kind <resource kind e.g. ConfigMap> -namespace <a cluster namespace> -name <name of the resource>
  `,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
