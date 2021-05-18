@@ -7,6 +7,7 @@ go 1.16
 require (
 	github.com/IBM/integrity-enforcer/cmd v0.0.0-00010101000000-000000000000
 	github.com/ghodss/yaml v1.0.0
+	github.com/google/go-containerregistry v0.5.0
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
 	github.com/onsi/ginkgo v1.14.1
@@ -15,6 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/r3labs/diff v0.0.0-20191120142937-b4ed99a31f5a
 	github.com/sigstore/cosign v0.4.0
+	github.com/sigstore/sigstore v0.0.0-20210516171352-bee6a385d4af
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tidwall/gjson v1.6.7
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b

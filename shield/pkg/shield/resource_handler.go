@@ -61,7 +61,6 @@ func NewResourceHandlerWithContext(config *config.ShieldConfig, metaLogger *log.
 }
 
 func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult {
-
 	// init ctx, reqc and data & init logger
 	self.initialize(res)
 
@@ -69,9 +68,11 @@ func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult
 	dr := self.Check()
 
 	if self.config.ImageVerificationEnabled() {
+		fmt.Println("ImageVerificationEnabled")
 		// apiURL := self.config.GetImageVerificationURL()
 		// TODO: call cosign verify API here
-
+		idr := self.ImageCheck()
+		fmt.Println("image check result: ", idr)
 	}
 
 	// log results
@@ -117,6 +118,20 @@ func (self *ResourceHandler) Check() *DecisionResult {
 		}
 	}
 	return dr
+}
+
+// image
+func (self *ResourceHandler) ImageCheck() *ImageDecisionResult {
+	idr := &ImageDecisionResult{}
+	sigcheck, imageToVerify, msg := requestCheckForImageCheck(self.resc)
+	if !sigcheck {
+		idr.Message = msg
+		return idr
+	}
+	imageToVerify.imageSignatureCheck()
+	imageToVerify.imageVerifiedResultCheckByProfile()
+	idr = makeImageCheckResult(imageToVerify)
+	return idr
 }
 
 // load resoruces / set default values
