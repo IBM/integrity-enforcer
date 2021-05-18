@@ -22,6 +22,7 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
 /**********************************************
@@ -68,7 +69,7 @@ func InitCheckContext(config *config.ShieldConfig) *CheckContext {
 	return cc
 }
 
-func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext) map[string]interface{} {
+func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext, lggr *logger.Logger) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
@@ -151,99 +152,8 @@ func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext) map[st
 
 	}
 
-	// logRecord["request.objectHashType"] = reqc.ObjectHashType
-	// logRecord["request.objectHash"] = reqc.ObjectHash
-
-	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
-
-	currentTime := time.Now()
-	ts := currentTime.Format("2006-01-02T15:04:05.000Z")
-
-	logRecord["timestamp"] = ts
-
-	return logRecord
-
-}
-
-func (self *CheckContext) convertToLogRecordByResource(resc *common.ResourceContext) map[string]interface{} {
-
-	// cc := self
-	logRecord := map[string]interface{}{
-		// request context
-		"namespace":    resc.Namespace,
-		"name":         resc.Name,
-		"apiGroup":     resc.ApiGroup,
-		"apiVersion":   resc.ApiVersion,
-		"kind":         resc.Kind,
-		"objLabels":    resc.ObjLabels,
-		"objMetaName":  resc.ObjMetaName,
-		"request.dump": "",
-		"requestScope": resc.ResourceScope,
-
-		//context
-		"ignoreSA":        self.IgnoredSA,
-		"protected":       self.Protected,
-		"iShieldResource": self.IShieldResource,
-		"allowed":         self.Allow,
-		"verified":        self.Verified,
-		"aborted":         self.Aborted,
-		"abortReason":     self.AbortReason,
-		"msg":             self.Message,
-		"breakglass":      self.BreakGlassModeEnabled,
-		"detectOnly":      self.DetectOnlyModeEnabled,
-
-		//reason code
-		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
-	}
-
-	if self.Error != nil {
-		logRecord["error"] = self.Error.Error()
-	}
-
-	//context from sign policy eval
-	if self.SignatureEvalResult != nil {
-		r := self.SignatureEvalResult
-		if r.Signer != nil {
-			logRecord["sig.signer.email"] = r.Signer.Email
-			logRecord["sig.signer.name"] = r.Signer.Name
-			logRecord["sig.signer.comment"] = r.Signer.Comment
-			logRecord["sig.signer.fingerprint"] = r.Signer.Fingerprint
-			logRecord["sig.signer.displayName"] = r.GetSignerName()
-		}
-		logRecord["sig.allow"] = r.Allow
-		if r.Error != nil {
-			logRecord["sig.errOccured"] = true
-			logRecord["sig.errMsg"] = r.Error.Msg
-			logRecord["sig.errReason"] = r.Error.Reason
-			if r.Error.Error != nil {
-				logRecord["sig.error"] = r.Error.Error.Error()
-			}
-		} else {
-			logRecord["sig.errOccured"] = false
-		}
-	}
-
-	//context from mutation eval
-	if self.MutationEvalResult != nil {
-		r := self.MutationEvalResult
-		if r.Error != nil {
-			logRecord["ma.errOccured"] = true
-			logRecord["ma.errMsg"] = r.Error.Msg
-			logRecord["ma.errReason"] = r.Error.Reason
-			if r.Error.Error != nil {
-				logRecord["ma.error"] = r.Error.Error.Error()
-			}
-		} else {
-			logRecord["ma.errOccured"] = false
-		}
-		logRecord["ma.mutated"] = strconv.FormatBool(r.IsMutated)
-		logRecord["ma.diff"] = r.Diff
-		logRecord["ma.filtered"] = r.Filtered
-		logRecord["ma.checked"] = strconv.FormatBool(r.Checked)
-
-	}
-
-	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
+	sessionTraceStr := lggr.GetSessionTraceString()
+	logRecord["sessionTrace"] = sessionTraceStr
 
 	currentTime := time.Now()
 	ts := currentTime.Format("2006-01-02T15:04:05.000Z")

@@ -27,7 +27,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -211,20 +210,9 @@ func TestHandlerSuite(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
-func getTestLogger(testReq *admv1.AdmissionRequest, testConf *config.ShieldConfig) (*log.Logger, *log.Entry) {
-	gv := metav1.GroupVersion{Group: testReq.Kind.Group, Version: testReq.Kind.Version}
+func getTestLogger(testReq *admv1.AdmissionRequest, testConf *config.ShieldConfig) *logger.Logger {
 	metaLogger := logger.NewLogger(testConf.LoggerConfig())
-	reqLog := metaLogger.WithFields(
-		log.Fields{
-			"namespace":  testReq.Namespace,
-			"name":       testReq.Name,
-			"apiVersion": gv.String(),
-			"kind":       testReq.Kind,
-			"operation":  testReq.Operation,
-			"requestUID": string(testReq.UID),
-		},
-	)
-	return metaLogger, reqLog
+	return metaLogger
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -337,8 +325,8 @@ func handlerTest() {
 	It("Handler Run Test (allow, no-mutation)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			metaLogger, reqLog := getTestLogger(req, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(req, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(req)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -354,8 +342,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			invalidRSPReq := getInvalidRSPRequest(req)
-			metaLogger, reqLog := getTestLogger(invalidRSPReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(invalidRSPReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(invalidRSPReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -371,8 +359,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			invalidSConfReq := getInvalidSignerConfigRequest(req)
-			metaLogger, reqLog := getTestLogger(invalidSConfReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(invalidSConfReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(invalidSConfReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -392,8 +380,8 @@ func handlerTest() {
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
 			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/keyring-secret/pgp/miss-configured-pubring"}
-			metaLogger, reqLog := getTestLogger(changedReq, test2Config)
-			testHandler := NewHandler(test2Config, metaLogger, reqLog)
+			metaLogger := getTestLogger(changedReq, test2Config)
+			testHandler := NewHandler(test2Config, metaLogger)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -409,8 +397,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			changedReq := getChangedRequest(req)
-			metaLogger, reqLog := getTestLogger(changedReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(changedReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -426,8 +414,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			modReq := getRequestWithoutAnnoSig(req)
-			metaLogger, reqLog := getTestLogger(modReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(modReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(modReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -444,8 +432,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			updReq := getUpdateRequest()
-			metaLogger, reqLog := getTestLogger(updReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(updReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(updReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -462,8 +450,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			updReq := getUpdateWithMetaChangeRequest()
-			metaLogger, reqLog := getTestLogger(updReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(updReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(updReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -480,8 +468,8 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			crdReq, crdTestConfig := getCRDRequest()
-			metaLogger, reqLog := getTestLogger(crdReq, crdTestConfig)
-			testHandler := NewHandler(crdTestConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(crdReq, crdTestConfig)
+			testHandler := NewHandler(crdTestConfig, metaLogger)
 			resp := testHandler.Run(crdReq)
 
 			respBytes, _ := json.Marshal(resp)

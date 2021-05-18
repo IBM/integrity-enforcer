@@ -17,8 +17,6 @@
 package shield
 
 import (
-	"encoding/json"
-
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
@@ -39,20 +37,20 @@ type ResourceCheckHandler struct {
 	ctx           *CheckContext
 	resc          *common.ResourceContext
 	data          *RunData
-	serverLogger  *log.Logger
+	serverLogger  *logger.Logger
 	resourceLog   *log.Entry
 	contextLogger *logger.ContextLogger
 	logInScope    bool
 }
 
-func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *log.Logger, resLog *log.Entry) *ResourceCheckHandler {
+func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *logger.Logger) *ResourceCheckHandler {
 	data := &RunData{}
 	data.EnableForceInitialize() // ResourceCheckHandler will load profiles on every run
-	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger, resourceLog: resLog}
+	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger}
 }
 
-func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *log.Logger, resLog *log.Entry, ctx *CheckContext, data *RunData) *ResourceCheckHandler {
-	resHandler := NewResourceCheckHandler(config, metaLogger, resLog)
+func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *logger.Logger, ctx *CheckContext, data *RunData) *ResourceCheckHandler {
+	resHandler := NewResourceCheckHandler(config, metaLogger)
 	resHandler.ctx = ctx
 	resHandler.data = data
 	return resHandler
@@ -65,27 +63,6 @@ func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *DecisionR
 
 	// make DecisionResult based on reqc, config and data
 	dr := self.Check()
-
-	if self.config.ImageVerificationEnabled() {
-		// TODO: support pgp/x509 image signature
-		if self.config.SigStoreEnabled() {
-			resourceDecisionResult := dr
-			resourceAllowed := resourceDecisionResult.isAllowed()
-
-			self.resourceLog.Trace("ImageVerificationEnabled")
-			imageDecisionResult := self.ImageCheck()
-			self.resourceLog.Trace("image check result: ", imageDecisionResult)
-			imageDenied := imageDecisionResult.isDenied() || imageDecisionResult.isErrorOccurred()
-
-			// overwride existing DecisionResult only when resource is allowed & image is denied
-			if resourceAllowed && imageDenied {
-				dr = imageDecisionResult
-			}
-		}
-	}
-
-	// log results
-	self.logContext()
 
 	// reset logger
 	self.finalize()
@@ -119,6 +96,26 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 		}
 	}
 
+	resourceDecisionResult := dr
+	resourceSigOk := resourceDecisionResult.isAllowed()
+
+	// if image verification is enabled, check the image siganture here if needed.
+	// At the end of this verification, override the result only when resource is ok & image is ng.
+	if self.config.ImageVerificationEnabled() {
+		// TODO: support pgp/x509 image signature
+		if self.config.SigStoreEnabled() {
+			self.resourceLog.Trace("ImageVerificationEnabled")
+			imageDecisionResult := self.ImageCheck()
+			self.resourceLog.Trace("image check result: ", imageDecisionResult)
+			imageDenied := imageDecisionResult.isDenied() || imageDecisionResult.isErrorOccurred()
+
+			// overwride existing DecisionResult only when resource siganature is allowed & image is denied
+			if resourceSigOk && imageDenied {
+				dr = imageDecisionResult
+			}
+		}
+	}
+
 	if dr.isUndetermined() {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
@@ -144,6 +141,14 @@ func (self *ResourceCheckHandler) ImageCheck() *DecisionResult {
 
 // load resoruces / set default values
 func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *DecisionResult {
+	self.resourceLog = self.serverLogger.WithFields(
+		log.Fields{
+			"namespace":  res.GetNamespace(),
+			"name":       res.GetName(),
+			"apiVersion": res.GetAPIVersion(),
+			"kind":       res.GetKind(),
+		},
+	)
 
 	if self.ctx == nil {
 		self.ctx = InitCheckContext(self.config)
@@ -180,20 +185,20 @@ func (self *ResourceCheckHandler) logEntry() {
 	}
 }
 
-func (self *ResourceCheckHandler) logContext() {
-	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
-		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
-		logRecord := self.ctx.convertToLogRecordByResource(self.resc)
-		logBytes, err := json.Marshal(logRecord)
-		if err != nil {
-			self.resourceLog.Error(err)
-			logBytes = []byte("")
-		}
-		if self.resc.ResourceScope == "Namespaced" || (self.resc.ResourceScope == "Cluster" && self.ctx.Protected) {
-			self.contextLogger.SendLog(logBytes)
-		}
-	}
-}
+// func (self *ResourceCheckHandler) logContext() {
+// 	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
+// 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
+// 		logRecord := self.ctx.convertToLogRecordByResource(self.resc, self.resourceLog)
+// 		logBytes, err := json.Marshal(logRecord)
+// 		if err != nil {
+// 			self.resourceLog.Error(err)
+// 			logBytes = []byte("")
+// 		}
+// 		if self.resc.ResourceScope == "Namespaced" || (self.resc.ResourceScope == "Cluster" && self.ctx.Protected) {
+// 			self.contextLogger.SendLog(logBytes)
+// 		}
+// 	}
+// }
 
 func (self *ResourceCheckHandler) logExit() {
 	if ok, _ := self.config.ConsoleLogEnabled(self.resc); ok {

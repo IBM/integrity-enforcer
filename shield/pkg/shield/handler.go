@@ -27,6 +27,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -43,7 +44,7 @@ type Handler struct {
 	reqobj        *common.RequestObject
 	resc          *common.ResourceContext
 	data          *RunData
-	serverLogger  *log.Logger
+	serverLogger  *logger.Logger
 	requestLog    *log.Entry
 	contextLogger *logger.ContextLogger
 	logInScope    bool
@@ -51,8 +52,8 @@ type Handler struct {
 	resHandler *ResourceCheckHandler
 }
 
-func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *Handler {
-	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
+func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger) *Handler {
+	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger}
 }
 
 func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
@@ -182,12 +183,23 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 // load resoruces / set default values
 func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
+	gv := metav1.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
+	self.requestLog = self.serverLogger.WithFields(
+		log.Fields{
+			"namespace":  req.Namespace,
+			"name":       req.Name,
+			"apiVersion": gv.String(),
+			"kind":       req.Kind,
+			"operation":  req.Operation,
+			"requestUID": string(req.UID),
+		},
+	)
 
 	// init CheckContext
 	self.ctx = InitCheckContext(self.config)
 
 	// init resource handler with shared CheckContext
-	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.requestLog, self.ctx, self.data)
+	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.ctx, self.data)
 
 	reqNamespace := getRequestNamespace(req)
 
@@ -276,7 +288,7 @@ func (self *Handler) logEntry() {
 func (self *Handler) logContext() {
 	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
-		logRecord := self.ctx.convertToLogRecord(self.reqc)
+		logRecord := self.ctx.convertToLogRecord(self.reqc, self.serverLogger)
 		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
 			logRecord["request.dump"] = self.reqc.RequestJsonStr
 		}

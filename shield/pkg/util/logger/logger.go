@@ -17,6 +17,7 @@
 package logger
 
 import (
+	"bytes"
 	"os"
 	"time"
 
@@ -27,6 +28,11 @@ type LoggerConfig struct {
 	Level    string
 	Format   string
 	FileDest string
+}
+
+type Logger struct {
+	*log.Logger
+	sessionTrace *SessionTraceHook
 }
 
 // NOTE: this singleton logger should be used only for simple log messages
@@ -62,35 +68,51 @@ func SetSingletonLoggerLevel(lvlStr string) {
 // 	})
 // }
 
-func NewLogger(conf LoggerConfig) *log.Logger {
+func NewLogger(conf LoggerConfig) *Logger {
 
-	logger := log.New()
+	baselogger := log.New()
 
 	if conf.Format == "json" {
-		logger.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
+		baselogger.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
 	}
 
 	logLevel := log.InfoLevel
 	if conf.Level != "" {
 		lvl, err := log.ParseLevel(conf.Level)
 		if err != nil {
-			logger.Info("Failed to parse log level, using info level")
+			baselogger.Info("Failed to parse log level, using info level")
 		} else {
 			logLevel = lvl
 		}
 	}
-	logger.SetLevel(logLevel)
+	baselogger.SetLevel(logLevel)
 	if conf.FileDest != "" {
 		file, err := os.OpenFile(conf.FileDest, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640) // NOSONAR
 		if err == nil {
-			logger.Out = file
+			baselogger.Out = file
 		} else {
-			logger.Info("Failed to log to file, using default stderr")
+			baselogger.Info("Failed to log to file, using default stderr")
 		}
 	} else {
-		logger.Out = os.Stdout
+		baselogger.Out = os.Stdout
 	}
+
+	sessionTrace := NewSessionTraceHook(log.TraceLevel, &log.TextFormatter{})
+	baselogger.AddHook(sessionTrace)
+
+	logger := &Logger{
+		Logger:       baselogger,
+		sessionTrace: sessionTrace,
+	}
+
 	return logger
+}
+
+func (self *Logger) GetSessionTraceString() string {
+	if self.sessionTrace == nil {
+		return ""
+	}
+	return self.sessionTrace.GetBufferedString()
 }
 
 func GetGreaterLevel(lvStr1, lvStr2 string) string {
@@ -143,4 +165,44 @@ func Trace(args ...interface{}) {
 
 func WithFields(fields log.Fields) *log.Entry {
 	return simpleLogger.WithFields(fields)
+}
+
+/*
+   Hook for Logging to Buffer
+*/
+
+type SessionTraceHook struct {
+	writer    *bytes.Buffer
+	minLevel  log.Level
+	formatter log.Formatter
+}
+
+func (hook *SessionTraceHook) GetBufferedString() string {
+	s := (*hook.writer).String()
+	return s
+}
+
+func NewSessionTraceHook(minLevel log.Level, formatter log.Formatter) *SessionTraceHook {
+	return &SessionTraceHook{
+		writer:    &bytes.Buffer{},
+		minLevel:  minLevel,
+		formatter: formatter,
+	}
+}
+
+func (hook *SessionTraceHook) Fire(entry *log.Entry) error {
+
+	msg, err := hook.formatter.Format(entry)
+	if err != nil {
+		return err
+	}
+
+	if hook.writer != nil {
+		_, err = (*hook.writer).Write([]byte(msg))
+	}
+	return err
+}
+
+func (hook *SessionTraceHook) Levels() []log.Level {
+	return log.AllLevels[:hook.minLevel+1]
 }

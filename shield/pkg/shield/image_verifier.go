@@ -62,18 +62,25 @@ func (sci *SigCheckImages) imageSignatureCheck() {
 		ref, err := name.ParseReference(img.Image)
 		if err != nil {
 			res.Error = err
+			img.Result = res
+			sci.ImagesToVerify[i] = img
 			continue
 		}
 		verified, err := cosign.Verify(context.Background(), ref, co)
 		if err != nil {
 			//  cosign verify err
-			res.Error = err
+			res.Allowed = false
+			res.Reason = "no valid signature for this image; " + err.Error()
+			img.Result = res
+			sci.ImagesToVerify[i] = img
 			continue
 		}
 		if len(verified) == 0 {
 			//  []cosign.SignedPayload is empty: no valid signature"
 			res.Allowed = false
-			res.Reason = "no valid signature"
+			res.Reason = "no valid signature for this image"
+			img.Result = res
+			sci.ImagesToVerify[i] = img
 			continue
 		}
 		var commonNames []string

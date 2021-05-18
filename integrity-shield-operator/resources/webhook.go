@@ -96,7 +96,7 @@ func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield
 
 	var empty []byte
 
-	sideEffect := admregv1.SideEffectClassNone
+	sideEffect := admregv1.SideEffectClassNoneOnDryRun
 	timeoutSeconds := int32(apiv1alpha1.DefaultIShieldWebhookTimeout)
 
 	rules := []admregv1.RuleWithOperations{

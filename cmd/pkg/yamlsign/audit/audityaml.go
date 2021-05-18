@@ -31,15 +31,7 @@ func AuditYaml(ctx context.Context, apiVersion, kind, namespace, name string) (*
 	_ = config.InitShieldConfig()
 
 	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	reqLog := metaLogger.WithFields(
-		log.Fields{
-			"namespace":  namespace,
-			"name":       name,
-			"apiVersion": apiVersion,
-			"kind":       kind,
-		},
-	)
-	resourceHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, reqLog)
+	resourceHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger)
 
 	var obj *unstructured.Unstructured
 	obj, err := kubeutil.GetResource(apiVersion, kind, namespace, name)

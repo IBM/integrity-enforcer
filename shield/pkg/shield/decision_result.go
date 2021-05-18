@@ -17,6 +17,8 @@
 package shield
 
 import (
+	"encoding/json"
+
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -39,6 +41,11 @@ type DecisionResult struct {
 
 func undeterminedDescision() *DecisionResult {
 	return &DecisionResult{Type: common.DecisionUndetermined}
+}
+
+func (self *DecisionResult) String() string {
+	drB, _ := json.Marshal(self)
+	return string(drB)
 }
 
 func (self *DecisionResult) isAllowed() bool {
