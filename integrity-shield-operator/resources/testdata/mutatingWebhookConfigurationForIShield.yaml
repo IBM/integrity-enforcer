@@ -31,6 +31,6 @@ webhooks:
     resources:
     - '*'
     scope: Cluster
-  sideEffects: None
+  sideEffects: NoneOnDryRun
   timeoutSeconds: 10
   admissionReviewVersions: ["v1", "v1beta1"]

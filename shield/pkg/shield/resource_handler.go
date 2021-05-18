@@ -74,7 +74,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
-	dr = inScopeCheckByResource(self.resc, self.config, self.data, self.ctx)
+	dr = ishieldScopeCheckByResource(self.resc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
 		return dr
 	}
@@ -87,7 +87,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 	}
 
 	for _, prof := range matchedProfiles {
-		dr = resourceSigningProfileSignatureCheck(prof, self.resc, self.config, self.data, self.ctx)
+		dr = signatureCheckWithSingleProfile(prof, self.resc, self.config, self.data, self.ctx)
 		if dr.isAllowed() {
 			// this RSP allowed the resource. will check next RSP.
 		} else {

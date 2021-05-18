@@ -95,7 +95,7 @@ func (self *Handler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
-	dr = inScopeCheck(self.reqc, self.config, self.data, self.ctx)
+	dr = ishieldScopeCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
 		return dr
 	}

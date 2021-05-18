@@ -183,7 +183,7 @@ func checkIfProfileTargetNamespace(reqNamespace, shieldNamespace string, data *R
 	return ruleTable.CheckIfTargetNamespace(reqNamespace)
 }
 
-func checkIfInScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
+func checkIfIshieldScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
 	inScopeNSSelector := config.InScopeNamespaceSelector
 	if inScopeNSSelector == nil {
 		return false
