@@ -18,7 +18,6 @@ package shield
 
 import (
 	"encoding/json"
-	"fmt"
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
@@ -26,7 +25,6 @@ import (
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
-	admv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -36,43 +34,42 @@ import (
 
 ***********************************************/
 
-type ResourceHandler struct {
+type ResourceCheckHandler struct {
 	config        *config.ShieldConfig
 	ctx           *CheckContext
 	resc          *common.ResourceContext
 	data          *RunData
 	serverLogger  *log.Logger
-	requestLog    *log.Entry
+	resourceLog   *log.Entry
 	contextLogger *logger.ContextLogger
 	logInScope    bool
 }
 
-func NewResourceHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *ResourceHandler {
+func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *log.Logger, resLog *log.Entry) *ResourceCheckHandler {
 	data := &RunData{}
-	data.EnableForceInitialize() // Resource Handler will load profiles on every run
-	return &ResourceHandler{config: config, data: data, serverLogger: metaLogger, requestLog: reqLog}
+	data.EnableForceInitialize() // ResourceCheckHandler will load profiles on every run
+	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger, resourceLog: resLog}
 }
 
-func NewResourceHandlerWithContext(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry, ctx *CheckContext, data *RunData) *ResourceHandler {
-	resHandler := NewResourceHandler(config, metaLogger, reqLog)
+func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *log.Logger, resLog *log.Entry, ctx *CheckContext, data *RunData) *ResourceCheckHandler {
+	resHandler := NewResourceCheckHandler(config, metaLogger, resLog)
 	resHandler.ctx = ctx
 	resHandler.data = data
 	return resHandler
 }
 
-func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult {
-	// init ctx, reqc and data & init logger
+func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *DecisionResult {
+
+	// init ctx, resc and data & init logger
 	self.initialize(res)
 
 	// make DecisionResult based on reqc, config and data
 	dr := self.Check()
 
 	if self.config.ImageVerificationEnabled() {
-		fmt.Println("ImageVerificationEnabled")
-		// apiURL := self.config.GetImageVerificationURL()
-		// TODO: call cosign verify API here
+		self.resourceLog.Trace("ImageVerificationEnabled")
 		idr := self.ImageCheck()
-		fmt.Println("image check result: ", idr)
+		self.resourceLog.Trace("image check result: ", idr)
 	}
 
 	// log results
@@ -84,7 +81,7 @@ func (self *ResourceHandler) Run(res *unstructured.Unstructured) *DecisionResult
 	return dr
 }
 
-func (self *ResourceHandler) Check() *DecisionResult {
+func (self *ResourceCheckHandler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
@@ -103,9 +100,9 @@ func (self *ResourceHandler) Check() *DecisionResult {
 	for _, prof := range matchedProfiles {
 		dr = resourceSigningProfileSignatureCheck(prof, self.resc, self.config, self.data, self.ctx)
 		if dr.IsAllowed() {
-			// this RSP allowed the request. will check next RSP.
+			// this RSP allowed the resource. will check next RSP.
 		} else {
-			// this RSP denied the request. return the result and will make AdmissionResponse.
+			// this RSP denied the resource. return the result.
 			return dr
 		}
 	}
@@ -114,14 +111,14 @@ func (self *ResourceHandler) Check() *DecisionResult {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,
-			Message:    "IntegrityShield failed to decide a response for this request.",
+			Message:    "IntegrityShield failed to decide a response for this resource.",
 		}
 	}
 	return dr
 }
 
 // image
-func (self *ResourceHandler) ImageCheck() *ImageDecisionResult {
+func (self *ResourceCheckHandler) ImageCheck() *ImageDecisionResult {
 	idr := &ImageDecisionResult{}
 	sigcheck, imageToVerify, msg := requestCheckForImageCheck(self.resc)
 	if !sigcheck {
@@ -135,7 +132,7 @@ func (self *ResourceHandler) ImageCheck() *ImageDecisionResult {
 }
 
 // load resoruces / set default values
-func (self *ResourceHandler) initialize(res *unstructured.Unstructured) *DecisionResult {
+func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *DecisionResult {
 
 	if self.ctx == nil {
 		self.ctx = InitCheckContext(self.config)
@@ -143,10 +140,10 @@ func (self *ResourceHandler) initialize(res *unstructured.Unstructured) *Decisio
 
 	reqNamespace := res.GetNamespace()
 
-	// init RequestContext
+	// init ResourceContext
 	self.resc = common.NewResourceContext(res)
 
-	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
+	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ResourceContext.
 	self.logEntry()
 
 	if self.data.loader == nil {
@@ -159,26 +156,26 @@ func (self *ResourceHandler) initialize(res *unstructured.Unstructured) *Decisio
 }
 
 // reset logger context
-func (self *ResourceHandler) finalize() {
+func (self *ResourceCheckHandler) finalize() {
 	self.logExit()
 }
 
-func (self *ResourceHandler) logEntry() {
+func (self *ResourceCheckHandler) logEntry() {
 	if ok, levelStr := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(levelStr) // change singleton logger level; this might be overwritten by parallel handler instance
 		lvl, _ := log.ParseLevel(levelStr)
-		self.serverLogger.SetLevel(lvl) // set custom log level for this request
-		self.requestLog.Trace("New Admission Request Received")
+		self.serverLogger.SetLevel(lvl) // set custom log level for this resource
+		self.resourceLog.Trace("New Resource Check Request Received")
 	}
 }
 
-func (self *ResourceHandler) logContext() {
+func (self *ResourceCheckHandler) logContext() {
 	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
 		logRecord := self.ctx.convertToLogRecordByResource(self.resc)
 		logBytes, err := json.Marshal(logRecord)
 		if err != nil {
-			self.requestLog.Error(err)
+			self.resourceLog.Error(err)
 			logBytes = []byte("")
 		}
 		if self.resc.ResourceScope == "Namespaced" || (self.resc.ResourceScope == "Cluster" && self.ctx.Protected) {
@@ -187,32 +184,12 @@ func (self *ResourceHandler) logContext() {
 	}
 }
 
-func (self *ResourceHandler) logExit() {
+func (self *ResourceCheckHandler) logExit() {
 	if ok, _ := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(self.config.Log.LogLevel)
-		self.requestLog.WithFields(log.Fields{
+		self.resourceLog.WithFields(log.Fields{
 			"allowed": self.ctx.Allow,
 			"aborted": self.ctx.Aborted,
-		}).Trace("New Admission Request Sent")
+		}).Trace("New Resource Check Request Sent")
 	}
-}
-
-func (self *ResourceHandler) logResponse(req *admv1.AdmissionRequest, resp *admv1.AdmissionResponse) {
-	if self.config.Log.LogAllResponse {
-		respData := map[string]interface{}{}
-		respData["allowed"] = resp.Allowed
-		respData["operation"] = req.Operation
-		respData["kind"] = req.Kind
-		respData["namespace"] = req.Namespace
-		respData["name"] = req.Name
-		respData["message"] = resp.Result.Message
-		respData["patch"] = resp.Patch
-		respDataBytes, err := json.Marshal(respData)
-		if err != nil {
-			self.requestLog.Error(err.Error())
-			return
-		}
-		self.requestLog.Trace(fmt.Sprintf("[AdmissionResponse] %s", string(respDataBytes)))
-	}
-	return
 }

@@ -40,7 +40,7 @@ type Handler struct {
 	config        *config.ShieldConfig
 	ctx           *CheckContext
 	reqc          *common.RequestContext
-	vreqobj       *common.VRequestObject
+	reqobj        *common.RequestObject
 	resc          *common.ResourceContext
 	data          *RunData
 	serverLogger  *log.Logger
@@ -48,32 +48,11 @@ type Handler struct {
 	contextLogger *logger.ContextLogger
 	logInScope    bool
 
-	resHandler *ResourceHandler
+	resHandler *ResourceCheckHandler
 }
 
 func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *Handler {
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
-}
-
-func (self *Handler) StepRun(req *admv1.AdmissionRequest) *DecisionResult {
-
-	// init ctx, reqc and data & init logger
-	self.initialize(req)
-
-	// make DecisionResult based on reqc, config and data
-	dr := self.Check()
-
-	// overwrite DecisionResult if needed (DetectMode & BreakGlass)
-	dr = self.overwriteDecision(dr)
-
-	// log results
-	self.logResponse(req, dr)
-	self.logContext()
-
-	// clear some cache if needed
-	self.finalize(dr)
-
-	return dr
 }
 
 func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
@@ -91,11 +70,11 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	resp := &admv1.AdmissionResponse{}
 
 	if dr.IsUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.vreqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.reqobj, self.ctx, self.config)
 	} else if dr.IsErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.vreqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
 	} else {
-		resp = createAdmissionResponse(dr.IsAllowed(), dr.Message, self.reqc, self.vreqobj, self.ctx, self.config)
+		resp = createAdmissionResponse(dr.IsAllowed(), dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
 	}
 
 	// log results
@@ -121,7 +100,7 @@ func (self *Handler) Check() *DecisionResult {
 	}
 	self.logInScope = true
 
-	dr = formatCheck(self.reqc, self.vreqobj, self.config, self.data, self.ctx)
+	dr = formatCheck(self.reqc, self.reqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 
 		return dr
@@ -143,13 +122,13 @@ func (self *Handler) Check() *DecisionResult {
 		return dr
 	}
 
-	dr = mutationCheck(matchedProfiles, self.reqc, self.vreqobj, self.config, self.data, self.ctx)
+	dr = mutationCheck(matchedProfiles, self.reqc, self.reqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	var obj *unstructured.Unstructured
-	_ = json.Unmarshal(self.vreqobj.RawObject, &obj)
+	_ = json.Unmarshal(self.reqobj.RawObject, &obj)
 	// For the case that RawObject does not have metadata.namespace
 	obj.SetNamespace(self.reqc.Namespace)
 
@@ -208,17 +187,17 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 	self.ctx = InitCheckContext(self.config)
 
 	// init resource handler with shared CheckContext
-	self.resHandler = NewResourceHandlerWithContext(self.config, self.serverLogger, self.requestLog, self.ctx, self.data)
+	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.requestLog, self.ctx, self.data)
 
 	reqNamespace := getRequestNamespace(req)
 
 	// init RequestContext & RequestObject
-	self.reqc, self.vreqobj = common.NewRequestContext(req)
+	self.reqc, self.reqobj = common.NewRequestContext(req)
 
 	// init ResourceContext
 	self.resc = common.AdmissionRequestToResourceContext(req)
 
-	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
+	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ResourceContext.
 	self.logEntry()
 
 	runDataLoader := NewLoader(self.config, reqNamespace)
@@ -266,7 +245,7 @@ func (self *Handler) finalize(dr *DecisionResult) {
 		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
 		if self.reqc.Kind == "Namespace" {
 			if self.reqc.IsUpdateRequest() {
-				mtResult, _ := MutationCheck(self.reqc, self.vreqobj)
+				mtResult, _ := MutationCheck(self.reqc, self.reqobj)
 				if mtResult != nil && mtResult.IsMutated {
 					resetRuleTableCache = true
 				}

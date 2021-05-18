@@ -25,7 +25,7 @@ replace (
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.0
 	k8s.io/client-go => k8s.io/client-go v0.19.0
 	k8s.io/kubectl => k8s.io/kubectl v0.19.0
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.2
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm

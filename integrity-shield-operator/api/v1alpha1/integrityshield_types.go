@@ -39,13 +39,13 @@ import (
 )
 
 const (
-	DefaultIntegrityShieldCRDName             = "integrityshields.apis.integrityshield.io"
-	DefaultShieldConfigCRDName                = "shieldconfigs.apis.integrityshield.io"
-	DefaultSignerConfigCRDName                = "signerconfigs.apis.integrityshield.io"
-	DefaultResourceSignatureCRDName           = "resourcesignatures.apis.integrityshield.io"
-	DefaultResourceSigningProfileCRDName      = "resourcesigningprofiles.apis.integrityshield.io"
-	DefaultHelmReleaseMetadataCRDName         = "helmreleasemetadatas.apis.integrityshield.io"
-	DefaultProtectedResourceIntegrityCRDName  = "protectedresourceintegrities.apis.integrityshield.io"
+	DefaultIntegrityShieldCRDName        = "integrityshields.apis.integrityshield.io"
+	DefaultShieldConfigCRDName           = "shieldconfigs.apis.integrityshield.io"
+	DefaultSignerConfigCRDName           = "signerconfigs.apis.integrityshield.io"
+	DefaultResourceSignatureCRDName      = "resourcesignatures.apis.integrityshield.io"
+	DefaultResourceSigningProfileCRDName = "resourcesigningprofiles.apis.integrityshield.io"
+	DefaultHelmReleaseMetadataCRDName    = "helmreleasemetadatas.apis.integrityshield.io"
+	// DefaultProtectedResourceIntegrityCRDName  = "protectedresourceintegrities.apis.integrityshield.io"
 	DefaultSignerConfigCRName                 = "signer-config"
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
@@ -282,9 +282,9 @@ func (self *IntegrityShield) GetResourceSigningProfileCRDName() string {
 	return DefaultResourceSigningProfileCRDName
 }
 
-func (self *IntegrityShield) GetProtectedResourceIntegrityCRDName() string {
-	return DefaultProtectedResourceIntegrityCRDName
-}
+// func (self *IntegrityShield) GetProtectedResourceIntegrityCRDName() string {
+// 	return DefaultProtectedResourceIntegrityCRDName
+// }
 
 func (self *IntegrityShield) GetHelmReleaseMetadataCRDName() string {
 	return DefaultHelmReleaseMetadataCRDName

@@ -83,8 +83,8 @@ func testInScopeCheck(t *testing.T, caseNum int) {
 }
 
 func testFormatCheck(t *testing.T, caseNum int) {
-	reqc, vreqobj, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := formatCheck(reqc, vreqobj, config, data, ctx)
+	reqc, reqobj, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := formatCheck(reqc, reqobj, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -140,8 +140,8 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 }
 
 func testSingleMutationCheck(t *testing.T, caseNum int) {
-	reqc, vreqobj, _, config, data, ctx, initialDr, prof, expectedDr := getTestData(caseNum)
-	actualDr := resourceSigningProfileCheck(prof, reqc, vreqobj, config, data, ctx)
+	reqc, reqobj, _, config, data, ctx, initialDr, prof, expectedDr := getTestData(caseNum)
+	actualDr := resourceSigningProfileCheck(prof, reqc, reqobj, config, data, ctx)
 	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
 	if strings.Contains(expectedDr.Message, "no mutation") {
 		initialDr = expectedDr

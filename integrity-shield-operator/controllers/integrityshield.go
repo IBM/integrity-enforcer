@@ -163,11 +163,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateResourceSigningProfileCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateProtectedResourceIntegrityCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildProtectedResourceIntegrityCRD(instance)
-	return r.createOrUpdateCRD(instance, expected)
-}
+// func (r *IntegrityShieldReconciler) createOrUpdateProtectedResourceIntegrityCRD(
+// 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+// 	expected := res.BuildProtectedResourceIntegrityCRD(instance)
+// 	return r.createOrUpdateCRD(instance, expected)
+// }
 
 func (r *IntegrityShieldReconciler) deleteShieldConfigCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
@@ -198,11 +198,11 @@ func (r *IntegrityShieldReconciler) deleteResourceSigningProfileCRD(
 	return r.deleteCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) deleteProtectedResourceIntegrityCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildProtectedResourceIntegrityCRD(instance)
-	return r.deleteCRD(instance, expected)
-}
+// func (r *IntegrityShieldReconciler) deleteProtectedResourceIntegrityCRD(
+// 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+// 	expected := res.BuildProtectedResourceIntegrityCRD(instance)
+// 	return r.deleteCRD(instance, expected)
+// }
 
 /**********************************************
 

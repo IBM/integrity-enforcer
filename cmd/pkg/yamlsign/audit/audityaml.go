@@ -39,7 +39,7 @@ func AuditYaml(ctx context.Context, apiVersion, kind, namespace, name string) (*
 			"kind":       kind,
 		},
 	)
-	resourceHandler := shield.NewResourceHandler(config.ShieldConfig, metaLogger, reqLog)
+	resourceHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, reqLog)
 
 	var obj *unstructured.Unstructured
 	obj, err := kubeutil.GetResource(apiVersion, kind, namespace, name)

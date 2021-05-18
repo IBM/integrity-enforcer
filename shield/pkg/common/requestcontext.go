@@ -47,7 +47,7 @@ type RequestContext struct {
 	Type           string   `json:"Type"`
 }
 
-type VRequestObject struct {
+type RequestObject struct {
 	RawObject       []byte          `json:"-"`
 	RawOldObject    []byte          `json:"-"`
 	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
@@ -222,7 +222,7 @@ func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *VRequestObject) {
+func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *RequestObject) {
 
 	pr := NewParsedRequest(req)
 
@@ -272,7 +272,7 @@ func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *VRequestO
 		UserGroups:     pr.getArrayValue("userInfo.groups"),
 		Type:           pr.getValue("object.type"),
 	}
-	ro := &VRequestObject{
+	ro := &RequestObject{
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
 		ObjLabels:       pr.getValue("object.metadata.labels"),

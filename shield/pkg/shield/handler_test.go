@@ -62,10 +62,10 @@ var schemes *runtime.Scheme
 var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
-func getTestData(num int) (*common.RequestContext, *common.VRequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
+func getTestData(num int) (*common.RequestContext, *common.RequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
 
 	var reqc *common.RequestContext
-	var vreqobj *common.VRequestObject
+	var reqobj *common.RequestObject
 	var resc *common.ResourceContext
 
 	var data *RunData
@@ -80,7 +80,7 @@ func getTestData(num int) (*common.RequestContext, *common.VRequestObject, *comm
 	adreqBytes, _ := ioutil.ReadFile(testFileName(testAdReqFile, num))
 	_ = json.Unmarshal(adreqBytes, &adreq)
 	if adreq != nil {
-		reqc, vreqobj = common.NewRequestContext(adreq)
+		reqc, reqobj = common.NewRequestContext(adreq)
 		resc = common.AdmissionRequestToResourceContext(adreq)
 	}
 	configBytes, _ := ioutil.ReadFile(testFileName(testConfigFile, num))
@@ -98,7 +98,7 @@ func getTestData(num int) (*common.RequestContext, *common.VRequestObject, *comm
 	dr0 = &DecisionResult{
 		Type: common.DecisionUndetermined,
 	}
-	return reqc, vreqobj, resc, cfg, data, ctx, dr0, prof, dr
+	return reqc, reqobj, resc, cfg, data, ctx, dr0, prof, dr
 }
 
 func getChangedRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
@@ -328,7 +328,7 @@ var _ = Describe("Test Suite for shield package", func() {
 		handlerTest()
 	})
 
-	Describe("Test ResourceHandler", func() {
+	Describe("Test ResourceCheckHandler", func() {
 		resourceHandlerTest()
 	})
 })

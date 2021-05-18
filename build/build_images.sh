@@ -57,10 +57,10 @@ if [ -z "$ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION" ]; then
     exit 1
 fi
 
-if [ -z "$ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION" ]; then
-    echo "ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
-    exit 1
-fi
+# if [ -z "$ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION" ]; then
+#     echo "ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+#     exit 1
+# fi
 
 if [ -z "$ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
     echo "ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."

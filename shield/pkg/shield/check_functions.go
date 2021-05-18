@@ -105,8 +105,8 @@ func inScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldC
 	return undeterminedDescision()
 }
 
-func formatCheck(reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if ok, msg := ValidateResource(reqc, vreqobj, config.Namespace); !ok {
+func formatCheck(reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	if ok, msg := ValidateResource(reqc, reqobj, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
@@ -264,11 +264,11 @@ func protectedCheckByResource(resc *common.ResourceContext, config *config.Shiel
 	return undeterminedDescision(), matchedProfiles
 }
 
-func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	mutationCheckPassedCount := 0
 	var dr *DecisionResult
 	for _, prof := range matchedProfiles {
-		tmpdr := resourceSigningProfileCheck(prof, reqc, vreqobj, config, data, ctx)
+		tmpdr := resourceSigningProfileCheck(prof, reqc, reqobj, config, data, ctx)
 		if tmpdr.IsAllowed() {
 			// no mutations are found
 			dr = tmpdr
@@ -288,13 +288,13 @@ func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common
 	return undeterminedDescision()
 }
 
-func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
 	var mutResult *common.MutationEvalResult
 
-	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, reqc, vreqobj, config)
+	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, reqc, reqobj, config)
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -360,11 +360,11 @@ func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningPr
 	}
 }
 
-func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
+func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
 	var mutResult *common.MutationEvalResult
 	var err error
 	if reqc.IsUpdateRequest() {
-		mutResult, err = NewMutationChecker().Eval(reqc, vreqobj, singleProfile)
+		mutResult, err = NewMutationChecker().Eval(reqc, reqobj, singleProfile)
 		if err != nil {
 			return false, common.REASON_ERROR, err.Error(), mutResult
 		}
