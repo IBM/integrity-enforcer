@@ -60,7 +60,10 @@ EXAMPLES
   ishieldctl sign -key key.pub -payload <yaml file> 
 
   # sign a yaml file with a key pair stored in Google Cloud KMS
-  ishieldctl sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <yaml file>`,
+  ishieldctl sign -key gcpkms://projects/<PROJECT>/locations/global/keyRings/<KEYRING>/cryptoKeys/<KEY> -payload <yaml file>
+ 
+  # sign a yaml file will create <FILE>.signed in same directory (e.g. ishieldctl sign -payload test.yaml => test.yaml.signed)
+  `,
 		FlagSet: flagset,
 		Exec:    cmd.Exec,
 	}
