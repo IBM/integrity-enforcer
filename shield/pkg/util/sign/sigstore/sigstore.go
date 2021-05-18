@@ -10,8 +10,6 @@ import (
 	"os"
 	"path"
 
-	// gyaml "github.com/ghodss/yaml"
-
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
 	ishieldx509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
@@ -95,7 +93,7 @@ func verify(message, signature, certPem, bundle []byte, rootPemPath *string) (bo
 	if err != nil {
 		return false, err
 	}
-	if len(p) == 0 {
+	if p == nil {
 		return false, fmt.Errorf("signature does not match")
 	}
 	return true, nil

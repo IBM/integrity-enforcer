@@ -21,10 +21,9 @@ const IntegrityShieldAnnotationSignature = "integrityshield.io/signature"
 const IntegrityShieldAnnotationCertificate = "integrityshield.io/certificate"
 const IntegrityShieldAnnotationBundle = "integrityshield.io/bundle"
 
-func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.SignedPayload, error) {
+func FetchSignedYamlPayload(ctx context.Context, payloadPath string) (*cosign.SignedPayload, error) {
 
-	signatures := make([]cosign.SignedPayload, 1)
-
+	var sp *cosign.SignedPayload
 	if payloadPath != "" {
 
 		mPayload, _ := readPayload(payloadPath)
@@ -63,7 +62,7 @@ func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.Sign
 			}
 		}
 
-		sp := cosign.SignedPayload{
+		sp = &cosign.SignedPayload{
 			Payload:         payloadOrig,
 			Base64Signature: base64sig,
 		}
@@ -89,10 +88,9 @@ func FetchYamlSignatures(ctx context.Context, payloadPath string) ([]cosign.Sign
 			sp.Cert = certs[0]
 		}
 
-		signatures[0] = sp
 	}
 
-	return signatures, nil
+	return sp, nil
 }
 
 func WriteYamlContent(signature []byte, pemBytes []byte, bundleJson []byte, mPayload map[interface{}]interface{}, payloadPath string) error {

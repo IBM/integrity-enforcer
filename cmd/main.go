@@ -1,3 +1,6 @@
+// The code in this file were adapted from the following original source to sign and verify signature on YAML files.
+// The original source: https://github.com/sigstore/cosign/blob/main/cmd/cosign/main.go
+
 package main
 
 import (

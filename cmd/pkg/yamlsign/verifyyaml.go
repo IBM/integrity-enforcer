@@ -1,3 +1,6 @@
+// The code in this file were adapted from the following original source to verify signature on YAML files.
+// The original source: https://github.com/sigstore/cosign/blob/main/pkg/cosign/verify.go
+
 package yamlsign
 
 import (
@@ -5,7 +8,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -21,7 +23,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/payload"
 	"gopkg.in/yaml.v2"
 )
 
@@ -40,127 +41,170 @@ func getTlogEntry(rekorClient *client.Rekor, uuid string) (*models.LogEntryAnon,
 
 // Verify does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
-func VerifyYaml(ctx context.Context, co *cosign.CheckOpts, payloadPath string) ([]cosign.SignedPayload, error) {
-	// Enforce this up front.
-	if co.Roots == nil && co.PubKey == nil {
-		return nil, errors.New("one of public key or cert roots is required")
+func VerifyYaml(ctx context.Context, co *cosign.CheckOpts, payloadPath string) (*cosign.SignedPayload, error) {
+
+	// Fetch signature attached to our yaml file that we know how to parse.
+	sp, err := FetchSignedYamlPayload(ctx, payloadPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to fetch signed payload")
 	}
-	// TODO: Figure out if we'll need a client before creating one.
-	rekorClient, err := app.GetRekorClient(cosign.TlogServer())
+
+	// fetch yaml after removing annotations such as signature, certificate, message, and bundle (if exist)
+	mPayload, err := FetchYamlContent(payloadPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to fetch yaml payload")
+	}
+
+	cleanPayloadYaml, err := yaml.Marshal(mPayload)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to convert payload to yaml")
+	}
+
+	payloadJson, err := gyaml.YAMLToJSON(cleanPayloadYaml)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to convert payload to json")
+	}
+
+	verified, err := VerifyPayload(ctx, co, payloadJson, sp)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// These are all the signatures attached to our image that we know how to parse.
-	allSignatures, err := FetchYamlSignatures(ctx, payloadPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "fetching signatures")
-	}
+	return verified, nil
+}
+
+func VerifyPayload(ctx context.Context, co *cosign.CheckOpts, payloadJson []byte, sp *cosign.SignedPayload) (*cosign.SignedPayload, error) {
 
 	validationErrs := []string{}
-	checkedSignatures := []cosign.SignedPayload{}
-	for _, sp := range allSignatures {
-		switch {
-		// We have a public key to check against.
-		case co.PubKey != nil:
-			if err := sp.VerifyKey(ctx, co.PubKey); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-		// If we don't have a public key to check against, we can try a root cert.
-		case co.Roots != nil:
-			// There might be signatures with a public key instead of a cert, though
-			if sp.Cert == nil {
-				validationErrs = append(validationErrs, "no certificate found on signature")
-				continue
-			}
-			pub := &signature.ECDSAVerifier{Key: sp.Cert.PublicKey.(*ecdsa.PublicKey), HashAlg: crypto.SHA256}
-			// Now verify the signature, then the cert.
-			if err := sp.VerifyKey(ctx, pub); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
-			if err := sp.TrustedCert(co.Roots); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
+
+	err := verifyKeyAndSignature(ctx, co, payloadJson, sp, &validationErrs)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to verify key and signature")
+	}
+
+	err = verifyClaims(co, payloadJson, sp, &validationErrs)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to verify claims")
+	}
+
+	verified, err := verifyBundleAndTlog(ctx, co, sp, &validationErrs)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to verify payload")
+	}
+
+	return verified, nil
+}
+
+func verifyKeyAndSignature(ctx context.Context, co *cosign.CheckOpts, payloadJson []byte, sp *cosign.SignedPayload, validationErrs *[]string) error {
+
+	// Enforce this up front.
+	if co.Roots == nil && co.PubKey == nil {
+		return errors.New("one of public key or cert roots is required")
+	}
+
+	switch {
+	// We have a public key to check against.
+	case co.PubKey != nil:
+		if err := sp.VerifyKey(ctx, co.PubKey); err != nil {
+			*validationErrs = append(*validationErrs, err.Error())
+
+		}
+	// If we don't have a public key to check against, we can try a root cert.
+	case co.Roots != nil:
+		// There might be signatures with a public key instead of a cert, though
+		if sp.Cert == nil {
+			*validationErrs = append(*validationErrs, "no certificate found on signature")
+
+		}
+		pub := &signature.ECDSAVerifier{Key: sp.Cert.PublicKey.(*ecdsa.PublicKey), HashAlg: crypto.SHA256}
+		// Now verify the signature, then the cert.
+		if err := sp.VerifyKey(ctx, pub); err != nil {
+			*validationErrs = append(*validationErrs, err.Error())
+
+		}
+		if err := sp.TrustedCert(co.Roots); err != nil {
+			*validationErrs = append(*validationErrs, err.Error())
+
 		}
 
-		// We can't check annotations without claims, both require unmarshalling the payload.
-		if co.Claims {
-			ss := &payload.SimpleContainerImage{}
-			if err := json.Unmarshal(sp.Payload, ss); err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
+	}
+	return nil
+}
 
-			mPayload, _ := FetchYamlContent(payloadPath)
-			cleanPayloadYaml, _ := yaml.Marshal(mPayload)
+func verifyClaims(co *cosign.CheckOpts, payloadJson []byte, sp *cosign.SignedPayload, validationErrs *[]string) error {
 
-			payloadJson, _ := gyaml.YAMLToJSON(cleanPayloadYaml)
+	// Enforce this up front.
+	if sp.Payload == nil || string(payloadJson) == "" {
+		return errors.New("payload is required")
+	}
 
-			if string(payloadJson) != string(sp.Payload) {
-				validationErrs = append(validationErrs, "`annotation.message` in this payload does not matcch with yaml content")
-				continue
-			}
+	if co.Claims {
+		// verify if the yaml content match with message in annotation
+		if string(payloadJson) != string(sp.Payload) {
+			*validationErrs = append(*validationErrs, "`annotation.message` in this payload does not match with yaml content")
 
-			if co.Annotations != nil {
-				if !correctAnnotations(co.Annotations, ss.Optional) {
-					validationErrs = append(validationErrs, "missing or incorrect annotation")
-					continue
-				}
-			}
 		}
+	}
+	return nil
+}
 
-		verified, err := sp.VerifyBundle()
+func verifyBundleAndTlog(ctx context.Context, co *cosign.CheckOpts, sp *cosign.SignedPayload, validationErrs *[]string) (*cosign.SignedPayload, error) {
 
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
-		}
-		co.VerifyBundle = verified
+	verified, err := sp.VerifyBundle()
 
-		if co.Tlog && !verified {
-			// Get the right public key to use (key or cert)
-			var pemBytes []byte
-			if co.PubKey != nil {
-				pemBytes, err = cosign.PublicKeyPem(ctx, co.PubKey)
-				if err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
-			} else {
-				pemBytes = cosign.CertToPem(sp.Cert)
-			}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to verify offline (%v), checking tlog instead...", err)
+	}
 
-			// Find the uuid then the entry.
-			uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
+	co.VerifyBundle = verified
+
+	if co.Tlog && !verified {
+		// Get the right public key to use (key or cert)
+		var pemBytes []byte
+		if co.PubKey != nil {
+			pemBytes, err = cosign.PublicKeyPem(ctx, co.PubKey)
 			if err != nil {
-				validationErrs = append(validationErrs, err.Error())
-				continue
-			}
+				*validationErrs = append(*validationErrs, err.Error())
 
-			// if we have a cert, we should check expiry
-			if sp.Cert != nil {
-				e, err := getTlogEntry(rekorClient, uuid)
-				if err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
-				// Expiry check is only enabled with Tlog support
-				if err := checkExpiry(sp.Cert, time.Unix(e.IntegratedTime, 0)); err != nil {
-					validationErrs = append(validationErrs, err.Error())
-					continue
-				}
 			}
+		} else {
+			pemBytes = cosign.CertToPem(sp.Cert)
 		}
 
-		// Phew, we made it.
-		checkedSignatures = append(checkedSignatures, sp)
+		// TODO: Figure out if we'll need a client before creating one.
+		rekorClient, err := app.GetRekorClient(cosign.TlogServer())
+		if err != nil {
+			return nil, errors.Wrap(err, "retriving rekor client")
+		}
+
+		// Find the uuid then the entry.
+		uuid, _, err := sp.VerifyTlog(rekorClient, pemBytes)
+		if err != nil {
+			*validationErrs = append(*validationErrs, err.Error())
+
+		}
+
+		// if we have a cert, we should check expiry
+		if sp.Cert != nil {
+			e, err := getTlogEntry(rekorClient, uuid)
+			if err != nil {
+				*validationErrs = append(*validationErrs, err.Error())
+
+			}
+			// Expiry check is only enabled with Tlog support
+			if err := checkExpiry(sp.Cert, time.Unix(e.IntegratedTime, 0)); err != nil {
+				*validationErrs = append(*validationErrs, err.Error())
+
+			}
+		}
 	}
-	if len(checkedSignatures) == 0 {
-		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(validationErrs, "\n "))
+
+	if len(*validationErrs) != 0 {
+		return nil, fmt.Errorf("no matching signatures:\n%s", strings.Join(*validationErrs, "\n "))
+	} else {
+		return sp, nil
 	}
-	return checkedSignatures, nil
 }
 
 func checkExpiry(cert *x509.Certificate, it time.Time) error {
@@ -176,13 +220,4 @@ func checkExpiry(cert *x509.Certificate, it time.Time) error {
 			ft(cert.NotAfter), ft(it))
 	}
 	return nil
-}
-
-func correctAnnotations(wanted, have map[string]interface{}) bool {
-	for k, v := range wanted {
-		if have[k] != v {
-			return false
-		}
-	}
-	return true
 }
