@@ -1,3 +1,6 @@
+// The code in this file were adapted from the following original source to test sign YAML files.
+// The original source: https://github.com/sigstore/cosign/blob/main/test/e2e_test.go
+
 package cli
 
 import (
