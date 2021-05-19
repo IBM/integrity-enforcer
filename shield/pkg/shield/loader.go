@@ -17,7 +17,7 @@
 package shield
 
 import (
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
 /**********************************************

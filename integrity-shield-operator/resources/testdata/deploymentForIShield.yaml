@@ -65,7 +65,7 @@ spec:
           name: tmp
         - mountPath: /ishield-app/public
           name: log-volume
-        - mountPath: /sample-signer-keyconfig/pgp/
+        - mountPath: /sample-signer-keyconfig/keyring-secret/pgp/
           name: sample-signer-keyconfig
       - env:
         - name: STDOUT_ENABLED

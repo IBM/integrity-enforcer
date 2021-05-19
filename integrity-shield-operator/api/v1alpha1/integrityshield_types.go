@@ -27,7 +27,7 @@ import (
 
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	iec "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	iec "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
@@ -39,23 +39,30 @@ import (
 )
 
 const (
-	DefaultIntegrityShieldCRDName             = "integrityshields.apis.integrityshield.io"
-	DefaultShieldConfigCRDName                = "shieldconfigs.apis.integrityshield.io"
-	DefaultSignerConfigCRDName                = "signerconfigs.apis.integrityshield.io"
-	DefaultResourceSignatureCRDName           = "resourcesignatures.apis.integrityshield.io"
-	DefaultResourceSigningProfileCRDName      = "resourcesigningprofiles.apis.integrityshield.io"
-	DefaultHelmReleaseMetadataCRDName         = "helmreleasemetadatas.apis.integrityshield.io"
+	DefaultIntegrityShieldCRDName        = "integrityshields.apis.integrityshield.io"
+	DefaultShieldConfigCRDName           = "shieldconfigs.apis.integrityshield.io"
+	DefaultSignerConfigCRDName           = "signerconfigs.apis.integrityshield.io"
+	DefaultResourceSignatureCRDName      = "resourcesignatures.apis.integrityshield.io"
+	DefaultResourceSigningProfileCRDName = "resourcesigningprofiles.apis.integrityshield.io"
+	DefaultHelmReleaseMetadataCRDName    = "helmreleasemetadatas.apis.integrityshield.io"
+	// DefaultProtectedResourceIntegrityCRDName  = "protectedresourceintegrities.apis.integrityshield.io"
 	DefaultSignerConfigCRName                 = "signer-config"
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
-	DefaultIShieldCRYamlPath                  = "./resources/default-ishield-cr.yaml"
-	CommonProfilesPath                        = "./resources/common-profiles"
-	WebhookRulesForRoksYamlPath               = "./resources/webhook-rules-for-roks.yaml"
-	DefaultKeyringFilename                    = "pubring.gpg"
-	DefaultIShieldWebhookTimeout              = 10
-	SATokenPath                               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
+	// DefaultIShieldInspectorName               = "integrity-shield-inspector"
+	// DefaultIShieldCheckerName                 = "integrity-shield-checker"
+	// DefaultIShieldInspectorLabel              = "ishield-inspector"
+	// DefaultIShieldCheckerLabel                = "ishield-checker"
+	DefaultIShieldCRYamlPath        = "./resources/default-ishield-cr.yaml"
+	CommonProfilesPath              = "./resources/common-profiles"
+	WebhookRulesForRoksYamlPath     = "./resources/webhook-rules-for-roks.yaml"
+	DefaultKeyringFilename          = "pubring.gpg"
+	DefaultSigstoreRootCertFilename = "root.pem"
+	DefaultIShieldWebhookTimeout    = 10
+	SATokenPath                     = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
 	CleanupFinalizerName = "cleanup.finalizers.integrityshield.io"
 )
@@ -84,7 +91,9 @@ type IntegrityShieldSpec struct {
 	Server                 ServerContainer   `json:"server,omitempty"`
 	Logger                 LoggerContainer   `json:"logger,omitempty"`
 	Observer               ObserverContainer `json:"observer,omitempty"`
-	RegKeySecret           RegKeySecret      `json:"regKeySecret,omitempty"`
+	// Inspector              InspectorContainer `json:"inspector,omitempty"`
+	// Checker                CheckerContainer   `json:"checker,omitempty"`
+	RegKeySecret RegKeySecret `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
 	ShieldConfig            *iec.ShieldConfig     `json:"shieldConfig,omitempty"`
@@ -163,6 +172,30 @@ type ObserverContainer struct {
 	Image           string                  `json:"image,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
+
+// type InspectorContainer struct {
+// 	Enabled         *bool                   `json:"enabled,omitempty"`
+// 	Name            string                  `json:"name,omitempty"`
+// 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
+// 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+// 	Image           string                  `json:"image,omitempty"`
+// 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
+// }
+
+// type CheckerContainer struct {
+// 	// Enabled         *bool                   `json:"enabled,omitempty"`
+// 	Name                   string                  `json:"name,omitempty"`
+// 	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
+// 	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+// 	Image                  string                  `json:"image,omitempty"`
+// 	Port                   int32                   `json:"port,omitempty"`
+// 	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
+// 	ChartBaseUrl           string                  `json:"chartBaseUrl,omitempty"`
+// 	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
+// 	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
+// 	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
+// 	ServiceName            string                  `json:"serviceName,omitempty"`
+// }
 
 type EsConfig struct {
 	Enabled     bool   `json:"enabled,omitempty"`
@@ -249,6 +282,10 @@ func (self *IntegrityShield) GetResourceSigningProfileCRDName() string {
 	return DefaultResourceSigningProfileCRDName
 }
 
+// func (self *IntegrityShield) GetProtectedResourceIntegrityCRDName() string {
+// 	return DefaultProtectedResourceIntegrityCRDName
+// }
+
 func (self *IntegrityShield) GetHelmReleaseMetadataCRDName() string {
 	return DefaultHelmReleaseMetadataCRDName
 }
@@ -267,6 +304,10 @@ func (self *IntegrityShield) GetRegKeySecretName() string {
 
 func (self *IntegrityShield) GetWebhookServerTlsSecretName() string {
 	return self.Spec.WebhookServerTlsSecretName
+}
+
+func (self *IntegrityShield) GetSigStoreDefaultRootSecretName() string {
+	return DefaultIShieldSigStoreRootCertSecretName
 }
 
 func (self *IntegrityShield) GetServiceAccountName() string {
@@ -313,12 +354,44 @@ func (self *IntegrityShield) GetIShieldServerDeploymentName() string {
 	return self.Name
 }
 
+// func (self *IntegrityShield) GetIShieldInspectorDeploymentName() string {
+// 	return DefaultIShieldInspectorName
+// }
+
+// func (self *IntegrityShield) GetIShieldCheckerDeploymentName() string {
+// 	return DefaultIShieldCheckerName
+// }
+
+// func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
+// 	return DefaultIShieldInspectorLabel
+// }
+
+// func (self *IntegrityShield) GetIShieldCheckerSelectorLabel() string {
+// 	return DefaultIShieldCheckerLabel
+// }
+
 func (self *IntegrityShield) GetWebhookServiceName() string {
 	return self.Spec.WebhookServiceName
 }
 
+// func (self *IntegrityShield) GetCheckerServiceName() string {
+// 	return self.Spec.Checker.ServiceName
+// }
+
 func (self *IntegrityShield) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName
+}
+
+func (self *IntegrityShield) SigStoreEnabled() bool {
+	return self.Spec.ShieldConfig.SigStoreConfig.Enabled
+}
+
+func (self *IntegrityShield) UseDefaultSigStoreRootCert() bool {
+	return self.Spec.ShieldConfig.SigStoreConfig.UseDefaultRootCert
+}
+
+func (self *IntegrityShield) GetSigStoreDefaultRootCertURL() string {
+	return self.Spec.ShieldConfig.SigStoreConfig.DefaultRootCertURL
 }
 
 func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*common.ResourceRef, []*common.ResourceRef) {

@@ -20,5 +20,3 @@
 // Go modules will be forced to download and install them.
 
 package tools
-
-import _ "k8s.io/apiextensions-apiserver"

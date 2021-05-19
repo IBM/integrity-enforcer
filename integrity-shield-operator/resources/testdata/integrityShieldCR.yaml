@@ -87,6 +87,7 @@ spec:
     - kind: TokenReview
     - kind: SubjectAccessReview
     - kind: SelfSubjectAccessReview
+    imageVerificationConfig: {}
     inScopeNamespaceSelector:
       exclude:
       - kube-*
@@ -107,6 +108,13 @@ spec:
       enabled: true
     plugin:
     - name: helm
+    sideEffect:
+      createDenyEvent: true
+      createIShieldResourceEvent: true
+      updateRSPStatusForDeniedRequest: true
+    sigstoreConfig:
+      defaultRootCertURL: https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem
+      useDefaultRootCert: true
   shieldConfigCrName: ishield-config
   signerConfig:
     policies:

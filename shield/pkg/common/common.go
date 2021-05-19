@@ -56,6 +56,7 @@ const (
 	SignatureAnnotationKey     = "integrityshield.io/signature"
 	MessageAnnotationKey       = "integrityshield.io/message"
 	CertificateAnnotationKey   = "integrityshield.io/certificate"
+	BundleAnnotationKey        = "integrityshield.io/bundle"
 	SignatureTypeAnnotationKey = "integrityshield.io/signatureType"
 	MessageScopeAnnotationKey  = "integrityshield.io/messageScope"
 	MutableAttrsAnnotationKey  = "integrityshield.io/mutableAttrs"
@@ -81,9 +82,10 @@ const (
 type SignatureType string
 
 const (
-	SignatureTypeDefault = ""
-	SignatureTypePGP     = "pgp"
-	SignatureTypeX509    = "x509"
+	SignatureTypeDefault  = ""
+	SignatureTypePGP      = "pgp"
+	SignatureTypeX509     = "x509"
+	SignatureTypeSigStore = "sigstore"
 )
 
 type DecisionType string
@@ -256,22 +258,24 @@ type ResourceAnnotation struct {
 }
 
 type SignatureAnnotation struct {
-	SignatureType string
-	Signature     string
-	Certificate   string
-	Message       string
-	MessageScope  string
-	MutableAttrs  string
+	SignatureType  string
+	Signature      string
+	Certificate    string
+	Message        string
+	MessageScope   string
+	MutableAttrs   string
+	SigStoreBundle string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
-		Signature:     self.getString(SignatureAnnotationKey),
-		SignatureType: self.getString(SignatureTypeAnnotationKey),
-		Certificate:   self.getString(CertificateAnnotationKey),
-		Message:       self.getString(MessageAnnotationKey),
-		MessageScope:  self.getString(MessageScopeAnnotationKey),
-		MutableAttrs:  self.getString(MutableAttrsAnnotationKey),
+		Signature:      self.getString(SignatureAnnotationKey),
+		SignatureType:  self.getString(SignatureTypeAnnotationKey),
+		Certificate:    self.getString(CertificateAnnotationKey),
+		Message:        self.getString(MessageAnnotationKey),
+		MessageScope:   self.getString(MessageScopeAnnotationKey),
+		MutableAttrs:   self.getString(MutableAttrsAnnotationKey),
+		SigStoreBundle: self.getString(BundleAnnotationKey),
 	}
 }
 
@@ -399,6 +403,9 @@ const (
 	REASON_NO_SIG
 	REASON_NO_VALID_KEYRING
 	REASON_NO_MATCH_SIGNER_CONFIG
+	REASON_NO_MATCH_IMAGE_PROFILE
+	REASON_VALID_SIG_IMAGE
+	REASON_INVALID_SIG_IMAGE
 	REASON_UNEXPECTED
 	REASON_ERROR
 )
@@ -487,6 +494,18 @@ var ReasonCodeMap = map[int]ReasonCode{
 	REASON_NO_MATCH_SIGNER_CONFIG: {
 		Message: "Signature verification is required for this request, but no signer config matches with this resource. Please configure SignerConfig for this resource or contact Integrity Shield admins.",
 		Code:    "no-match-signer-config",
+	},
+	REASON_NO_MATCH_IMAGE_PROFILE: {
+		Message: "no image profile matches with this commonName",
+		Code:    "no-match-image-profile",
+	},
+	REASON_VALID_SIG_IMAGE: {
+		Message: "this image is signed by a valid signer",
+		Code:    "valid-sig-image",
+	},
+	REASON_INVALID_SIG_IMAGE: {
+		Message: "Signature verification is required for this image, but failed to verify signature",
+		Code:    "invalid-signature-image",
 	},
 	REASON_UNEXPECTED: {
 		Message: "unexpected",

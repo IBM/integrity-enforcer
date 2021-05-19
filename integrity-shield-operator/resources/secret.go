@@ -17,6 +17,9 @@
 package resources
 
 import (
+	"io/ioutil"
+	"net/http"
+
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,4 +56,30 @@ func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
 		Type: corev1.SecretTypeTLS,
 	}
 	return sec
+}
+
+// ishield-sigstore-root-cert
+func BuildSigStoreDefaultRootSecretForIShield(cr *apiv1alpha1.IntegrityShield) (*corev1.Secret, error) {
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetSigStoreDefaultRootSecretName(),
+			Namespace: cr.Namespace,
+		},
+		Data: map[string][]byte{},
+	}
+	cert, err := download(cr.GetSigStoreDefaultRootCertURL())
+	sec.Data[apiv1alpha1.DefaultSigstoreRootCertFilename] = cert
+	return sec, err
+}
+
+func download(url string) ([]byte, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }

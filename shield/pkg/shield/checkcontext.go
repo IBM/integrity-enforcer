@@ -21,7 +21,8 @@ import (
 	"time"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
 /**********************************************
@@ -68,20 +69,20 @@ func InitCheckContext(config *config.ShieldConfig) *CheckContext {
 	return cc
 }
 
-func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string]interface{} {
+func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext, lggr *logger.Logger) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
 		// request context
-		"namespace":    reqc.Namespace,
-		"name":         reqc.Name,
-		"apiGroup":     reqc.ApiGroup,
-		"apiVersion":   reqc.ApiVersion,
-		"kind":         reqc.Kind,
-		"operation":    reqc.Operation,
-		"userInfo":     reqc.UserInfo,
-		"objLabels":    reqc.ObjLabels,
-		"objMetaName":  reqc.ObjMetaName,
+		"namespace":  reqc.Namespace,
+		"name":       reqc.Name,
+		"apiGroup":   reqc.ApiGroup,
+		"apiVersion": reqc.ApiVersion,
+		"kind":       reqc.Kind,
+		"operation":  reqc.Operation,
+		"userInfo":   reqc.UserInfo,
+		// "objLabels":    reqc.ObjLabels,
+		// "objMetaName":  reqc.ObjMetaName,
 		"userName":     reqc.UserName,
 		"request.uid":  reqc.RequestUid,
 		"type":         reqc.Type,
@@ -151,10 +152,8 @@ func (self *CheckContext) convertToLogRecord(reqc *common.ReqContext) map[string
 
 	}
 
-	logRecord["request.objectHashType"] = reqc.ObjectHashType
-	logRecord["request.objectHash"] = reqc.ObjectHash
-
-	// logRecord["sessionTrace"] = logger.GetSessionTraceString()
+	sessionTraceStr := lggr.GetSessionTraceString()
+	logRecord["sessionTrace"] = sessionTraceStr
 
 	currentTime := time.Now()
 	ts := currentTime.Format("2006-01-02T15:04:05.000Z")

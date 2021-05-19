@@ -31,37 +31,37 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 )
 
-func ValidateResource(reqc *common.ReqContext, shieldNamespace string) (bool, string) {
+func ValidateResource(reqc *common.RequestContext, reqobj *common.RequestObject, shieldNamespace string) (bool, string) {
 	if reqc.IsDeleteRequest() {
 		return true, ""
 	}
 
 	if reqc.Kind == common.ProfileCustomResourceKind {
-		ok, err := ValidateResourceSigningProfile(reqc, shieldNamespace)
+		ok, err := ValidateResourceSigningProfile(reqc, reqobj, shieldNamespace)
 		if err != nil {
 			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.SignatureCustomResourceKind {
-		ok, err := ValidateResourceSignature(reqc)
+		ok, err := ValidateResourceSignature(reqc, reqobj)
 		if err != nil {
 			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.ShieldConfigCustomResourceAPIVersion {
-		ok, err := ValidateShieldConfig(reqc)
+		ok, err := ValidateShieldConfig(reqc, reqobj)
 		if err != nil {
 			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.SignerConfigCustomResourceKind {
-		ok, err := ValidateSignerConfig(reqc)
+		ok, err := ValidateSignerConfig(reqc, reqobj)
 		if err != nil {
 			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
 		return ok, ""
 	} else if reqc.Kind == common.HelmReleaseMetadataCustomResourceAPIVersion {
-		ok, err := ValidateHelmReleaseMetadata(reqc)
+		ok, err := ValidateHelmReleaseMetadata(reqc, reqobj)
 		if err != nil {
 			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
@@ -70,9 +70,9 @@ func ValidateResource(reqc *common.ReqContext, shieldNamespace string) (bool, st
 	return true, ""
 }
 
-func ValidateResourceSigningProfile(reqc *common.ReqContext, shieldNamespace string) (bool, error) {
+func ValidateResourceSigningProfile(reqc *common.RequestContext, reqobj *common.RequestObject, shieldNamespace string) (bool, error) {
 	var data *rsp.ResourceSigningProfile
-	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec := json.NewDecoder(bytes.NewReader(reqobj.RawObject))
 	dec.DisallowUnknownFields() // Force errors if data has undefined fields
 
 	if err := dec.Decode(&data); err != nil {
@@ -81,12 +81,35 @@ func ValidateResourceSigningProfile(reqc *common.ReqContext, shieldNamespace str
 	if reqc.Namespace != shieldNamespace && data.Spec.TargetNamespaceSelector != nil {
 		return false, fmt.Errorf("%s.Spec.TargetNamespaceSelector is allowed only for %s in %s.", common.ProfileCustomResourceKind, common.ProfileCustomResourceKind, shieldNamespace)
 	}
+	if reqc.Namespace != shieldNamespace {
+		rules := data.Spec.ProtectRules
+		rules = append(rules, data.Spec.IgnoreRules...)
+		rules = append(rules, data.Spec.ForceCheckRules...)
+		for _, r := range rules {
+			for _, m := range r.Match {
+				if m.Namespace != nil {
+					return false, fmt.Errorf("namespace condition is not allowed in RSP.")
+				}
+			}
+		}
+
+		attrs := data.Spec.IgnoreAttrs
+		attrs = append(attrs, data.Spec.UnprotectAttrs...)
+		attrs = append(attrs, data.Spec.ProtectAttrs...)
+		for _, a := range attrs {
+			for _, m := range a.Match {
+				if m.Namespace != nil {
+					return false, fmt.Errorf("namespace condition is not allowed in RSP.")
+				}
+			}
+		}
+	}
 	return true, nil
 }
 
-func ValidateResourceSignature(reqc *common.ReqContext) (bool, error) {
+func ValidateResourceSignature(reqc *common.RequestContext, reqobj *common.RequestObject) (bool, error) {
 	var data *rsig.ResourceSignature
-	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec := json.NewDecoder(bytes.NewReader(reqobj.RawObject))
 	dec.DisallowUnknownFields() // Force errors if data has undefined fields
 
 	if err := dec.Decode(&data); err != nil {
@@ -113,9 +136,9 @@ func ValidateResourceSignature(reqc *common.ReqContext) (bool, error) {
 	return true, nil
 }
 
-func ValidateShieldConfig(reqc *common.ReqContext) (bool, error) {
+func ValidateShieldConfig(reqc *common.RequestContext, reqobj *common.RequestObject) (bool, error) {
 	var data *sconf.ShieldConfig
-	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec := json.NewDecoder(bytes.NewReader(reqobj.RawObject))
 	dec.DisallowUnknownFields() // Force errors if data has undefined fields
 
 	if err := dec.Decode(&data); err != nil {
@@ -124,9 +147,9 @@ func ValidateShieldConfig(reqc *common.ReqContext) (bool, error) {
 	return true, nil
 }
 
-func ValidateSignerConfig(reqc *common.ReqContext) (bool, error) {
+func ValidateSignerConfig(reqc *common.RequestContext, reqobj *common.RequestObject) (bool, error) {
 	var data *sigconf.SignerConfig
-	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec := json.NewDecoder(bytes.NewReader(reqobj.RawObject))
 	dec.DisallowUnknownFields() // Force errors if data has undefined fields
 
 	if err := dec.Decode(&data); err != nil {
@@ -147,9 +170,9 @@ func ValidateSignerConfig(reqc *common.ReqContext) (bool, error) {
 	return true, nil
 }
 
-func ValidateHelmReleaseMetadata(reqc *common.ReqContext) (bool, error) {
+func ValidateHelmReleaseMetadata(reqc *common.RequestContext, reqobj *common.RequestObject) (bool, error) {
 	var data *hrm.HelmReleaseMetadata
-	dec := json.NewDecoder(bytes.NewReader(reqc.RawObject))
+	dec := json.NewDecoder(bytes.NewReader(reqobj.RawObject))
 	dec.DisallowUnknownFields() // Force errors if data has undefined fields
 
 	if err := dec.Decode(&data); err != nil {

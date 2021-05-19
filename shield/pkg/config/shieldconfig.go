@@ -41,14 +41,17 @@ type IShieldResourceCondition struct {
 }
 
 type ShieldConfig struct {
-	Patch *PatchConfig        `json:"patch,omitempty"`
-	Log   *LoggingScopeConfig `json:"log,omitempty"`
+	Patch      *PatchConfig        `json:"patch,omitempty"`
+	Log        *LoggingScopeConfig `json:"log,omitempty"`
+	SideEffect *SideEffectConfig   `json:"sideEffect,omitempty"`
 
 	InScopeNamespaceSelector *common.NamespaceSelector `json:"inScopeNamespaceSelector,omitempty"`
 	Allow                    []common.RequestPattern   `json:"allow,omitempty"`
 	Ignore                   []common.RequestPattern   `json:"ignore,omitempty"`
 	Mode                     IntegrityShieldMode       `json:"mode,omitempty"`
 	Plugin                   []PluginConfig            `json:"plugin,omitempty"`
+	SigStoreConfig           SigStoreConfig            `json:"sigstoreConfig,omitempty"`
+	ImageVerificationConfig  ImageVerificationConfig   `json:"imageVerificationConfig,omitempty"`
 	CommonProfile            *common.CommonProfile     `json:"commonProfile,omitempty"`
 
 	Namespace          string   `json:"namespace,omitempty"`
@@ -83,6 +86,18 @@ type LoggingScopeConfig struct {
 type PluginConfig struct {
 	Name    string `json:"name,omitempty"`
 	Enabled bool   `json:"enabled,omitempty"`
+}
+
+type SigStoreConfig struct {
+	Enabled            bool   `json:"enabled,omitempty"`
+	RekorServerURL     string `json:"rekorServerURL,omitempty"`
+	UseDefaultRootCert bool   `json:"useDefaultRootCert,omitempty"`
+	DefaultRootCertURL string `json:"defaultRootCertURL,omitempty"`
+}
+
+type ImageVerificationConfig struct {
+	Enabled bool              `json:"enabled,omitempty"`
+	Options map[string]string `json:"options,omitempty"`
 }
 
 func (self *IShieldResourceCondition) IsOperatorResource(ref *common.ResourceRef) bool {
@@ -120,11 +135,11 @@ type LogScopeConfig struct {
 	Ignore  []LogRequestPattern `json:"ignore,omitempty"`
 }
 
-func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) (bool, string) {
+func (sc *LogScopeConfig) IsInScope(resc *common.ResourceContext) (bool, string) {
 	if !sc.Enabled {
 		return false, ""
 	}
-	reqFields := reqc.Map()
+	reqFields := resc.Map()
 	isInScope := false
 	level := ""
 	if sc.InScope != nil {
@@ -149,7 +164,7 @@ func (sc *LogScopeConfig) IsInScope(reqc *common.ReqContext) (bool, string) {
 	return (isInScope && !isIgnored), level
 }
 
-func (ec *ShieldConfig) PatchEnabled(reqc *common.ReqContext) bool {
+func (ec *ShieldConfig) PatchEnabled(reqc *common.RequestContext) bool {
 	// TODO: make this configurable
 	if reqc.Kind == "Policy" && reqc.ApiGroup == "policy.open-cluster-management.io" {
 		return false
@@ -228,14 +243,14 @@ func (ec *ShieldConfig) ContextLoggerConfig() logger.ContextLoggerConfig {
 	return logger.ContextLoggerConfig{Enabled: lc.ContextLog.Enabled, File: lc.ContextLogFile, LimitSize: lc.ContextLogRotateSize}
 }
 
-func (ec *ShieldConfig) ConsoleLogEnabled(reqc *common.ReqContext) (bool, string) {
-	enabled, level := ec.Log.ConsoleLog.IsInScope(reqc)
+func (ec *ShieldConfig) ConsoleLogEnabled(resc *common.ResourceContext) (bool, string) {
+	enabled, level := ec.Log.ConsoleLog.IsInScope(resc)
 	level = logger.GetGreaterLevel(ec.Log.LogLevel, level)
 	return enabled, level
 }
 
-func (ec *ShieldConfig) ContextLogEnabled(reqc *common.ReqContext) bool {
-	enabled, _ := ec.Log.ContextLog.IsInScope(reqc)
+func (ec *ShieldConfig) ContextLogEnabled(resc *common.ResourceContext) bool {
+	enabled, _ := ec.Log.ContextLog.IsInScope(resc)
 	return enabled
 }
 
@@ -247,4 +262,48 @@ func (ec *ShieldConfig) GetEnabledPlugins() map[string]bool {
 		}
 	}
 	return plugins
+}
+
+func (ec *ShieldConfig) SigStoreEnabled() bool {
+	return ec.SigStoreConfig.Enabled
+}
+
+func (ec *ShieldConfig) ImageVerificationEnabled() bool {
+	return ec.ImageVerificationConfig.Enabled
+}
+
+/**********************************************
+
+				SideEffectConfig
+
+***********************************************/
+
+type SideEffectConfig struct {
+
+	// Event
+	CreateDenyEvent            bool `json:"createDenyEvent"`
+	CreateIShieldResourceEvent bool `json:"createIShieldResourceEvent"`
+
+	// RSP
+	UpdateRSPStatusForDeniedRequest bool `json:"updateRSPStatusForDeniedRequest"`
+}
+
+func (sc *SideEffectConfig) Enabled() bool {
+	return sc.CreateEventEnabled() || sc.UpdateRSPStatusEnabled()
+}
+
+func (sc *SideEffectConfig) CreateEventEnabled() bool {
+	return (sc.CreateDenyEvent || sc.CreateIShieldResourceEvent)
+}
+
+func (sc *SideEffectConfig) CreateDenyEventEnabled() bool {
+	return sc.CreateDenyEvent
+}
+
+func (sc *SideEffectConfig) CreateIShieldResourceEventEnabled() bool {
+	return sc.CreateIShieldResourceEvent
+}
+
+func (sc *SideEffectConfig) UpdateRSPStatusEnabled() bool {
+	return sc.UpdateRSPStatusForDeniedRequest
 }

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package main
+package loader
 
 import (
 	"context"
@@ -23,14 +23,17 @@ import (
 	"time"
 
 	ecfgclient "github.com/IBM/integrity-enforcer/shield/pkg/client/shieldconfig/clientset/versioned/typed/shieldconfig/v1alpha1"
-	cfg "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	sconfig "github.com/IBM/integrity-enforcer/shield/pkg/config"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 )
 
+const defaultShieldNS = "integrity-shield-operator-system"
+const defaultShieldConfigName = "ishield-config"
+
 type Config struct {
-	ShieldConfig *cfg.ShieldConfig
+	ShieldConfig *sconfig.ShieldConfig
 	lastUpdated  time.Time
 }
 
@@ -62,8 +65,14 @@ func (conf *Config) InitShieldConfig() bool {
 
 	if renew {
 		shieldNs := os.Getenv("SHIELD_NS")
+		if shieldNs == "" {
+			shieldNs = defaultShieldNS
+		}
 		shieldConfigName := os.Getenv("SHIELD_CONFIG_NAME")
-		shieldConfig := LoadEnforceConfig(shieldNs, shieldConfigName)
+		if shieldConfigName == "" {
+			shieldConfigName = defaultShieldConfigName
+		}
+		shieldConfig := LoadShieldConfig(shieldNs, shieldConfigName)
 		if shieldConfig == nil {
 			if conf.ShieldConfig == nil {
 				log.Fatal("Failed to initialize ShieldConfig. Exiting...")
@@ -88,9 +97,9 @@ func (conf *Config) InitShieldConfig() bool {
 	return renew
 }
 
-func LoadEnforceConfig(namespace, cmname string) *cfg.ShieldConfig {
+func LoadShieldConfig(namespace, cmname string) *sconfig.ShieldConfig {
 
-	config, err := rest.InClusterConfig()
+	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return nil
 	}

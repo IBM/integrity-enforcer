@@ -23,10 +23,12 @@ import (
 	vrsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
 	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
 	ishieldyaml "github.com/IBM/integrity-enforcer/shield/pkg/util/yaml"
 )
@@ -60,7 +62,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error)
+	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
@@ -77,9 +79,9 @@ func NewSignatureEvaluator(config *config.ShieldConfig, signerConfig *common.Sig
 	}, nil
 }
 
-func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.ResourceRef, reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
+func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.ResourceRef, resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
 
-	sigAnnotations := reqc.ClaimedMetadata.Annotations.SignatureAnnotations()
+	sigAnnotations := resc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
 	//1. pick ResourceSignature from metadata.annotation if available
 	if sigAnnotations.Signature != "" {
@@ -92,12 +94,18 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			matchRequired := true
 			scopedSignature := false
 			if message == "" && messageScope != "" {
-				message = GenerateMessageFromRawObj(reqc.RawObject, messageScope, mutableAttrs)
+				message = GenerateMessageFromRawObj(resc.RawObject, messageScope, mutableAttrs)
 				matchRequired = false  // skip matching because the message is generated from Requested Object
 				scopedSignature = true // enable checking if the signature is for patch
 			}
 			signature := ishieldyaml.Base64decode(sigAnnotations.Signature)
 			certificate := ishieldyaml.Base64decode(sigAnnotations.Certificate)
+			certificate = ishieldyaml.Decompress(certificate)
+			sigstoreBundle := ""
+			if sigAnnotations.SigStoreBundle != "" {
+				sigstoreBundle = ishieldyaml.Base64decode(sigAnnotations.SigStoreBundle)
+				sigstoreBundle = ishieldyaml.Decompress(sigstoreBundle)
+			}
 			signType := SignedResourceTypeResource
 			if sigAnnotations.SignatureType == vrsig.SignatureTypeApplyingResource {
 				signType = SignedResourceTypeApplyingResource
@@ -106,7 +114,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": messageScope},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": messageScope, "sigstoreBundle": sigstoreBundle},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -118,13 +126,19 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		if found {
 			signature := ishieldyaml.Base64decode(si.Signature)
 			certificate := ishieldyaml.Base64decode(si.Certificate)
+			certificate = ishieldyaml.Decompress(certificate)
+			sigstoreBundle := ""
+			if si.SigStoreBundle != "" {
+				sigstoreBundle = ishieldyaml.Base64decode(si.SigStoreBundle)
+				sigstoreBundle = ishieldyaml.Decompress(sigstoreBundle)
+			}
 			message := ishieldyaml.Base64decode(si.Message)
 			message = ishieldyaml.Decompress(message)
 			mutableAttrs := si.MutableAttrs
 			matchRequired := true
 			scopedSignature := false
 			if si.Message == "" && si.MessageScope != "" {
-				message = GenerateMessageFromRawObj(reqc.RawObject, si.MessageScope, mutableAttrs)
+				message = GenerateMessageFromRawObj(resc.RawObject, si.MessageScope, mutableAttrs)
 				matchRequired = false  // skip matching because the message is generated from Requested Object
 				scopedSignature = true // enable checking if the signature is for patch
 			}
@@ -136,7 +150,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "resourceSignatureUID": resSigUID},
+				data:     map[string]string{"signature": signature, "message": message, "certificate": certificate, "yamlBytes": string(yamlBytes), "scope": si.MessageScope, "sigstoreBundle": sigstoreBundle, "resourceSignatureUID": resSigUID},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature},
 			}
 		}
@@ -146,7 +160,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 
 	//4. helm resource (release secret, helm cahrt resources)
 	if ok := self.plugins["helm"]; ok {
-		rsecBytes, err := helm.FindReleaseSecret(reqc.Namespace, reqc.Kind, reqc.Name, reqc.RawObject)
+		rsecBytes, err := helm.FindReleaseSecret(resc.Namespace, resc.Kind, resc.Name, resc.RawObject)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Error occured in finding helm release secret; %s", err.Error()))
 			return nil
@@ -176,19 +190,19 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
-	ref := reqc.ResourceRef()
+	ref := resc.ResourceRef()
 
 	// override ref name if there is kustomize pattern for this
-	kustPatterns := signingProfile.Kustomize(reqc.Map())
+	kustPatterns := signingProfile.Kustomize(resc.Map())
 	if len(kustPatterns) > 0 {
 		ref = kustPatterns[0].Override(ref)
 	}
 
 	// find signature
-	rsig := self.GetResourceSignature(ref, reqc, resSigList)
+	rsig := self.GetResourceSignature(ref, resc, resSigList)
 	if rsig == nil {
 		return &common.SignatureEvalResult{
 			Allow:   false,
@@ -200,12 +214,13 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
-	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, reqc.Namespace)
+	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, resc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
-	x509Pubkeys := candidatePubkeys[common.SignatureTypeX509]
+	x509Certs := candidatePubkeys[common.SignatureTypeX509]
+	sigstoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
 
 	keyLoadingError := false
-	candidateKeyCount := len(pgpPubkeys) + len(x509Pubkeys)
+	candidateKeyCount := len(pgpPubkeys) + len(x509Certs)
 	if candidateKeyCount > 0 {
 		validKeyCount := 0
 		for _, keyPath := range pgpPubkeys {
@@ -214,8 +229,14 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 			}
 		}
 
-		for _, certDir := range x509Pubkeys {
+		for _, certDir := range x509Certs {
 			if loaded, _ := x509.LoadCertDir(certDir); len(loaded) > 0 {
+				validKeyCount += 1
+			}
+		}
+
+		for _, certPath := range sigstoreCerts {
+			if loaded, _ := sigstore.LoadCert(certPath); len(loaded) > 0 {
 				validKeyCount += 1
 			}
 		}
@@ -224,15 +245,25 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 		}
 	}
 
+	sigstoreEnabled := self.config.SigStoreEnabled()
+
 	// create verifier
 	dryRunNamespace := ""
-	if reqc.ResourceScope == string(common.ScopeNamespaced) {
+	if resc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Pubkeys, self.config.KeyPathList)
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
+
+	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
+	if !kubeutil.IsInCluster() {
+		err := verifier.LoadSecrets(self.config.Namespace)
+		if err != nil {
+			logger.Warn("Error while loading pubkey secrets;", err.Error())
+		}
+	}
 
 	// verify signature
-	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, reqc, signingProfile)
+	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, signingProfile)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{
@@ -277,7 +308,7 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	signer := sigVerifyResult.Signer
 
 	// check signer config
-	signerMatched, matchedSignerConfig := self.signerConfig.Match(reqc.Namespace, signer, verifiedKeyPathList)
+	signerMatched, matchedSignerConfig := self.signerConfig.Match(resc.Namespace, signer, verifiedKeyPathList)
 	if signerMatched {
 		matchedSignerConfigStr := ""
 		if matchedSignerConfig != nil {
@@ -311,8 +342,8 @@ func (self *ConcreteSignatureEvaluator) Eval(reqc *common.ReqContext, resSigList
 	}
 }
 
-func findAttrsPattern(reqc *common.ReqContext, attrs []*common.AttrsPattern) []string {
-	reqFields := reqc.Map()
+func findAttrsPattern(reqc *common.RequestContext, resc *common.ResourceContext, attrs []*common.AttrsPattern) []string {
+	reqFields := resc.Map()
 	masks := []string{}
 	for _, attr := range attrs {
 		if attr.MatchWith(reqFields) {

@@ -20,6 +20,7 @@ rules:
   - signerconfigs
   - resourcesigningprofiles
   - resourcesignatures
+  - protectedresourceintegrities
   verbs:
   - get
   - list
@@ -49,3 +50,4 @@ rules:
   - '*'
   verbs:
   - get
+  - list

@@ -112,9 +112,11 @@ func embedRSP(cr *apisv1alpha1.IntegrityShield) *apisv1alpha1.IntegrityShield {
 				},
 				ProtectRules: []*common.Rule{
 					{
-						Match: []*common.RequestPattern{
+						Match: []*common.RequestPatternWithNamespace{
 							{
-								Kind: &secretPattern,
+								RequestPattern: &common.RequestPattern{
+									Kind: &secretPattern,
+								},
 							},
 						},
 					},
@@ -126,7 +128,7 @@ func embedRSP(cr *apisv1alpha1.IntegrityShield) *apisv1alpha1.IntegrityShield {
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zap.New())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -232,6 +234,7 @@ func doReconcileTest(fn func(*apiv1alpha1.IntegrityShield) (ctrl.Result, error),
 var _ = Describe("Test integrity shield", func() {
 
 	It("repeating Reconcile() Test", func() {
+		ctx := context.Background()
 		req := reconcile.Request{
 			NamespacedName: types.NamespacedName{Namespace: iShieldCR.Namespace, Name: iShieldCR.Name},
 		}
@@ -240,7 +243,7 @@ var _ = Describe("Test integrity shield", func() {
 		maxReconcileTrial := 600
 		deployFound := &appsv1.Deployment{}
 		for {
-			_, recError := r.Reconcile(req)
+			_, recError := r.Reconcile(ctx, req)
 			i++
 
 			if i%10 == 0 {

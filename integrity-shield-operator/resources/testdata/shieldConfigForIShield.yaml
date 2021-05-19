@@ -24,6 +24,13 @@ spec:
         match:
         - kind: Service
       - attrs:
+        - metadata.labels.olm.api.*
+        - metadata.labels.operators.coreos.com/*
+        - metadata.annotations.*
+        - spec.install.spec.deployments.*.spec.template.spec.containers.*.resources.limits.cpu
+        match:
+        - kind: ClusterServiceVersion
+      - attrs:
         - metadata.annotations.argocd.argoproj.io/sync-wave
         match:
         - kind: '*'
@@ -107,46 +114,57 @@ spec:
         - username: system:serviceaccount:openshift-service-ca:service-ca
         - username: system:serviceaccount:openshift-config-operator:openshift-config-operator
         - username: system:serviceaccount:openshift-kube-apiserver:localhost-recovery-client
-        - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
         - username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-ca, openshift-network-operator
           username: system:serviceaccount:openshift-service-ca:configmap-cabundle-injector-sa
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-ca-operator
           username: system:serviceaccount:openshift-service-ca-operator:service-ca-operator
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-catalog-controller-manager-operator
           username: system:serviceaccount:openshift-service-catalog-controller-manager-operator:openshift-service-catalog-controller-manager-operator
       - match:
-        - username: system:serviceaccount:openshift-console-operator:console-operator
+        - namespace: openshift-console-operator, openshift-console
+          username: system:serviceaccount:openshift-console-operator:console-operator
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-ca
           username: system:serviceaccount:openshift-service-ca:apiservice-cabundle-injector-sa
         - kind: ConfigMap
+          namespace: openshift-service-ca
           username: system:serviceaccount:openshift-service-ca:service-serving-cert-signer-sa
       - match:
         - kind: ConfigMap
+          namespace: openshift-service-catalog-apiserver-operator
           username: system:serviceaccount:openshift-service-catalog-apiserver-operator:openshift-service-catalog-apiserver-operator
       - match:
-        - username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
+        - namespace: openshift-operator-lifecycle-manager
+          username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
       - match:
         - kind: ConfigMap,DaemonSet
+          namespace: openshift-cluster-node-tuning-operator
           username: system:serviceaccount:openshift-cluster-node-tuning-operator:cluster-node-tuning-operator
       - match:
         - kind: Secret
+          namespace: openshift
           username: system:serviceaccount:openshift-cluster-samples-operator:cluster-samples-operator
       - match:
         - kind: Deployment
+          namespace: openshift-ingress
           username: system:serviceaccount:openshift-ingress-operator:ingress-operator
       - match:
         - kind: ServiceAccount, Secret
           username: system:serviceaccount:openshift-infra:serviceaccount-pull-secrets-controller
       - match:
         - kind: Pod
+          namespace: openshift-marketplace
           username: system:node:*
       - match:
-        - kind: ClusterServiceVersion, ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
+        - kind: ServiceAccount, InstallPlan, OperatorGroup, Role, RoleBinding, Deployment
           username: system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
       - match:
         - kind: InstallPlan, Role, RoleBinding, Deployment
@@ -173,7 +191,7 @@ spec:
       include:
       - '*'
     keyPathList:
-    - /sample-signer-keyconfig/pgp/pubring.gpg
+    - /sample-signer-keyconfig/keyring-secret/pgp/pubring.gpg
     log:
       consoleLog:
         enabled: true
@@ -184,6 +202,13 @@ spec:
         inScope:
         - kind: '*'
       logLevel: info
+    sideEffect:
+      createDenyEvent: true
+      createIShieldResourceEvent: true
+      updateRSPStatusForDeniedRequest: true
+    sigstoreConfig:
+      useDefaultRootCert: true
+      defaultRootCertURL: https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem
     patch:
       enabled: true
     plugin:

@@ -91,7 +91,7 @@ else
 endif
 
 
-.PHONY: config int fmt lint test coverage build build-images
+.PHONY: config int fmt lint test coverage build build-images build-cli
 
 
 config:
@@ -162,6 +162,13 @@ push-images:
 
 pull-images:
 		${ISHIELD_REPO_ROOT}/build/pull_images.sh
+
+############################################################
+# cli section
+############################################################
+
+build-cli:
+	cd ${CLI_DIR} && go mod tidy && go build -o build/ishieldctl main.go
 
 ############################################################
 # bundle section
@@ -276,14 +283,18 @@ tag-images-to-local:
 	@echo tag image for local registry
 	docker tag $(ISHIELD_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	docker tag $(ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION)
-	docker tag $(ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
+	# docker tag $(ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
+	# docker tag $(ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION)
+	# docker tag $(ISHIELD_CHECKER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_CHECKER_IMAGE_NAME_AND_VERSION)
 	docker tag $(ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 push-images-to-local: tag-images-to-local
 	@echo push image into local registry
 	docker push $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION)
-	docker push $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
+	# docker push $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
+	# docker push $(TEST_ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION)
+	# docker push $(TEST_ISHIELD_CHECKER_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 setup-test-env:

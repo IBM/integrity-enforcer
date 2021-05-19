@@ -24,11 +24,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	"github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
 const (
-	testReqcFile   = "testdata/reqc_NUM.json"
+	testAdReqFile = "testdata/adreq_NUM.json"
+	//testReqcFile   = "testdata/reqc_NUM.json"
 	testConfigFile = "testdata/config_NUM.json"
 	testDataFile   = "testdata/data_NUM.json"
 	testCtxFile    = "testdata/ctx_NUM.json"
@@ -48,12 +49,13 @@ func TestCheckFunctions(t *testing.T) {
 		if skipCaseNum[i] {
 			continue
 		}
-		testInScopeCheck(t, i)
+		testIshieldScopeCheck(t, i)
 		testFormatCheck(t, i)
 		testIShieldResourceCheck(t, i)
 		testDeleteCheck(t, i)
 		testProtectedCheck(t, i)
-		testRSPCheck(t, i)
+		testSingleMutationCheck(t, i)
+		testSingleSignatureCheck(t, i)
 	}
 }
 
@@ -67,9 +69,9 @@ func testFileName(fname string, num int) string {
 	return strings.Replace(fname, "NUM", strconv.Itoa(num), 1)
 }
 
-func testInScopeCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := inScopeCheck(reqc, config, data, ctx)
+func testIshieldScopeCheck(t *testing.T, caseNum int) {
+	reqc, _, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := ishieldScopeCheck(reqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -81,8 +83,8 @@ func testInScopeCheck(t *testing.T, caseNum int) {
 }
 
 func testFormatCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
-	actualDr := formatCheck(reqc, config, data, ctx)
+	reqc, reqobj, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	actualDr := formatCheck(reqc, reqobj, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -94,7 +96,7 @@ func testFormatCheck(t *testing.T, caseNum int) {
 }
 
 func testIShieldResourceCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	reqc, _, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := iShieldResourceCheck(reqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -107,7 +109,7 @@ func testIShieldResourceCheck(t *testing.T, caseNum int) {
 }
 
 func testDeleteCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
+	reqc, _, _, config, data, ctx, expectedDr, _, _ := getTestData(caseNum)
 	actualDr := deleteCheck(reqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -120,7 +122,7 @@ func testDeleteCheck(t *testing.T, caseNum int) {
 }
 
 func testProtectedCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
+	reqc, _, _, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
 	actualDr, actualMatchedProfiles := protectedCheck(reqc, config, data, ctx)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
@@ -137,16 +139,36 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 	}
 }
 
-func testRSPCheck(t *testing.T, caseNum int) {
-	reqc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
-	actualDr := resourceSigningProfileCheck(prof, reqc, config, data, ctx)
+func testSingleMutationCheck(t *testing.T, caseNum int) {
+	reqc, reqobj, _, config, data, ctx, initialDr, prof, expectedDr := getTestData(caseNum)
+	actualDr := mutationCheckWithSingleProfile(prof, reqc, reqobj, config, data, ctx)
+	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
+	if strings.Contains(expectedDr.Message, "no mutation") {
+		initialDr = expectedDr
+	}
+
+	if !reflect.DeepEqual(actualDr, initialDr) {
+		actDrBytes, _ := json.Marshal(initialDr)
+		expDrBytes, _ := json.Marshal(initialDr)
+		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
+	} else {
+		t.Logf("[Case %s] Test for resourceSigningProfileCheck() passed.", strconv.Itoa(caseNum))
+	}
+}
+
+func testSingleSignatureCheck(t *testing.T, caseNum int) {
+	_, _, resc, config, data, ctx, _, prof, expectedDr := getTestData(caseNum)
+	if strings.Contains(expectedDr.Message, "no mutation") {
+		return
+	}
+	actualDr := signatureCheckWithSingleProfile(prof, resc, config, data, ctx)
 	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
 		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for resourceSigningProfileCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
+		t.Errorf("[Case %s] Test failed for resourceSigningProfileSignatureCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
 	} else {
-		t.Logf("[Case %s] Test for resourceSigningProfileCheck() passed.", strconv.Itoa(caseNum))
+		t.Logf("[Case %s] Test for resourceSigningProfileSignatureCheck() passed.", strconv.Itoa(caseNum))
 	}
 }

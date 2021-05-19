@@ -22,7 +22,7 @@ import (
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
@@ -41,9 +41,20 @@ type RunData struct {
 	SignerConfig *sigconfapi.SignerConfig        `json:"signerConfig,omitempty"`
 	ResSigList   *rsigapi.ResourceSignatureList  `json:"resSigList,omitempty"`
 
-	loader        *Loader               `json:"-"`
-	commonProfile *common.CommonProfile `json:"-"`
-	ruleTable     *RuleTable            `json:"-"`
+	loader          *Loader               `json:"-"`
+	commonProfile   *common.CommonProfile `json:"-"`
+	ruleTable       *RuleTable            `json:"-"`
+	forceInitialize bool                  `json:"-"`
+}
+
+func (self *RunData) EnableForceInitialize() {
+	self.forceInitialize = true
+	return
+}
+
+func (self *RunData) DisableForceInitialize() {
+	self.forceInitialize = false
+	return
 }
 
 func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
@@ -53,9 +64,9 @@ func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
 	return self.SignerConfig
 }
 
-func (self *RunData) GetResSigList(reqc *common.ReqContext) *rsigapi.ResourceSignatureList {
+func (self *RunData) GetResSigList(resc *common.ResourceContext) *rsigapi.ResourceSignatureList {
 	if self.ResSigList == nil && self.loader != nil {
-		self.ResSigList = self.loader.ResourceSignature.GetData(reqc, true)
+		self.ResSigList = self.loader.ResourceSignature.GetData(resc, true)
 	}
 	return self.ResSigList
 }
@@ -102,9 +113,14 @@ func (self *RunData) GetRuleTable(shieldNamespace string) *RuleTable {
 	return self.ruleTable
 }
 
-func (self *RunData) Init(reqc *common.ReqContext, conf *config.ShieldConfig) {
-	self.RSPList, _ = self.loader.RSP.GetData(false)
-	self.NSList, _ = self.loader.Namespace.GetData(false)
+func (self *RunData) Init(conf *config.ShieldConfig) {
+	force := false
+	if self.forceInitialize {
+		force = true
+	}
+
+	self.RSPList, _ = self.loader.RSP.GetData(force)
+	self.NSList, _ = self.loader.Namespace.GetData(force)
 	self.commonProfile = conf.CommonProfile
 	rtInited := self.setRuleTable(conf.Namespace)
 	if rtInited {

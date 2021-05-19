@@ -31,9 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -57,7 +54,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zap.New())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -71,8 +68,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	schemes = runtime.NewScheme()
 	err = clientgoscheme.AddToScheme(schemes)
-	err = apiextensionsv1.AddToScheme(schemes)
-	err = apiextensionsv1beta1.AddToScheme(schemes)
 
 	Expect(err).NotTo(HaveOccurred())
 

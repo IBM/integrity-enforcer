@@ -32,8 +32,8 @@ type CommonProfile struct {
 }
 
 type Rule struct {
-	Match   []*RequestPattern `json:"match,omitempty"`
-	Exclude []*RequestPattern `json:"exclude,omitempty"`
+	Match   []*RequestPatternWithNamespace `json:"match,omitempty"`
+	Exclude []*RequestPatternWithNamespace `json:"exclude,omitempty"`
 }
 
 type RequestPattern struct {
@@ -274,8 +274,8 @@ type ServiceAccountPattern struct {
 }
 
 type AttrsPattern struct {
-	Match []*RequestPattern `json:"match,omitempty"`
-	Attrs []string          `json:"attrs,omitempty"`
+	Match []*RequestPatternWithNamespace `json:"match,omitempty"`
+	Attrs []string                       `json:"attrs,omitempty"`
 }
 
 func (self *AttrsPattern) MatchWith(reqFields map[string]string) bool {
@@ -316,7 +316,7 @@ func (self *Request) Equal(req *Request) bool {
 	return reflect.DeepEqual(self, req)
 }
 
-func NewRequestFromReqContext(reqc *ReqContext) *Request {
+func NewRequestFromReqContext(reqc *RequestContext) *Request {
 	req := &Request{
 		Operation:  reqc.Operation,
 		Namespace:  reqc.Namespace,

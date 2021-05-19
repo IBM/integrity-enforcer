@@ -1,0 +1,41 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: IntegrityShield
+metadata:
+  name: integrity-shield-server
+  finalizers:
+  - cleanup.finalizers.integrityshield.io
+spec:
+  # namespace: integrity-shield-operator-system
+  shieldConfig:
+    inScopeNamespaceSelector:
+      include:
+      - "*"
+      exclude:
+      - "kube-*"
+      - "openshift-*"
+    sigstoreConfig:
+      enabled: true
+      useDefaultRootCert: true
+    imageVerificationConfig:
+      enabled: true
+  signerConfig:
+    policies:
+    - namespaces:
+      - "*"
+      signers:
+      - "SampleSigner"
+    - scope: "Cluster"
+      signers:
+      - "SampleSigner"
+    signers:
+    - name: "SampleSigner"
+      keyConfig: sample-signer-keyconfig
+      subjects:
+      - commonName: "*"
+  keyConfig:
+  - name: sample-signer-keyconfig
+    signatureType: sigstore
+  server:
+    image: localhost:5000/integrity-shield-server:0.1.6
+  logger:
+    image: localhost:5000/integrity-shield-logging:0.1.6

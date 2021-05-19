@@ -28,18 +28,18 @@ import (
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 	var patchBytes []byte
 	if conf.PatchEnabled(reqc) {
 		// `patchBytes` will be nil if no patch
-		patchBytes = generatePatchBytes(reqc, ctx)
+		patchBytes = generatePatchBytes(reqc, reqobj, ctx)
 	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	resp := &admv1.AdmissionResponse{
@@ -56,7 +56,7 @@ func createAdmissionResponse(allowed bool, msg string, reqc *common.ReqContext, 
 	return resp
 }
 
-func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *config.ShieldConfig, denyRSP *rspapi.ResourceSigningProfile) error {
+func createOrUpdateEvent(reqc *common.RequestContext, ctx *CheckContext, sconfig *config.ShieldConfig, denyRSP *rspapi.ResourceSigningProfile) error {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return err
@@ -144,7 +144,7 @@ func createOrUpdateEvent(reqc *common.ReqContext, ctx *CheckContext, sconfig *co
 	return nil
 }
 
-func updateRSPStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.ReqContext, errMsg string) error {
+func updateRSPStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.RequestContext, errMsg string) error {
 	if rsp == nil {
 		return nil
 	}
@@ -183,7 +183,7 @@ func checkIfProfileTargetNamespace(reqNamespace, shieldNamespace string, data *R
 	return ruleTable.CheckIfTargetNamespace(reqNamespace)
 }
 
-func checkIfInScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
+func checkIfIshieldScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
 	inScopeNSSelector := config.InScopeNamespaceSelector
 	if inScopeNSSelector == nil {
 		return false
@@ -191,13 +191,13 @@ func checkIfInScopeNamespace(reqNamespace string, config *config.ShieldConfig) b
 	return inScopeNSSelector.MatchNamespaceName(reqNamespace)
 }
 
-func checkIfDryRunAdmission(reqc *common.ReqContext) bool {
+func checkIfDryRunAdmission(reqc *common.RequestContext) bool {
 	return reqc.DryRun
 }
 
-func checkIfUnprocessedInIShield(reqc *common.ReqContext, config *config.ShieldConfig) bool {
+func checkIfUnprocessedInIShield(reqFeilds map[string]string, config *config.ShieldConfig) bool {
 	for _, d := range config.Ignore {
-		if d.Match(reqc.Map()) {
+		if d.Match(reqFeilds) {
 			return true
 		}
 	}
@@ -212,7 +212,7 @@ func getRequestNamespace(req *admv1.AdmissionRequest) string {
 	return reqNamespace
 }
 
-func getRequestNamespaceFromReqContext(reqc *common.ReqContext) string {
+func getRequestNamespaceFromRequestContext(reqc *common.RequestContext) string {
 	reqNamespace := ""
 	if reqc.Kind != "Namespace" && reqc.Namespace != "" {
 		reqNamespace = reqc.Namespace
@@ -220,7 +220,15 @@ func getRequestNamespaceFromReqContext(reqc *common.ReqContext) string {
 	return reqNamespace
 }
 
-func checkIfIShieldAdminRequest(reqc *common.ReqContext, config *config.ShieldConfig) bool {
+func getRequestNamespaceFromResourceContext(resc *common.ResourceContext) string {
+	reqNamespace := ""
+	if resc.Kind != "Namespace" && resc.Namespace != "" {
+		reqNamespace = resc.Namespace
+	}
+	return reqNamespace
+}
+
+func checkIfIShieldAdminRequest(reqc *common.RequestContext, config *config.ShieldConfig) bool {
 	groupMatched := false
 	if config.IShieldAdminUserGroup != "" {
 		groupMatched = common.MatchPatternWithArray(config.IShieldAdminUserGroup, reqc.UserGroups)
@@ -237,20 +245,20 @@ func checkIfIShieldAdminRequest(reqc *common.ReqContext, config *config.ShieldCo
 	return isAdmin
 }
 
-func checkIfIShieldServerRequest(reqc *common.ReqContext, config *config.ShieldConfig) bool {
+func checkIfIShieldServerRequest(reqc *common.RequestContext, config *config.ShieldConfig) bool {
 	return common.MatchPattern(config.IShieldServerUserName, reqc.UserName) //"service account for integrity-shield"
 }
 
-func checkIfIShieldOperatorRequest(reqc *common.ReqContext, config *config.ShieldConfig) bool {
+func checkIfIShieldOperatorRequest(reqc *common.RequestContext, config *config.ShieldConfig) bool {
 	return common.ExactMatch(config.IShieldResourceCondition.OperatorServiceAccount, reqc.UserName) //"service account for integrity-shield-operator"
 }
 
-func checkIfGarbageCollectorRequest(reqc *common.ReqContext) bool {
+func checkIfGarbageCollectorRequest(reqc *common.RequestContext) bool {
 	// TODO: should be configurable?
 	return reqc.UserName == "system:serviceaccount:kube-system:generic-garbage-collector"
 }
 
-func checkIfSpecialServiceAccountRequest(reqc *common.ReqContext) bool {
+func checkIfSpecialServiceAccountRequest(reqc *common.RequestContext) bool {
 	// TODO: should be configurable?
 	if strings.HasPrefix(reqc.UserName, "system:serviceaccount:kube-") {
 		return true
@@ -275,7 +283,7 @@ func getBreakGlassConditions(signerConfig *sigconfapi.SignerConfig) []common.Bre
 	return conditions
 }
 
-func checkIfBreakGlassEnabled(reqc *common.ReqContext, signerConfig *sigconfapi.SignerConfig) bool {
+func checkIfBreakGlassEnabled(reqc *common.RequestContext, signerConfig *sigconfapi.SignerConfig) bool {
 
 	conditions := getBreakGlassConditions(signerConfig)
 	breakGlassEnabled := false

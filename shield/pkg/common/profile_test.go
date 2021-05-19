@@ -28,7 +28,7 @@ func TestProfile(t *testing.T) {
 		t.Error(err)
 	}
 
-	var reqc *ReqContext
+	var reqc *RequestContext
 	err = json.Unmarshal(reqcBytes, &reqc)
 	if err != nil {
 		t.Error(err)
@@ -101,7 +101,7 @@ func TestKustomizePattern(t *testing.T) {
 		t.Error(err)
 	}
 
-	var reqc *ReqContext
+	var reqc *RequestContext
 	err = json.Unmarshal(reqcBytes, &reqc)
 	if err != nil {
 		t.Error(err)

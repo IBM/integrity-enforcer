@@ -26,32 +26,34 @@ import (
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	admv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type ReqContext struct {
-	ResourceScope   string          `json:"resourceScope,omitempty"`
-	DryRun          bool            `json:"dryRun"`
+type RequestContext struct {
+	ResourceScope  string   `json:"resourceScope,omitempty"`
+	DryRun         bool     `json:"dryRun"`
+	RequestJsonStr string   `json:"request"`
+	RequestUid     string   `json:"requestUid"`
+	Namespace      string   `json:"namespace"`
+	Name           string   `json:"name"`
+	ApiGroup       string   `json:"apiGroup"`
+	ApiVersion     string   `json:"apiVersion"`
+	Kind           string   `json:"kind"`
+	Operation      string   `json:"operation"`
+	UserInfo       string   `json:"userInfo"`
+	UserName       string   `json:"userName"`
+	UserGroups     []string `json:"userGroups"`
+	Type           string   `json:"Type"`
+}
+
+type RequestObject struct {
 	RawObject       []byte          `json:"-"`
 	RawOldObject    []byte          `json:"-"`
-	RequestJsonStr  string          `json:"request"`
-	RequestUid      string          `json:"requestUid"`
-	Namespace       string          `json:"namespace"`
-	Name            string          `json:"name"`
-	ApiGroup        string          `json:"apiGroup"`
-	ApiVersion      string          `json:"apiVersion"`
-	Kind            string          `json:"kind"`
-	Operation       string          `json:"operation"`
 	OrgMetadata     *ObjectMetadata `json:"orgMetadata"`
 	ClaimedMetadata *ObjectMetadata `json:"claimedMetadata"`
-	UserInfo        string          `json:"userInfo"`
 	ObjLabels       string          `json:"objLabels"`
 	ObjMetaName     string          `json:"objMetaName"`
-	UserName        string          `json:"userName"`
-	UserGroups      []string        `json:"userGroups"`
-	Type            string          `json:"Type"`
-	ObjectHashType  string          `json:"objectHashType"`
-	ObjectHash      string          `json:"objectHash"`
 }
 
 type ObjectMetadata struct {
@@ -59,7 +61,7 @@ type ObjectMetadata struct {
 	Labels      *ResourceLabel      `json:"labels"`
 }
 
-func (reqc *ReqContext) ResourceRef() *ResourceRef {
+func (reqc *RequestContext) ResourceRef() *ResourceRef {
 	gv := schema.GroupVersion{
 		Group:   reqc.ApiGroup,
 		Version: reqc.ApiVersion,
@@ -72,7 +74,7 @@ func (reqc *ReqContext) ResourceRef() *ResourceRef {
 	}
 }
 
-func (reqc *ReqContext) Map() map[string]string {
+func (reqc *RequestContext) Map() map[string]string {
 	m := map[string]string{}
 	v := reflect.Indirect(reflect.ValueOf(reqc))
 	t := v.Type()
@@ -89,7 +91,7 @@ func (reqc *ReqContext) Map() map[string]string {
 	return m
 }
 
-func (reqc *ReqContext) Info(m map[string]string) string {
+func (reqc *RequestContext) Info(m map[string]string) string {
 	if m == nil {
 		m = map[string]string{}
 	}
@@ -104,35 +106,41 @@ func (reqc *ReqContext) Info(m map[string]string) string {
 	return string(infoBytes)
 }
 
-func (reqc *ReqContext) GroupVersion() string {
+func (reqc *RequestContext) GroupVersion() string {
 	return schema.GroupVersion{Group: reqc.ApiGroup, Version: reqc.ApiVersion}.String()
 }
 
-func (rc *ReqContext) IsUpdateRequest() bool {
+func (rc *RequestContext) IsUpdateRequest() bool {
 	return rc.Operation == "UPDATE"
 }
 
-func (rc *ReqContext) IsCreateRequest() bool {
+func (rc *RequestContext) IsCreateRequest() bool {
 	return rc.Operation == "CREATE"
 }
 
-func (rc *ReqContext) IsDeleteRequest() bool {
+func (rc *RequestContext) IsDeleteRequest() bool {
 	return rc.Operation == "DELETE"
 }
 
-func (rc *ReqContext) IsSecret() bool {
+func (rc *RequestContext) IsSecret() bool {
 	return rc.Kind == "Secret" && rc.GroupVersion() == "v1"
 }
 
-func (rc *ReqContext) IsServiceAccount() bool {
+func (rc *RequestContext) IsServiceAccount() bool {
 	return rc.Kind == "ServiceAccount" && rc.GroupVersion() == "v1"
 }
 
-func (rc *ReqContext) ExcludeDiffValue() bool {
+func (rc *RequestContext) ExcludeDiffValue() bool {
 	if rc.Kind == "Secret" {
 		return true
 	}
 	return false
+}
+
+func AdmissionRequestToResourceContext(request *admv1.AdmissionRequest) *ResourceContext {
+	var obj *unstructured.Unstructured
+	_ = json.Unmarshal(request.Object.Raw, &obj)
+	return NewResourceContext(obj)
 }
 
 type ParsedRequest struct {
@@ -214,7 +222,7 @@ func (pr *ParsedRequest) getBool(path string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func NewReqContext(req *admv1.AdmissionRequest) *ReqContext {
+func NewRequestContext(req *admv1.AdmissionRequest) (*RequestContext, *RequestObject) {
 
 	pr := NewParsedRequest(req)
 
@@ -248,28 +256,30 @@ func NewReqContext(req *admv1.AdmissionRequest) *ReqContext {
 		resourceScope = "Cluster"
 	}
 
-	rc := &ReqContext{
-		DryRun:          *req.DryRun,
+	rc := &RequestContext{
+		DryRun:         *req.DryRun,
+		ResourceScope:  resourceScope,
+		RequestUid:     pr.UID,
+		RequestJsonStr: pr.JsonStr,
+		Name:           name,
+		Operation:      pr.getValue("operation"),
+		ApiGroup:       pr.getValue("kind.group"),
+		ApiVersion:     pr.getValue("kind.version"),
+		Kind:           kind,
+		Namespace:      namespace,
+		UserInfo:       pr.getValue("userInfo"),
+		UserName:       pr.getValue("userInfo.username"),
+		UserGroups:     pr.getArrayValue("userInfo.groups"),
+		Type:           pr.getValue("object.type"),
+	}
+	ro := &RequestObject{
 		RawObject:       req.Object.Raw,
 		RawOldObject:    req.OldObject.Raw,
-		ResourceScope:   resourceScope,
-		RequestUid:      pr.UID,
-		RequestJsonStr:  pr.JsonStr,
-		Name:            name,
-		Operation:       pr.getValue("operation"),
-		ApiGroup:        pr.getValue("kind.group"),
-		ApiVersion:      pr.getValue("kind.version"),
-		Kind:            kind,
-		Namespace:       namespace,
-		UserInfo:        pr.getValue("userInfo"),
 		ObjLabels:       pr.getValue("object.metadata.labels"),
 		ObjMetaName:     pr.getValue("object.metadata.name"),
-		UserName:        pr.getValue("userInfo.username"),
-		UserGroups:      pr.getArrayValue("userInfo.groups"),
-		Type:            pr.getValue("object.type"),
 		OrgMetadata:     orgMetadata,
 		ClaimedMetadata: claimedMetadata,
 	}
-	return rc
+	return rc, ro
 
 }

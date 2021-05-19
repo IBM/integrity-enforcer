@@ -15,7 +15,7 @@
 #
 
 # FROM registry.access.redhat.com/ubi7/ubi:latest
-FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi7/ubi-minimal:7.8
 
 # RUN yum install -y tar
 

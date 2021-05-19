@@ -19,6 +19,9 @@ package shield
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
@@ -28,8 +31,11 @@ import (
 	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
+	sign "github.com/IBM/integrity-enforcer/shield/pkg/util/sign"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
+	sigstore "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/sigstore"
 	x509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
+	corev1 "k8s.io/api/core/v1"
 )
 
 /**********************************************
@@ -39,7 +45,8 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
+	Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
+	LoadSecrets(ishieldNS string) error
 }
 
 /**********************************************
@@ -50,32 +57,175 @@ type VerifierInterface interface {
 
 type ResourceVerifier struct {
 	PGPKeyPathList        []string
-	X509KeyPathList       []string
+	X509CertPathList      []string
+	SigStoreCertPathList  []string
 	AllMountedKeyPathList []string
 	dryRunNamespace       string // namespace for dryrun; should be empty for cluster scope request
+	sigstoreEnabled       bool
 }
 
-func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509KeyPathList, allKeyPathList []string) VerifierInterface {
+func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509CertPathList, sigStoreCertPathList, allKeyPathList []string, sigstoreEnabled bool) VerifierInterface {
 	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
-		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509KeyPathList: x509KeyPathList, AllMountedKeyPathList: allKeyPathList}
+		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509CertPathList: x509CertPathList, SigStoreCertPathList: sigStoreCertPathList, AllMountedKeyPathList: allKeyPathList, sigstoreEnabled: sigstoreEnabled}
 	} else if signType == SignedResourceTypeHelm {
 		return &HelmVerifier{Namespace: dryRunNamespace, KeyPathList: pgpKeyPathList}
 	}
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *ResourceVerifier) LoadSecrets(ishieldNS string) error {
+	replace := map[string]string{}
+	for _, keyPath := range self.AllMountedKeyPathList {
+		// if secret is found, skip loading
+		if exists(keyPath) {
+			continue
+		}
+		// otherwise, try getting secret and save it as tmp local file, and then update keyPathList at the end
+		keyPathParts := parseKeyPath(keyPath)
+		secretName := keyPathParts["secret"]
+		if secretName == "" {
+			continue
+		}
+		// get secret
+		obj, err := kubeutil.GetResource("v1", "Secret", ishieldNS, secretName)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to get secret `%s`; %s", secretName, err.Error()))
+			continue
+		}
+		objBytes, _ := json.Marshal(obj)
+		var res corev1.Secret
+		_ = json.Unmarshal(objBytes, &res)
+
+		// save it in a tmp dir
+		keyPathParts["base"] = "./tmp"
+		newPath := filepath.Clean(joinKeyPathParts(keyPathParts))
+		newPathDir := filepath.Dir(newPath)
+		newPathFile := filepath.Base(newPath)
+		err = os.MkdirAll(newPathDir, 0755)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to create a directory for secret `%s`; %s", secretName, err.Error()))
+			continue
+		}
+		pubKeyBytes, ok := res.Data[newPathFile]
+		if !ok {
+			logger.Warn(fmt.Sprintf("Failed to get a pubKeyBytes from secret `%s`, file %s", secretName, newPathFile))
+			continue
+		}
+		err = ioutil.WriteFile(newPath, pubKeyBytes, 0755)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("Failed to save a secret as a file `%s`; %s", secretName, err.Error()))
+			continue
+		}
+
+		replace[keyPath] = newPath
+	}
+	// replace all key path list with the saved filepath
+	for i, keyPath := range self.AllMountedKeyPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.AllMountedKeyPathList[i] = newPath
+		}
+	}
+	for i, keyPath := range self.PGPKeyPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.PGPKeyPathList[i] = newPath
+		}
+	}
+	for i, keyPath := range self.X509CertPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.X509CertPathList[i] = newPath
+		}
+	}
+	for i, keyPath := range self.SigStoreCertPathList {
+		if newPath, ok := replace[keyPath]; ok {
+			self.SigStoreCertPathList[i] = newPath
+		}
+	}
+	return nil
+}
+
+func parseKeyPath(keyPath string) map[string]string {
+	m := map[string]string{
+		"base":      "",
+		"keyConfig": "",
+		"secret":    "",
+		"sigType":   "",
+		"file":      "",
+	}
+	sigType := ""
+	if strings.Contains(keyPath, "/pgp/") {
+		sigType = "/pgp/"
+	} else if strings.Contains(keyPath, "/x509/") {
+		sigType = "/x509/"
+	} else if strings.Contains(keyPath, "/sigstore/") {
+		sigType = "/sigstore/"
+	}
+	if sigType == "" {
+		return m
+	}
+
+	m["sigType"] = sigType
+	parts1 := strings.Split(keyPath, sigType)
+	parts2 := strings.Split(parts1[0], "/")
+	if len(parts1) >= 2 {
+		m["file"] = parts1[1]
+	}
+	if len(parts2) >= 1 {
+		m["secret"] = parts2[len(parts2)-1]
+	}
+	keyConfig := ""
+	if len(parts2) >= 2 {
+		keyConfig = parts2[len(parts2)-2]
+	}
+
+	if keyConfig == "" {
+		return m
+	}
+
+	m["keyConfig"] = keyConfig
+	parts3 := strings.Split(keyPath, keyConfig)
+	if len(parts2) >= 1 {
+		m["base"] = parts3[0]
+	}
+	return m
+}
+
+func joinKeyPathParts(m map[string]string) string {
+	keys := []string{"base", "keyConfig", "secret", "sigType", "file"}
+	parts := []string{}
+	for _, key := range keys {
+		if v, ok := m[key]; ok {
+			parts = append(parts, v)
+		} else {
+			return ""
+		}
+	}
+	return strings.Join(parts, "/")
+}
+
+func exists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
+}
+
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
 
-	excludeDiffValue := reqc.ExcludeDiffValue()
+	excludeDiffValue := resc.ExcludeDiffValue()
 
-	kustomizeList := signingProfile.Kustomize(reqc.Map())
-	allowDiffPatterns := makeAllowDiffPatterns(reqc, kustomizeList)
+	kustomizeList := signingProfile.Kustomize(resc.Map())
+	allowNSChange := false
+	for _, k := range kustomizeList {
+		if k.AllowNamespaceChange {
+			allowNSChange = true
+			break
+		}
+	}
+	allowDiffPatterns := makeAllowDiffPatterns(resc, kustomizeList)
 
-	protectAttrsList := signingProfile.ProtectAttrs(reqc.Map())
-	ignoreAttrsList := signingProfile.IgnoreAttrs(reqc.Map())
+	protectAttrsList := signingProfile.ProtectAttrs(resc.Map())
+	ignoreAttrsList := signingProfile.IgnoreAttrs(resc.Map())
 
 	resSigUID := sig.data["resourceSignatureUID"]
 	sigFrom := ""
@@ -92,7 +242,20 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 			message = yamlBytes
 		}
 
-		matched, diffStr := self.MatchMessage([]byte(message), reqc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, reqc.ResourceScope, reqc.Kind, sig.SignType, excludeDiffValue)
+		// if allowNamespaceChange is true in KustomizePattern, overwrite namespace in message with requested one
+		if allowNSChange {
+			messageNode, err := mapnode.NewFromYamlBytes([]byte(message))
+			if err == nil {
+				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, resc.Namespace)
+				overwriteNode, _ := mapnode.NewFromBytes([]byte(overwriteJson))
+				newMessageNode, err := messageNode.Merge(overwriteNode)
+				if err == nil {
+					message = newMessageNode.ToYaml()
+				}
+			}
+		}
+
+		matched, diffStr := self.MatchMessage([]byte(message), resc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, resc.ResourceScope, resc.Kind, sig.SignType, excludeDiffValue)
 		if !matched {
 			msg := fmt.Sprintf("The message for this signature in %s is not identical with the requested object. diff: %s", sigFrom, diffStr)
 			return &SigVerifyResult{
@@ -109,25 +272,27 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 	if sig.option["scopedSignature"] {
 		isValidScopeSignature := false
 		scopeDenyMsg := ""
-		if reqc.IsCreateRequest() {
-			// for CREATE request, this boolean flag will be true.
-			// because signature verification will work as value check in the case of scopedSignature.
-			isValidScopeSignature = true
-		} else if reqc.IsUpdateRequest() {
-			// for UPDATE request, IShield will confirm that no value is modified except attributes in `scope`.
-			// if there is any modification, the request will be denied.
-			if reqc.OrgMetadata.Labels.IntegrityVerified() {
-				scope, _ := sig.data["scope"]
-				diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope, excludeDiffValue)
-				if diffIsInMessageScope {
-					isValidScopeSignature = true
-				} else {
-					scopeDenyMsg = fmt.Sprintf("messageScope of the signature in %s does not cover all changed attributes in this update", sigFrom)
-				}
-			} else {
-				scopeDenyMsg = fmt.Sprintf("Original object must be integrityVerified to allow UPDATE request with scope signature specified in %s", sigFrom)
-			}
-		}
+
+		// TODO: support scopedSignature after refactoring
+		// if reqc.IsCreateRequest() {
+		// 	// for CREATE request, this boolean flag will be true.
+		// 	// because signature verification will work as value check in the case of scopedSignature.
+		// 	isValidScopeSignature = true
+		// } else if reqc.IsUpdateRequest() {
+		// 	// for UPDATE request, IShield will confirm that no value is modified except attributes in `scope`.
+		// 	// if there is any modification, the request will be denied.
+		// 	if reqc.OrgMetadata.Labels.IntegrityVerified() {
+		// 		scope, _ := sig.data["scope"]
+		// 		diffIsInMessageScope := self.IsPatchWithScopeKey(reqc.RawOldObject, reqc.RawObject, scope, excludeDiffValue)
+		// 		if diffIsInMessageScope {
+		// 			isValidScopeSignature = true
+		// 		} else {
+		// 			scopeDenyMsg = fmt.Sprintf("messageScope of the signature in %s does not cover all changed attributes in this update", sigFrom)
+		// 		}
+		// 	} else {
+		// 		scopeDenyMsg = fmt.Sprintf("Original object must be integrityVerified to allow UPDATE request with scope signature specified in %s", sigFrom)
+		// 	}
+		// }
 		if !isValidScopeSignature {
 			return &SigVerifyResult{
 				Error: &common.CheckError{
@@ -140,104 +305,58 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, reqc *common.ReqCont
 		}
 	}
 
-	message := sig.data["message"]
-	signature := sig.data["signature"]
+	message := []byte(sig.data["message"])
+	signature := []byte(sig.data["signature"])
 	certificateStr, certFound := sig.data["certificate"]
+	certificate := []byte(certificateStr)
+	sigstoreBundleStr, bundleFound := sig.data["sigstoreBundle"]
+
+	opts := map[string]string{}
+	if self.sigstoreEnabled && bundleFound {
+		opts["sigstoreBundle"] = sigstoreBundleStr
+	}
+
+	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .
+	// Then you can add your function here.
+	verifiers := map[string]*sign.Verifier{
+		"pgp":  sign.NewVerifier(pgp.Verify, self.PGPKeyPathList, sigFrom),
+		"x509": sign.NewVerifier(x509.Verify, self.X509CertPathList, sigFrom),
+		// "custom": sign.NewVerifier(custom.Verify, nil, sigFrom),
+	}
+	certRequired := map[string]bool{
+		"pgp":  false,
+		"x509": true,
+		// "custom": false,
+	}
+
+	if self.sigstoreEnabled {
+		verifiers["sigstore"] = sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom)
+		certRequired["sigstore"] = true
+	}
 
 	verifiedKeyPathList := []string{}
-	if len(self.PGPKeyPathList) > 0 {
-		for _, keyPath := range self.PGPKeyPathList {
-			ok, reasonFail, signer, fingerprint, err := pgp.VerifySignature(keyPath, message, signature)
-			if err != nil {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  err,
-				}
-				return &SigVerifyResult{Error: vcerr, Signer: nil}, []string{}, err
-			} else if ok {
-				vcerr = nil
-				vsinfo = &common.SignerInfo{
-					Email:       signer.Email,
-					Name:        signer.Name,
-					Comment:     signer.Comment,
-					Fingerprint: fingerprint,
-				}
-				verifiedKeyPathList = append(verifiedKeyPathList, keyPath)
-			} else {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  nil,
-				}
-			}
+	for sigType, verifier := range verifiers {
+		// skip this verifier because no valid key path is configured
+		if !verifier.HasAnyKey() {
+			continue
 		}
-	}
-	if len(self.X509KeyPathList) > 0 && certFound {
-		for _, caCertPath := range self.X509KeyPathList {
-			certificate := []byte(certificateStr)
-			certOk, reasonFail, err := x509.VerifyCertificate(certificate, caCertPath)
-			if err != nil {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Error occured while verifying certificate in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  err,
-				}
-				return &SigVerifyResult{Error: vcerr, Signer: nil}, []string{}, err
-			} else if !certOk {
-				vcerr = &common.CheckError{
-					Msg:    fmt.Sprintf("Failed to verify certificate in %s", sigFrom),
-					Reason: reasonFail,
-					Error:  nil,
-				}
-				vsinfo = nil
-			} else {
-				cert, err := x509.ParseCertificate(certificate)
-				if err != nil {
-					logger.Error("Failed to parse certificate; ", err)
-				}
-				pubKeyBytes, err := x509.GetPublicKeyFromCertificate(certificate)
-				if err != nil {
-					logger.Error("Failed to get public key from certificate; ", err)
-				}
-				message := []byte(sig.data["message"])
-				signature := []byte(sig.data["signature"])
-				sigOk, reasonFail, err := x509.VerifySignature(message, signature, pubKeyBytes)
-				if err != nil {
-					vcerr = &common.CheckError{
-						Msg:    fmt.Sprintf("Error occured while verifying signature in %s", sigFrom),
-						Reason: reasonFail,
-						Error:  err,
-					}
-					return &SigVerifyResult{Error: vcerr, Signer: vsinfo}, []string{}, err
-				} else if sigOk {
-					vcerr = nil
-					vsinfo = x509.NewSignerInfoFromCert(cert)
-					verifiedKeyPathList = append(verifiedKeyPathList, caCertPath)
-				} else {
-					vcerr = &common.CheckError{
-						Msg:    fmt.Sprintf("Failed to verify signature in %s", sigFrom),
-						Reason: reasonFail,
-						Error:  nil,
-					}
-					vsinfo = nil
-				}
-			}
+		// skip this because certificate is required for this verification but not found
+		if certRequired[sigType] && !certFound {
+			continue
 		}
+		// try verifying
+		sigErr, sigInfo, okPathList := verifier.Verify(message, signature, certificate, opts)
+		vcerr = sigErr
+		vsinfo = sigInfo
+		verifiedKeyPathList = append(verifiedKeyPathList, okPathList...)
 	}
 
 	// additional pgp verification trial only for detail error message
 	if vsinfo == nil {
 		for _, keyPath := range self.AllMountedKeyPathList {
 			if strings.Contains(keyPath, "/pgp/") {
-				if ok2, _, signer2, fingerprint2, _ := pgp.VerifySignature(keyPath, message, signature); ok2 && signer2 != nil {
-					signerAlt := &common.SignerInfo{
-						Email:       signer2.Email,
-						Name:        signer2.Name,
-						Comment:     signer2.Comment,
-						Fingerprint: fingerprint2,
-					}
-					vsinfo = signerAlt
+				if ok2, signer2, _, _ := pgp.Verify(message, signature, nil, keyPath, nil); ok2 && signer2 != nil {
+					vsinfo = signer2
 					break
 				}
 			}
@@ -286,8 +405,16 @@ func (self *ResourceVerifier) MatchMessage(message, reqObj []byte, protectAttrs,
 	// do not attempt to DryRun for all Cluster scope resources
 	// because ishield-sa does not have a role for creating "any" resource at cluster scope
 	// currently IShield tries dry-run only for CRD request among cluster scope resources
-	if resScope == "Cluster" && resKind != "CustomResourceDefinition" {
-		return matched, diffStr
+	if resScope == "Cluster" {
+		if resKind == "CustomResourceDefinition" {
+			// for CRD, additional mask is required for dryrun
+			addMask = append(addMask, "spec.names")
+			addMask = append(addMask, "spec.validation")
+			addMask = append(addMask, "spec.versions")
+			addMask = append(addMask, "spec.version")
+		} else {
+			return matched, diffStr
+		}
 	}
 
 	// CASE2: DryRun for create or for update by edit/replace
@@ -463,9 +590,9 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 	return message
 }
 
-func makeAllowDiffPatterns(reqc *common.ReqContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
-	ref := reqc.ResourceRef()
-	name := reqc.Name
+func makeAllowDiffPatterns(resc *common.ResourceContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
+	ref := resc.ResourceRef()
+	name := resc.Name
 	kustomizedName := name
 	for _, pattern := range kustomizeList {
 		newRef := pattern.Override(ref)
@@ -503,7 +630,7 @@ type HelmVerifier struct {
 	KeyPathList []string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -578,6 +705,11 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, reqc *common.ReqContext,
 
 }
 
+func (self *HelmVerifier) LoadSecrets(ishieldNS string) error {
+	// TODO: implement
+	return nil
+}
+
 var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.labels.\"%s\"", common.ResourceIntegrityLabelKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignedByAnnotationKey),
@@ -586,6 +718,7 @@ var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.CertificateAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.BundleAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),
@@ -599,4 +732,5 @@ var CommonMessageMask = []string{
 	"metadata.resourceVersion",
 	"metadata.selfLink",
 	"metadata.uid",
+	"status",
 }

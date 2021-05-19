@@ -25,8 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 /**********************************************
@@ -38,16 +40,20 @@ import (
 type Handler struct {
 	config        *config.ShieldConfig
 	ctx           *CheckContext
-	reqc          *common.ReqContext
+	reqc          *common.RequestContext
+	reqobj        *common.RequestObject
+	resc          *common.ResourceContext
 	data          *RunData
-	serverLogger  *log.Logger
+	serverLogger  *logger.Logger
 	requestLog    *log.Entry
 	contextLogger *logger.ContextLogger
 	logInScope    bool
+
+	resHandler *ResourceCheckHandler
 }
 
-func NewHandler(config *config.ShieldConfig, metaLogger *log.Logger, reqLog *log.Entry) *Handler {
-	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, requestLog: reqLog}
+func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger) *Handler {
+	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger}
 }
 
 func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
@@ -65,22 +71,22 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	resp := &admv1.AdmissionResponse{}
 
 	if dr.isUndetermined() {
-		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.ctx, self.config)
+		resp = createAdmissionResponse(false, "IntegrityShield failed to decide the response for this request", self.reqc, self.reqobj, self.ctx, self.config)
 	} else if dr.isErrorOccurred() {
-		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.ctx, self.config)
+		resp = createAdmissionResponse(false, dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
 	} else {
-		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc, self.ctx, self.config)
+		resp = createAdmissionResponse(dr.isAllowed(), dr.Message, self.reqc, self.reqobj, self.ctx, self.config)
 	}
 
 	// log results
-	self.logResponse(req, resp)
+	self.logResponse(req, dr)
 	self.logContext()
 
 	// create Event & update RSP status
 	_ = self.Report(dr.denyRSP)
 
 	// clear some cache if needed
-	self.finalize(resp)
+	self.finalize(dr)
 
 	return resp
 }
@@ -89,13 +95,13 @@ func (self *Handler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
-	dr = inScopeCheck(self.reqc, self.config, self.data, self.ctx)
+	dr = ishieldScopeCheck(self.reqc, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
-	dr = formatCheck(self.reqc, self.config, self.data, self.ctx)
+	dr = formatCheck(self.reqc, self.reqobj, self.config, self.data, self.ctx)
 	if !dr.isUndetermined() {
 
 		return dr
@@ -117,15 +123,17 @@ func (self *Handler) Check() *DecisionResult {
 		return dr
 	}
 
-	for _, prof := range matchedProfiles {
-		dr = resourceSigningProfileCheck(prof, self.reqc, self.config, self.data, self.ctx)
-		if dr.isAllowed() {
-			// this RSP allowed the request. will check next RSP.
-		} else {
-			// this RSP denied the request. return the result and will make AdmissionResponse.
-			return dr
-		}
+	dr = mutationCheck(matchedProfiles, self.reqc, self.reqobj, self.config, self.data, self.ctx)
+	if !dr.isUndetermined() {
+		return dr
 	}
+
+	var obj *unstructured.Unstructured
+	_ = json.Unmarshal(self.reqobj.RawObject, &obj)
+	// For the case that RawObject does not have metadata.namespace
+	obj.SetNamespace(self.reqc.Namespace)
+
+	dr = self.resHandler.Run(obj)
 
 	if dr.isUndetermined() {
 		dr = &DecisionResult{
@@ -140,11 +148,11 @@ func (self *Handler) Check() *DecisionResult {
 func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 	// report only for denying request or for IShield resource request by IShield Admin
 	shouldReport := false
-	if !self.ctx.Allow {
+	if !self.ctx.Allow && self.config.SideEffect.CreateDenyEventEnabled() {
 		shouldReport = true
 	}
 	iShieldAdmin := checkIfIShieldAdminRequest(self.reqc, self.config)
-	if self.ctx.IShieldResource && iShieldAdmin {
+	if self.ctx.IShieldResource && !iShieldAdmin && self.config.SideEffect.CreateIShieldResourceEventEnabled() {
 		shouldReport = true
 	}
 
@@ -154,16 +162,20 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 	var err error
 	// create/update Event
-	err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
-	if err != nil {
-		self.requestLog.Error("Failed to create event; ", err)
-		return err
+	if self.config.SideEffect.CreateEventEnabled() {
+		err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
+		if err != nil {
+			self.requestLog.Error("Failed to create event; ", err)
+			return err
+		}
 	}
 
 	// update RSP status
-	err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
-	if err != nil {
-		self.requestLog.Error("Failed to update status; ", err)
+	if self.config.SideEffect.UpdateRSPStatusEnabled() {
+		err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
+		if err != nil {
+			self.requestLog.Error("Failed to update status; ", err)
+		}
 	}
 
 	return nil
@@ -171,20 +183,38 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 
 // load resoruces / set default values
 func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
+	gv := metav1.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
+	self.requestLog = self.serverLogger.WithFields(
+		log.Fields{
+			"namespace":  req.Namespace,
+			"name":       req.Name,
+			"apiVersion": gv.String(),
+			"kind":       req.Kind,
+			"operation":  req.Operation,
+			"requestUID": string(req.UID),
+		},
+	)
 
+	// init CheckContext
 	self.ctx = InitCheckContext(self.config)
+
+	// init resource handler with shared CheckContext
+	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.ctx, self.data)
 
 	reqNamespace := getRequestNamespace(req)
 
-	// init ReqContext
-	self.reqc = common.NewReqContext(req)
+	// init RequestContext & RequestObject
+	self.reqc, self.reqobj = common.NewRequestContext(req)
 
-	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ReqContext.
+	// init ResourceContext
+	self.resc = common.AdmissionRequestToResourceContext(req)
+
+	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ResourceContext.
 	self.logEntry()
 
 	runDataLoader := NewLoader(self.config, reqNamespace)
 	self.data.loader = runDataLoader
-	self.data.Init(self.reqc, self.config)
+	self.data.Init(self.config)
 
 	return &DecisionResult{Type: common.DecisionUndetermined}
 }
@@ -220,16 +250,15 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 	return dr
 }
 
-func (self *Handler) finalize(resp *admv1.AdmissionResponse) {
-	if resp.Allowed {
+func (self *Handler) finalize(dr *DecisionResult) {
+	if dr.isAllowed() {
 		resetRuleTableCache := false
 		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
 		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
 		if self.reqc.Kind == "Namespace" {
 			if self.reqc.IsUpdateRequest() {
-				mtResult, _ := MutationCheck(self.reqc)
+				mtResult, _ := MutationCheck(self.reqc, self.reqobj)
 				if mtResult != nil && mtResult.IsMutated {
-					self.requestLog.Debug("[DEBUG] namespace mutation: ", mtResult.Diff)
 					resetRuleTableCache = true
 				}
 			} else {
@@ -248,7 +277,7 @@ func (self *Handler) finalize(resp *admv1.AdmissionResponse) {
 }
 
 func (self *Handler) logEntry() {
-	if ok, levelStr := self.config.ConsoleLogEnabled(self.reqc); ok {
+	if ok, levelStr := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(levelStr) // change singleton logger level; this might be overwritten by parallel handler instance
 		lvl, _ := log.ParseLevel(levelStr)
 		self.serverLogger.SetLevel(lvl) // set custom log level for this request
@@ -257,9 +286,9 @@ func (self *Handler) logEntry() {
 }
 
 func (self *Handler) logContext() {
-	if self.config.ContextLogEnabled(self.reqc) && self.logInScope {
+	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
-		logRecord := self.ctx.convertToLogRecord(self.reqc)
+		logRecord := self.ctx.convertToLogRecord(self.reqc, self.serverLogger)
 		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
 			logRecord["request.dump"] = self.reqc.RequestJsonStr
 		}
@@ -275,7 +304,7 @@ func (self *Handler) logContext() {
 }
 
 func (self *Handler) logExit() {
-	if ok, _ := self.config.ConsoleLogEnabled(self.reqc); ok {
+	if ok, _ := self.config.ConsoleLogEnabled(self.resc); ok {
 		logger.SetSingletonLoggerLevel(self.config.Log.LogLevel)
 		self.requestLog.WithFields(log.Fields{
 			"allowed":    self.ctx.Allow,
@@ -285,16 +314,16 @@ func (self *Handler) logExit() {
 	}
 }
 
-func (self *Handler) logResponse(req *admv1.AdmissionRequest, resp *admv1.AdmissionResponse) {
+func (self *Handler) logResponse(req *admv1.AdmissionRequest, dr *DecisionResult) {
 	if self.config.Log.LogAllResponse {
 		respData := map[string]interface{}{}
-		respData["allowed"] = resp.Allowed
+		respData["allowed"] = dr.isAllowed()
 		respData["operation"] = req.Operation
 		respData["kind"] = req.Kind
 		respData["namespace"] = req.Namespace
 		respData["name"] = req.Name
-		respData["message"] = resp.Result.Message
-		respData["patch"] = resp.Patch
+		respData["message"] = dr.Message
+		// respData["patch"] = resp.Patch
 		respDataBytes, err := json.Marshal(respData)
 		if err != nil {
 			self.requestLog.Error(err.Error())

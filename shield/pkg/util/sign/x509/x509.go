@@ -219,7 +219,32 @@ func GenerateSignature(msg, prvKeyPemBytes []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func VerifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
+func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
+	var signerInfo *common.SignerInfo
+
+	certOk, reasonFail, err := verifyCertificate(certificate, path)
+	if !certOk {
+		return false, nil, reasonFail, err
+	}
+
+	cert, err := ParseCertificate(certificate)
+	if err != nil {
+		return false, nil, "Failed to parse certificate", err
+	}
+	pubKeyBytes, err := GetPublicKeyFromCertificate(certificate)
+	if err != nil {
+		return false, nil, "Failed to get public key from certificate", err
+	}
+
+	ok, reasonFail, err := verifySignature(message, signature, pubKeyBytes)
+	if !ok {
+		return false, nil, reasonFail, err
+	}
+	signerInfo = NewSignerInfoFromCert(cert)
+	return ok, signerInfo, reasonFail, err
+}
+
+func verifySignature(msg, sig, pubKeyBytes []byte) (bool, string, error) {
 	var reasonFail string
 	var err error
 	if msg == nil {
@@ -266,7 +291,7 @@ func LoadCertDir(certDir string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func VerifyCertificate(certPemBytes []byte, caCertPath string) (bool, string, error) {
+func verifyCertificate(certPemBytes []byte, caCertPath string) (bool, string, error) {
 	var reasonFail string
 	var err error
 	certBytes := PEMDecode(certPemBytes, PEMTypeCertificate)

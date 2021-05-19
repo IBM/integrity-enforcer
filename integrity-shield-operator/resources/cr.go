@@ -26,7 +26,7 @@ import (
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
-	econf "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	econf "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -75,11 +75,23 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 					fileName = apiv1alpha1.DefaultKeyringFilename
 				}
 				// specify .gpg file name in case of pgp --> change to dir name?
-				keyPath := fmt.Sprintf("/%s/%s/%s", keyConf.Name, sigType, fileName)
+				keyPath := fmt.Sprintf("/%s/%s/%s/%s", keyConf.Name, keyConf.SecretName, sigType, fileName)
 				keyPathList = append(keyPathList, keyPath)
 			} else if sigType == common.SignatureTypeX509 {
 				// specify only mounted dir name in case of x509
-				keyPath := fmt.Sprintf("/%s/%s/", keyConf.Name, sigType)
+				keyPath := fmt.Sprintf("/%s/%s/%s/", keyConf.Name, keyConf.SecretName, sigType)
+				keyPathList = append(keyPathList, keyPath)
+			} else if sigType == common.SignatureTypeSigStore {
+				// specify sigstore secret (if default root cert, empty filename)
+				fileName := keyConf.FileName
+				if fileName == "" {
+					fileName = apiv1alpha1.DefaultSigstoreRootCertFilename
+				}
+				secretName := keyConf.SecretName
+				if secretName == "" {
+					secretName = cr.GetSigStoreDefaultRootSecretName()
+				}
+				keyPath := fmt.Sprintf("/%s/%s/%s/%s", keyConf.Name, secretName, sigType, fileName)
 				keyPathList = append(keyPathList, keyPath)
 			}
 
@@ -116,7 +128,7 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 			operatorSAPattern := common.RulePattern(operatorSA)
 			ignoreRules := commonProfile.IgnoreRules
 
-			ignoreRules = append(ignoreRules, &common.Rule{Match: []*common.RequestPattern{{UserName: &operatorSAPattern}}})
+			ignoreRules = append(ignoreRules, &common.Rule{Match: []*common.RequestPatternWithNamespace{{RequestPattern: &common.RequestPattern{UserName: &operatorSAPattern}}}})
 			commonProfile.IgnoreRules = ignoreRules
 		}
 

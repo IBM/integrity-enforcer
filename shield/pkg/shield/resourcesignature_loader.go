@@ -61,21 +61,21 @@ func NewResSigLoader(signatureNamespace, requestNamespace string) *ResSigLoader 
 	}
 }
 
-func (self *ResSigLoader) GetData(reqc *common.ReqContext, doK8sApiCall bool) *rsigapi.ResourceSignatureList {
+func (self *ResSigLoader) GetData(resc *common.ResourceContext, doK8sApiCall bool) *rsigapi.ResourceSignatureList {
 	if self.Data == nil {
-		self.Load(reqc, doK8sApiCall)
+		self.Load(resc, doK8sApiCall)
 	}
 	return self.Data
 }
 
-func (self *ResSigLoader) Load(reqc *common.ReqContext, doK8sApiCall bool) {
+func (self *ResSigLoader) Load(resc *common.ResourceContext, doK8sApiCall bool) {
 	var err error
 	var list1, list2 *rsigapi.ResourceSignatureList
 	var keyName string
 
 	// For ApiVersion label, `apps_v1` is used instead of `apps/v1`, because "/" cannot be used in label value
-	reqApiVersion := strings.ReplaceAll(reqc.GroupVersion(), "/", "_")
-	reqKind := reqc.Kind
+	reqApiVersion := strings.ReplaceAll(resc.GroupVersion(), "/", "_")
+	reqKind := resc.Kind
 	labelSelector := fmt.Sprintf("%s=%s,%s=%s", common.ResSigLabelApiVer, reqApiVersion, common.ResSigLabelKind, reqKind)
 
 	keyName = fmt.Sprintf("ResSigLoader/%s/list/%s", self.signatureNamespace, labelSelector)

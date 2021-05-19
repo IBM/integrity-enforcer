@@ -103,7 +103,7 @@ func (self *RSPLoader) Load(doK8sApiCall bool) bool {
 	return reloaded
 }
 
-func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.ReqContext, errMsg string) error {
+func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.RequestContext, resc *common.ResourceContext, errMsg string) error {
 	rspNamespace := rsp.GetNamespace()
 	rspName := rsp.GetName()
 	rspOrg, err := self.Client.ResourceSigningProfiles(rspNamespace).Get(context.Background(), rspName, metav1.GetOptions{})

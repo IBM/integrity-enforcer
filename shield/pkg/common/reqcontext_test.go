@@ -33,7 +33,7 @@ func TestReqContext(t *testing.T) {
 		t.Error(err)
 	}
 
-	var reqc *ReqContext
+	var reqc *RequestContext
 	err = json.Unmarshal(reqcBytes, &reqc)
 	if err != nil {
 		t.Error(err)
@@ -46,7 +46,7 @@ func TestReqContext(t *testing.T) {
 		return
 	}
 
-	actualReqc := NewReqContext(req)
+	actualReqc, _ := NewRequestContext(req)
 	actualReqcBytes, err := json.Marshal(actualReqc)
 	if err != nil {
 		t.Error(err)

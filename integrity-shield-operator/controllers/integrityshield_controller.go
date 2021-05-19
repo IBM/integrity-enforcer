@@ -48,9 +48,9 @@ type IntegrityShieldReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
 // +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=*
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update;delete
 
-func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 
 	// Fetch the IntegrityShield instance
@@ -151,6 +151,14 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		}
 	}
 
+	//Secret SigStore default root cert
+	if instance.SigStoreEnabled() && instance.UseDefaultSigStoreRootCert() {
+		recResult, recErr = r.createOrUpdateSigStoreRootCertSecret(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+	}
+
 	//Secret
 	recResult, recErr = r.createOrUpdateTlsSecret(instance)
 	if recErr != nil || recResult.Requeue {
@@ -220,13 +228,40 @@ func (r *IntegrityShieldReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		return recResult, recErr
 	}
 
-	//Deployment
+	// inspectorEnabled := instance.Spec.Inspector.Enabled
+	// if inspectorEnabled != nil && *inspectorEnabled {
+	// 	//ProtectedResourceIntegrity CRD
+	// 	recResult, recErr = r.createOrUpdateProtectedResourceIntegrityCRD(instance)
+	// 	if recErr != nil || recResult.Requeue {
+	// 		return recResult, recErr
+	// 	}
+
+	// 	//Inspector Deployment
+	// 	recResult, recErr = r.createOrUpdateInspectorDeployment(instance)
+	// 	if recErr != nil || recResult.Requeue {
+	// 		return recResult, recErr
+	// 	}
+	// }
+
+	// // checker Deployment
+	// recResult, recErr = r.createOrUpdateCheckerDeployment(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
+
+	// // checker Service
+	// recResult, recErr = r.createOrUpdateCheckerService(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
+
+	// server Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
-	//Service
+	// server Service
 	recResult, recErr = r.createOrUpdateWebhookService(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
@@ -298,6 +333,14 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 			return err
 		}
 	}
+
+	// inspectorEnabled := instance.Spec.Inspector.Enabled
+	// if inspectorEnabled != nil && *inspectorEnabled {
+	// 	_, err = r.deleteProtectedResourceIntegrityCRD(instance)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	_, err = r.deleteResourceSigningProfileCRD(instance)
 	if err != nil {

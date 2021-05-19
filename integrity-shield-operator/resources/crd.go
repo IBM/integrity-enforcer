@@ -18,12 +18,12 @@ package resources
 
 import (
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
-	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNames) *extv1.CustomResourceDefinition {
-	xPreserve := true
+	trueVar := true
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -38,17 +38,16 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 			//Version: "v1beta1",
 			Names: crdNames,
 			Scope: "Namespaced",
-			Validation: &extv1.CustomResourceValidation{
-				OpenAPIV3Schema: &extv1.JSONSchemaProps{
-					Type:                   "object",
-					XPreserveUnknownFields: &xPreserve,
-				},
-			},
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
 					Name:    "v1alpha1",
 					Served:  true,
 					Storage: true,
+					Schema: &extv1.CustomResourceValidation{
+						OpenAPIV3Schema: &extv1.JSONSchemaProps{
+							XPreserveUnknownFields: &trueVar,
+						},
+					},
 				},
 			},
 		},
@@ -115,3 +114,61 @@ func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.Cust
 	}
 	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames)
 }
+
+// // protectedresourceintegrity crd
+// func BuildProtectedResourceIntegrityCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+
+// 	crdNames := extv1.CustomResourceDefinitionNames{
+// 		Kind:       "ProtectedResourceIntegrity",
+// 		Plural:     "protectedresourceintegrities",
+// 		ListKind:   "ProtectedResourceIntegrityList",
+// 		Singular:   "protectedresourceintegrity",
+// 		ShortNames: []string{"pri", "pris"},
+// 	}
+// 	crd := buildCRD(cr.GetProtectedResourceIntegrityCRDName(), cr.Namespace, crdNames)
+// 	// crd.Spec.AdditionalPrinterColumns = []extv1.CustomResourceColumnDefinition{
+// 	// 	{
+// 	// 		Name:        "Profiles",
+// 	// 		Type:        "string",
+// 	// 		Description: "ResourceSigningProfiles that cover this resource",
+// 	// 		JSONPath:    ".status.profiles",
+// 	// 		Priority:    0,
+// 	// 	},
+// 	// 	{
+// 	// 		Name:        "Verified",
+// 	// 		Type:        "boolean",
+// 	// 		Description: "A boolean value represents if a signature for this resource is verified or not",
+// 	// 		JSONPath:    ".status.verified",
+// 	// 		Priority:    0,
+// 	// 	},
+// 	// 	{
+// 	// 		Name:        "LastVerified",
+// 	// 		Type:        "date",
+// 	// 		Description: "The latest timestamp when its signature was verified by inspector",
+// 	// 		JSONPath:    ".status.lastVerified",
+// 	// 		Priority:    0,
+// 	// 	},
+// 	// 	{
+// 	// 		Name:        "LastUpdated",
+// 	// 		Type:        "date",
+// 	// 		Description: "The latest timestamp when signature verification was done by inspector",
+// 	// 		JSONPath:    ".status.lastUpdated",
+// 	// 		Priority:    0,
+// 	// 	},
+// 	// 	{
+// 	// 		Name:        "Result",
+// 	// 		Type:        "string",
+// 	// 		Description: "A result from a verification of integrity-shield-server",
+// 	// 		JSONPath:    ".status.result",
+// 	// 		Priority:    1,
+// 	// 	},
+// 	// 	{
+// 	// 		Name:        "AllowedUsernames",
+// 	// 		Type:        "string",
+// 	// 		Description: "Usernames that are allowed to change this resource without signature",
+// 	// 		JSONPath:    ".status.allowedUsernames",
+// 	// 		Priority:    1,
+// 	// 	},
+// 	// }
+// 	return crd
+// }

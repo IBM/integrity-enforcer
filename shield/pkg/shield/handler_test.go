@@ -27,7 +27,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,13 +44,10 @@ import (
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/shield/config"
+	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	scc "github.com/openshift/api/security/v1"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -65,9 +61,11 @@ var schemes *runtime.Scheme
 var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
-func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
+func getTestData(num int) (*common.RequestContext, *common.RequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
 
-	var reqc *common.ReqContext
+	var reqc *common.RequestContext
+	var reqobj *common.RequestObject
+	var resc *common.ResourceContext
 
 	var data *RunData
 	var cfg *config.ShieldConfig
@@ -76,14 +74,20 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	var prof rspapi.ResourceSigningProfile
 	var dr *DecisionResult
 
-	reqcBytes, _ := ioutil.ReadFile(testFileName(testReqcFile, num))
+	var adreq *admv1.AdmissionRequest
+
+	adreqBytes, _ := ioutil.ReadFile(testFileName(testAdReqFile, num))
+	_ = json.Unmarshal(adreqBytes, &adreq)
+	if adreq != nil {
+		reqc, reqobj = common.NewRequestContext(adreq)
+		resc = common.AdmissionRequestToResourceContext(adreq)
+	}
 	configBytes, _ := ioutil.ReadFile(testFileName(testConfigFile, num))
 	dataBytes, _ := ioutil.ReadFile(testFileName(testDataFile, num))
 	ctxBytes, _ := ioutil.ReadFile(testFileName(testCtxFile, num))
 	//drBytes, _ := ioutil.ReadFile(testDrFile)
 	profBytes, _ := ioutil.ReadFile(testFileName(testProfFile, num))
 	drBytes, _ := ioutil.ReadFile(testFileName(testDrFile, num))
-	_ = json.Unmarshal(reqcBytes, &reqc)
 	_ = json.Unmarshal(configBytes, &cfg)
 	_ = json.Unmarshal(dataBytes, &data)
 	_ = json.Unmarshal(ctxBytes, &ctx)
@@ -93,16 +97,7 @@ func getTestData(num int) (*common.ReqContext, *config.ShieldConfig, *RunData, *
 	dr0 = &DecisionResult{
 		Type: common.DecisionUndetermined,
 	}
-	var req *admv1.AdmissionRequest
-	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &req)
-	if req != nil {
-		reqc2 := common.NewReqContext(req)
-		reqc.RawObject = reqc2.RawObject
-		reqc.RawOldObject = reqc2.RawOldObject
-		reqc.OrgMetadata = reqc2.OrgMetadata
-		reqc.ClaimedMetadata = reqc2.ClaimedMetadata
-	}
-	return reqc, cfg, data, ctx, dr0, prof, dr
+	return reqc, reqobj, resc, cfg, data, ctx, dr0, prof, dr
 }
 
 func getChangedRequest(req *admv1.AdmissionRequest) *admv1.AdmissionRequest {
@@ -143,21 +138,21 @@ func getRequestWithoutAnnoSig(req *admv1.AdmissionRequest) *admv1.AdmissionReque
 
 func getUpdateRequest() *admv1.AdmissionRequest {
 	var newReq *admv1.AdmissionRequest
-	reqc, _, _, _, _, _, _ := getTestData(3)
+	reqc, _, _, _, _, _, _, _, _ := getTestData(3)
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
 	return newReq
 }
 
 func getCRDRequest() (*admv1.AdmissionRequest, *config.ShieldConfig) {
 	var newReq *admv1.AdmissionRequest
-	reqc, crdTestConfig, _, _, _, _, _ := getTestData(4)
+	reqc, _, _, crdTestConfig, _, _, _, _, _ := getTestData(4)
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
 	return newReq, crdTestConfig
 }
 
 func getUpdateWithMetaChangeRequest() *admv1.AdmissionRequest {
 	var newReq *admv1.AdmissionRequest
-	reqc, _, _, _, _, _, _ := getTestData(3)
+	reqc, _, _, _, _, _, _, _, _ := getTestData(3)
 	_ = json.Unmarshal([]byte(reqc.RequestJsonStr), &newReq)
 	var cm, oldCm *v1.ConfigMap
 	_ = json.Unmarshal(newReq.Object.Raw, &cm)
@@ -207,7 +202,7 @@ func getInvalidSignerConfigRequest(req *admv1.AdmissionRequest) *admv1.Admission
 	return newReq
 }
 
-func TestHandler(t *testing.T) {
+func TestHandlerSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
@@ -215,24 +210,13 @@ func TestHandler(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
-func getTestLogger(testReq *admv1.AdmissionRequest, testConf *config.ShieldConfig) (*log.Logger, *log.Entry) {
-	gv := metav1.GroupVersion{Group: testReq.Kind.Group, Version: testReq.Kind.Version}
+func getTestLogger(testReq *admv1.AdmissionRequest, testConf *config.ShieldConfig) *logger.Logger {
 	metaLogger := logger.NewLogger(testConf.LoggerConfig())
-	reqLog := metaLogger.WithFields(
-		log.Fields{
-			"namespace":  testReq.Namespace,
-			"name":       testReq.Name,
-			"apiVersion": gv.String(),
-			"kind":       testReq.Kind,
-			"operation":  testReq.Operation,
-			"requestUID": string(testReq.UID),
-		},
-	)
-	return metaLogger, reqLog
+	return metaLogger
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zap.New())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -246,8 +230,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	schemes = runtime.NewScheme()
 	err = clientgoscheme.AddToScheme(schemes)
-	err = apiextensionsv1.AddToScheme(schemes)
-	err = apiextensionsv1beta1.AddToScheme(schemes)
 
 	err = scc.AddToScheme(schemes)
 	err = ec.AddToScheme(schemes)
@@ -265,14 +247,14 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
-	reqc, tmpConfig, data, _, _, _, _ := getTestData(1)
+	reqc, _, _, tmpConfig, data, _, _, _, _ := getTestData(1)
 	testConfig = tmpConfig
 	reqBytes := []byte(reqc.RequestJsonStr)
 	err = json.Unmarshal(reqBytes, &req)
 	Expect(err).Should(BeNil())
 	Expect(req).ToNot(BeNil())
 
-	_, _, crdTestData, _, _, _, _ := getTestData(4)
+	_, _, _, _, crdTestData, _, _, _, _ := getTestData(4)
 
 	err = k8sClient.Create(context.Background(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testConfig.Namespace}})
 	Expect(err).Should(BeNil())
@@ -329,12 +311,22 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-var _ = Describe("Test integrity shield", func() {
+var _ = Describe("Test Suite for shield package", func() {
+	Describe("Test Handler", func() {
+		handlerTest()
+	})
+
+	Describe("Test ResourceCheckHandler", func() {
+		resourceHandlerTest()
+	})
+})
+
+func handlerTest() {
 	It("Handler Run Test (allow, no-mutation)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			metaLogger, reqLog := getTestLogger(req, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(req, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(req)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -350,8 +342,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			invalidRSPReq := getInvalidRSPRequest(req)
-			metaLogger, reqLog := getTestLogger(invalidRSPReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(invalidRSPReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(invalidRSPReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -367,8 +359,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			invalidSConfReq := getInvalidSignerConfigRequest(req)
-			metaLogger, reqLog := getTestLogger(invalidSConfReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(invalidSConfReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(invalidSConfReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -387,9 +379,9 @@ var _ = Describe("Test integrity shield", func() {
 			var test2Config *config.ShieldConfig
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
-			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/pgp/miss-configured-pubring"}
-			metaLogger, reqLog := getTestLogger(changedReq, test2Config)
-			testHandler := NewHandler(test2Config, metaLogger, reqLog)
+			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/keyring-secret/pgp/miss-configured-pubring"}
+			metaLogger := getTestLogger(changedReq, test2Config)
+			testHandler := NewHandler(test2Config, metaLogger)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -405,8 +397,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			changedReq := getChangedRequest(req)
-			metaLogger, reqLog := getTestLogger(changedReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(changedReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(changedReq)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -422,8 +414,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			modReq := getRequestWithoutAnnoSig(req)
-			metaLogger, reqLog := getTestLogger(modReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(modReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(modReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -440,8 +432,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			updReq := getUpdateRequest()
-			metaLogger, reqLog := getTestLogger(updReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(updReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(updReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -458,8 +450,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			updReq := getUpdateWithMetaChangeRequest()
-			metaLogger, reqLog := getTestLogger(updReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(updReq, testConfig)
+			testHandler := NewHandler(testConfig, metaLogger)
 			resp := testHandler.Run(updReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -476,8 +468,8 @@ var _ = Describe("Test integrity shield", func() {
 		var timeout int = 10
 		Eventually(func() error {
 			crdReq, crdTestConfig := getCRDRequest()
-			metaLogger, reqLog := getTestLogger(crdReq, crdTestConfig)
-			testHandler := NewHandler(crdTestConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(crdReq, crdTestConfig)
+			testHandler := NewHandler(crdTestConfig, metaLogger)
 			resp := testHandler.Run(crdReq)
 
 			respBytes, _ := json.Marshal(resp)
@@ -490,5 +482,4 @@ var _ = Describe("Test integrity shield", func() {
 			return nil
 		}, timeout, 1).Should(BeNil())
 	})
-
-})
+}

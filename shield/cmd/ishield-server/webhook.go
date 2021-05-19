@@ -23,8 +23,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
-	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	sconfloder "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
+	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	log "github.com/sirupsen/logrus"
 	admv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,8 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// singleton
-var config *Config
+var config *sconfloder.Config
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -47,7 +47,7 @@ type WebhookServer struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	config = NewConfig()
+	config = sconfloder.NewConfig()
 	config.InitShieldConfig()
 	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
 	logger.Info("Integrity Shield has been started.")
@@ -61,26 +61,13 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 
 	_ = config.InitShieldConfig()
 
-	gv := metav1.GroupVersion{Group: admissionReviewReq.Request.Kind.Group, Version: admissionReviewReq.Request.Kind.Version}
 	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	reqLog := metaLogger.WithFields(
-		log.Fields{
-			"namespace":  admissionReviewReq.Request.Namespace,
-			"name":       admissionReviewReq.Request.Name,
-			"apiVersion": gv.String(),
-			"kind":       admissionReviewReq.Request.Kind,
-			"operation":  admissionReviewReq.Request.Operation,
-			"requestUID": string(admissionReviewReq.Request.UID),
-		},
-	)
-	reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, reqLog)
+	requestHandler := shield.NewHandler(config.ShieldConfig, metaLogger)
 	admissionRequest := admissionReviewReq.Request
 
-	//process request
-	admissionResponse := reqHandler.Run(admissionRequest)
-
+	// Run Request Handler
+	admissionResponse := requestHandler.Run(admissionRequest)
 	return admissionResponse
-
 }
 
 func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +76,7 @@ func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Reques
 }
 
 func (server *WebhookServer) checkReadiness(w http.ResponseWriter, r *http.Request) {
+
 	msg := "readiness ok"
 	_, _ = w.Write([]byte(msg))
 }
