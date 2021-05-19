@@ -16,7 +16,7 @@ spec:
       containers:
         - name: integrity-shield-operator
           # Replace this with the built image name
-          image: integrity-shield-operator:0.1.6
+          image: integrity-shield-operator:0.2.0
           command:
           - integrity-shield-operator
           imagePullPolicy: IfNotPresent

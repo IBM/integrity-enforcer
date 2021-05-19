@@ -390,6 +390,8 @@ spec:
                             type: string
                           name:
                             type: string
+                          namespace:
+                            type: string
                           operation:
                             type: string
                           scope:
@@ -419,6 +421,8 @@ spec:
                             type: string
                           name:
                             type: string
+                          namespace:
+                            type: string
                           operation:
                             type: string
                           scope:
@@ -440,6 +444,8 @@ spec:
                           kind:
                             type: string
                           name:
+                            type: string
+                          namespace:
                             type: string
                           operation:
                             type: string
@@ -601,6 +607,18 @@ spec:
                             description: User is a SELinux user label that applies to the container.
                             type: string
                         type: object
+                      seccompProfile:
+                        description: The seccomp options to use by this container. If seccomp options are provided at both the pod & container level, the container options override the pod options.
+                        properties:
+                          localhostProfile:
+                            description: localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if type is "Localhost".
+                            type: string
+                          type:
+                            description: "type indicates which kind of seccomp profile will be applied. Valid options are: \n Localhost - a profile defined in a file on the node should be used. RuntimeDefault - the container runtime default profile should be used. Unconfined - no profile should be applied."
+                            type: string
+                        required:
+                        - type
+                        type: object
                       windowsOptions:
                         description: The Windows specific settings applied to all containers. If unspecified, the options from the PodSecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
                         properties:
@@ -723,6 +741,18 @@ spec:
                             description: User is a SELinux user label that applies to the container.
                             type: string
                         type: object
+                      seccompProfile:
+                        description: The seccomp options to use by this container. If seccomp options are provided at both the pod & container level, the container options override the pod options.
+                        properties:
+                          localhostProfile:
+                            description: localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if type is "Localhost".
+                            type: string
+                          type:
+                            description: "type indicates which kind of seccomp profile will be applied. Valid options are: \n Localhost - a profile defined in a file on the node should be used. RuntimeDefault - the container runtime default profile should be used. Unconfined - no profile should be applied."
+                            type: string
+                        required:
+                        - type
+                        type: object
                       windowsOptions:
                         description: The Windows specific settings applied to all containers. If unspecified, the options from the PodSecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
                         properties:
@@ -739,6 +769,7 @@ spec:
                     type: object
                 type: object
               regKeySecret:
+                description: Inspector              InspectorContainer `json:"inspector,omitempty"` Checker                CheckerContainer   `json:"checker,omitempty"`
                 properties:
                   name:
                     type: string
@@ -769,6 +800,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -790,6 +823,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -822,6 +857,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -849,6 +886,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -870,6 +909,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -937,6 +978,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -964,6 +1007,8 @@ spec:
                                   type: string
                                 name:
                                   type: string
+                                namespace:
+                                  type: string
                                 operation:
                                   type: string
                                 scope:
@@ -985,6 +1030,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -1058,6 +1105,8 @@ spec:
                                 kind:
                                   type: string
                                 name:
+                                  type: string
+                                namespace:
                                   type: string
                                 operation:
                                   type: string
@@ -1140,6 +1189,18 @@ spec:
                           user:
                             description: User is a SELinux user label that applies to the container.
                             type: string
+                        type: object
+                      seccompProfile:
+                        description: The seccomp options to use by the containers in this pod.
+                        properties:
+                          localhostProfile:
+                            description: localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if type is "Localhost".
+                            type: string
+                          type:
+                            description: "type indicates which kind of seccomp profile will be applied. Valid options are: \n Localhost - a profile defined in a file on the node should be used. RuntimeDefault - the container runtime default profile should be used. Unconfined - no profile should be applied."
+                            type: string
+                        required:
+                        - type
                         type: object
                       supplementalGroups:
                         description: A list of groups applied to the first process run in each container, in addition to the container's primary GID.  If unspecified, no groups will be added to any container.
@@ -1282,6 +1343,18 @@ spec:
                             description: User is a SELinux user label that applies to the container.
                             type: string
                         type: object
+                      seccompProfile:
+                        description: The seccomp options to use by this container. If seccomp options are provided at both the pod & container level, the container options override the pod options.
+                        properties:
+                          localhostProfile:
+                            description: localhostProfile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if type is "Localhost".
+                            type: string
+                          type:
+                            description: "type indicates which kind of seccomp profile will be applied. Valid options are: \n Localhost - a profile defined in a file on the node should be used. RuntimeDefault - the container runtime default profile should be used. Unconfined - no profile should be applied."
+                            type: string
+                        required:
+                        - type
+                        type: object
                       windowsOptions:
                         description: The Windows specific settings applied to all containers. If unspecified, the options from the PodSecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
                         properties:
@@ -1352,6 +1425,8 @@ spec:
                                     type: string
                                   name:
                                     type: string
+                                  namespace:
+                                    type: string
                                   operation:
                                     type: string
                                   scope:
@@ -1379,6 +1454,8 @@ spec:
                                     type: string
                                   name:
                                     type: string
+                                  namespace:
+                                    type: string
                                   operation:
                                     type: string
                                   scope:
@@ -1400,6 +1477,8 @@ spec:
                                   kind:
                                     type: string
                                   name:
+                                    type: string
+                                  namespace:
                                     type: string
                                   operation:
                                     type: string
@@ -1487,6 +1566,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                  imageVerificationConfig:
+                    properties:
+                      enabled:
+                        type: boolean
+                      options:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
                   inScopeNamespaceSelector:
                     properties:
                       exclude:
@@ -1690,8 +1778,34 @@ spec:
                     type: array
                   profileNamespace:
                     type: string
+                  sideEffect:
+                    properties:
+                      createDenyEvent:
+                        description: Event
+                        type: boolean
+                      createIShieldResourceEvent:
+                        type: boolean
+                      updateRSPStatusForDeniedRequest:
+                        description: RSP
+                        type: boolean
+                    required:
+                    - createDenyEvent
+                    - createIShieldResourceEvent
+                    - updateRSPStatusForDeniedRequest
+                    type: object
                   signatureNamespace:
                     type: string
+                  sigstoreConfig:
+                    properties:
+                      defaultRootCertURL:
+                        type: string
+                      enabled:
+                        type: boolean
+                      rekorServerURL:
+                        type: string
+                      useDefaultRootCert:
+                        type: boolean
+                    type: object
                 type: object
               shieldConfigCrName:
                 type: string
