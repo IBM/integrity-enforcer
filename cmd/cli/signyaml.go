@@ -20,6 +20,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -40,6 +41,7 @@ type SignYamlCommand struct {
 func SignYaml() *ffcli.Command {
 
 	cmd := SignYamlCommand{}
+	cmd.Pf = cli.GetPass
 	flagset := flag.NewFlagSet("ishieldctl sign", flag.ExitOnError)
 
 	flagset.StringVar(&cmd.KeyRef, "key", "", "path to the public key file, URL, or KMS URI")
@@ -71,7 +73,9 @@ EXAMPLES
 }
 
 func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
-
+	if c.PayloadPath == "" {
+		return errors.New("no payloadpath found in arguments")
+	}
 	// prepare yaml payload as json ([] byte]
 	payloadPath := c.PayloadPath
 
@@ -96,8 +100,12 @@ func (c *SignYamlCommand) Exec(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "Failed to prepare bundle json")
 	}
 
-	// create yaml file with annotations such as signature, certificate, message, and bundle
-	err = yamlsign.WriteYamlContent(sig, cert, bundleJson, mPayload, payloadPath)
+	// create yaml file with annotations such as signature, [certificate], message, and bundle
+	if c.KeyRef != "" {
+		err = yamlsign.WriteYamlContent(sig, nil, bundleJson, mPayload, payloadPath)
+	} else {
+		err = yamlsign.WriteYamlContent(sig, cert, bundleJson, mPayload, payloadPath)
+	}
 	if err != nil {
 		return errors.Wrap(err, "Failed to create signed yaml file")
 	}
