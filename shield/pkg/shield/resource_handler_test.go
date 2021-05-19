@@ -46,8 +46,8 @@ func resourceHandlerTest() {
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
 			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/keyring-secret/pgp/miss-configured-pubring"}
-			metaLogger, reqLog := getTestLogger(changedReq, test2Config)
-			testHandler := NewResourceHandler(test2Config, metaLogger, reqLog)
+			metaLogger := getTestLogger(changedReq, test2Config)
+			testHandler := NewResourceCheckHandler(test2Config, metaLogger)
 			dr := testHandler.Run(res)
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
@@ -64,8 +64,8 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			changedReq := getChangedRequest(req)
 			res := adReqToResource(changedReq)
-			metaLogger, reqLog := getTestLogger(changedReq, testConfig)
-			testHandler := NewResourceHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(changedReq, testConfig)
+			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
 			dr := testHandler.Run(res)
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
@@ -82,8 +82,8 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			modReq := getRequestWithoutAnnoSig(req)
 			res := adReqToResource(modReq)
-			metaLogger, reqLog := getTestLogger(modReq, testConfig)
-			testHandler := NewResourceHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(modReq, testConfig)
+			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
 			dr := testHandler.Run(res)
 
 			drBytes, _ := json.Marshal(dr)
@@ -101,8 +101,8 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			updReq := getUpdateRequest()
 			res := adReqToResource(updReq)
-			metaLogger, reqLog := getTestLogger(updReq, testConfig)
-			testHandler := NewResourceHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(updReq, testConfig)
+			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
 			dr := testHandler.Run(res)
 
 			drBytes, _ := json.Marshal(dr)
@@ -120,8 +120,8 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			updReq := getUpdateWithMetaChangeRequest()
 			res := adReqToResource(updReq)
-			metaLogger, reqLog := getTestLogger(updReq, testConfig)
-			testHandler := NewResourceHandler(testConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(updReq, testConfig)
+			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
 			dr := testHandler.Run(res)
 
 			drBytes, _ := json.Marshal(dr)
@@ -139,8 +139,8 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			crdReq, crdTestConfig := getCRDRequest()
 			res := adReqToResource(crdReq)
-			metaLogger, reqLog := getTestLogger(crdReq, crdTestConfig)
-			testHandler := NewResourceHandler(crdTestConfig, metaLogger, reqLog)
+			metaLogger := getTestLogger(crdReq, crdTestConfig)
+			testHandler := NewResourceCheckHandler(crdTestConfig, metaLogger)
 			dr := testHandler.Run(res)
 
 			drBytes, _ := json.Marshal(dr)

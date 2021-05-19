@@ -43,7 +43,6 @@ spec:
       defaultRootCertURL: "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
     imageVerificationConfig:
       enabled: false
-      verificationURL: ""
       options: {}
   shieldConfigCrName: ishield-config
   imagePullSecrets: []

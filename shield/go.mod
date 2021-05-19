@@ -41,5 +41,5 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.19.0
 	k8s.io/code-generator => k8s.io/code-generator v0.19.0
 	k8s.io/kubectl => k8s.io/kubectl v0.19.0
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.8.2
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.8.3
 )

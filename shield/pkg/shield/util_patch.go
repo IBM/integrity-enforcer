@@ -32,7 +32,7 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func generatePatchBytes(reqc *common.RequestContext, vreqobj *common.VRequestObject, ctx *CheckContext) []byte {
+func generatePatchBytes(reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext) []byte {
 	// do not patch for denying request
 	if !ctx.Allow {
 		return nil
@@ -53,7 +53,7 @@ func generatePatchBytes(reqc *common.RequestContext, vreqobj *common.VRequestObj
 	}
 
 	name := reqc.Name
-	reqJson := vreqobj.RawObject
+	reqJson := reqobj.RawObject
 	labels := map[string]string{
 		common.ResourceIntegrityLabelKey: verifyResultLabel,
 	}

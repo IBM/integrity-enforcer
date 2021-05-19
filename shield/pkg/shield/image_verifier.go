@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	"github.com/sigstore/sigstore/pkg/signature"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -61,18 +62,25 @@ func (sci *SigCheckImages) imageSignatureCheck() {
 		ref, err := name.ParseReference(img.Image)
 		if err != nil {
 			res.Error = err
+			img.Result = res
+			sci.ImagesToVerify[i] = img
 			continue
 		}
 		verified, err := cosign.Verify(context.Background(), ref, co)
 		if err != nil {
 			//  cosign verify err
-			res.Error = err
+			res.Allowed = false
+			res.Reason = "no valid signature for this image; " + err.Error()
+			img.Result = res
+			sci.ImagesToVerify[i] = img
 			continue
 		}
 		if len(verified) == 0 {
 			//  []cosign.SignedPayload is empty: no valid signature"
 			res.Allowed = false
-			res.Reason = "no valid signature"
+			res.Reason = "no valid signature for this image"
+			img.Result = res
+			sci.ImagesToVerify[i] = img
 			continue
 		}
 		var commonNames []string
@@ -81,20 +89,20 @@ func (sci *SigCheckImages) imageSignatureCheck() {
 			ss := payload.SimpleContainerImage{}
 			err := json.Unmarshal(vp.Payload, &ss)
 			if err != nil {
-				fmt.Println("error decoding the payload:", err.Error())
+				logger.Warn("error decoding the payload:", err.Error())
 			}
 			digest = ss.Critical.Image.DockerManifestDigest
 			cn := vp.Cert.Subject.CommonName
 			commonNames = append(commonNames, cn)
-			fmt.Println("digest: ", digest)
-			fmt.Println("commonName: ", cn)
+			logger.Trace("digest: ", digest)
+			logger.Trace("commonName: ", cn)
 		}
 		res.Digest = digest
 		res.CommonNames = commonNames
 		res.Allowed = true
 		img.Result = res
 		sci.ImagesToVerify[i] = img
-		fmt.Println("Results: ", img.Result)
+		logger.Trace("Image Check Results: ", img.Result)
 	}
 }
 

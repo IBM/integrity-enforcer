@@ -19,21 +19,19 @@ package shield
 import (
 	"strings"
 
-	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
-// check if request is inScope or not
-func inScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+// check if request is ishieldScope or not
+func ishieldScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	reqNamespace := getRequestNamespaceFromRequestContext(reqc)
 
 	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
-	if reqNamespace != "" && !checkIfInScopeNamespace(reqNamespace, config) && !checkIfProfileTargetNamespace(reqNamespace, config.Namespace, data) {
+	if reqNamespace != "" && !checkIfIshieldScopeNamespace(reqNamespace, config) && !checkIfProfileTargetNamespace(reqNamespace, config.Namespace, data) {
 		msg := "this namespace is not monitored"
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
@@ -72,13 +70,13 @@ func inScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig, data
 	return undeterminedDescision()
 }
 
-// check if request is inScope or not
-func inScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	reqNamespace := getRequestNamespaceFromResourceContext(resc)
+// check if resource is ishieldScope or not
+func ishieldScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	resNamespace := getRequestNamespaceFromResourceContext(resc)
 
-	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
+	// check if resNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
 	// this check is done only for Namespaced request, and skip this for Cluster-scope request
-	if reqNamespace != "" && !checkIfInScopeNamespace(reqNamespace, config) && !checkIfProfileTargetNamespace(reqNamespace, config.Namespace, data) {
+	if resNamespace != "" && !checkIfIshieldScopeNamespace(resNamespace, config) && !checkIfProfileTargetNamespace(resNamespace, config.Namespace, data) {
 		msg := "this namespace is not monitored"
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
@@ -105,8 +103,8 @@ func inScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldC
 	return undeterminedDescision()
 }
 
-func formatCheck(reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
-	if ok, msg := ValidateResource(reqc, vreqobj, config.Namespace); !ok {
+func formatCheck(reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+	if ok, msg := ValidateResource(reqc, reqobj, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
@@ -264,12 +262,12 @@ func protectedCheckByResource(resc *common.ResourceContext, config *config.Shiel
 	return undeterminedDescision(), matchedProfiles
 }
 
-func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	mutationCheckPassedCount := 0
 	var dr *DecisionResult
 	for _, prof := range matchedProfiles {
-		tmpdr := resourceSigningProfileCheck(prof, reqc, vreqobj, config, data, ctx)
-		if tmpdr.IsAllowed() {
+		tmpdr := mutationCheckWithSingleProfile(prof, reqc, reqobj, config, data, ctx)
+		if tmpdr.isAllowed() {
 			// no mutations are found
 			dr = tmpdr
 			mutationCheckPassedCount += 1
@@ -288,13 +286,26 @@ func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common
 	return undeterminedDescision()
 }
 
-func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func mutationCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
 	var mutResult *common.MutationEvalResult
+	var err error
 
-	allowed, evalReason, evalMessage, mutResult = singleProfileCheck(singleProfile, reqc, vreqobj, config)
+	if reqc.IsUpdateRequest() {
+		mutResult, err = NewMutationChecker().Eval(reqc, reqobj, singleProfile)
+		if err != nil {
+			allowed = false
+			evalMessage = err.Error()
+			evalReason = common.REASON_ERROR
+		}
+		if mutResult.Checked && !mutResult.IsMutated {
+			allowed = true
+			evalMessage = common.ReasonCodeMap[common.REASON_NO_MUTATION].Message
+			evalReason = common.REASON_NO_MUTATION
+		}
+	}
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -314,17 +325,10 @@ func resourceSigningProfileCheck(singleProfile rspapi.ResourceSigningProfile, re
 	} else {
 		// return undetermined DecisionResult to trigger resource checker
 		return undeterminedDescision()
-
-		// return &DecisionResult{
-		// 	Type:       common.DecisionDeny,
-		// 	ReasonCode: evalReason,
-		// 	Message:    evalMessage,
-		// 	denyRSP:    &singleProfile,
-		// }
 	}
 }
 
-func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func signatureCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
@@ -333,7 +337,45 @@ func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningPr
 	sigConf := data.GetSignerConfig()
 	rsigList := data.GetResSigList(resc)
 
-	allowed, evalReason, evalMessage, sigResult = singleProfileSignatureCheck(singleProfile, resc, config, sigConf, rsigList)
+	var err error
+
+	signerConfig := sigConf.Spec.Config
+	plugins := config.GetEnabledPlugins()
+	evaluator, err := NewSignatureEvaluator(config, signerConfig, plugins)
+	if err != nil {
+		allowed = false
+		evalMessage = err.Error()
+		evalReason = common.REASON_ERROR
+	} else {
+		sigResult, err = evaluator.Eval(resc, rsigList, singleProfile)
+		if err != nil {
+			allowed = false
+			evalMessage = err.Error()
+			evalReason = common.REASON_ERROR
+		} else if sigResult.Checked && sigResult.Allow {
+			allowed = true
+			evalMessage = common.ReasonCodeMap[common.REASON_VALID_SIG].Message
+			evalReason = common.REASON_VALID_SIG
+		} else if sigResult.Error != nil {
+			var reasonCode int
+			var message string
+			message = sigResult.Error.MakeMessage()
+			if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
+				reasonCode = common.REASON_INVALID_SIG
+			} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
+				reasonCode = common.REASON_NO_VALID_KEYRING
+			} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_MATCH_SIGNER_CONFIG].Message) {
+				reasonCode = common.REASON_NO_MATCH_SIGNER_CONFIG
+			} else if message == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
+				reasonCode = common.REASON_NO_SIG
+			} else {
+				reasonCode = common.REASON_ERROR
+			}
+			allowed = false
+			evalMessage = message
+			evalReason = reasonCode
+		}
+	}
 
 	ctx.Allow = allowed
 	ctx.ReasonCode = evalReason
@@ -358,57 +400,4 @@ func resourceSigningProfileSignatureCheck(singleProfile rspapi.ResourceSigningPr
 			denyRSP:    &singleProfile,
 		}
 	}
-}
-
-func singleProfileCheck(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, vreqobj *common.VRequestObject, config *config.ShieldConfig) (bool, int, string, *common.MutationEvalResult) {
-	var mutResult *common.MutationEvalResult
-	var err error
-	if reqc.IsUpdateRequest() {
-		mutResult, err = NewMutationChecker().Eval(reqc, vreqobj, singleProfile)
-		if err != nil {
-			return false, common.REASON_ERROR, err.Error(), mutResult
-		}
-		if mutResult.Checked && !mutResult.IsMutated {
-			return true, common.REASON_NO_MUTATION, common.ReasonCodeMap[common.REASON_NO_MUTATION].Message, mutResult
-		}
-	}
-
-	return false, common.REASON_UNEXPECTED, "mutation found. this request should be checked by siganture", mutResult
-}
-
-func singleProfileSignatureCheck(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, sigConfRes *sigconfapi.SignerConfig, rsigList *rsigapi.ResourceSignatureList) (bool, int, string, *common.SignatureEvalResult) {
-	var sigResult *common.SignatureEvalResult
-	var err error
-
-	signerConfig := sigConfRes.Spec.Config
-	plugins := config.GetEnabledPlugins()
-	evaluator, err := NewSignatureEvaluator(config, signerConfig, plugins)
-	if err != nil {
-		return false, common.REASON_ERROR, err.Error(), nil
-	}
-	sigResult, err = evaluator.Eval(resc, rsigList, singleProfile)
-	if err != nil {
-		return false, common.REASON_ERROR, err.Error(), sigResult
-	}
-	if sigResult.Checked && sigResult.Allow {
-		return true, common.REASON_VALID_SIG, common.ReasonCodeMap[common.REASON_VALID_SIG].Message, sigResult
-	}
-
-	var reasonCode int
-	var message string
-	if sigResult.Error != nil {
-		message = sigResult.Error.MakeMessage()
-		if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_INVALID_SIG].Message) {
-			reasonCode = common.REASON_INVALID_SIG
-		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_VALID_KEYRING].Message) {
-			reasonCode = common.REASON_NO_VALID_KEYRING
-		} else if strings.HasPrefix(message, common.ReasonCodeMap[common.REASON_NO_MATCH_SIGNER_CONFIG].Message) {
-			reasonCode = common.REASON_NO_MATCH_SIGNER_CONFIG
-		} else if message == common.ReasonCodeMap[common.REASON_NO_SIG].Message {
-			reasonCode = common.REASON_NO_SIG
-		} else {
-			reasonCode = common.REASON_ERROR
-		}
-	}
-	return false, reasonCode, message, sigResult
 }

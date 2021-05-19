@@ -61,19 +61,8 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 
 	_ = config.InitShieldConfig()
 
-	gv := metav1.GroupVersion{Group: admissionReviewReq.Request.Kind.Group, Version: admissionReviewReq.Request.Kind.Version}
 	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	reqLog := metaLogger.WithFields(
-		log.Fields{
-			"namespace":  admissionReviewReq.Request.Namespace,
-			"name":       admissionReviewReq.Request.Name,
-			"apiVersion": gv.String(),
-			"kind":       admissionReviewReq.Request.Kind,
-			"operation":  admissionReviewReq.Request.Operation,
-			"requestUID": string(admissionReviewReq.Request.UID),
-		},
-	)
-	requestHandler := shield.NewHandler(config.ShieldConfig, metaLogger, reqLog)
+	requestHandler := shield.NewHandler(config.ShieldConfig, metaLogger)
 	admissionRequest := admissionReviewReq.Request
 
 	// Run Request Handler

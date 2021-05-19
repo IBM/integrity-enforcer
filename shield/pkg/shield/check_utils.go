@@ -35,11 +35,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, vreqobj *common.VRequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 	var patchBytes []byte
 	if conf.PatchEnabled(reqc) {
 		// `patchBytes` will be nil if no patch
-		patchBytes = generatePatchBytes(reqc, vreqobj, ctx)
+		patchBytes = generatePatchBytes(reqc, reqobj, ctx)
 	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	resp := &admv1.AdmissionResponse{
@@ -183,7 +183,7 @@ func checkIfProfileTargetNamespace(reqNamespace, shieldNamespace string, data *R
 	return ruleTable.CheckIfTargetNamespace(reqNamespace)
 }
 
-func checkIfInScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
+func checkIfIshieldScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
 	inScopeNSSelector := config.InScopeNamespaceSelector
 	if inScopeNSSelector == nil {
 		return false

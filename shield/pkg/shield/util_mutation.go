@@ -25,7 +25,7 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.RequestContext, vreqobj *common.VRequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.RequestContext, reqobj *common.RequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct{}
@@ -34,13 +34,13 @@ func NewMutationChecker() MutationChecker {
 	return &ConcreteMutationChecker{}
 }
 
-func MutationCheck(reqc *common.RequestContext, vreqobj *common.VRequestObject) (*common.MutationEvalResult, error) {
+func MutationCheck(reqc *common.RequestContext, reqobj *common.RequestObject) (*common.MutationEvalResult, error) {
 	checker := NewMutationChecker()
 	dummyProf := rspapi.ResourceSigningProfile{}
-	return checker.Eval(reqc, vreqobj, dummyProf)
+	return checker.Eval(reqc, reqobj, dummyProf)
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, vreqobj *common.VRequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, reqobj *common.RequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -63,14 +63,14 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, vreqobj *
 
 	var oldObj, newObj map[string]interface{}
 	// oldObj from reqc.RawOldObject
-	if vreqobj.RawOldObject == nil {
+	if reqobj.RawOldObject == nil {
 		maResult.Error = &common.CheckError{
 			Reason: "no old object in request",
 		}
 		return maResult, nil
 	}
 
-	if v, err := mapnode.NewFromBytes(vreqobj.RawOldObject); err != nil || v == nil {
+	if v, err := mapnode.NewFromBytes(reqobj.RawOldObject); err != nil || v == nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "fail to parse old object in request",
@@ -82,14 +82,14 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, vreqobj *
 	}
 
 	// newObj from reqc.RawObject
-	if vreqobj.RawObject == nil {
+	if reqobj.RawObject == nil {
 		maResult.Error = &common.CheckError{
 			Reason: "no (claimed) object in request",
 		}
 		return maResult, nil
 	}
 
-	if v, err := mapnode.NewFromBytes(vreqobj.RawObject); err != nil || v == nil {
+	if v, err := mapnode.NewFromBytes(reqobj.RawObject); err != nil || v == nil {
 		maResult.Error = &common.CheckError{
 			Error:  err,
 			Reason: "fail to parse (claimed) object in request",

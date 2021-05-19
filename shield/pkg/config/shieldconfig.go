@@ -96,9 +96,8 @@ type SigStoreConfig struct {
 }
 
 type ImageVerificationConfig struct {
-	Enabled         bool              `json:"enabled,omitempty"`
-	VerificationURL string            `json:"verificationURL,omitempty"`
-	Options         map[string]string `json:"options,omitempty"`
+	Enabled bool              `json:"enabled,omitempty"`
+	Options map[string]string `json:"options,omitempty"`
 }
 
 func (self *IShieldResourceCondition) IsOperatorResource(ref *common.ResourceRef) bool {
@@ -271,10 +270,6 @@ func (ec *ShieldConfig) SigStoreEnabled() bool {
 
 func (ec *ShieldConfig) ImageVerificationEnabled() bool {
 	return ec.ImageVerificationConfig.Enabled
-}
-
-func (ec *ShieldConfig) GetImageVerificationURL() string {
-	return ec.ImageVerificationConfig.VerificationURL
 }
 
 /**********************************************

@@ -26,6 +26,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -37,13 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
-
-type ImageDecisionResult struct {
-	Type     common.DecisionType `json:"type,omitempty"`
-	Verified bool                `json:"verified,omitempty"`
-	Allowed  bool                `json:"allowed,omitempty"`
-	Message  string              `json:"message,omitempty"`
-}
 
 type SigCheckImages struct {
 	ImagesToVerify []ImageToVerify `json:"imagesToVefiry"`
@@ -73,19 +67,19 @@ type ImageCheckProfile struct {
 }
 
 func requestCheckForImageCheck(resc *common.ResourceContext) (bool, *SigCheckImages, string) {
-	// return sigcheck, image, msg
+	// return needsigcheck, image, msg
 	// scope check
 	inscope := filterByKind(resc.Kind)
 	if !inscope {
 		// no image referenced
-		fmt.Println("no image referenced")
+		logger.Trace("no image referenced")
 		return false, nil, "no image referenced"
 	}
 	// get images
 	podspec, err := getPodSpec(resc.RawObject, resc.ApiGroup, resc.ApiVersion, resc.Kind)
 	if err != nil {
 		// "no image referenced: fail to get podspec"
-		fmt.Println("no image referenced: fail to get podspec")
+		logger.Trace("no image referenced: fail to get podspec")
 		return false, nil, "no image referenced: fail to get podspec"
 	}
 	images := getImages(podspec.Containers)
@@ -108,35 +102,35 @@ func (sci *SigCheckImages) imageVerifiedResultCheckByProfile() {
 	}
 }
 
-func makeImageCheckResult(images *SigCheckImages) *ImageDecisionResult {
-	res := &ImageDecisionResult{}
+func makeImageCheckResult(images *SigCheckImages) *DecisionResult {
+	res := &DecisionResult{}
 	for _, img := range images.ImagesToVerify {
 		if img.Result.Error != nil {
 			res.Type = common.DecisionError
-			res.Allowed = false
 			res.Verified = true
+			res.ReasonCode = common.REASON_ERROR
 			res.Message = img.Result.Error.Error()
 			return res
 		}
 		if !img.Result.Allowed {
 			res.Type = common.DecisionDeny
-			res.Allowed = false
 			res.Verified = true
+			res.ReasonCode = common.REASON_INVALID_SIG_IMAGE
 			res.Message = img.Result.Reason
 			return res
 		}
 		if !img.ProfileCheckResult {
 			res.Type = common.DecisionDeny
-			res.Allowed = false
 			res.Verified = true
+			res.ReasonCode = common.REASON_NO_MATCH_IMAGE_PROFILE
 			res.Message = "no image profile matches with this commonName:" + strings.Join(img.Result.CommonNames, ",")
 			return res
 		}
 	}
-	res.Allowed = true
 	res.Verified = true
+	res.ReasonCode = common.REASON_VALID_SIG_IMAGE
 	res.Type = common.DecisionAllow
-	res.Message = "image " + images.ImagesToVerify[0].Result.Digest + " is signed by " + images.ImagesToVerify[0].Profile.CommonName
+	res.Message = fmt.Sprintf("this image is signed by a valid signer; image digest: %s, signer: %s", images.ImagesToVerify[0].Result.Digest, images.ImagesToVerify[0].Profile.CommonName)
 	return res
 }
 
