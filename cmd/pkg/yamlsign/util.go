@@ -85,6 +85,9 @@ func FetchSignedYamlPayload(ctx context.Context, payloadPath string) (*cosign.Si
 			if err != nil {
 				return nil, err
 			}
+			if len(certs) == 0 {
+				return nil, err
+			}
 			sp.Cert = certs[0]
 		}
 

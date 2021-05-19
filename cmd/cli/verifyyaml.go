@@ -72,7 +72,9 @@ EXAMPLES
 
 // Exec runs the verification command
 func (c *VerifyYamlCommand) Exec(ctx context.Context, args []string) error {
-
+	if c.PayloadPath == "" {
+		return errors.New("no payloadpath found in arguments")
+	}
 	co := &cosign.CheckOpts{
 		Claims: c.CheckClaims,
 		Tlog:   true,
