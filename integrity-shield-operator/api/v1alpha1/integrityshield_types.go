@@ -53,9 +53,9 @@ const (
 	DefaultIShieldAdminRoleBindingName        = "ishield-admin-rolebinding"
 	DefaultIShieldSigStoreRootCertSecretName  = "ishield-sigstore-root-cert"
 	// DefaultIShieldInspectorName               = "integrity-shield-inspector"
-	// DefaultIShieldCheckerName                 = "integrity-shield-checker"
 	// DefaultIShieldInspectorLabel              = "ishield-inspector"
-	// DefaultIShieldCheckerLabel                = "ishield-checker"
+	DefaultIShieldAPIName           = "integrity-shield-api"
+	DefaultIShieldAPILabel          = "ishield-api"
 	DefaultIShieldCRYamlPath        = "./resources/default-ishield-cr.yaml"
 	CommonProfilesPath              = "./resources/common-profiles"
 	WebhookRulesForRoksYamlPath     = "./resources/webhook-rules-for-roks.yaml"
@@ -92,7 +92,7 @@ type IntegrityShieldSpec struct {
 	Logger                 LoggerContainer   `json:"logger,omitempty"`
 	Observer               ObserverContainer `json:"observer,omitempty"`
 	// Inspector              InspectorContainer `json:"inspector,omitempty"`
-	// Checker                CheckerContainer   `json:"checker,omitempty"`
+	API          APIContainer `json:"api,omitempty"`
 	RegKeySecret RegKeySecret `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
@@ -102,6 +102,7 @@ type IntegrityShieldSpec struct {
 	SignerConfig            *common.SignerConfig  `json:"signerConfig,omitempty"`
 	ResourceSigningProfiles []*ProfileConfig      `json:"resourceSigningProfiles,omitempty"`
 
+	APITlsSecretName           string     `json:"apiTlsSecretName,omitempty"`
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
 	WebhookConfigName          string     `json:"webhookConfigName,omitempty"`
@@ -182,20 +183,19 @@ type ObserverContainer struct {
 // 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 // }
 
-// type CheckerContainer struct {
-// 	// Enabled         *bool                   `json:"enabled,omitempty"`
-// 	Name                   string                  `json:"name,omitempty"`
-// 	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
-// 	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-// 	Image                  string                  `json:"image,omitempty"`
-// 	Port                   int32                   `json:"port,omitempty"`
-// 	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
-// 	ChartBaseUrl           string                  `json:"chartBaseUrl,omitempty"`
-// 	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
-// 	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
-// 	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
-// 	ServiceName            string                  `json:"serviceName,omitempty"`
-// }
+type APIContainer struct {
+	// Enabled         *bool                   `json:"enabled,omitempty"`
+	Name                   string                  `json:"name,omitempty"`
+	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
+	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image                  string                  `json:"image,omitempty"`
+	Port                   int32                   `json:"port,omitempty"`
+	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
+	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
+	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
+	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
+	ServiceName            string                  `json:"serviceName,omitempty"`
+}
 
 type EsConfig struct {
 	Enabled     bool   `json:"enabled,omitempty"`
@@ -306,6 +306,10 @@ func (self *IntegrityShield) GetWebhookServerTlsSecretName() string {
 	return self.Spec.WebhookServerTlsSecretName
 }
 
+func (self *IntegrityShield) GetAPITlsSecretName() string {
+	return self.Spec.APITlsSecretName
+}
+
 func (self *IntegrityShield) GetSigStoreDefaultRootSecretName() string {
 	return DefaultIShieldSigStoreRootCertSecretName
 }
@@ -358,25 +362,25 @@ func (self *IntegrityShield) GetIShieldServerDeploymentName() string {
 // 	return DefaultIShieldInspectorName
 // }
 
-// func (self *IntegrityShield) GetIShieldCheckerDeploymentName() string {
-// 	return DefaultIShieldCheckerName
-// }
+func (self *IntegrityShield) GetIShieldAPIDeploymentName() string {
+	return DefaultIShieldAPIName
+}
 
 // func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
 // 	return DefaultIShieldInspectorLabel
 // }
 
-// func (self *IntegrityShield) GetIShieldCheckerSelectorLabel() string {
-// 	return DefaultIShieldCheckerLabel
-// }
+func (self *IntegrityShield) GetIShieldAPISelectorLabel() string {
+	return DefaultIShieldAPILabel
+}
 
 func (self *IntegrityShield) GetWebhookServiceName() string {
 	return self.Spec.WebhookServiceName
 }
 
-// func (self *IntegrityShield) GetCheckerServiceName() string {
-// 	return self.Spec.Checker.ServiceName
-// }
+func (self *IntegrityShield) GetAPIServiceName() string {
+	return self.Spec.API.ServiceName
+}
 
 func (self *IntegrityShield) GetWebhookConfigName() string {
 	return self.Spec.WebhookConfigName

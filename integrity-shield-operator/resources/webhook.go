@@ -54,29 +54,29 @@ func BuildServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
 }
 
 //service
-// func BuildCheckerServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
-// 	var targetport intstr.IntOrString
-// 	targetport.Type = intstr.String
-// 	targetport.StrVal = "checker-api"
-// 	svc := &corev1.Service{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      cr.GetCheckerServiceName(),
-// 			Namespace: cr.Namespace,
-// 		},
-// 		Spec: corev1.ServiceSpec{
-// 			Ports: []corev1.ServicePort{
-// 				{
-// 					Port:       cr.Spec.Checker.Port,
-// 					TargetPort: targetport, //"checker-api"
-// 				},
-// 			},
-// 			Selector: map[string]string{
-// 				"app": cr.GetIShieldCheckerSelectorLabel(),
-// 			},
-// 		},
-// 	}
-// 	return svc
-// }
+func BuildAPIServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
+	var targetport intstr.IntOrString
+	targetport.Type = intstr.String
+	targetport.StrVal = "ishield-api"
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetAPIServiceName(),
+			Namespace: cr.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       8123,
+					TargetPort: targetport, //"ishield-api"
+				},
+			},
+			Selector: map[string]string{
+				"app": cr.GetIShieldAPISelectorLabel(),
+			},
+		},
+	}
+	return svc
+}
 
 //webhook configuration
 func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield) *admregv1.MutatingWebhookConfiguration {

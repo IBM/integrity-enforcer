@@ -878,14 +878,14 @@ func (r *IntegrityShieldReconciler) createOrUpdateSecret(instance *apiv1alpha1.I
 
 }
 
-func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret) *corev1.Secret {
+func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret, serviceName string) *corev1.Secret {
 	reqLogger := log.WithValues(
 		"Secret.Namespace", instance.Namespace,
 		"Instance.Name", instance.Name,
 		"Secret.Name", expected.Name)
 
-	// generate and put certsß
-	ca, tlsKey, tlsCert, err := cert.GenerateCert(instance.GetWebhookServiceName(), instance.Namespace)
+	// generate and put certs
+	ca, tlsKey, tlsCert, err := cert.GenerateCert(serviceName, instance.Namespace)
 	if err != nil {
 		reqLogger.Error(err, "Failed to generate certs")
 	}
@@ -904,7 +904,14 @@ func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secre
 func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildTlsSecretForIShield(instance)
-	expected = addCertValues(instance, expected)
+	expected = addCertValues(instance, expected, instance.GetWebhookServiceName())
+	return r.createOrUpdateSecret(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) createOrUpdateAPITlsSecret(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildAPITlsSecretForIShield(instance)
+	expected = addCertValues(instance, expected, instance.GetAPIServiceName())
 	return r.createOrUpdateSecret(instance, expected)
 }
 
@@ -1038,10 +1045,10 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookDeployment(instance *ap
 // 	return r.createOrUpdateDeployment(instance, expected)
 // }
 
-// func (r *IntegrityShieldReconciler) createOrUpdateCheckerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-// 	expected := res.BuildCheckerDeploymentForIShield(instance)
-// 	return r.createOrUpdateDeployment(instance, expected)
-// }
+func (r *IntegrityShieldReconciler) createOrUpdateAPIDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildAPIDeploymentForIShield(instance)
+	return r.createOrUpdateDeployment(instance, expected)
+}
 
 /**********************************************
 
@@ -1096,10 +1103,10 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1
 	return r.createOrUpdateService(instance, expected)
 }
 
-// func (r *IntegrityShieldReconciler) createOrUpdateCheckerService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-// 	expected := res.BuildCheckerServiceForIShield(instance)
-// 	return r.createOrUpdateService(instance, expected)
-// }
+func (r *IntegrityShieldReconciler) createOrUpdateAPIService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildAPIServiceForIShield(instance)
+	return r.createOrUpdateService(instance, expected)
+}
 
 /**********************************************
 

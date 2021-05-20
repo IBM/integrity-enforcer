@@ -243,17 +243,23 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// 	}
 	// }
 
-	// // checker Deployment
-	// recResult, recErr = r.createOrUpdateCheckerDeployment(instance)
-	// if recErr != nil || recResult.Requeue {
-	// 	return recResult, recErr
-	// }
+	// API Secret
+	recResult, recErr = r.createOrUpdateAPITlsSecret(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
 
-	// // checker Service
-	// recResult, recErr = r.createOrUpdateCheckerService(instance)
-	// if recErr != nil || recResult.Requeue {
-	// 	return recResult, recErr
-	// }
+	// API Deployment
+	recResult, recErr = r.createOrUpdateAPIDeployment(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	// API Service
+	recResult, recErr = r.createOrUpdateAPIService(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
 
 	// server Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
