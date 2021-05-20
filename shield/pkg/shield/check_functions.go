@@ -267,7 +267,7 @@ func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common
 	var dr *DecisionResult
 	for _, prof := range matchedProfiles {
 		tmpdr := mutationCheckWithSingleProfile(prof, reqc, reqobj, config, data, ctx)
-		if tmpdr.isAllowed() {
+		if tmpdr.IsAllowed() {
 			// no mutations are found
 			dr = tmpdr
 			mutationCheckPassedCount += 1
