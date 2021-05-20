@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/sigstore/cosign/pkg/cosign"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 )
 
 const IntegrityShieldAnnotationMessage = "integrityshield.io/message"
@@ -53,7 +54,7 @@ func FetchSignedYamlPayload(ctx context.Context, payloadPath string) (*cosign.Si
 		}
 		decodedBundle = gzipDecompress(decodedBundle)
 
-		var bundle *cosign.Bundle
+		var bundle *cremote.Bundle
 		if decodedBundle != nil {
 			err := json.Unmarshal(decodedBundle, &bundle)
 			if err != nil {

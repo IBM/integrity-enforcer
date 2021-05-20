@@ -26,6 +26,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
 	"github.com/sigstore/sigstore/pkg/kms"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -175,11 +176,13 @@ func prepareBundleJson(entry *models.LogEntryAnon) ([]byte, error) {
 	if entry.Verification == nil {
 		return nil, nil
 	}
-	bundle := &cosign.Bundle{
+	it := entry.IntegratedTime
+	bundle := &cremote.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
 		Body:                 entry.Body,
-		IntegratedTime:       entry.IntegratedTime,
+		IntegratedTime:       *it,
 		LogIndex:             entry.LogIndex,
+		LogID:                entry.LogID,
 	}
 
 	bundleJson, err := json.Marshal(bundle)

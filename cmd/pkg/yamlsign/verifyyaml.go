@@ -192,8 +192,9 @@ func verifyBundleAndTlog(ctx context.Context, co *cosign.CheckOpts, sp *cosign.S
 				*validationErrs = append(*validationErrs, err.Error())
 
 			}
+			et := e.IntegratedTime
 			// Expiry check is only enabled with Tlog support
-			if err := checkExpiry(sp.Cert, time.Unix(e.IntegratedTime, 0)); err != nil {
+			if err := checkExpiry(sp.Cert, time.Unix(*et, 0)); err != nil {
 				*validationErrs = append(*validationErrs, err.Error())
 
 			}
