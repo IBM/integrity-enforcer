@@ -70,25 +70,29 @@ func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *DecisionR
 	return dr
 }
 
+func (self *ResourceCheckHandler) GetCheckContext() *CheckContext {
+	return self.ctx
+}
+
 func (self *ResourceCheckHandler) Check() *DecisionResult {
 	var dr *DecisionResult
 	dr = undeterminedDescision()
 
 	dr = ishieldScopeCheckByResource(self.resc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 	self.logInScope = true
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	dr, matchedProfiles = protectedCheckByResource(self.resc, self.config, self.data, self.ctx)
-	if !dr.isUndetermined() {
+	if !dr.IsUndetermined() {
 		return dr
 	}
 
 	for _, prof := range matchedProfiles {
 		dr = signatureCheckWithSingleProfile(prof, self.resc, self.config, self.data, self.ctx)
-		if dr.isAllowed() {
+		if dr.IsAllowed() {
 			// this RSP allowed the resource. will check next RSP.
 		} else {
 			// this RSP denied the resource. return the result.
@@ -97,7 +101,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 	}
 
 	resourceDecisionResult := dr
-	resourceSigOk := resourceDecisionResult.isAllowed()
+	resourceSigOk := resourceDecisionResult.IsAllowed()
 
 	// if image verification is enabled, check the image siganture here if needed.
 	// At the end of this verification, override the result only when resource is ok & image is ng.
@@ -107,7 +111,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 			self.resourceLog.Trace("ImageVerificationEnabled")
 			imageDecisionResult := self.ImageCheck()
 			self.resourceLog.Trace("image check result: ", imageDecisionResult)
-			imageDenied := imageDecisionResult.isDenied() || imageDecisionResult.isErrorOccurred()
+			imageDenied := imageDecisionResult.IsDenied() || imageDecisionResult.IsErrorOccurred()
 
 			// overwride existing DecisionResult only when resource siganature is allowed & image is denied
 			if resourceSigOk && imageDenied {
@@ -116,7 +120,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 		}
 	}
 
-	if dr.isUndetermined() {
+	if dr.IsUndetermined() {
 		dr = &DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 
@@ -13,10 +12,7 @@ import (
 
 // AuditCommand verifies a signature on a supplied container image
 type AuditYamlCommand struct {
-	APIVersion string
-	Kind       string
-	Namespace  string
-	Name       string
+	KubectlPath string
 }
 
 // Audit builds and returns an ffcli command
@@ -24,10 +20,7 @@ func AuditYaml() *ffcli.Command {
 	cmd := AuditYamlCommand{}
 	flagset := flag.NewFlagSet("ishieldctl audit", flag.ExitOnError)
 
-	flagset.StringVar(&cmd.APIVersion, "apiversion", "v1", "apiversion to specify a resource. Default v1.")
-	flagset.StringVar(&cmd.Kind, "kind", "ConfigMap", "kind to specify a resource. Default ConfigMap.")
-	flagset.StringVar(&cmd.Namespace, "namespace", "default", "namespace to specify a resource. Default default.")
-	flagset.StringVar(&cmd.Name, "name", "no-name", "name to specify a resource. Default no-name.")
+	flagset.StringVar(&cmd.KubectlPath, "kubectlpath", "kubectl", "filepath to specify a kubectl command. If this is empty, execute just `kubectl`.")
 
 	return &ffcli.Command{
 		Name:       "audit",
@@ -49,12 +42,41 @@ EXAMPLES
 // Exec runs the verification command
 func (c *AuditYamlCommand) Exec(ctx context.Context, args []string) error {
 
-	dr, err := yamlsignaudit.AuditYaml(ctx, c.APIVersion, c.Kind, c.Namespace, c.Name)
+	mainArgs, kubectlArgs := splitArgs(args)
+	result, err := yamlsignaudit.AuditYaml(ctx, c.KubectlPath, mainArgs, kubectlArgs)
 	if err != nil {
 		return err
 	}
-	result, _ := json.Marshal(dr)
-	fmt.Println(string(result))
+	resultTable := ""
+	if result != nil {
+		resultTable = string(result.Table())
+	}
+
+	fmt.Println(resultTable)
 
 	return nil
+}
+
+func splitArgs(args []string) ([]string, []string) {
+	mainArgs := []string{}
+	kubectlArgs := []string{}
+	mainArgsCondition := map[string]bool{
+		"-kubectlpath": true,
+		"-o":           true,
+		"--output":     true,
+	}
+	skipIndex := map[int]bool{}
+	for i, s := range args {
+		if skipIndex[i] {
+			continue
+		}
+		if mainArgsCondition[s] {
+			mainArgs = append(mainArgs, args[i])
+			mainArgs = append(mainArgs, args[i+1])
+			skipIndex[i+1] = true
+		} else {
+			kubectlArgs = append(kubectlArgs, args[i])
+		}
+	}
+	return mainArgs, kubectlArgs
 }
