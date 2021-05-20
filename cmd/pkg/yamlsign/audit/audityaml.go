@@ -3,8 +3,12 @@ package audit
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -21,15 +25,30 @@ import (
 
 	sconfloder "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
 	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
-	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
 var config *sconfloder.Config
+
+const ishieldAPIEnvName = "ISHIELD_API_URL"
+const defaultAPIURL = "https://default-ishield-api:8123"
+
+var apiURL string
+var httpClient *http.Client
 
 func init() {
 	config = sconfloder.NewConfig()
 
 	log.SetFormatter(&log.JSONFormatter{})
+
+	apiURL = os.Getenv(ishieldAPIEnvName)
+	if apiURL == "" {
+		apiURL = defaultAPIURL
+	}
+
+	httpClient = new(http.Client)
+	httpClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 }
 
 type ResourceResult struct {
@@ -51,8 +70,55 @@ func getAge(t metav1.Time) string {
 	return age
 }
 
+func GetIshieldAPIBaseURL() string {
+	return apiURL
+}
+
+func parseResourceAPIResult(result []byte) (*shield.DecisionResult, *shield.CheckContext) {
+	var dr *shield.DecisionResult
+	var ctx *shield.CheckContext
+
+	var m map[string]interface{}
+	_ = json.Unmarshal(result, &m)
+	drB, _ := json.Marshal(m["result"])
+	ctxB, _ := json.Marshal(m["context"])
+	// fmt.Println("[DEBUG] drB: ", string(drB))
+	// fmt.Println("[DEBUG] ctxB: ", string(ctxB))
+	_ = json.Unmarshal(drB, &dr)
+	_ = json.Unmarshal(ctxB, &ctx)
+	return dr, ctx
+}
+
+func callResourceCheckAPI(obj unstructured.Unstructured) (*shield.DecisionResult, *shield.CheckContext, error) {
+	url := GetIshieldAPIBaseURL() + "/api/resource"
+	objB, _ := json.Marshal(obj.Object)
+	dataB := bytes.NewBuffer(objB)
+
+	req, err := http.NewRequest("POST", url, dataB)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	result, err := ioutil.ReadAll(resp.Body)
+	// fmt.Println("[DEBUG] result: ", string(result))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dr, ctx := parseResourceAPIResult(result)
+
+	return dr, ctx, nil
+}
+
 func (r *AuditResult) Table() []byte {
-	tableResult := "NAME\tAUDIT\tPROTECTED\tSIGNER\tAGE\t\n"
+	tableResult := "NAME\tAUDIT_OK\tPROTECTED\tSIGNER\tAGE\t\n"
 	for _, resResult := range r.Resources {
 		obj := resResult.Object
 		dr := resResult.Result
@@ -86,7 +152,6 @@ func ExecKubectl(cmdpath string, args ...string) (string, error) {
 // AuditYaml does all the main cosign checks in a loop, returning validated payloads.
 // If there were no payloads, we return an error.
 func AuditYaml(ctx context.Context, kubectlPath string, mainArgs, kubectlArgs []string) (*AuditResult, error) {
-	var dr *shield.DecisionResult
 	var err error
 
 	tmpArgs := []string{"get", "--output", "json"}
@@ -121,14 +186,19 @@ func AuditYaml(ctx context.Context, kubectlPath string, mainArgs, kubectlArgs []
 	_ = config.InitShieldConfig()
 
 	result := &AuditResult{}
+	sumErr := []string{}
 	for i, obj := range items {
-		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-		resourceHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger)
-		dr = resourceHandler.Run(&obj)
-		ctx := resourceHandler.GetCheckContext()
+		dr, ctx, err := callResourceCheckAPI(obj)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
 		objPtr := &(items[i])
 		res := &ResourceResult{Object: objPtr, Result: dr, CheckContext: ctx}
 		result.Resources = append(result.Resources, res)
+	}
+	if len(sumErr) > 0 {
+		return result, errors.New(strings.Join(sumErr, "; "))
 	}
 
 	return result, nil

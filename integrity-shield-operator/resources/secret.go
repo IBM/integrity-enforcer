@@ -58,6 +58,24 @@ func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
 	return sec
 }
 
+// ishield-api-tls
+func BuildAPITlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+	var empty []byte
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetAPITlsSecretName(),
+			Namespace: cr.Namespace,
+		},
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       empty, // "tls.crt"
+			corev1.TLSPrivateKeyKey: empty,
+			"ca.crt":                empty,
+		},
+		Type: corev1.SecretTypeTLS,
+	}
+	return sec
+}
+
 // ishield-sigstore-root-cert
 func BuildSigStoreDefaultRootSecretForIShield(cr *apiv1alpha1.IntegrityShield) (*corev1.Secret, error) {
 	sec := &corev1.Secret{

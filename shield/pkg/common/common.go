@@ -342,7 +342,7 @@ type SignerInfo struct {
 	StreetAddress      string
 	PostalCode         string
 	CommonName         string
-	SerialNumber       *big.Int
+	SerialNumber       *big.Int `json:"-"`
 	Fingerprint        []byte
 }
 

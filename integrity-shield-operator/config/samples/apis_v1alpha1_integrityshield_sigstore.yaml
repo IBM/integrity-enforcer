@@ -36,6 +36,8 @@ spec:
   - name: sample-signer-keyconfig
     signatureType: sigstore
   server:
-    image: localhost:5000/integrity-shield-server:0.1.6
+    image: localhost:5000/integrity-shield-server:0.2.0
   logger:
-    image: localhost:5000/integrity-shield-logging:0.1.6
+    image: localhost:5000/integrity-shield-logging:0.2.0
+  api:
+    image: localhost:5000/integrity-shield-api:0.2.0

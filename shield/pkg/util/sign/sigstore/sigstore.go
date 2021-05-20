@@ -84,8 +84,9 @@ func verify(message, signature, certPem, bundle []byte, rootPemPath *string) (bo
 	}
 
 	co := &cosign.CheckOpts{
-		Tlog:  true,
-		Roots: cp,
+		Claims: true,
+		Tlog:   true,
+		Roots:  cp,
 	}
 
 	fpath := path.Join(tmpDir, tmpSignedFileName)
