@@ -49,7 +49,6 @@ func (c *AuditYamlCommand) Exec(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(c.Output)
 	resultTable := ""
 	if result != nil {
 		if c.Output == "wide" {

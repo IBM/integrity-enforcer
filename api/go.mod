@@ -12,7 +12,10 @@ require (
 replace (
 	github.com/IBM/integrity-enforcer/cmd => ../cmd
 	github.com/IBM/integrity-enforcer/shield => ../shield
+<<<<<<< HEAD
 	github.com/sigstore/cosign => ../../../gajananan/cosign
+=======
+>>>>>>> 7d52cee83f23d3cfddac7825ef810ab32e89fcd6
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0
