@@ -24,6 +24,7 @@ rules:
   - helmreleasemetadatas
   - integrityshields
   - integrityshields/finalizers
+  - resourceauditreviews
   - resourcesignatures
   - resourcesigningprofiles
   - shieldconfigs

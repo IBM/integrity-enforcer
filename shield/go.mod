@@ -22,8 +22,8 @@ require (
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.0.2
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
+	k8s.io/api v0.21.1
+	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.20.2
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
 	k8s.io/kubectl v0.19.0
@@ -32,6 +32,7 @@ require (
 
 replace (
 	github.com/IBM/integrity-enforcer/cmd => ../cmd
+	github.com/IBM/integrity-enforcer/controller => ../controller
 	github.com/IBM/integrity-enforcer/shield => ./
 	//github.com/sigstore/cosign => github.com/sigstore/cosign v0.4.1-0.20210513202038-96a92e0d5c84
 	github.com/sigstore/cosign => ../../../gajananan/cosign

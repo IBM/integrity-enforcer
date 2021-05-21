@@ -163,6 +163,12 @@ func (r *IntegrityShieldReconciler) createOrUpdateResourceSigningProfileCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
+func (r *IntegrityShieldReconciler) createOrUpdateResourceAuditReviewCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildResourceAuditReviewCRD(instance)
+	return r.createOrUpdateCRD(instance, expected)
+}
+
 // func (r *IntegrityShieldReconciler) createOrUpdateProtectedResourceIntegrityCRD(
 // 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 // 	expected := res.BuildProtectedResourceIntegrityCRD(instance)
@@ -195,6 +201,12 @@ func (r *IntegrityShieldReconciler) deleteHelmReleaseMetadataCRD(
 func (r *IntegrityShieldReconciler) deleteResourceSigningProfileCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildResourceSigningProfileCRD(instance)
+	return r.deleteCRD(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) deleteResourceAuditReviewCRD(
+	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildResourceAuditReviewCRD(instance)
 	return r.deleteCRD(instance, expected)
 }
 
@@ -1047,6 +1059,11 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookDeployment(instance *ap
 
 func (r *IntegrityShieldReconciler) createOrUpdateAPIDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildAPIDeploymentForIShield(instance)
+	return r.createOrUpdateDeployment(instance, expected)
+}
+
+func (r *IntegrityShieldReconciler) createOrUpdateControllerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildControllerDeploymentForIShield(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
 

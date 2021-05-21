@@ -22,8 +22,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNames) *extv1.CustomResourceDefinition {
+func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNames, namespaced bool) *extv1.CustomResourceDefinition {
 	trueVar := true
+	scope := extv1.NamespaceScoped
+	if !namespaced {
+		scope = extv1.ClusterScoped
+	}
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -37,7 +41,7 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 			Group: "apis.integrityshield.io",
 			//Version: "v1beta1",
 			Names: crdNames,
-			Scope: "Namespaced",
+			Scope: scope,
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
 					Name:    "v1alpha1",
@@ -63,7 +67,7 @@ func BuildSignerConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResource
 		ListKind: "SignerConfigList",
 		Singular: "signerconfig",
 	}
-	return buildCRD(cr.GetSignerConfigCRDName(), cr.Namespace, crdNames)
+	return buildCRD(cr.GetSignerConfigCRDName(), cr.Namespace, crdNames, true)
 }
 
 //shield config crd
@@ -75,7 +79,7 @@ func BuildShieldConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResource
 		Singular:   "shieldconfig",
 		ShortNames: []string{"econf", "econfs"},
 	}
-	return buildCRD(cr.GetShieldConfigCRDName(), cr.Namespace, crdNames)
+	return buildCRD(cr.GetShieldConfigCRDName(), cr.Namespace, crdNames, true)
 }
 
 //resource signature crd
@@ -87,7 +91,7 @@ func BuildResourceSignatureCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomRes
 		Singular:   "resourcesignature",
 		ShortNames: []string{"rsig", "rsigs"},
 	}
-	return buildCRD(cr.GetResourceSignatureCRDName(), cr.Namespace, crdNames)
+	return buildCRD(cr.GetResourceSignatureCRDName(), cr.Namespace, crdNames, true)
 }
 
 // helm release metadata crd
@@ -99,7 +103,7 @@ func BuildHelmReleaseMetadataCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomR
 		Singular:   "helmreleasemetadata",
 		ShortNames: []string{"hrm", "hrms"},
 	}
-	return buildCRD(cr.GetHelmReleaseMetadataCRDName(), cr.Namespace, crdNames)
+	return buildCRD(cr.GetHelmReleaseMetadataCRDName(), cr.Namespace, crdNames, true)
 }
 
 // resourcesigningprofile crd
@@ -112,7 +116,20 @@ func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.Cust
 		Singular:   "resourcesigningprofile",
 		ShortNames: []string{"rsp", "rsps"},
 	}
-	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames)
+	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames, true)
+}
+
+// resourceauditreview crd
+func BuildResourceAuditReviewCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:       "ResourceAuditReview",
+		Plural:     "resourceauditreviews",
+		ListKind:   "ResourceAuditReviewList",
+		Singular:   "resourceauditreview",
+		ShortNames: []string{"rar", "rars"},
+	}
+	return buildCRD(cr.GetResourceAuditReviewCRDName(), cr.Namespace, crdNames, false)
 }
 
 // // protectedresourceintegrity crd

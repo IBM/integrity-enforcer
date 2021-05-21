@@ -82,11 +82,12 @@ LOGG_BASEDIR=${ISHIELD_REPO_ROOT}/logging/
 OBSV_BASEDIR=${ISHIELD_REPO_ROOT}/observer/
 INSP_BASEDIR=${ISHIELD_REPO_ROOT}/inspector/
 API_BASEDIR=${ISHIELD_REPO_ROOT}/api/
+CTRL_BASEDIR=${ISHIELD_REPO_ROOT}/controller/
 OPERATOR_BASEDIR=${ISHIELD_REPO_ROOT}/integrity-shield-operator/
 
 # Build ishield-server image
 echo -----------------------------
-echo [1/4] Building ishield-server image.
+echo [1/5] Building ishield-server image.
 cd ${ISHIELD_REPO_ROOT}/shield
 go mod tidy
 exit_status=$?
@@ -118,7 +119,7 @@ echo ""
 
 # Build ishield-logging image
 echo -----------------------------
-echo [2/4] Building ishield-logging image.
+echo [2/5] Building ishield-logging image.
 cd ${LOGG_BASEDIR}
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
@@ -196,7 +197,7 @@ echo ""
 
 # Build ishield-api image
 echo -----------------------------
-echo [3/4] Building ishield-api image.
+echo [3/5] Building ishield-api image.
 cd ${API_BASEDIR}
 go mod tidy
 exit_status=$?
@@ -222,9 +223,37 @@ echo done.
 echo -----------------------------
 echo ""
 
+# Build ishield-controller image
+echo -----------------------------
+echo [4/5] Building ishield-controller image.
+cd ${CTRL_BASEDIR}
+go mod tidy
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_bin/ishield-auditreview-controller ./
+	
+if [ "$NO_CACHE" = true ] ; then
+     docker build -t ${ISHIELD_CONTROLLER_IMAGE_NAME_AND_VERSION} ${CTRL_BASEDIR} --no-cache
+else
+     docker build -t ${ISHIELD_CONTROLLER_IMAGE_NAME_AND_VERSION} ${CTRL_BASEDIR}
+fi
+
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+echo done.
+echo -----------------------------
+echo ""
+
 # Build integrity-shield-operator image
 echo -----------------------------
-echo [4/4] Building integrity-shield-operator image.
+echo [5/5] Building integrity-shield-operator image.
 cd ${OPERATOR_BASEDIR}
 go mod tidy
 exit_status=$?

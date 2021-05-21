@@ -5,12 +5,14 @@ go 1.16
 require (
 	github.com/IBM/integrity-enforcer/shield v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
-	k8s.io/api v0.20.2
-	k8s.io/apimachinery v0.20.2
+	k8s.io/api v0.21.1
+	k8s.io/apimachinery v0.21.1
 )
 
 replace (
+	github.com/IBM/integrity-enforcer/api => ./
 	github.com/IBM/integrity-enforcer/cmd => ../cmd
+	github.com/IBM/integrity-enforcer/controller => ../controller
 	github.com/IBM/integrity-enforcer/shield => ../shield
 	github.com/sigstore/cosign => ../../../gajananan/cosign
 	k8s.io/api => k8s.io/api v0.19.0

@@ -3,12 +3,8 @@ package audit
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -20,41 +16,48 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	rareviewv1alpha1 "github.com/IBM/integrity-enforcer/controller/pkg/apis/resourceauditreview/v1alpha1"
+	clientset "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/clientset/versioned"
 	sconfloder "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
-	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 )
 
 var config *sconfloder.Config
 
-const ishieldAPIEnvName = "ISHIELD_API_URL"
-const defaultAPIURL = "https://default-ishield-api:8123"
+const getReviewResultMaxRetry = 3
+const getReviewResultRetryInterval = 2
 
-var apiURL string
-var httpClient *http.Client
+var rareviewClient clientset.Interface
 
 func init() {
 	config = sconfloder.NewConfig()
 
 	log.SetFormatter(&log.JSONFormatter{})
 
-	apiURL = os.Getenv(ishieldAPIEnvName)
-	if apiURL == "" {
-		apiURL = defaultAPIURL
+	var err error
+	k8sconfig, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		log.Fatalf("Error getting kubeconfig: %s", err.Error())
 	}
-
-	httpClient = new(http.Client)
-	httpClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	rareviewClient, err = clientset.NewForConfig(k8sconfig)
+	if err != nil {
+		log.Fatalf("Error building rareview clientset: %s", err.Error())
 	}
 }
 
 type ResourceResult struct {
-	Object       *unstructured.Unstructured `json:"object,omitempty"`
-	Result       *shield.DecisionResult     `json:"result,omitempty"`
-	CheckContext *shield.CheckContext       `json:"checkContext,omitempty"`
+	Object *unstructured.Unstructured `json:"object,omitempty"`
+	// Result       *shield.DecisionResult     `json:"result,omitempty"`
+	// CheckContext *shield.CheckContext       `json:"checkContext,omitempty"`
+	Audit     bool   `json:"allowed,omitempty"`
+	Protected bool   `json:"protected,omitempty"`
+	Signer    string `json:"signer,omitempty"`
+	Message   string `json:"message,omitempty"`
 }
 
 type AuditResult struct {
@@ -70,65 +73,119 @@ func getAge(t metav1.Time) string {
 	return age
 }
 
-func GetIshieldAPIBaseURL() string {
-	return apiURL
+func generateResourceAuditReview(obj unstructured.Unstructured) *rareviewv1alpha1.ResourceAuditReview {
+	apiVersion := obj.GetAPIVersion()
+	gv, _ := schema.ParseGroupVersion(apiVersion)
+	group := gv.Group
+	version := gv.Version
+	kind := obj.GetKind()
+	namespace := obj.GetNamespace()
+	name := obj.GetName()
+
+	resAttrs := &rareviewv1alpha1.ResourceAttributes{
+		Namespace: namespace,
+		Group:     group,
+		Version:   version,
+		Kind:      kind,
+		Name:      name,
+	}
+	nameParts := []string{group, version, strings.ToLower(kind), namespace, name}
+	namePartsClean := []string{}
+	for _, p := range nameParts {
+		if p == "" {
+			continue
+		}
+		namePartsClean = append(namePartsClean, p)
+	}
+
+	rarName := strings.Join(namePartsClean, "-")
+
+	rar := &rareviewv1alpha1.ResourceAuditReview{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: rarName,
+		},
+		Spec: rareviewv1alpha1.ResourceAuditReviewSpec{
+			ResourceAttributes: resAttrs,
+		},
+	}
+	return rar
 }
 
-func parseResourceAPIResult(result []byte) (*shield.DecisionResult, *shield.CheckContext) {
-	var dr *shield.DecisionResult
-	var ctx *shield.CheckContext
+func createResourceAuditReview(obj unstructured.Unstructured) error {
+	rar := generateResourceAuditReview(obj)
+	rarName := rar.GetName()
 
-	var m map[string]interface{}
-	_ = json.Unmarshal(result, &m)
-	drB, _ := json.Marshal(m["result"])
-	ctxB, _ := json.Marshal(m["context"])
-	// fmt.Println("[DEBUG] drB: ", string(drB))
-	// fmt.Println("[DEBUG] ctxB: ", string(ctxB))
-	_ = json.Unmarshal(drB, &dr)
-	_ = json.Unmarshal(ctxB, &ctx)
-	return dr, ctx
+	aleradyExsits := false
+	_, err := rareviewClient.ApisV1alpha1().ResourceAuditReviews().Get(context.TODO(), rarName, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			// if not found, then just create a new one
+		} else {
+			return err
+		}
+	} else {
+		aleradyExsits = true
+	}
+	if aleradyExsits {
+		err = rareviewClient.ApisV1alpha1().ResourceAuditReviews().Delete(context.TODO(), rarName, metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = rareviewClient.ApisV1alpha1().ResourceAuditReviews().Create(context.TODO(), rar, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func callResourceCheckAPI(obj unstructured.Unstructured) (*shield.DecisionResult, *shield.CheckContext, error) {
-	url := GetIshieldAPIBaseURL() + "/api/resource"
-	objB, _ := json.Marshal(obj.Object)
-	dataB := bytes.NewBuffer(objB)
+func getResourceAuditReviewResult(obj unstructured.Unstructured) (*ResourceResult, error) {
+	rar := generateResourceAuditReview(obj)
+	rarName := rar.GetName()
 
-	req, err := http.NewRequest("POST", url, dataB)
-	if err != nil {
-		return nil, nil, err
+	var err error
+	var currentRar *rareviewv1alpha1.ResourceAuditReview
+	for i := 0; i < getReviewResultMaxRetry; i++ {
+		resultFound := false
+		currentRar, err = rareviewClient.ApisV1alpha1().ResourceAuditReviews().Get(context.TODO(), rarName, metav1.GetOptions{})
+		if err == nil {
+			if currentRar != nil {
+				if !currentRar.Status.LastUpdated.IsZero() {
+					resultFound = true
+				}
+			}
+		}
+		if resultFound {
+			break
+		} else {
+			interval := time.Second * getReviewResultRetryInterval
+			time.Sleep(interval)
+		}
 	}
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, nil, err
+	if currentRar == nil && err != nil {
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	result, err := ioutil.ReadAll(resp.Body)
-	// fmt.Println("[DEBUG] result: ", string(result))
-	if err != nil {
-		return nil, nil, err
+	result := &ResourceResult{
+		Object:    &obj,
+		Audit:     currentRar.Status.Audit,
+		Protected: currentRar.Status.Protected,
+		Signer:    currentRar.Status.Signer,
+		Message:   currentRar.Status.Message,
 	}
-
-	dr, ctx := parseResourceAPIResult(result)
-
-	return dr, ctx, nil
+	return result, nil
 }
 
 func (r *AuditResult) Table() []byte {
 	tableResult := "NAME\tPROTECTED\tAUDIT_OK\tSIGNER\tAGE\t\n"
 	for _, resResult := range r.Resources {
 		obj := resResult.Object
-		dr := resResult.Result
-		ctx := resResult.CheckContext
-		auditResult := strconv.FormatBool(dr.IsAllowed())
+		auditResult := strconv.FormatBool(resResult.Audit)
 		resName := obj.GetName()
 		resTime := obj.GetCreationTimestamp()
 		resAge := getAge(resTime)
-		protected := strconv.FormatBool(ctx.Protected)
-		signer := ctx.SignatureEvalResult.SignerName
+		protected := strconv.FormatBool(resResult.Protected)
+		signer := resResult.Signer
 		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t\n", resName, protected, auditResult, signer, resAge)
 		tableResult = fmt.Sprintf("%s%s", tableResult, line)
 	}
@@ -144,15 +201,14 @@ func (r *AuditResult) DetailTable() []byte {
 	tableResult := "NAME\tPROTECTED\tAUDIT_OK\tSIGNER\tRESULT\tAGE\t\n"
 	for _, resResult := range r.Resources {
 		obj := resResult.Object
-		dr := resResult.Result
-		ctx := resResult.CheckContext
-		auditResult := strconv.FormatBool(dr.IsAllowed())
+		auditResult := strconv.FormatBool(resResult.Audit)
 		resName := obj.GetName()
 		resTime := obj.GetCreationTimestamp()
 		resAge := getAge(resTime)
-		protected := strconv.FormatBool(ctx.Protected)
-		signer := ctx.SignatureEvalResult.SignerName
-		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s\t\n", resName, protected, auditResult, signer, ctx.Message, resAge)
+		protected := strconv.FormatBool(resResult.Protected)
+		signer := resResult.Signer
+		message := resResult.Message
+		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s\t\n", resName, protected, auditResult, signer, message, resAge)
 		tableResult = fmt.Sprintf("%s%s", tableResult, line)
 	}
 	writer := new(bytes.Buffer)
@@ -210,15 +266,24 @@ func AuditYaml(ctx context.Context, kubectlPath string, mainArgs, kubectlArgs []
 
 	result := &AuditResult{}
 	sumErr := []string{}
-	for i, obj := range items {
-		dr, ctx, err := callResourceCheckAPI(obj)
+	for _, obj := range items {
+		err := createResourceAuditReview(obj)
 		if err != nil {
 			sumErr = append(sumErr, err.Error())
 			continue
 		}
-		objPtr := &(items[i])
-		res := &ResourceResult{Object: objPtr, Result: dr, CheckContext: ctx}
-		result.Resources = append(result.Resources, res)
+
+	}
+	if len(sumErr) > 0 {
+		return result, errors.New(strings.Join(sumErr, "; "))
+	}
+	for _, obj := range items {
+		resResult, err := getResourceAuditReviewResult(obj)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		result.Resources = append(result.Resources, resResult)
 	}
 	if len(sumErr) > 0 {
 		return result, errors.New(strings.Join(sumErr, "; "))

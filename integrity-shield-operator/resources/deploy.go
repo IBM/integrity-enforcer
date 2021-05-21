@@ -502,6 +502,88 @@ func BuildAPIDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deplo
 	}
 }
 
+//deployment
+func BuildControllerDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+
+	port := int(cr.Spec.API.ServicePort)
+	apiURL := "https://" + cr.GetAPIServiceName() + ":" + strconv.Itoa(port)
+	controllerContainer := v1.Container{
+		Name:            cr.Spec.Controller.Name,
+		SecurityContext: cr.Spec.Controller.SecurityContext,
+		Image:           cr.Spec.Controller.Image,
+		ImagePullPolicy: cr.Spec.Controller.ImagePullPolicy,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				Exec: &v1.ExecAction{
+					Command: []string{"ls"},
+				},
+			},
+		},
+		Env: []v1.EnvVar{
+			{
+				Name:  "ISHIELD_API_URL",
+				Value: apiURL,
+			},
+		},
+		Resources: cr.Spec.Controller.Resources,
+	}
+
+	containers := []v1.Container{
+		controllerContainer,
+	}
+
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.GetIShieldControllerDeploymentName(),
+			Namespace: cr.Namespace,
+			Labels: map[string]string{
+				"app": cr.GetIShieldControllerSelectorLabel(),
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Strategy: appsv1.DeploymentStrategy{
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       cr.Spec.MaxSurge,
+					MaxUnavailable: cr.Spec.MaxUnavailable,
+				},
+			},
+			Replicas: cr.Spec.ReplicaCount,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": cr.GetIShieldControllerSelectorLabel(),
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": cr.GetIShieldControllerSelectorLabel(),
+					},
+				},
+				Spec: v1.PodSpec{
+					ImagePullSecrets:   cr.Spec.ImagePullSecrets,
+					ServiceAccountName: cr.GetServiceAccountName(),
+					SecurityContext:    cr.Spec.Security.PodSecurityContext,
+					Containers:         containers,
+					NodeSelector:       cr.Spec.NodeSelector,
+					Affinity:           cr.Spec.Affinity,
+					Tolerations:        cr.Spec.Tolerations,
+				},
+			},
+		},
+	}
+}
+
 // func BuildInspectorDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
 // 	labels := cr.Spec.MetaLabels
 

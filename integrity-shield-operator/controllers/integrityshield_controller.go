@@ -43,7 +43,7 @@ type IntegrityShieldReconciler struct {
 
 // +kubebuilder:rbac:groups=core,resources=services;serviceaccounts;events;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshields/finalizers;shieldconfigs;signerconfigs;resourcesigningprofiles;resourcesignatures;helmreleasemetadatas,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshields/finalizers;shieldconfigs;signerconfigs;resourcesigningprofiles;resourcesignatures;helmreleasemetadatas;resourceauditreviews,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
 // +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;list;watch;create;update;patch;delete
@@ -119,6 +119,11 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	recResult, recErr = r.createOrUpdateResourceSigningProfileCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	recResult, recErr = r.createOrUpdateResourceAuditReviewCRD(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -261,6 +266,12 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return recResult, recErr
 	}
 
+	// controller Deployment
+	recResult, recErr = r.createOrUpdateControllerDeployment(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	// server Deployment
 	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
 	if recErr != nil || recResult.Requeue {
@@ -364,6 +375,11 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 	}
 
 	_, err = r.deleteShieldConfigCRD(instance)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.deleteResourceAuditReviewCRD(instance)
 	if err != nil {
 		return err
 	}

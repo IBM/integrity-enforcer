@@ -12,9 +12,9 @@ require (
 	github.com/onsi/gomega v1.10.3
 	github.com/openshift/api v3.9.0+incompatible
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
-	k8s.io/api v0.20.2
+	k8s.io/api v0.21.1
 	k8s.io/apiextensions-apiserver v0.20.2
-	k8s.io/apimachinery v0.20.2
+	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.20.2
 	k8s.io/klog v1.0.0
 	sigs.k8s.io/controller-runtime v0.8.3
@@ -23,6 +23,7 @@ require (
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.4-0.20200207053602-7439e774c9e9+incompatible
 	github.com/IBM/integrity-enforcer/cmd => ../cmd
+	github.com/IBM/integrity-enforcer/controller => ../controller
 	github.com/IBM/integrity-enforcer/integrity-shield-operator => ./
 	github.com/IBM/integrity-enforcer/shield => ../shield
 	k8s.io/api => k8s.io/api v0.19.0

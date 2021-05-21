@@ -143,6 +143,7 @@ spec:
     name: api
     serviceName: integrity-shield-api
     port: 8080
+    servicePort: 8123
     resources:
       limits:
         cpu: 500m
@@ -151,6 +152,17 @@ spec:
         cpu: 200m
         memory: 256Mi
     securityContext: {}
+  controller:
+    image: quay.io/open-cluster-management/integrity-shield-controller:0.2.0
+    imagePullPolicy: Always
+    name: controller
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
   apiTlsSecretName: ishield-api-tls
   webhookConfigName: ishield-webhook-config
   webhookServerTlsSecretName: ishield-server-tls

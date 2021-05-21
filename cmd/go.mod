@@ -3,6 +3,7 @@ module github.com/IBM/integrity-enforcer/cmd
 go 1.16
 
 require (
+	github.com/IBM/integrity-enforcer/controller v0.0.0-00010101000000-000000000000
 	github.com/IBM/integrity-enforcer/shield v0.0.0-00010101000000-000000000000
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -14,11 +15,12 @@ require (
 	github.com/sigstore/sigstore v0.0.0-20210516171352-bee6a385d4af
 	github.com/sirupsen/logrus v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/apimachinery v0.20.2
+	k8s.io/apimachinery v0.21.1
 )
 
 replace (
 	github.com/IBM/integrity-enforcer/cmd => ./
+	github.com/IBM/integrity-enforcer/controller => ../controller
 	github.com/IBM/integrity-enforcer/shield => ../shield
 	github.com/sigstore/cosign => ../../../gajananan/cosign
 	github.com/sigstore/rekor => github.com/sigstore/rekor v0.1.2-0.20210519014330-b5480728bde6

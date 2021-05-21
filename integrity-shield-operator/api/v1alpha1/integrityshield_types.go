@@ -45,6 +45,7 @@ const (
 	DefaultResourceSignatureCRDName      = "resourcesignatures.apis.integrityshield.io"
 	DefaultResourceSigningProfileCRDName = "resourcesigningprofiles.apis.integrityshield.io"
 	DefaultHelmReleaseMetadataCRDName    = "helmreleasemetadatas.apis.integrityshield.io"
+	DefaultResourceAuditReviewCRDName    = "resourceauditreviews.apis.integrityshield.io"
 	// DefaultProtectedResourceIntegrityCRDName  = "protectedresourceintegrities.apis.integrityshield.io"
 	DefaultSignerConfigCRName                 = "signer-config"
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
@@ -55,7 +56,9 @@ const (
 	// DefaultIShieldInspectorName               = "integrity-shield-inspector"
 	// DefaultIShieldInspectorLabel              = "ishield-inspector"
 	DefaultIShieldAPIName           = "integrity-shield-api"
+	DefaultIShieldControllerName    = "integrity-shield-auditreview-controller"
 	DefaultIShieldAPILabel          = "ishield-api"
+	DefaultIShieldControllerLabel   = "ishield-controller"
 	DefaultIShieldCRYamlPath        = "./resources/default-ishield-cr.yaml"
 	CommonProfilesPath              = "./resources/common-profiles"
 	WebhookRulesForRoksYamlPath     = "./resources/webhook-rules-for-roks.yaml"
@@ -92,8 +95,9 @@ type IntegrityShieldSpec struct {
 	Logger                 LoggerContainer   `json:"logger,omitempty"`
 	Observer               ObserverContainer `json:"observer,omitempty"`
 	// Inspector              InspectorContainer `json:"inspector,omitempty"`
-	API          APIContainer `json:"api,omitempty"`
-	RegKeySecret RegKeySecret `json:"regKeySecret,omitempty"`
+	API          APIContainer        `json:"api,omitempty"`
+	Controller   ControllerContainer `json:"controller,omitempty"`
+	RegKeySecret RegKeySecret        `json:"regKeySecret,omitempty"`
 
 	ShieldConfigCrName      string                `json:"shieldConfigCrName,omitempty"`
 	ShieldConfig            *iec.ShieldConfig     `json:"shieldConfig,omitempty"`
@@ -190,11 +194,20 @@ type APIContainer struct {
 	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image                  string                  `json:"image,omitempty"`
 	Port                   int32                   `json:"port,omitempty"`
+	ServicePort            int32                   `json:"servicePort,omitempty"`
 	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
 	ContextLogEnabled      bool                    `json:"contextLogEnabled,omitempty"`
 	ShieldCmReloadSec      int32                   `json:"shieldCmReloadSec,omitempty"`
 	EnforcePolicyReloadSec int32                   `json:"shieldPolicyReloadSec,omitempty"`
 	ServiceName            string                  `json:"serviceName,omitempty"`
+}
+
+type ControllerContainer struct {
+	Name            string                  `json:"name,omitempty"`
+	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
+	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image           string                  `json:"image,omitempty"`
+	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type EsConfig struct {
@@ -282,6 +295,10 @@ func (self *IntegrityShield) GetResourceSigningProfileCRDName() string {
 	return DefaultResourceSigningProfileCRDName
 }
 
+func (self *IntegrityShield) GetResourceAuditReviewCRDName() string {
+	return DefaultResourceAuditReviewCRDName
+}
+
 // func (self *IntegrityShield) GetProtectedResourceIntegrityCRDName() string {
 // 	return DefaultProtectedResourceIntegrityCRDName
 // }
@@ -366,12 +383,20 @@ func (self *IntegrityShield) GetIShieldAPIDeploymentName() string {
 	return DefaultIShieldAPIName
 }
 
+func (self *IntegrityShield) GetIShieldControllerDeploymentName() string {
+	return DefaultIShieldControllerName
+}
+
 // func (self *IntegrityShield) GetIShieldInspectorSelectorLabel() string {
 // 	return DefaultIShieldInspectorLabel
 // }
 
 func (self *IntegrityShield) GetIShieldAPISelectorLabel() string {
 	return DefaultIShieldAPILabel
+}
+
+func (self *IntegrityShield) GetIShieldControllerSelectorLabel() string {
+	return DefaultIShieldControllerLabel
 }
 
 func (self *IntegrityShield) GetWebhookServiceName() string {

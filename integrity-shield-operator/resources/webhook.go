@@ -66,7 +66,7 @@ func BuildAPIServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service 
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Port:       8123,
+					Port:       cr.Spec.API.ServicePort,
 					TargetPort: targetport, //"ishield-api"
 				},
 			},
