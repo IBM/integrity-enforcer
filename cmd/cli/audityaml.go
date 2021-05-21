@@ -13,6 +13,7 @@ import (
 // AuditCommand verifies a signature on a supplied container image
 type AuditYamlCommand struct {
 	KubectlPath string
+	Output      string
 }
 
 // Audit builds and returns an ffcli command
@@ -21,6 +22,7 @@ func AuditYaml() *ffcli.Command {
 	flagset := flag.NewFlagSet("ishieldctl audit", flag.ExitOnError)
 
 	flagset.StringVar(&cmd.KubectlPath, "kubectlpath", "kubectl", "filepath to specify a kubectl command. If this is empty, execute just `kubectl`.")
+	flagset.StringVar(&cmd.Output, "output", "", "If this is \"wide\", shows the detail message for each resource")
 
 	return &ffcli.Command{
 		Name:       "audit",
@@ -47,9 +49,14 @@ func (c *AuditYamlCommand) Exec(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(c.Output)
 	resultTable := ""
 	if result != nil {
-		resultTable = string(result.Table())
+		if c.Output == "wide" {
+			resultTable = string(result.DetailTable())
+		} else {
+			resultTable = string(result.Table())
+		}
 	}
 
 	fmt.Println(resultTable)
@@ -62,8 +69,7 @@ func splitArgs(args []string) ([]string, []string) {
 	kubectlArgs := []string{}
 	mainArgsCondition := map[string]bool{
 		"-kubectlpath": true,
-		"-o":           true,
-		"--output":     true,
+		"-output":      true,
 	}
 	skipIndex := map[int]bool{}
 	for i, s := range args {

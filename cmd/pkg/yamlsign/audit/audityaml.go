@@ -118,7 +118,7 @@ func callResourceCheckAPI(obj unstructured.Unstructured) (*shield.DecisionResult
 }
 
 func (r *AuditResult) Table() []byte {
-	tableResult := "NAME\tAUDIT_OK\tPROTECTED\tSIGNER\tAGE\t\n"
+	tableResult := "NAME\tPROTECTED\tAUDIT_OK\tSIGNER\tAGE\t\n"
 	for _, resResult := range r.Resources {
 		obj := resResult.Object
 		dr := resResult.Result
@@ -129,7 +129,30 @@ func (r *AuditResult) Table() []byte {
 		resAge := getAge(resTime)
 		protected := strconv.FormatBool(ctx.Protected)
 		signer := ctx.SignatureEvalResult.SignerName
-		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t\n", resName, auditResult, protected, signer, resAge)
+		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t\n", resName, protected, auditResult, signer, resAge)
+		tableResult = fmt.Sprintf("%s%s", tableResult, line)
+	}
+	writer := new(bytes.Buffer)
+	w := tabwriter.NewWriter(writer, 0, 3, 3, ' ', 0)
+	w.Write([]byte(tableResult))
+	w.Flush()
+	result := writer.Bytes()
+	return result
+}
+
+func (r *AuditResult) DetailTable() []byte {
+	tableResult := "NAME\tPROTECTED\tAUDIT_OK\tSIGNER\tRESULT\tAGE\t\n"
+	for _, resResult := range r.Resources {
+		obj := resResult.Object
+		dr := resResult.Result
+		ctx := resResult.CheckContext
+		auditResult := strconv.FormatBool(dr.IsAllowed())
+		resName := obj.GetName()
+		resTime := obj.GetCreationTimestamp()
+		resAge := getAge(resTime)
+		protected := strconv.FormatBool(ctx.Protected)
+		signer := ctx.SignatureEvalResult.SignerName
+		line := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s\t\n", resName, protected, auditResult, signer, ctx.Message, resAge)
 		tableResult = fmt.Sprintf("%s%s", tableResult, line)
 	}
 	writer := new(bytes.Buffer)
