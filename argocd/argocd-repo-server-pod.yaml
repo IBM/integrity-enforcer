@@ -1,0 +1,354 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2021-05-25T01:34:29Z"
+  generateName: argocd-repo-server-5fbf484547-
+  labels:
+    app.kubernetes.io/name: argocd-repo-server
+    pod-template-hash: 5fbf484547
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:generateName: {}
+        f:labels:
+          .: {}
+          f:app.kubernetes.io/name: {}
+          f:pod-template-hash: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"befece67-9488-4ce3-a760-c2dd9dc1e7af"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        f:affinity:
+          .: {}
+          f:podAntiAffinity:
+            .: {}
+            f:preferredDuringSchedulingIgnoredDuringExecution: {}
+        f:automountServiceAccountToken: {}
+        f:containers:
+          k:{"name":"argocd-repo-server"}:
+            .: {}
+            f:command: {}
+            f:image: {}
+            f:imagePullPolicy: {}
+            f:livenessProbe:
+              .: {}
+              f:failureThreshold: {}
+              f:httpGet:
+                .: {}
+                f:path: {}
+                f:port: {}
+                f:scheme: {}
+              f:initialDelaySeconds: {}
+              f:periodSeconds: {}
+              f:successThreshold: {}
+              f:timeoutSeconds: {}
+            f:name: {}
+            f:ports:
+              .: {}
+              k:{"containerPort":8081,"protocol":"TCP"}:
+                .: {}
+                f:containerPort: {}
+                f:protocol: {}
+              k:{"containerPort":8084,"protocol":"TCP"}:
+                .: {}
+                f:containerPort: {}
+                f:protocol: {}
+            f:readinessProbe:
+              .: {}
+              f:failureThreshold: {}
+              f:httpGet:
+                .: {}
+                f:path: {}
+                f:port: {}
+                f:scheme: {}
+              f:initialDelaySeconds: {}
+              f:periodSeconds: {}
+              f:successThreshold: {}
+              f:timeoutSeconds: {}
+            f:resources: {}
+            f:securityContext:
+              .: {}
+              f:allowPrivilegeEscalation: {}
+              f:capabilities:
+                .: {}
+                f:drop: {}
+            f:terminationMessagePath: {}
+            f:terminationMessagePolicy: {}
+            f:volumeMounts:
+              .: {}
+              k:{"mountPath":"/app/config/gpg/keys"}:
+                .: {}
+                f:mountPath: {}
+                f:name: {}
+              k:{"mountPath":"/app/config/gpg/source"}:
+                .: {}
+                f:mountPath: {}
+                f:name: {}
+              k:{"mountPath":"/app/config/reposerver/tls"}:
+                .: {}
+                f:mountPath: {}
+                f:name: {}
+              k:{"mountPath":"/app/config/ssh"}:
+                .: {}
+                f:mountPath: {}
+                f:name: {}
+              k:{"mountPath":"/app/config/tls"}:
+                .: {}
+                f:mountPath: {}
+                f:name: {}
+        f:dnsPolicy: {}
+        f:enableServiceLinks: {}
+        f:restartPolicy: {}
+        f:schedulerName: {}
+        f:securityContext: {}
+        f:terminationGracePeriodSeconds: {}
+        f:volumes:
+          .: {}
+          k:{"name":"argocd-repo-server-tls"}:
+            .: {}
+            f:name: {}
+            f:secret:
+              .: {}
+              f:defaultMode: {}
+              f:items: {}
+              f:optional: {}
+              f:secretName: {}
+          k:{"name":"gpg-keyring"}:
+            .: {}
+            f:emptyDir: {}
+            f:name: {}
+          k:{"name":"gpg-keys"}:
+            .: {}
+            f:configMap:
+              .: {}
+              f:defaultMode: {}
+              f:name: {}
+            f:name: {}
+          k:{"name":"ssh-known-hosts"}:
+            .: {}
+            f:configMap:
+              .: {}
+              f:defaultMode: {}
+              f:name: {}
+            f:name: {}
+          k:{"name":"tls-certs"}:
+            .: {}
+            f:configMap:
+              .: {}
+              f:defaultMode: {}
+              f:name: {}
+            f:name: {}
+    manager: kube-controller-manager
+    operation: Update
+    time: "2021-05-25T01:34:29Z"
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        f:conditions:
+          k:{"type":"ContainersReady"}:
+            .: {}
+            f:lastProbeTime: {}
+            f:lastTransitionTime: {}
+            f:status: {}
+            f:type: {}
+          k:{"type":"Initialized"}:
+            .: {}
+            f:lastProbeTime: {}
+            f:lastTransitionTime: {}
+            f:status: {}
+            f:type: {}
+          k:{"type":"Ready"}:
+            .: {}
+            f:lastProbeTime: {}
+            f:lastTransitionTime: {}
+            f:status: {}
+            f:type: {}
+        f:containerStatuses: {}
+        f:hostIP: {}
+        f:phase: {}
+        f:podIP: {}
+        f:podIPs:
+          .: {}
+          k:{"ip":"10.244.0.8"}:
+            .: {}
+            f:ip: {}
+        f:startTime: {}
+    manager: kubelet
+    operation: Update
+    time: "2021-05-25T01:35:30Z"
+  name: argocd-repo-server-5fbf484547-n87c7
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ReplicaSet
+    name: argocd-repo-server-5fbf484547
+    uid: befece67-9488-4ce3-a760-c2dd9dc1e7af
+  resourceVersion: "991"
+  uid: 9cbddb81-69a8-4dea-aeda-18d7d85974ab
+spec:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: argocd-repo-server
+          topologyKey: kubernetes.io/hostname
+        weight: 100
+      - podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: argocd
+          topologyKey: kubernetes.io/hostname
+        weight: 5
+  automountServiceAccountToken: false
+  containers:
+  - command:
+    - uid_entrypoint.sh
+    - argocd-repo-server
+    - --redis
+    - argocd-redis:6379
+    # image: quay.io/argoproj/argocd:v2.0.2
+    image: gcr.io/sigstore-test-project/argocd:v2.0.2
+    imagePullPolicy: Always
+    livenessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /healthz?full=true
+        port: 8084
+        scheme: HTTP
+      initialDelaySeconds: 30
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 1
+    name: argocd-repo-server
+    ports:
+    - containerPort: 8081
+      protocol: TCP
+    - containerPort: 8084
+      protocol: TCP
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /healthz
+        port: 8084
+        scheme: HTTP
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
+    resources: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - all
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /app/config/ssh
+      name: ssh-known-hosts
+    - mountPath: /app/config/tls
+      name: tls-certs
+    - mountPath: /app/config/gpg/source
+      name: gpg-keys
+    - mountPath: /app/config/gpg/keys
+      name: gpg-keyring
+    - mountPath: /app/config/reposerver/tls
+      name: argocd-repo-server-tls
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: test-managed-control-plane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - configMap:
+      defaultMode: 420
+      name: argocd-ssh-known-hosts-cm
+    name: ssh-known-hosts
+  - configMap:
+      defaultMode: 420
+      name: argocd-tls-certs-cm
+    name: tls-certs
+  - configMap:
+      defaultMode: 420
+      name: argocd-gpg-keys-cm
+    name: gpg-keys
+  - emptyDir: {}
+    name: gpg-keyring
+  - name: argocd-repo-server-tls
+    secret:
+      defaultMode: 420
+      items:
+      - key: tls.crt
+        path: tls.crt
+      - key: tls.key
+        path: tls.key
+      - key: ca.crt
+        path: ca.crt
+      optional: true
+      secretName: argocd-repo-server-tls
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2021-05-25T01:34:29Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2021-05-25T01:35:30Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2021-05-25T01:35:30Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2021-05-25T01:34:29Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://a5ab3bd4d6359f502032f310ec277382ada1248571293cb9eabc7e4c457c5c0d
+    image: quay.io/argoproj/argocd:v2.0.2
+    imageID: quay.io/argoproj/argocd@sha256:6b09ce71045624cdba66bd71e4b7b59ef8f5b8b6e9e5b497f8023d5164dcde3e
+    lastState: {}
+    name: argocd-repo-server
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2021-05-25T01:35:21Z"
+  hostIP: 172.18.0.2
+  phase: Running
+  podIP: 10.244.0.8
+  podIPs:
+  - ip: 10.244.0.8
+  qosClass: BestEffort
+  startTime: "2021-05-25T01:34:29Z"
