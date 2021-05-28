@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-simulator
+spec:
+  selector:
+    matchLabels:
+      app: argo-simulator
+  template:
+    metadata:
+      labels:
+        app: argo-simulator
+    spec:
+      serviceAccountName: argo-simulator
+      containers:
+      - name: simulator
+        image: localhost:5000/argo-simulator:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+       
