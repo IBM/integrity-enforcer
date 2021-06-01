@@ -118,10 +118,6 @@ var _ = Describe("Test integrity shield", func() {
 			}
 			framework := initFrameWork()
 			var timeout int = 120
-			// signer config
-			sc, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), DefaultSignerConfigName, metav1.GetOptions{})
-			Expect(err).To(BeNil())
-			generation_signerconfig := sc.Generation
 			// shield config
 			shc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), DefaultShieldConfigName, metav1.GetOptions{})
 			Expect(err).To(BeNil())
@@ -129,16 +125,6 @@ var _ = Describe("Test integrity shield", func() {
 			// update cr
 			cmd_err := Kubectl("apply", "-f", integrityShieldOperatorCR_updated, "-n", ishield_namespace)
 			Expect(cmd_err).To(BeNil())
-			Eventually(func() error {
-				sc, err := framework.SignerConfigClient.SignerConfigs(ishield_namespace).Get(goctx.Background(), DefaultSignerConfigName, metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
-				if sc.Generation == generation_signerconfig {
-					return fmt.Errorf("SignerConfig is not changed: %v", DefaultSignerConfigName)
-				}
-				return nil
-			}, timeout, 1).Should(BeNil())
 			Eventually(func() error {
 				shc, err := framework.ShieldConfigClient.ShieldConfigs(ishield_namespace).Get(goctx.Background(), DefaultShieldConfigName, metav1.GetOptions{})
 				if err != nil {

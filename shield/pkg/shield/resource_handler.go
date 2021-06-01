@@ -33,6 +33,7 @@ import (
 ***********************************************/
 
 type ResourceCheckHandler struct {
+	profile       rspapi.ResourceSigningProfile
 	config        *config.ShieldConfig
 	ctx           *CheckContext
 	resc          *common.ResourceContext
@@ -43,20 +44,20 @@ type ResourceCheckHandler struct {
 	logInScope    bool
 }
 
-func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *logger.Logger) *ResourceCheckHandler {
+func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile) *ResourceCheckHandler {
 	data := &RunData{}
 	data.EnableForceInitialize() // ResourceCheckHandler will load profiles on every run
-	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger}
+	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger, profile: profile}
 }
 
-func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *logger.Logger, ctx *CheckContext, data *RunData) *ResourceCheckHandler {
-	resHandler := NewResourceCheckHandler(config, metaLogger)
+func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile, ctx *CheckContext, data *RunData) *ResourceCheckHandler {
+	resHandler := NewResourceCheckHandler(config, metaLogger, profile)
 	resHandler.ctx = ctx
 	resHandler.data = data
 	return resHandler
 }
 
-func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *DecisionResult {
+func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *common.DecisionResult {
 
 	// init ctx, resc and data & init logger
 	self.initialize(res)
@@ -74,30 +75,16 @@ func (self *ResourceCheckHandler) GetCheckContext() *CheckContext {
 	return self.ctx
 }
 
-func (self *ResourceCheckHandler) Check() *DecisionResult {
-	var dr *DecisionResult
-	dr = undeterminedDescision()
+func (self *ResourceCheckHandler) Check() *common.DecisionResult {
+	var dr *common.DecisionResult
+	dr = common.UndeterminedDecision()
 
-	dr = ishieldScopeCheckByResource(self.resc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
+	dr = signatureCheckWithSingleProfile(self.profile, self.resc, self.config, self.data, self.ctx)
+	if dr.IsAllowed() {
+		// this RSP allowed the resource. will check next RSP.
+	} else {
+		// this RSP denied the resource. return the result.
 		return dr
-	}
-	self.logInScope = true
-
-	var matchedProfiles []rspapi.ResourceSigningProfile
-	dr, matchedProfiles = protectedCheckByResource(self.resc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
-		return dr
-	}
-
-	for _, prof := range matchedProfiles {
-		dr = signatureCheckWithSingleProfile(prof, self.resc, self.config, self.data, self.ctx)
-		if dr.IsAllowed() {
-			// this RSP allowed the resource. will check next RSP.
-		} else {
-			// this RSP denied the resource. return the result.
-			return dr
-		}
 	}
 
 	resourceDecisionResult := dr
@@ -121,7 +108,7 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 	}
 
 	if dr.IsUndetermined() {
-		dr = &DecisionResult{
+		dr = &common.DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,
 			Message:    "IntegrityShield failed to decide a response for this resource.",
@@ -131,8 +118,8 @@ func (self *ResourceCheckHandler) Check() *DecisionResult {
 }
 
 // image
-func (self *ResourceCheckHandler) ImageCheck() *DecisionResult {
-	idr := undeterminedDescision()
+func (self *ResourceCheckHandler) ImageCheck() *common.DecisionResult {
+	idr := common.UndeterminedDecision()
 	needSigCheck, imageToVerify, _ := requestCheckForImageCheck(self.resc)
 	if !needSigCheck {
 		return idr
@@ -144,7 +131,7 @@ func (self *ResourceCheckHandler) ImageCheck() *DecisionResult {
 }
 
 // load resoruces / set default values
-func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *DecisionResult {
+func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *common.DecisionResult {
 	self.resourceLog = self.serverLogger.WithFields(
 		log.Fields{
 			"namespace":  res.GetNamespace(),
@@ -172,7 +159,7 @@ func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *De
 	}
 	self.data.Init(self.config)
 
-	return &DecisionResult{Type: common.DecisionUndetermined}
+	return &common.DecisionResult{Type: common.DecisionUndetermined}
 }
 
 // reset logger context

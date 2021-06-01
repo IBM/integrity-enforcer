@@ -46,7 +46,7 @@ import (
 
 type VerifierInterface interface {
 	Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
-	LoadSecrets(ishieldNS string) error
+	LoadSecrets(overwriteSecretsBaseDir string) error
 }
 
 /**********************************************
@@ -73,7 +73,7 @@ func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPath
 	return nil
 }
 
-func (self *ResourceVerifier) LoadSecrets(ishieldNS string) error {
+func (self *ResourceVerifier) LoadSecrets(overwriteSecretsBaseDir string) error {
 	replace := map[string]string{}
 	for _, keyPath := range self.AllMountedKeyPathList {
 		// if secret is found, skip loading
@@ -82,12 +82,13 @@ func (self *ResourceVerifier) LoadSecrets(ishieldNS string) error {
 		}
 		// otherwise, try getting secret and save it as tmp local file, and then update keyPathList at the end
 		keyPathParts := parseKeyPath(keyPath)
-		secretName := keyPathParts["secret"]
+		secretName := keyPathParts["secretName"]
+		secretNamespace := keyPathParts["secretNamespace"]
 		if secretName == "" {
 			continue
 		}
 		// get secret
-		obj, err := kubeutil.GetResource("v1", "Secret", ishieldNS, secretName)
+		obj, err := kubeutil.GetResource("v1", "Secret", secretNamespace, secretName)
 		if err != nil {
 			logger.Warn(fmt.Sprintf("Failed to get secret `%s`; %s", secretName, err.Error()))
 			continue
@@ -97,27 +98,26 @@ func (self *ResourceVerifier) LoadSecrets(ishieldNS string) error {
 		_ = json.Unmarshal(objBytes, &res)
 
 		// save it in a tmp dir
-		keyPathParts["base"] = "./tmp"
+		if overwriteSecretsBaseDir != "" {
+			keyPathParts["base"] = overwriteSecretsBaseDir
+		}
 		newPath := filepath.Clean(joinKeyPathParts(keyPathParts))
 		newPathDir := filepath.Dir(newPath)
-		newPathFile := filepath.Base(newPath)
 		err = os.MkdirAll(newPathDir, 0755)
 		if err != nil {
 			logger.Warn(fmt.Sprintf("Failed to create a directory for secret `%s`; %s", secretName, err.Error()))
 			continue
 		}
-		pubKeyBytes, ok := res.Data[newPathFile]
-		if !ok {
-			logger.Warn(fmt.Sprintf("Failed to get a pubKeyBytes from secret `%s`, file %s", secretName, newPathFile))
-			continue
-		}
-		err = ioutil.WriteFile(newPath, pubKeyBytes, 0755)
-		if err != nil {
-			logger.Warn(fmt.Sprintf("Failed to save a secret as a file `%s`; %s", secretName, err.Error()))
-			continue
+		for filename, pubKeyBytes := range res.Data {
+			savingFilePath := filepath.Join(newPathDir, filename)
+			err = ioutil.WriteFile(savingFilePath, pubKeyBytes, 0755)
+			if err != nil {
+				logger.Warn(fmt.Sprintf("Failed to save a secret as a file `%s`; %s", secretName, err.Error()))
+				continue
+			}
 		}
 
-		replace[keyPath] = newPath
+		replace[keyPath] = newPathDir
 	}
 	// replace all key path list with the saved filepath
 	for i, keyPath := range self.AllMountedKeyPathList {
@@ -145,11 +145,11 @@ func (self *ResourceVerifier) LoadSecrets(ishieldNS string) error {
 
 func parseKeyPath(keyPath string) map[string]string {
 	m := map[string]string{
-		"base":      "",
-		"keyConfig": "",
-		"secret":    "",
-		"sigType":   "",
-		"file":      "",
+		"base":            "",
+		"secretNamespace": "",
+		"secretName":      "",
+		"sigType":         "",
+		"file":            "",
 	}
 	sigType := ""
 	if strings.Contains(keyPath, "/pgp/") {
@@ -170,19 +170,19 @@ func parseKeyPath(keyPath string) map[string]string {
 		m["file"] = parts1[1]
 	}
 	if len(parts2) >= 1 {
-		m["secret"] = parts2[len(parts2)-1]
+		m["secretName"] = parts2[len(parts2)-1]
 	}
-	keyConfig := ""
+	secretNamespace := ""
 	if len(parts2) >= 2 {
-		keyConfig = parts2[len(parts2)-2]
+		secretNamespace = parts2[len(parts2)-2]
 	}
 
-	if keyConfig == "" {
+	if secretNamespace == "" {
 		return m
 	}
 
-	m["keyConfig"] = keyConfig
-	parts3 := strings.Split(keyPath, keyConfig)
+	m["secretNamespace"] = secretNamespace
+	parts3 := strings.Split(keyPath, secretNamespace)
 	if len(parts2) >= 1 {
 		m["base"] = parts3[0]
 	}
@@ -190,7 +190,7 @@ func parseKeyPath(keyPath string) map[string]string {
 }
 
 func joinKeyPathParts(m map[string]string) string {
-	keys := []string{"base", "keyConfig", "secret", "sigType", "file"}
+	keys := []string{"base", "secretNamespace", "secretName", "sigType", "file"}
 	parts := []string{}
 	for _, key := range keys {
 		if v, ok := m[key]; ok {
@@ -214,14 +214,8 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 
 	excludeDiffValue := resc.ExcludeDiffValue()
 
-	kustomizeList := signingProfile.Kustomize(resc.Map())
-	allowNSChange := false
-	for _, k := range kustomizeList {
-		if k.AllowNamespaceChange {
-			allowNSChange = true
-			break
-		}
-	}
+	// TODO: need new implementation of kustomizeList
+	var kustomizeList []*common.KustomizePattern
 	allowDiffPatterns := makeAllowDiffPatterns(resc, kustomizeList)
 
 	protectAttrsList := signingProfile.ProtectAttrs(resc.Map())
@@ -242,18 +236,18 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 			message = yamlBytes
 		}
 
-		// if allowNamespaceChange is true in KustomizePattern, overwrite namespace in message with requested one
-		if allowNSChange {
-			messageNode, err := mapnode.NewFromYamlBytes([]byte(message))
-			if err == nil {
-				overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, resc.Namespace)
-				overwriteNode, _ := mapnode.NewFromBytes([]byte(overwriteJson))
-				newMessageNode, err := messageNode.Merge(overwriteNode)
-				if err == nil {
-					message = newMessageNode.ToYaml()
-				}
-			}
-		}
+		// // if allowNamespaceChange is true in KustomizePattern, overwrite namespace in message with requested one
+		// if allowNSChange {
+		// 	messageNode, err := mapnode.NewFromYamlBytes([]byte(message))
+		// 	if err == nil {
+		// 		overwriteJson := fmt.Sprintf(`{"metadata":{"namespace":"%s"}}`, resc.Namespace)
+		// 		overwriteNode, _ := mapnode.NewFromBytes([]byte(overwriteJson))
+		// 		newMessageNode, err := messageNode.Merge(overwriteNode)
+		// 		if err == nil {
+		// 			message = newMessageNode.ToYaml()
+		// 		}
+		// 	}
+		// }
 
 		matched, diffStr := self.MatchMessage([]byte(message), resc.RawObject, protectAttrsList, ignoreAttrsList, allowDiffPatterns, resc.ResourceScope, resc.Kind, sig.SignType, excludeDiffValue)
 		if !matched {
@@ -705,7 +699,7 @@ func (self *HelmVerifier) Verify(sig *GeneralSignature, resc *common.ResourceCon
 
 }
 
-func (self *HelmVerifier) LoadSecrets(ishieldNS string) error {
+func (self *HelmVerifier) LoadSecrets(overwriteSecretsBaseDir string) error {
 	// TODO: implement
 	return nil
 }

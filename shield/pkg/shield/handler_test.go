@@ -42,7 +42,6 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
@@ -61,7 +60,7 @@ var schemes *runtime.Scheme
 var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
-func getTestData(num int) (*common.RequestContext, *common.RequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *DecisionResult, rspapi.ResourceSigningProfile, *DecisionResult) {
+func getTestData(num int) (*common.RequestContext, *common.RequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *common.DecisionResult, rspapi.ResourceSigningProfile, *common.DecisionResult) {
 
 	var reqc *common.RequestContext
 	var reqobj *common.RequestObject
@@ -70,9 +69,9 @@ func getTestData(num int) (*common.RequestContext, *common.RequestObject, *commo
 	var data *RunData
 	var cfg *config.ShieldConfig
 	var ctx *CheckContext
-	var dr0 *DecisionResult
+	var dr0 *common.DecisionResult
 	var prof rspapi.ResourceSigningProfile
-	var dr *DecisionResult
+	var dr *common.DecisionResult
 
 	var adreq *admv1.AdmissionRequest
 
@@ -94,7 +93,7 @@ func getTestData(num int) (*common.RequestContext, *common.RequestObject, *commo
 	//_ = json.Unmarshal(drBytes, &dr)
 	_ = json.Unmarshal(profBytes, &prof)
 	_ = json.Unmarshal(drBytes, &dr)
-	dr0 = &DecisionResult{
+	dr0 = &common.DecisionResult{
 		Type: common.DecisionUndetermined,
 	}
 	return reqc, reqobj, resc, cfg, data, ctx, dr0, prof, dr
@@ -235,7 +234,6 @@ var _ = BeforeSuite(func(done Done) {
 	err = ec.AddToScheme(schemes)
 	err = rsp.AddToScheme(schemes)
 	err = rs.AddToScheme(schemes)
-	err = sigconf.AddToScheme(schemes)
 
 	Expect(err).NotTo(HaveOccurred())
 
@@ -273,14 +271,6 @@ var _ = BeforeSuite(func(done Done) {
 		Spec:       ec.ShieldConfigSpec{ShieldConfig: testConfig},
 	}
 	err = k8sClient.Create(context.Background(), sconf)
-	Expect(err).Should(BeNil())
-
-	// create SignerConfig in test data
-	sigconfres := &sigconf.SignerConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: data.SignerConfig.Name, Namespace: data.SignerConfig.Namespace},
-		Spec:       sigconf.SignerConfigSpec{Config: data.SignerConfig.Spec.Config.DeepCopy()},
-	}
-	err = k8sClient.Create(context.Background(), sigconfres)
 	Expect(err).Should(BeNil())
 
 	// create rsps in test data
@@ -325,9 +315,17 @@ func handlerTest() {
 	It("Handler Run Test (allow, no-mutation)", func() {
 		var timeout int = 10
 		Eventually(func() error {
-			metaLogger := getTestLogger(req, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(req)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(req, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(req, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(req)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
+
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
@@ -342,9 +340,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			invalidRSPReq := getInvalidRSPRequest(req)
-			metaLogger := getTestLogger(invalidRSPReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(invalidRSPReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(invalidRSPReq, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(invalidRSPReq, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(invalidRSPReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
@@ -359,9 +364,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			invalidSConfReq := getInvalidSignerConfigRequest(req)
-			metaLogger := getTestLogger(invalidSConfReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(invalidSConfReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(invalidSConfReq, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(invalidSConfReq, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(invalidSConfReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
@@ -380,9 +392,17 @@ func handlerTest() {
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
 			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/keyring-secret/pgp/miss-configured-pubring"}
-			metaLogger := getTestLogger(changedReq, test2Config)
-			testHandler := NewHandler(test2Config, metaLogger)
-			resp := testHandler.Run(changedReq)
+
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(changedReq, test2Config.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(changedReq, test2Config)
+				testHandler := NewHandler(test2Config, metaLogger, profile)
+				//process request
+				result := testHandler.Run(changedReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
@@ -397,9 +417,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			changedReq := getChangedRequest(req)
-			metaLogger := getTestLogger(changedReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(changedReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(changedReq, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(changedReq, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(changedReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
 			if resp == nil {
@@ -414,9 +441,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			modReq := getRequestWithoutAnnoSig(req)
-			metaLogger := getTestLogger(modReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(modReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(modReq, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(modReq, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(modReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -432,9 +466,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			updReq := getUpdateRequest()
-			metaLogger := getTestLogger(updReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(updReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(updReq, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(updReq, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(updReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -450,9 +491,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			updReq := getUpdateWithMetaChangeRequest()
-			metaLogger := getTestLogger(updReq, testConfig)
-			testHandler := NewHandler(testConfig, metaLogger)
-			resp := testHandler.Run(updReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(updReq, testConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(updReq, testConfig)
+				testHandler := NewHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(updReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))
@@ -468,9 +516,16 @@ func handlerTest() {
 		var timeout int = 10
 		Eventually(func() error {
 			crdReq, crdTestConfig := getCRDRequest()
-			metaLogger := getTestLogger(crdReq, crdTestConfig)
-			testHandler := NewHandler(crdTestConfig, metaLogger)
-			resp := testHandler.Run(crdReq)
+			matchedProfiles, _ := GetMatchedProfilesWithRequest(crdReq, crdTestConfig.Namespace)
+			multipleResults := []*admv1.AdmissionResponse{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(crdReq, crdTestConfig)
+				testHandler := NewHandler(crdTestConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(crdReq)
+				multipleResults = append(multipleResults, result)
+			}
+			resp, _ := SummarizeMultipleAdmissionResponses(multipleResults)
 
 			respBytes, _ := json.Marshal(resp)
 			fmt.Printf("[TestInfo] respBytes: %s", string(respBytes))

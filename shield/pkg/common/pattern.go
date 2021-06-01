@@ -48,6 +48,23 @@ func MatchPattern(pattern, value string) bool {
 	}
 }
 
+func MatchSinglePattern(pattern, value string) bool {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		return true
+	} else if pattern == "*" {
+		return true
+	} else if pattern == "-" && value == "" {
+		return true
+	} else if strings.HasSuffix(pattern, "*") {
+		return strings.HasPrefix(value, strings.TrimRight(pattern, "*"))
+	} else if pattern == value {
+		return true
+	} else {
+		return false
+	}
+}
+
 func ExactMatch(pattern, value string) bool {
 	return pattern == value
 }

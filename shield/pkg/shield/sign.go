@@ -195,12 +195,6 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	// eval sign policy
 	ref := resc.ResourceRef()
 
-	// override ref name if there is kustomize pattern for this
-	kustPatterns := signingProfile.Kustomize(resc.Map())
-	if len(kustPatterns) > 0 {
-		ref = kustPatterns[0].Override(ref)
-	}
-
 	// find signature
 	rsig := self.GetResourceSignature(ref, resc, resSigList)
 	if rsig == nil {
@@ -214,6 +208,18 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
+	candidatePubkeys = map[common.SignatureType][]string{}
+	for _, signerCondition := self.signerConfig.Signers {
+		secretName := signerCondition.KeySecretName
+		secretNamespace := signerCondition.keySecretNamespace
+		signatureType := signerCondition.SignatureType
+		if secretNamespace == "" {
+			secretNamespace = self.config.Namespace
+		}
+		if string(signatureType) == "" {
+			signatureType = common.SignatureTypePGP
+		}
+	}
 	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, resc.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
@@ -255,11 +261,9 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
 
 	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
-	if !kubeutil.IsInCluster() {
-		err := verifier.LoadSecrets(self.config.Namespace)
-		if err != nil {
-			logger.Warn("Error while loading pubkey secrets;", err.Error())
-		}
+	err := verifier.LoadSecrets(self.config.Namespace)
+	if err != nil {
+		logger.Warn("Error while loading pubkey secrets;", err.Error())
 	}
 
 	// verify signature

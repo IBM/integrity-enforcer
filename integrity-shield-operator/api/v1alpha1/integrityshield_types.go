@@ -35,19 +35,16 @@ import (
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 )
 
 const (
 	DefaultIntegrityShieldCRDName        = "integrityshields.apis.integrityshield.io"
 	DefaultShieldConfigCRDName           = "shieldconfigs.apis.integrityshield.io"
-	DefaultSignerConfigCRDName           = "signerconfigs.apis.integrityshield.io"
 	DefaultResourceSignatureCRDName      = "resourcesignatures.apis.integrityshield.io"
 	DefaultResourceSigningProfileCRDName = "resourcesigningprofiles.apis.integrityshield.io"
 	DefaultHelmReleaseMetadataCRDName    = "helmreleasemetadatas.apis.integrityshield.io"
 	DefaultResourceAuditReviewCRDName    = "resourceauditreviews.apis.integrityshield.io"
 	// DefaultProtectedResourceIntegrityCRDName  = "protectedresourceintegrities.apis.integrityshield.io"
-	DefaultSignerConfigCRName                 = "signer-config"
 	DefaultIShieldAdminClusterRoleName        = "ishield-admin-clusterrole"
 	DefaultIShieldAdminClusterRoleBindingName = "ishield-admin-clusterrolebinding"
 	DefaultIShieldAdminRoleName               = "ishield-admin-role"
@@ -103,7 +100,6 @@ type IntegrityShieldSpec struct {
 	ShieldConfig            *iec.ShieldConfig     `json:"shieldConfig,omitempty"`
 	IgnoreRules             []common.Rule         `json:"ignoreRules,omitempty"`
 	IgnoreAttrs             []common.AttrsPattern `json:"ignoreAttrs,omitempty"`
-	SignerConfig            *common.SignerConfig  `json:"signerConfig,omitempty"`
 	ResourceSigningProfiles []*ProfileConfig      `json:"resourceSigningProfiles,omitempty"`
 
 	APITlsSecretName           string     `json:"apiTlsSecretName,omitempty"`
@@ -283,10 +279,6 @@ func (self *IntegrityShield) GetShieldConfigCRDName() string {
 	return DefaultShieldConfigCRDName
 }
 
-func (self *IntegrityShield) GetSignerConfigCRDName() string {
-	return DefaultSignerConfigCRDName
-}
-
 func (self *IntegrityShield) GetResourceSignatureCRDName() string {
 	return DefaultResourceSignatureCRDName
 }
@@ -309,10 +301,6 @@ func (self *IntegrityShield) GetHelmReleaseMetadataCRDName() string {
 
 func (self *IntegrityShield) GetShieldConfigCRName() string {
 	return self.Spec.ShieldConfigCrName
-}
-
-func (self *IntegrityShield) GetSignerConfigCRName() string {
-	return DefaultSignerConfigCRName
 }
 
 func (self *IntegrityShield) GetRegKeySecretName() string {
@@ -443,7 +431,6 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 	_deployType := getTypeFromObj(&appsv1.Deployment{}, scheme)
 	_crdType := getTypeFromObj(&extv1.CustomResourceDefinition{}, scheme)
 	_ecType := getTypeFromObj(&ec.ShieldConfig{}, scheme)
-	_sigconfType := getTypeFromObj(&sigconf.SignerConfig{}, scheme)
 	_rspType := getTypeFromObj(&rsp.ResourceSigningProfile{}, scheme)
 	_secretType := getTypeFromObj(&v1.Secret{}, scheme)
 	_saType := getTypeFromObj(&v1.ServiceAccount{}, scheme)
@@ -477,10 +464,6 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 		},
 		{
 			Kind: _crdType.Kind,
-			Name: self.GetSignerConfigCRDName(),
-		},
-		{
-			Kind: _crdType.Kind,
 			Name: self.GetResourceSignatureCRDName(),
 		},
 		{
@@ -494,11 +477,6 @@ func (self *IntegrityShield) GetIShieldResourceList(scheme *runtime.Scheme) ([]*
 		{
 			Kind:      _ecType.Kind,
 			Name:      self.GetShieldConfigCRName(),
-			Namespace: self.Namespace,
-		},
-		{
-			Kind:      _sigconfType.Kind,
-			Name:      self.GetSignerConfigCRName(),
 			Namespace: self.Namespace,
 		},
 		{

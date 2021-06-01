@@ -24,7 +24,6 @@ import (
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	econf "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	"github.com/ghodss/yaml"
@@ -145,44 +144,6 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	}
 
 	return ecc
-}
-
-//signer config cr
-func BuildSignerConfigForIShield(cr *apiv1alpha1.IntegrityShield) *sigconf.SignerConfig {
-	var signerConfig *common.SignerConfig
-
-	if cr.Spec.SignerConfig != nil {
-		signerConfig = cr.Spec.SignerConfig
-	} else {
-		signerConfig = &common.SignerConfig{
-			Policies: []common.SignerConfigCondition{
-				{
-					Namespaces: []string{"sample"},
-					Signers:    []string{"SampleSigner"},
-				},
-			},
-			Signers: []common.SignerCondition{
-				{
-					Name: "SampleSigner",
-					Subjects: []common.SubjectMatchPattern{
-						{
-							CommonName: "sample",
-						},
-					},
-				},
-			},
-		}
-	}
-	epcr := &sigconf.SignerConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetSignerConfigCRName(),
-			Namespace: cr.Namespace,
-		},
-		Spec: sigconf.SignerConfigSpec{
-			Config: signerConfig,
-		},
-	}
-	return epcr
 }
 
 func BuildResourceSigningProfileForIShield(cr *apiv1alpha1.IntegrityShield, prof *apiv1alpha1.ProfileConfig) *rsp.ResourceSigningProfile {

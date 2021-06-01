@@ -59,17 +59,6 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 	return newCRD
 }
 
-//signer config crd
-func BuildSignerConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:     "SignerConfig",
-		Plural:   "signerconfigs",
-		ListKind: "SignerConfigList",
-		Singular: "signerconfig",
-	}
-	return buildCRD(cr.GetSignerConfigCRDName(), cr.Namespace, crdNames, true)
-}
-
 //shield config crd
 func BuildShieldConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{

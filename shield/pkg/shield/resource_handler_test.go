@@ -26,6 +26,7 @@ import (
 	admv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	// +kubebuilder:scaffold:imports
 )
@@ -46,9 +47,16 @@ func resourceHandlerTest() {
 			tmp, _ := json.Marshal(testConfig)
 			_ = json.Unmarshal(tmp, &test2Config)
 			test2Config.KeyPathList = []string{"./testdata/sample-signer-keyconfig/keyring-secret/pgp/miss-configured-pubring"}
-			metaLogger := getTestLogger(changedReq, test2Config)
-			testHandler := NewResourceCheckHandler(test2Config, metaLogger)
-			dr := testHandler.Run(res)
+			matchedProfiles, _ := GetMatchedProfilesWithResource(res, test2Config.Namespace)
+			multipleResults := []*common.DecisionResult{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(changedReq, test2Config)
+				testHandler := NewResourceCheckHandler(test2Config, metaLogger, profile)
+				//process request
+				result := testHandler.Run(res)
+				multipleResults = append(multipleResults, result)
+			}
+			dr, _ := SummarizeMultipleDecisionResults(multipleResults)
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
 			if dr == nil {
@@ -64,9 +72,16 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			changedReq := getChangedRequest(req)
 			res := adReqToResource(changedReq)
-			metaLogger := getTestLogger(changedReq, testConfig)
-			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
-			dr := testHandler.Run(res)
+			matchedProfiles, _ := GetMatchedProfilesWithResource(res, testConfig.Namespace)
+			multipleResults := []*common.DecisionResult{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(changedReq, testConfig)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(res)
+				multipleResults = append(multipleResults, result)
+			}
+			dr, _ := SummarizeMultipleDecisionResults(multipleResults)
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
 			if dr == nil {
@@ -82,9 +97,16 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			modReq := getRequestWithoutAnnoSig(req)
 			res := adReqToResource(modReq)
-			metaLogger := getTestLogger(modReq, testConfig)
-			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
-			dr := testHandler.Run(res)
+			matchedProfiles, _ := GetMatchedProfilesWithResource(res, testConfig.Namespace)
+			multipleResults := []*common.DecisionResult{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(modReq, testConfig)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(res)
+				multipleResults = append(multipleResults, result)
+			}
+			dr, _ := SummarizeMultipleDecisionResults(multipleResults)
 
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
@@ -101,9 +123,16 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			updReq := getUpdateRequest()
 			res := adReqToResource(updReq)
-			metaLogger := getTestLogger(updReq, testConfig)
-			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
-			dr := testHandler.Run(res)
+			matchedProfiles, _ := GetMatchedProfilesWithResource(res, testConfig.Namespace)
+			multipleResults := []*common.DecisionResult{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(updReq, testConfig)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(res)
+				multipleResults = append(multipleResults, result)
+			}
+			dr, _ := SummarizeMultipleDecisionResults(multipleResults)
 
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
@@ -120,9 +149,16 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			updReq := getUpdateWithMetaChangeRequest()
 			res := adReqToResource(updReq)
-			metaLogger := getTestLogger(updReq, testConfig)
-			testHandler := NewResourceCheckHandler(testConfig, metaLogger)
-			dr := testHandler.Run(res)
+			matchedProfiles, _ := GetMatchedProfilesWithResource(res, testConfig.Namespace)
+			multipleResults := []*common.DecisionResult{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(updReq, testConfig)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(res)
+				multipleResults = append(multipleResults, result)
+			}
+			dr, _ := SummarizeMultipleDecisionResults(multipleResults)
 
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
@@ -139,10 +175,16 @@ func resourceHandlerTest() {
 		Eventually(func() error {
 			crdReq, crdTestConfig := getCRDRequest()
 			res := adReqToResource(crdReq)
-			metaLogger := getTestLogger(crdReq, crdTestConfig)
-			testHandler := NewResourceCheckHandler(crdTestConfig, metaLogger)
-			dr := testHandler.Run(res)
-
+			matchedProfiles, _ := GetMatchedProfilesWithResource(res, crdTestConfig.Namespace)
+			multipleResults := []*common.DecisionResult{}
+			for _, profile := range matchedProfiles {
+				metaLogger := getTestLogger(crdReq, crdTestConfig)
+				testHandler := NewResourceCheckHandler(crdTestConfig, metaLogger, profile)
+				//process request
+				result := testHandler.Run(res)
+				multipleResults = append(multipleResults, result)
+			}
+			dr, _ := SummarizeMultipleDecisionResults(multipleResults)
 			drBytes, _ := json.Marshal(dr)
 			fmt.Printf("[TestInfo] drBytes: %s", string(drBytes))
 			if dr == nil {

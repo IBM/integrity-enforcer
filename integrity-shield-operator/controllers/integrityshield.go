@@ -41,7 +41,6 @@ import (
 	cert "github.com/IBM/integrity-enforcer/integrity-shield-operator/cert"
 
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,11 +139,6 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCRD(
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateSignerConfigCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildSignerConfigCRD(instance)
-	return r.createOrUpdateCRD(instance, expected)
-}
 func (r *IntegrityShieldReconciler) createOrUpdateResourceSignatureCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildResourceSignatureCRD(instance)
@@ -181,11 +175,6 @@ func (r *IntegrityShieldReconciler) deleteShieldConfigCRD(
 	return r.deleteCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) deleteSignerConfigCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildSignerConfigCRD(instance)
-	return r.deleteCRD(instance, expected)
-}
 func (r *IntegrityShieldReconciler) deleteResourceSignatureCRD(
 	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildResourceSignatureCRD(instance)
@@ -262,58 +251,6 @@ func (r *IntegrityShieldReconciler) createOrUpdateShieldConfigCR(instance *apiv1
 	}
 
 	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.Create(ctx, expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return ctrl.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return ctrl.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
-	} else {
-		if !reflect.DeepEqual(expected.Spec, found.Spec) {
-			expected.ObjectMeta = found.ObjectMeta
-			err = r.Update(ctx, expected)
-			if err != nil {
-				reqLogger.Error(err, "Failed to update the resource")
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	// No extra validation
-
-	// No reconcile was necessary
-	return ctrl.Result{}, nil
-
-}
-
-func (r *IntegrityShieldReconciler) createOrUpdateSignerConfigCR(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
-	ctx := context.Background()
-	found := &sigconf.SignerConfig{}
-	expected := res.BuildSignerConfigForIShield(instance)
-
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name,
-		"SignerConfig.Name", expected.Name)
-
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return ctrl.Result{}, err
-	}
-
-	// If default rpp does not exist, create it and requeue
 	err = r.Get(ctx, types.NamespacedName{Name: expected.Name, Namespace: instance.Namespace}, found)
 
 	if err != nil && errors.IsNotFound(err) {

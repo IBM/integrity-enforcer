@@ -29,16 +29,20 @@ const maxHistoryLength = 3
 
 // ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
 type ResourceSigningProfileSpec struct {
+	// ResourceProfile
 	Disabled bool `json:"disabled,omitempty"`
 	// `TargetNamespaceSelector` is used only for profile in iShield NS
-	TargetNamespaceSelector *common.NamespaceSelector  `json:"targetNamespaceSelector,omitempty"`
-	ProtectRules            []*common.Rule             `json:"protectRules,omitempty"`
-	IgnoreRules             []*common.Rule             `json:"ignoreRules,omitempty"`
-	ForceCheckRules         []*common.Rule             `json:"forceCheckRules,omitempty"`
-	KustomizePatterns       []*common.KustomizePattern `json:"kustomizePatterns,omitempty"`
-	ProtectAttrs            []*common.AttrsPattern     `json:"protectAttrs,omitempty"`
-	UnprotectAttrs          []*common.AttrsPattern     `json:"unprotectAttrs,omitempty"`
-	IgnoreAttrs             []*common.AttrsPattern     `json:"ignoreAttrs,omitempty"`
+	TargetNamespaceSelector *common.NamespaceSelector `json:"targetNamespaceSelector,omitempty"`
+	ProtectRules            []*common.Rule            `json:"protectRules,omitempty"`
+	IgnoreRules             []*common.Rule            `json:"ignoreRules,omitempty"`
+	ProtectAttrs            []*common.AttrsPattern    `json:"protectAttrs,omitempty"`
+	IgnoreAttrs             []*common.AttrsPattern    `json:"ignoreAttrs,omitempty"`
+
+	// SignerConfig
+	SignerConfig *common.SignerConfig `json:"signerConfig,omitempty"`
+
+	// ImageProfile
+	ImageProfile *common.ImageProfile `json:"imageProfile,omitempty"`
 }
 
 // ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy
@@ -94,13 +98,6 @@ func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS 
 		strictMatch = true
 	}
 
-	for _, rule := range self.Spec.ForceCheckRules {
-		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
-			return true, rule
-		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
-			return true, rule
-		}
-	}
 	for _, rule := range self.Spec.IgnoreRules {
 		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
 			return false, rule
@@ -123,20 +120,9 @@ func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) Resourc
 	newProfile := self
 	newProfile.Spec.ProtectRules = append(newProfile.Spec.ProtectRules, another.Spec.ProtectRules...)
 	newProfile.Spec.IgnoreRules = append(newProfile.Spec.IgnoreRules, another.Spec.IgnoreRules...)
-	newProfile.Spec.ForceCheckRules = append(newProfile.Spec.ForceCheckRules, another.Spec.ForceCheckRules...)
 	newProfile.Spec.ProtectAttrs = append(newProfile.Spec.ProtectAttrs, another.Spec.ProtectAttrs...)
 	newProfile.Spec.IgnoreAttrs = append(newProfile.Spec.IgnoreAttrs, another.Spec.IgnoreAttrs...)
 	return newProfile
-}
-
-func (self ResourceSigningProfile) Kustomize(reqFields map[string]string) []*common.KustomizePattern {
-	patterns := []*common.KustomizePattern{}
-	for _, kustPattern := range self.Spec.KustomizePatterns {
-		if kustPattern.MatchWith(reqFields) {
-			patterns = append(patterns, kustPattern)
-		}
-	}
-	return patterns
 }
 
 func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
@@ -152,12 +138,6 @@ func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*
 func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
 	for _, attrsPattern := range self.Spec.IgnoreAttrs {
-		if attrsPattern.MatchWith(reqFields) {
-			patterns = append(patterns, attrsPattern)
-		}
-	}
-	// `UnprotectAttrs` is deprecated, but keep this for backward compatibility
-	for _, attrsPattern := range self.Spec.UnprotectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}

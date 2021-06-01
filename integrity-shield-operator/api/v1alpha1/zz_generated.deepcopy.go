@@ -266,10 +266,6 @@ func (in *IntegrityShieldSpec) DeepCopyInto(out *IntegrityShieldSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.SignerConfig != nil {
-		in, out := &in.SignerConfig, &out.SignerConfig
-		*out = (*in).DeepCopy()
-	}
 	if in.ResourceSigningProfiles != nil {
 		in, out := &in.ResourceSigningProfiles, &out.ResourceSigningProfiles
 		*out = make([]*ProfileConfig, len(*in))

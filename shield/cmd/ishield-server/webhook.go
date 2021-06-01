@@ -23,6 +23,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	sconfloder "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
 	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
@@ -33,7 +35,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
+// const (
+// 	apiBaseURLEnvKey  = "CHECKER_API_BASE_URL"
+// 	defaultAPIBaseURL = "http://integrity-shield-checker:8080"
+// )
+
+// var apiBaseURL string
+
 var config *sconfloder.Config
+
+var rspLoader *RSPLoader
+var nsLoader *NamespaceLoader
+var ruletable *RuleTable
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -45,28 +58,127 @@ type WebhookServer struct {
 }
 
 func init() {
+	config = sconfloder.NewConfig()
+	_ = config.InitShieldConfig()
+
 	log.SetFormatter(&log.JSONFormatter{})
 
-	config = sconfloder.NewConfig()
-	config.InitShieldConfig()
 	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
 	logger.Info("Integrity Shield has been started.")
 
-	cfgBytes, _ := json.Marshal(config)
-	logger.Trace(string(cfgBytes))
-	logger.Info("ShieldConfig is loaded.")
+	// apiBaseURL = os.Getenv(apiBaseURLEnvKey)
+	// if apiBaseURL == "" {
+	// 	apiBaseURL = defaultAPIBaseURL
+	// }
+
+	rspLoader = NewRSPLoader()
+	nsLoader = NewNamespaceLoader()
+	rspList, _ := rspLoader.GetData(true)
+	nsList, _ := nsLoader.GetData(true)
+
+	ruletable = NewRuleTable(rspList, nsList, config.ShieldConfig.CommonProfile, config.ShieldConfig.Namespace)
+	if ruletable == nil {
+		logger.Fatal("Failed to initialize integrity shield rule table. Exitting...")
+	}
+}
+
+// Check if any profile matches the request (this can be replaced with gatekeeper constraints matching)
+func (server *WebhookServer) groupKindNamespaceCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
+	reqFields := shield.AdmissionRequestToReqFields(req)
+	protected, _, matchedProfiels := ruletable.CheckIfProtected(reqFields)
+	if !protected {
+		dr := &common.DecisionResult{
+			Type:       common.DecisionAllow,
+			Verified:   false,
+			ReasonCode: common.REASON_NOT_PROTECTED,
+			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+		}
+		return dr, nil
+	}
+	return common.UndeterminedDecision(), matchedProfiels
+}
+
+// Check if the request is delete operation
+func (server *WebhookServer) deleteCheck(req *admv1.AdmissionRequest) *common.DecisionResult {
+	isDelete := (req.Operation == admv1.Delete)
+	if isDelete {
+		dr := &common.DecisionResult{
+			Type:       common.DecisionAllow,
+			Verified:   false,
+			ReasonCode: common.REASON_SKIP_DELETE,
+			Message:    common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message,
+		}
+		return dr
+	}
+	return common.UndeterminedDecision()
+}
+
+// func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
+// 	var patchBytes []byte
+// 	if conf.PatchEnabled(reqc) {
+// 		// `patchBytes` will be nil if no patch
+// 		patchBytes = generatePatchBytes(reqc, reqobj, ctx)
+// 	}
+// 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
+// 	resp := &admv1.AdmissionResponse{
+// 		Allowed: allowed,
+// 		Result: &metav1.Status{
+// 			Message: responseMessage,
+// 		},
+// 	}
+// 	if patchBytes != nil {
+// 		patchType := admv1.PatchTypeJSONPatch
+// 		resp.Patch = patchBytes
+// 		resp.PatchType = &patchType
+// 	}
+// 	return resp
+// }
+
+func createSimpleAdmissionResponse(allowed bool, msg string) *admv1.AdmissionResponse {
+	responseMessage := fmt.Sprintf("%s (Request: %s)", msg)
+	resp := &admv1.AdmissionResponse{
+		Allowed: allowed,
+		Result: &metav1.Status{
+			Message: responseMessage,
+		},
+	}
+	return resp
 }
 
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
 
 	_ = config.InitShieldConfig()
 
-	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	requestHandler := shield.NewHandler(config.ShieldConfig, metaLogger)
-	admissionRequest := admissionReviewReq.Request
+	// init decision result with `undetermined`
+	dr := common.UndeterminedDecision()
 
-	// Run Request Handler
-	admissionResponse := requestHandler.Run(admissionRequest)
+	// check if the resource is owned by integrity shield and the operation can be allowed
+	// TODO: add it
+
+	// check if the request is delete operation; if delete, skip this request
+	dr = server.deleteCheck(admissionReviewReq.Request)
+	if !dr.IsUndetermined() {
+		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message)
+	}
+
+	var matchedProfiels []rspapi.ResourceSigningProfile
+	// check if the group/version/kind is protected in the namespace
+	dr, matchedProfiels = server.groupKindNamespaceCheck(admissionReviewReq.Request)
+	if !dr.IsUndetermined() {
+		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message)
+	}
+
+	// check mutation & signature & image signature if enabled & some others
+	multipleResponses := []*admv1.AdmissionResponse{}
+	for _, singleProfile := range matchedProfiels {
+		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+		requestHandler := shield.NewHandler(config.ShieldConfig, metaLogger, singleProfile)
+		// Run Request Handler
+		resp := requestHandler.Run(admissionReviewReq.Request)
+		multipleResponses = append(multipleResponses, resp)
+	}
+	admissionResponse, _ := shield.SummarizeMultipleAdmissionResponses(multipleResponses)
+
 	return admissionResponse
 }
 
@@ -76,6 +188,11 @@ func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Reques
 }
 
 func (server *WebhookServer) checkReadiness(w http.ResponseWriter, r *http.Request) {
+	// _, err := http.Get(apiBaseURL + "/probe/readiness")
+	// if err != nil {
+	// 	http.Error(w, "not ready", http.StatusInternalServerError)
+	// 	return
+	// }
 
 	msg := "readiness ok"
 	_, _ = w.Write([]byte(msg))

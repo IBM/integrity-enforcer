@@ -50,7 +50,6 @@ import (
 	rs "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	ec "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	scc "github.com/openshift/api/security/v1"
 
@@ -151,7 +150,6 @@ var _ = BeforeSuite(func(done Done) {
 	err = ec.AddToScheme(scheme)
 	err = rsp.AddToScheme(scheme)
 	err = rs.AddToScheme(scheme)
-	err = sigconf.AddToScheme(scheme)
 
 	Expect(err).NotTo(HaveOccurred())
 

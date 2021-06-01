@@ -38,6 +38,7 @@ import (
 ***********************************************/
 
 type Handler struct {
+	profile       rspapi.ResourceSigningProfile
 	config        *config.ShieldConfig
 	ctx           *CheckContext
 	reqc          *common.RequestContext
@@ -52,7 +53,7 @@ type Handler struct {
 	resHandler *ResourceCheckHandler
 }
 
-func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger) *Handler {
+func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile) *Handler {
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger}
 }
 
@@ -83,7 +84,11 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	self.logContext()
 
 	// create Event & update RSP status
-	_ = self.Report(dr.denyRSP)
+	var denyRSP *rspapi.ResourceSigningProfile
+	if dr.DenyRSP != nil {
+		denyRSP = dr.DenyRSP.(*rspapi.ResourceSigningProfile)
+	}
+	_ = self.Report(denyRSP)
 
 	// clear some cache if needed
 	self.finalize(dr)
@@ -91,39 +96,16 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	return resp
 }
 
-func (self *Handler) Check() *DecisionResult {
-	var dr *DecisionResult
-	dr = undeterminedDescision()
+func (self *Handler) Check() *common.DecisionResult {
+	var dr *common.DecisionResult
+	dr = common.UndeterminedDecision()
 
-	dr = ishieldScopeCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
-		return dr
-	}
-	self.logInScope = true
-
-	dr = formatCheck(self.reqc, self.reqobj, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
-
-		return dr
-	}
-
-	dr = iShieldResourceCheck(self.reqc, self.config, self.data, self.ctx)
+	dr = protectedCheck(self.reqc, self.config, self.profile, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
 
-	dr = deleteCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
-		return dr
-	}
-
-	var matchedProfiles []rspapi.ResourceSigningProfile
-	dr, matchedProfiles = protectedCheck(self.reqc, self.config, self.data, self.ctx)
-	if !dr.IsUndetermined() {
-		return dr
-	}
-
-	dr = mutationCheck(matchedProfiles, self.reqc, self.reqobj, self.config, self.data, self.ctx)
+	dr = mutationCheckWithSingleProfile(self.profile, self.reqc, self.reqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
@@ -136,7 +118,7 @@ func (self *Handler) Check() *DecisionResult {
 	dr = self.resHandler.Run(obj)
 
 	if dr.IsUndetermined() {
-		dr = &DecisionResult{
+		dr = &common.DecisionResult{
 			Type:       common.DecisionUndetermined,
 			ReasonCode: common.REASON_UNEXPECTED,
 			Message:    "IntegrityShield failed to decide a response for this request.",
@@ -182,7 +164,7 @@ func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
 }
 
 // load resoruces / set default values
-func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
+func (self *Handler) initialize(req *admv1.AdmissionRequest) *common.DecisionResult {
 	gv := metav1.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
 	self.requestLog = self.serverLogger.WithFields(
 		log.Fields{
@@ -199,7 +181,7 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 	self.ctx = InitCheckContext(self.config)
 
 	// init resource handler with shared CheckContext
-	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.ctx, self.data)
+	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.profile, self.ctx, self.data)
 
 	reqNamespace := getRequestNamespace(req)
 
@@ -216,11 +198,14 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *DecisionResult {
 	self.data.loader = runDataLoader
 	self.data.Init(self.config)
 
-	return &DecisionResult{Type: common.DecisionUndetermined}
+	return &common.DecisionResult{Type: common.DecisionUndetermined}
 }
 
-func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
-	sigConf := self.data.GetSignerConfig()
+func (self *Handler) overwriteDecision(dr *common.DecisionResult) *common.DecisionResult {
+	var sigConf *common.SignerConfig
+	if dr.DenyRSP != nil {
+		sigConf = dr.DenyRSP.(*rspapi.ResourceSigningProfile).Spec.SignerConfig
+	}
 	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, sigConf)
 	isDetectMode := checkIfDetectOnly(self.config)
 
@@ -250,7 +235,7 @@ func (self *Handler) overwriteDecision(dr *DecisionResult) *DecisionResult {
 	return dr
 }
 
-func (self *Handler) finalize(dr *DecisionResult) {
+func (self *Handler) finalize(dr *common.DecisionResult) {
 	if dr.IsAllowed() {
 		resetRuleTableCache := false
 		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
@@ -314,7 +299,7 @@ func (self *Handler) logExit() {
 	}
 }
 
-func (self *Handler) logResponse(req *admv1.AdmissionRequest, dr *DecisionResult) {
+func (self *Handler) logResponse(req *admv1.AdmissionRequest, dr *common.DecisionResult) {
 	if self.config.Log.LogAllResponse {
 		respData := map[string]interface{}{}
 		respData["allowed"] = dr.IsAllowed()

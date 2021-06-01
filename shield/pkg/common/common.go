@@ -342,7 +342,7 @@ type SignerInfo struct {
 	StreetAddress      string
 	PostalCode         string
 	CommonName         string
-	SerialNumber       *big.Int `json:"-"`
+	SerialNumber       *big.Int
 	Fingerprint        []byte
 }
 
@@ -373,6 +373,14 @@ type MutationEvalResult struct {
 	Filtered  string      `json:"filtered"`
 	Checked   bool        `json:"checked"`
 	Error     *CheckError `json:"error"`
+}
+
+type ImageVerifyResult struct {
+	Error       error    `json:"error"`
+	Allowed     bool     `json:"allowed"`
+	Reason      string   `json:"reason"`
+	Digest      string   `json:"digest"`
+	CommonNames []string `json:"commonNames"`
 }
 
 type ReasonCode struct {

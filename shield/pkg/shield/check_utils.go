@@ -23,7 +23,6 @@ import (
 	"time"
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
@@ -275,15 +274,15 @@ func checkIfSpecialServiceAccountRequest(reqc *common.RequestContext) bool {
 	return false
 }
 
-func getBreakGlassConditions(signerConfig *sigconfapi.SignerConfig) []common.BreakGlassCondition {
+func getBreakGlassConditions(signerConfig *common.SignerConfig) []common.BreakGlassCondition {
 	conditions := []common.BreakGlassCondition{}
 	if signerConfig != nil {
-		conditions = append(conditions, signerConfig.Spec.Config.BreakGlass...)
+		conditions = append(conditions, signerConfig.BreakGlass...)
 	}
 	return conditions
 }
 
-func checkIfBreakGlassEnabled(reqc *common.RequestContext, signerConfig *sigconfapi.SignerConfig) bool {
+func checkIfBreakGlassEnabled(reqc *common.RequestContext, signerConfig *common.SignerConfig) bool {
 
 	conditions := getBreakGlassConditions(signerConfig)
 	breakGlassEnabled := false

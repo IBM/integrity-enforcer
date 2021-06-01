@@ -21,7 +21,6 @@ import (
 
 	rsigapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	sigconfapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
@@ -36,10 +35,9 @@ import (
 ***********************************************/
 
 type RunData struct {
-	RSPList      []rspapi.ResourceSigningProfile `json:"rspList,omitempty"`
-	NSList       []v1.Namespace                  `json:"nsList,omitempty"`
-	SignerConfig *sigconfapi.SignerConfig        `json:"signerConfig,omitempty"`
-	ResSigList   *rsigapi.ResourceSignatureList  `json:"resSigList,omitempty"`
+	RSPList    []rspapi.ResourceSigningProfile `json:"rspList,omitempty"`
+	NSList     []v1.Namespace                  `json:"nsList,omitempty"`
+	ResSigList *rsigapi.ResourceSignatureList  `json:"resSigList,omitempty"`
 
 	loader          *Loader               `json:"-"`
 	commonProfile   *common.CommonProfile `json:"-"`
@@ -55,13 +53,6 @@ func (self *RunData) EnableForceInitialize() {
 func (self *RunData) DisableForceInitialize() {
 	self.forceInitialize = false
 	return
-}
-
-func (self *RunData) GetSignerConfig() *sigconfapi.SignerConfig {
-	if self.SignerConfig == nil && self.loader != nil {
-		self.SignerConfig = self.loader.SignerConfig.GetData(true)
-	}
-	return self.SignerConfig
 }
 
 func (self *RunData) GetResSigList(resc *common.ResourceContext) *rsigapi.ResourceSignatureList {

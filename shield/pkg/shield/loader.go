@@ -27,7 +27,6 @@ import (
 ***********************************************/
 
 type Loader struct {
-	SignerConfig      *SignerConfigLoader
 	RSP               *RSPLoader
 	Namespace         *NamespaceLoader
 	ResourceSignature *ResSigLoader
@@ -39,7 +38,6 @@ func NewLoader(cfg *config.ShieldConfig, reqNamespace string) *Loader {
 	signatureNamespace := cfg.SignatureNamespace // for non-existing namespace / cluster scope
 	profileNamespace := cfg.ProfileNamespace     // for non-existing namespace / cluster scope
 	loader := &Loader{
-		SignerConfig:      NewSignerConfigLoader(shieldNamespace),
 		RSP:               NewRSPLoader(shieldNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
 		Namespace:         NewNamespaceLoader(),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace),

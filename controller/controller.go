@@ -46,6 +46,7 @@ import (
 	rareviewscheme "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/clientset/versioned/scheme"
 	informers "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/informers/externalversions/resourceauditreview/v1alpha1"
 	listers "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/listers/resourceauditreview/v1alpha1"
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 )
@@ -285,7 +286,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) updateResourceAuditReviewStatus(rar *rareviewv1alpha1.ResourceAuditReview, dr *shield.DecisionResult, ctx *shield.CheckContext) error {
+func (c *Controller) updateResourceAuditReviewStatus(rar *rareviewv1alpha1.ResourceAuditReview, dr *common.DecisionResult, ctx *shield.CheckContext) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -366,7 +367,7 @@ func ishieldAPIURl() string {
 	return url
 }
 
-func resourceCheck(obj *unstructured.Unstructured) (*shield.DecisionResult, *shield.CheckContext, error) {
+func resourceCheck(obj *unstructured.Unstructured) (*common.DecisionResult, *shield.CheckContext, error) {
 	objB, _ := json.Marshal(obj)
 	dataB := bytes.NewBuffer(objB)
 	url := ishieldAPIURl() + "/api/resource"
@@ -393,8 +394,8 @@ func resourceCheck(obj *unstructured.Unstructured) (*shield.DecisionResult, *shi
 	return dr, ctx, nil
 }
 
-func parseResourceAPIResult(result []byte) (*shield.DecisionResult, *shield.CheckContext) {
-	var dr *shield.DecisionResult
+func parseResourceAPIResult(result []byte) (*common.DecisionResult, *shield.CheckContext) {
+	var dr *common.DecisionResult
 	var ctx *shield.CheckContext
 
 	var m map[string]interface{}

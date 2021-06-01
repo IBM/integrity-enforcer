@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
 	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
@@ -56,27 +57,41 @@ func handleRequest(admissionReq *admv1.AdmissionRequest) *admv1.AdmissionRespons
 
 	_ = config.InitShieldConfig()
 
-	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger)
-	admissionRequest := admissionReq
-
-	//process request
-	result := reqHandler.Run(admissionRequest)
+	matchedProfiles, _ := shield.GetMatchedProfilesWithRequest(admissionReq, config.ShieldConfig.Namespace)
+	multipleResps := []*admv1.AdmissionResponse{}
+	for _, profile := range matchedProfiles {
+		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+		reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, profile)
+		//process request
+		result := reqHandler.Run(admissionReq)
+		multipleResps = append(multipleResps, result)
+	}
+	result, _ := shield.SummarizeMultipleAdmissionResponses(multipleResps)
 
 	return result
 
 }
 
-func handleResource(resource *unstructured.Unstructured) (*shield.DecisionResult, *shield.CheckContext) {
+func handleResource(resource *unstructured.Unstructured) (*common.DecisionResult, *shield.CheckContext) {
 
 	_ = config.InitShieldConfig()
 
-	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-	resHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger)
-
-	//process request
-	dr := resHandler.Run(resource)
-	ctx := resHandler.GetCheckContext()
+	matchedProfiles, _ := shield.GetMatchedProfilesWithResource(resource, config.ShieldConfig.Namespace)
+	multipleResps := []*common.DecisionResult{}
+	multipleCtx := []*shield.CheckContext{}
+	for _, profile := range matchedProfiles {
+		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+		resHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, profile)
+		//process request
+		result := resHandler.Run(resource)
+		multipleResps = append(multipleResps, result)
+		multipleCtx = append(multipleCtx, resHandler.GetCheckContext())
+	}
+	dr, drIndex := shield.SummarizeMultipleDecisionResults(multipleResps)
+	var ctx *shield.CheckContext
+	if drIndex > 0 {
+		ctx = multipleCtx[drIndex]
+	}
 
 	return dr, ctx
 

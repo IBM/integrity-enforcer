@@ -26,7 +26,6 @@ import (
 
 	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
 	vcclient "github.com/IBM/integrity-enforcer/shield/pkg/client/shieldconfig/clientset/versioned/typed/shieldconfig/v1alpha1"
-	sigconfclient "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/typed/signerconfig/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,7 +68,6 @@ var (
 	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
 	test_deployment                   = deploy_dir + "test-deployment.yaml"
 	test_deployment_updated           = deploy_dir + "test-deployment-update.yaml"
-	DefaultSignerConfigName           = "signer-config"
 	DefaultShieldConfigName           = "ishield-config"
 )
 
@@ -87,7 +85,6 @@ type Framework struct {
 	KubeClientSet          kubernetes.Interface
 	APIExtensionsClientSet apiextcs.Interface
 	RSPClient              rspclient.ApisV1alpha1Interface
-	SignerConfigClient     sigconfclient.ApisV1alpha1Interface
 	ShieldConfigClient     vcclient.ApisV1alpha1Interface
 
 	// Namespace in which all test resources should reside
@@ -114,10 +111,6 @@ func initFrameWork() *Framework {
 	framework.RSPClient, err = rspclient.NewForConfig(kubeConfig)
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set RSPClient"))
-	}
-	framework.SignerConfigClient, err = sigconfclient.NewForConfig(kubeConfig)
-	if err != nil {
-		Fail(fmt.Sprintf("fail to set SignerConfigClient"))
 	}
 
 	framework.ShieldConfigClient, err = vcclient.NewForConfig(kubeConfig)

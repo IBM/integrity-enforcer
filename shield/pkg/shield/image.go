@@ -102,8 +102,8 @@ func (sci *SigCheckImages) imageVerifiedResultCheckByProfile() {
 	}
 }
 
-func makeImageCheckResult(images *SigCheckImages) *DecisionResult {
-	res := &DecisionResult{}
+func makeImageCheckResult(images *SigCheckImages) *common.DecisionResult {
+	res := &common.DecisionResult{}
 	for _, img := range images.ImagesToVerify {
 		if img.Result.Error != nil {
 			res.Type = common.DecisionError

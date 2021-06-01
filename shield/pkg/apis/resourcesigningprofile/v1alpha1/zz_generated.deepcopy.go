@@ -154,38 +154,8 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 			}
 		}
 	}
-	if in.ForceCheckRules != nil {
-		in, out := &in.ForceCheckRules, &out.ForceCheckRules
-		*out = make([]*common.Rule, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = (*in).DeepCopy()
-			}
-		}
-	}
-	if in.KustomizePatterns != nil {
-		in, out := &in.KustomizePatterns, &out.KustomizePatterns
-		*out = make([]*common.KustomizePattern, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = (*in).DeepCopy()
-			}
-		}
-	}
 	if in.ProtectAttrs != nil {
 		in, out := &in.ProtectAttrs, &out.ProtectAttrs
-		*out = make([]*common.AttrsPattern, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = (*in).DeepCopy()
-			}
-		}
-	}
-	if in.UnprotectAttrs != nil {
-		in, out := &in.UnprotectAttrs, &out.UnprotectAttrs
 		*out = make([]*common.AttrsPattern, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
@@ -203,6 +173,14 @@ func (in *ResourceSigningProfileSpec) DeepCopyInto(out *ResourceSigningProfileSp
 				*out = (*in).DeepCopy()
 			}
 		}
+	}
+	if in.SignerConfig != nil {
+		in, out := &in.SignerConfig, &out.SignerConfig
+		*out = (*in).DeepCopy()
+	}
+	if in.ImageProfile != nil {
+		in, out := &in.ImageProfile, &out.ImageProfile
+		*out = (*in).DeepCopy()
 	}
 	return
 }

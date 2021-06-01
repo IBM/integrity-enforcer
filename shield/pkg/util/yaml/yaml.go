@@ -34,26 +34,73 @@ type ResourceInfo struct {
 	raw                []byte
 }
 
+func (ri ResourceInfo) Map() map[string]string {
+	riGv, _ := schema.ParseGroupVersion(ri.ApiVersion)
+	m := map[string]string{}
+	m["group"] = riGv.Group
+	m["version"] = riGv.Version
+	m["kind"] = ri.Kind
+	m["namespace"] = ri.Namespace
+	m["name"] = ri.Name
+	return m
+}
+
 func FindSingleYaml(message []byte, apiVersion, kind, name, namespace string) (bool, []byte) {
 	gv, err := schema.ParseGroupVersion(apiVersion)
 	if err != nil {
 		return false, nil
 	}
-	apiGroup := gv.Group
-	for _, ri := range ParseMessage(message) {
-		riGv, err := schema.ParseGroupVersion(ri.ApiVersion)
-		if err != nil {
-			continue
-		}
-		riApiGroup := riGv.Group
-		if common.MatchPattern(apiGroup, riApiGroup) &&
-			common.MatchPattern(kind, ri.Kind) &&
-			common.MatchPattern(name, ri.Name) &&
-			(common.MatchPattern(namespace, ri.Namespace) || ri.Namespace == "") {
-			return true, ri.raw
+	reqInfos := map[string]string{}
+	reqInfos["group"] = gv.Group
+	reqInfos["version"] = gv.Version
+	reqInfos["kind"] = kind
+	reqInfos["namespace"] = namespace
+	reqInfos["name"] = name
+
+	resourcesInMessage := ParseMessage(message)
+	matchedItems := []ResourceInfo{}
+	for _, ri := range resourcesInMessage {
+		msgInfo := ri.Map()
+		if matchResourceInfo(msgInfo, reqInfos, []string{"group", "kind", "name"}) {
+			matchedItems = append(matchedItems, ri)
 		}
 	}
-	return false, nil
+	if len(matchedItems) == 0 {
+		return false, nil
+	}
+	if len(matchedItems) == 1 {
+		return true, matchedItems[0].raw
+	}
+
+	matchedItems2 := []ResourceInfo{}
+	for _, ri := range resourcesInMessage {
+		msgInfo := ri.Map()
+		if matchResourceInfo(msgInfo, reqInfos, []string{"group", "kind", "name", "namespace"}) {
+			matchedItems2 = append(matchedItems, ri)
+		}
+	}
+	if len(matchedItems2) == 0 {
+		return true, matchedItems[0].raw
+	} else {
+		return true, matchedItems2[0].raw
+	}
+}
+
+func matchResourceInfo(msgInfos, reqInfos map[string]string, useKeys []string) bool {
+	keyCount := len(useKeys)
+	matchedCount := 0
+	for _, key := range useKeys {
+		mval := msgInfos[key]
+		rval := reqInfos[key]
+		if mval == rval {
+			matchedCount += 1
+		}
+	}
+	matched := false
+	if keyCount == matchedCount && matchedCount > 0 {
+		matched = true
+	}
+	return matched
 }
 
 func ParseMessage(message []byte) []ResourceInfo {

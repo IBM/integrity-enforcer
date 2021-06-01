@@ -20,14 +20,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
 	rsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
-	sigconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/signerconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 )
 
@@ -50,12 +48,6 @@ func ValidateResource(reqc *common.RequestContext, reqobj *common.RequestObject,
 		return ok, ""
 	} else if reqc.Kind == common.ShieldConfigCustomResourceAPIVersion {
 		ok, err := ValidateShieldConfig(reqc, reqobj)
-		if err != nil {
-			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
-		}
-		return ok, ""
-	} else if reqc.Kind == common.SignerConfigCustomResourceKind {
-		ok, err := ValidateSignerConfig(reqc, reqobj)
 		if err != nil {
 			return false, fmt.Sprintf("Format validation failed; %s", err.Error())
 		}
@@ -84,7 +76,6 @@ func ValidateResourceSigningProfile(reqc *common.RequestContext, reqobj *common.
 	if reqc.Namespace != shieldNamespace {
 		rules := data.Spec.ProtectRules
 		rules = append(rules, data.Spec.IgnoreRules...)
-		rules = append(rules, data.Spec.ForceCheckRules...)
 		for _, r := range rules {
 			for _, m := range r.Match {
 				if m.Namespace != nil {
@@ -94,7 +85,6 @@ func ValidateResourceSigningProfile(reqc *common.RequestContext, reqobj *common.
 		}
 
 		attrs := data.Spec.IgnoreAttrs
-		attrs = append(attrs, data.Spec.UnprotectAttrs...)
 		attrs = append(attrs, data.Spec.ProtectAttrs...)
 		for _, a := range attrs {
 			for _, m := range a.Match {
@@ -144,29 +134,6 @@ func ValidateShieldConfig(reqc *common.RequestContext, reqobj *common.RequestObj
 	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
-	return true, nil
-}
-
-func ValidateSignerConfig(reqc *common.RequestContext, reqobj *common.RequestObject) (bool, error) {
-	var data *sigconf.SignerConfig
-	dec := json.NewDecoder(bytes.NewReader(reqobj.RawObject))
-	dec.DisallowUnknownFields() // Force errors if data has undefined fields
-
-	if err := dec.Decode(&data); err != nil {
-		return false, err
-	}
-	if data.Spec.Config == nil {
-		return false, fmt.Errorf("`spec.config` in SignerConfig is empty.")
-	}
-	if data.Spec.Config.Signers == nil || len(data.Spec.Config.Signers) == 0 {
-		return false, fmt.Errorf("`spec.config.signers` in SignerConfig is empty.")
-	}
-	for i, signer := range data.Spec.Config.Signers {
-		if signer.Subjects == nil || len(signer.Subjects) == 0 {
-			return false, fmt.Errorf("`spec.config.signers[%s].subjects` in SignerConfig is empty.", strconv.Itoa(i))
-		}
-	}
-
 	return true, nil
 }
 

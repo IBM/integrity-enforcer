@@ -26,7 +26,7 @@ import (
 )
 
 // check if request is ishieldScope or not
-func ishieldScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func ishieldScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	reqNamespace := getRequestNamespaceFromRequestContext(reqc)
 
 	// check if reqNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
@@ -36,7 +36,7 @@ func ishieldScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig,
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
 		ctx.Message = msg
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			ReasonCode: common.REASON_INTERNAL,
 			Message:    msg,
@@ -48,7 +48,7 @@ func ishieldScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig,
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
 		ctx.Message = msg
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			ReasonCode: common.REASON_INTERNAL,
 			Message:    msg,
@@ -60,18 +60,18 @@ func ishieldScopeCheck(reqc *common.RequestContext, config *config.ShieldConfig,
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
 		ctx.Message = msg
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			ReasonCode: common.REASON_INTERNAL,
 			Message:    msg,
 		}
 	}
 
-	return undeterminedDescision()
+	return common.UndeterminedDecision()
 }
 
 // check if resource is ishieldScope or not
-func ishieldScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func ishieldScopeCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	resNamespace := getRequestNamespaceFromResourceContext(resc)
 
 	// check if resNamespace matches ShieldConfig.MonitoringNamespace and check if any RSP is targeting the namespace
@@ -81,7 +81,7 @@ func ishieldScopeCheckByResource(resc *common.ResourceContext, config *config.Sh
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
 		ctx.Message = msg
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			ReasonCode: common.REASON_INTERNAL,
 			Message:    msg,
@@ -93,37 +93,37 @@ func ishieldScopeCheckByResource(resc *common.ResourceContext, config *config.Sh
 		ctx.Allow = true
 		ctx.ReasonCode = common.REASON_INTERNAL
 		ctx.Message = msg
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			ReasonCode: common.REASON_INTERNAL,
 			Message:    msg,
 		}
 	}
 
-	return undeterminedDescision()
+	return common.UndeterminedDecision()
 }
 
-func formatCheck(reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func formatCheck(reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	if ok, msg := ValidateResource(reqc, reqobj, config.Namespace); !ok {
 		ctx.Allow = false
 		ctx.ReasonCode = common.REASON_VALIDATION_FAIL
 		ctx.Message = msg
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionDeny,
 			ReasonCode: common.REASON_VALIDATION_FAIL,
 			Message:    msg,
 		}
 	}
-	return undeterminedDescision()
+	return common.UndeterminedDecision()
 }
 
-func iShieldResourceCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func iShieldResourceCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	reqRef := reqc.ResourceRef()
 	iShieldOperatorResource := config.IShieldResourceCondition.IsOperatorResource(reqRef)
 	iShieldServerResource := config.IShieldResourceCondition.IsServerResource(reqRef)
 
 	if !iShieldOperatorResource && !iShieldServerResource {
-		return undeterminedDescision()
+		return common.UndeterminedDecision()
 	} else {
 		ctx.IShieldResource = true
 	}
@@ -139,7 +139,7 @@ func iShieldResourceCheck(reqc *common.RequestContext, config *config.ShieldConf
 		ctx.Verified = true
 		ctx.ReasonCode = common.REASON_ISHIELD_ADMIN
 		ctx.Message = common.ReasonCodeMap[common.REASON_ISHIELD_ADMIN].Message
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			Verified:   true,
 			ReasonCode: common.REASON_ISHIELD_ADMIN,
@@ -150,7 +150,7 @@ func iShieldResourceCheck(reqc *common.RequestContext, config *config.ShieldConf
 		ctx.Verified = false
 		ctx.ReasonCode = common.REASON_BLOCK_ISHIELD_RESOURCE_OPERATION
 		ctx.Message = common.ReasonCodeMap[common.REASON_BLOCK_ISHIELD_RESOURCE_OPERATION].Message
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionDeny,
 			Verified:   false,
 			ReasonCode: common.REASON_BLOCK_ISHIELD_RESOURCE_OPERATION,
@@ -159,38 +159,30 @@ func iShieldResourceCheck(reqc *common.RequestContext, config *config.ShieldConf
 	}
 }
 
-func deleteCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func deleteCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	if reqc.IsDeleteRequest() {
 		ctx.Allow = true
 		ctx.Verified = true
 		ctx.ReasonCode = common.REASON_SKIP_DELETE
 		ctx.Message = common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			Verified:   true,
 			ReasonCode: common.REASON_SKIP_DELETE,
 			Message:    common.ReasonCodeMap[common.REASON_SKIP_DELETE].Message,
 		}
 	}
-	return undeterminedDescision()
+	return common.UndeterminedDecision()
 }
 
-func protectedCheck(reqc *common.RequestContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
+func protectedCheck(reqc *common.RequestContext, config *config.ShieldConfig, profile rspapi.ResourceSigningProfile, ctx *CheckContext) *common.DecisionResult {
 	reqFields := reqc.Map()
-	ruleTable := data.GetRuleTable(config.Namespace)
-	if ruleTable == nil {
-		ctx.Allow = true
-		ctx.Verified = true
-		ctx.Protected = false
-		ctx.ReasonCode = common.REASON_NOT_PROTECTED
-		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
-		return &DecisionResult{
-			Type:       common.DecisionAllow,
-			ReasonCode: common.REASON_NOT_PROTECTED,
-			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
-		}, nil
+	protected, matchedRule := profile.Match(reqFields, config.Namespace)
+	ignoreMatched := false
+	if !protected && matchedRule != nil {
+		ignoreMatched = true
 	}
-	protected, ignoreMatched, matchedProfiles := ruleTable.CheckIfProtected(reqFields)
+
 	if !protected {
 		ctx.Allow = true
 		ctx.Verified = true
@@ -198,27 +190,27 @@ func protectedCheck(reqc *common.RequestContext, config *config.ShieldConfig, da
 		if ignoreMatched {
 			ctx.ReasonCode = common.REASON_IGNORE_RULE_MATCHED
 			ctx.Message = common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message
-			return &DecisionResult{
+			return &common.DecisionResult{
 				Type:       common.DecisionAllow,
 				ReasonCode: common.REASON_IGNORE_RULE_MATCHED,
 				Message:    common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message,
-			}, nil
+			}
 		} else {
 			ctx.ReasonCode = common.REASON_NOT_PROTECTED
 			ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
-			return &DecisionResult{
+			return &common.DecisionResult{
 				Type:       common.DecisionAllow,
 				ReasonCode: common.REASON_NOT_PROTECTED,
 				Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
-			}, nil
+			}
 		}
 	} else {
 		ctx.Protected = true
 	}
-	return undeterminedDescision(), matchedProfiles
+	return common.UndeterminedDecision()
 }
 
-func protectedCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*DecisionResult, []rspapi.ResourceSigningProfile) {
+func protectedCheckByResource(resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := resc.Map()
 
 	ruleTable := data.GetRuleTable(config.Namespace)
@@ -228,7 +220,7 @@ func protectedCheckByResource(resc *common.ResourceContext, config *config.Shiel
 		ctx.Protected = false
 		ctx.ReasonCode = common.REASON_NOT_PROTECTED
 		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			ReasonCode: common.REASON_NOT_PROTECTED,
 			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
@@ -242,7 +234,7 @@ func protectedCheckByResource(resc *common.ResourceContext, config *config.Shiel
 		if ignoreMatched {
 			ctx.ReasonCode = common.REASON_IGNORE_RULE_MATCHED
 			ctx.Message = common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message
-			return &DecisionResult{
+			return &common.DecisionResult{
 				Type:       common.DecisionAllow,
 				ReasonCode: common.REASON_IGNORE_RULE_MATCHED,
 				Message:    common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message,
@@ -250,7 +242,7 @@ func protectedCheckByResource(resc *common.ResourceContext, config *config.Shiel
 		} else {
 			ctx.ReasonCode = common.REASON_NOT_PROTECTED
 			ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
-			return &DecisionResult{
+			return &common.DecisionResult{
 				Type:       common.DecisionAllow,
 				ReasonCode: common.REASON_NOT_PROTECTED,
 				Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
@@ -259,12 +251,12 @@ func protectedCheckByResource(resc *common.ResourceContext, config *config.Shiel
 	} else {
 		ctx.Protected = true
 	}
-	return undeterminedDescision(), matchedProfiles
+	return common.UndeterminedDecision(), matchedProfiles
 }
 
-func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	mutationCheckPassedCount := 0
-	var dr *DecisionResult
+	var dr *common.DecisionResult
 	for _, prof := range matchedProfiles {
 		tmpdr := mutationCheckWithSingleProfile(prof, reqc, reqobj, config, data, ctx)
 		if tmpdr.IsAllowed() {
@@ -283,10 +275,10 @@ func mutationCheck(matchedProfiles []rspapi.ResourceSigningProfile, reqc *common
 	if mutationCheckPassed {
 		return dr
 	}
-	return undeterminedDescision()
+	return common.UndeterminedDecision()
 }
 
-func mutationCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func mutationCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile, reqc *common.RequestContext, reqobj *common.RequestObject, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
@@ -316,7 +308,7 @@ func mutationCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile,
 
 	if allowed {
 		ctx.Verified = true
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			Verified:   true,
 			ReasonCode: evalReason,
@@ -324,22 +316,21 @@ func mutationCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile,
 		}
 	} else {
 		// return undetermined DecisionResult to trigger resource checker
-		return undeterminedDescision()
+		return common.UndeterminedDecision()
 	}
 }
 
-func signatureCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *DecisionResult {
+func signatureCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile, resc *common.ResourceContext, config *config.ShieldConfig, data *RunData, ctx *CheckContext) *common.DecisionResult {
 	var allowed bool
 	var evalMessage string
 	var evalReason int
 	var sigResult *common.SignatureEvalResult
 
-	sigConf := data.GetSignerConfig()
 	rsigList := data.GetResSigList(resc)
 
 	var err error
 
-	signerConfig := sigConf.Spec.Config
+	signerConfig := singleProfile.Spec.SignerConfig
 	plugins := config.GetEnabledPlugins()
 	evaluator, err := NewSignatureEvaluator(config, signerConfig, plugins)
 	if err != nil {
@@ -386,18 +377,18 @@ func signatureCheckWithSingleProfile(singleProfile rspapi.ResourceSigningProfile
 
 	if allowed {
 		ctx.Verified = true
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionAllow,
 			Verified:   true,
 			ReasonCode: evalReason,
 			Message:    evalMessage,
 		}
 	} else {
-		return &DecisionResult{
+		return &common.DecisionResult{
 			Type:       common.DecisionDeny,
 			ReasonCode: evalReason,
 			Message:    evalMessage,
-			denyRSP:    &singleProfile,
+			DenyRSP:    &singleProfile,
 		}
 	}
 }

@@ -24,7 +24,9 @@ import (
 	"strings"
 	"testing"
 
+	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/config"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -122,8 +124,19 @@ func testDeleteCheck(t *testing.T, caseNum int) {
 }
 
 func testProtectedCheck(t *testing.T, caseNum int) {
-	reqc, _, _, config, data, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
-	actualDr, actualMatchedProfiles := protectedCheck(reqc, config, data, ctx)
+	reqc, reqobj, _, config, _, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
+	var obj *unstructured.Unstructured
+	_ = json.Unmarshal(reqobj.RawObject, &obj)
+	actualMatchedProfiles, err := GetMatchedProfilesWithResource(obj, config.Namespace)
+	if err != nil {
+		t.Errorf("[Case %s] Test failed for protectedCheck(); failed to get matched profiles; %s", err.Error())
+	}
+	multipleResults := []*common.DecisionResult{}
+	for _, profile := range actualMatchedProfiles {
+		actualDr := protectedCheck(reqc, config, profile, ctx)
+		multipleResults = append(multipleResults, actualDr)
+	}
+	actualDr, _ := SummarizeMultipleDecisionResults(multipleResults)
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
@@ -142,7 +155,7 @@ func testProtectedCheck(t *testing.T, caseNum int) {
 func testSingleMutationCheck(t *testing.T, caseNum int) {
 	reqc, reqobj, _, config, data, ctx, initialDr, prof, expectedDr := getTestData(caseNum)
 	actualDr := mutationCheckWithSingleProfile(prof, reqc, reqobj, config, data, ctx)
-	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
+	actualDr.DenyRSP = nil // `DenyRSP` is an unexported field. this must be ignored when checking equivalent
 	if strings.Contains(expectedDr.Message, "no mutation") {
 		initialDr = expectedDr
 	}
@@ -162,7 +175,7 @@ func testSingleSignatureCheck(t *testing.T, caseNum int) {
 		return
 	}
 	actualDr := signatureCheckWithSingleProfile(prof, resc, config, data, ctx)
-	actualDr.denyRSP = nil // `denyRSP` is an unexported field. this must be ignored when checking equivalent
+	actualDr.DenyRSP = nil // `DenyRSP` is an unexported field. this must be ignored when checking equivalent
 
 	if !reflect.DeepEqual(actualDr, expectedDr) {
 		actDrBytes, _ := json.Marshal(actualDr)
