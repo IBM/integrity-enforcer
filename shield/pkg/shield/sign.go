@@ -19,6 +19,12 @@ package shield
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 
 	vrsig "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesignature/v1alpha1"
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
@@ -208,10 +214,33 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
-	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.Namespace)
+	originalCandidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.Namespace)
+
+	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
+	overwriteSecretsBaseDir := ""
+	if !kubeutil.IsInCluster() {
+		// for the testcases & the case this is called from CLI
+		overwriteSecretsBaseDir = "./tmp"
+	}
+	// load secrets if not there and update the path for some cases above
+	// TODO: apply TTL for saved secret to support updating pubkey secret
+	candidatePubkeys, err := loadSecrets(originalCandidatePubkeys, overwriteSecretsBaseDir)
+	if err != nil {
+		logger.Warn("Error while loading pubkey/certificate secrets;", err.Error())
+	}
+
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
 	sigstoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
+
+	sigstoreEnabled := self.config.SigStoreEnabled()
+
+	// create verifier
+	dryRunNamespace := ""
+	if resc.ResourceScope == string(common.ScopeNamespaced) {
+		dryRunNamespace = self.config.Namespace
+	}
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
 
 	keyLoadingError := false
 	candidateKeyCount := len(pgpPubkeys) + len(x509Certs)
@@ -237,25 +266,6 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 		if validKeyCount == 0 {
 			keyLoadingError = true
 		}
-	}
-
-	sigstoreEnabled := self.config.SigStoreEnabled()
-
-	// create verifier
-	dryRunNamespace := ""
-	if resc.ResourceScope == string(common.ScopeNamespaced) {
-		dryRunNamespace = self.config.Namespace
-	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
-
-	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
-	overwriteSecretsBaseDir := ""
-	if !kubeutil.IsInCluster() {
-		overwriteSecretsBaseDir = "./tmp"
-	}
-	err := verifier.LoadSecrets(overwriteSecretsBaseDir)
-	if err != nil {
-		logger.Warn("Error while loading pubkey/certificate secrets;", err.Error())
 	}
 
 	// verify signature
@@ -347,4 +357,136 @@ func findAttrsPattern(reqc *common.RequestContext, resc *common.ResourceContext,
 		}
 	}
 	return masks
+}
+
+func loadSecrets(candidatePubkeys map[common.SignatureType][]string, overwriteSecretsBaseDir string) (map[common.SignatureType][]string, error) {
+	replace := map[string]string{}
+	for _, keyPathList := range candidatePubkeys {
+		for _, keyPath := range keyPathList {
+			// if secret is found, skip loading
+			if exists(keyPath) {
+				continue
+			}
+			// otherwise, try getting secret and save it as tmp local file, and then update keyPathList at the end
+			keyPathParts := parseKeyPath(keyPath)
+			secretName := keyPathParts["secretName"]
+			secretNamespace := keyPathParts["secretNamespace"]
+			if secretName == "" {
+				continue
+			}
+			// get secret
+			obj, err := kubeutil.GetResource("v1", "Secret", secretNamespace, secretName)
+			if err != nil {
+				logger.Warn(fmt.Sprintf("Failed to get secret `%s`; %s", secretName, err.Error()))
+				continue
+			}
+			objBytes, _ := json.Marshal(obj)
+			var res corev1.Secret
+			_ = json.Unmarshal(objBytes, &res)
+
+			// save it in a tmp dir
+			if overwriteSecretsBaseDir != "" {
+				keyPathParts["base"] = overwriteSecretsBaseDir
+			}
+			newPath := filepath.Clean(joinKeyPathParts(keyPathParts))
+			newPathDir := newPath
+			if keyPathParts["file"] != "" {
+				newPathDir = filepath.Dir(newPath)
+			}
+			err = os.MkdirAll(newPathDir, 0755)
+			if err != nil {
+				logger.Warn(fmt.Sprintf("Failed to create a directory for secret `%s`; %s", secretName, err.Error()))
+				continue
+			}
+			for filename, pubKeyBytes := range res.Data {
+				savingFilePath := filepath.Join(newPathDir, filename)
+				err = ioutil.WriteFile(savingFilePath, pubKeyBytes, 0755)
+				if err != nil {
+					logger.Warn(fmt.Sprintf("Failed to save a secret as a file `%s`; %s", secretName, err.Error()))
+					continue
+				}
+			}
+
+			replace[keyPath] = newPathDir
+		}
+	}
+
+	// replace all key path list with the saved filepath
+	newCandidatePubkeys := map[common.SignatureType][]string{}
+	for sigType, keyPathList := range candidatePubkeys {
+		newKeyPathList := []string{}
+		for _, keyPath := range keyPathList {
+			newPath, ok := replace[keyPath]
+			if !ok {
+				newPath = keyPath
+			}
+			newKeyPathList = append(newKeyPathList, newPath)
+		}
+		newCandidatePubkeys[sigType] = newKeyPathList
+	}
+	return newCandidatePubkeys, nil
+}
+
+func parseKeyPath(keyPath string) map[string]string {
+	m := map[string]string{
+		"base":            "",
+		"secretNamespace": "",
+		"secretName":      "",
+		"sigType":         "",
+		"file":            "",
+	}
+	sigType := ""
+	if strings.HasSuffix(keyPath, "/pgp") {
+		sigType = "/pgp"
+	} else if strings.HasSuffix(keyPath, "/x509") {
+		sigType = "/x509"
+	} else if strings.HasSuffix(keyPath, "/sigstore") {
+		sigType = "/sigstore"
+	}
+	if sigType == "" {
+		return m
+	}
+
+	m["sigType"] = sigType
+	parts1 := strings.Split(keyPath, sigType)
+	parts2 := strings.Split(parts1[0], "/")
+	if len(parts1) >= 2 {
+		m["file"] = parts1[1]
+	}
+	if len(parts2) >= 1 {
+		m["secretName"] = parts2[len(parts2)-1]
+	}
+	secretNamespace := ""
+	if len(parts2) >= 2 {
+		secretNamespace = parts2[len(parts2)-2]
+	}
+
+	if secretNamespace == "" {
+		return m
+	}
+
+	m["secretNamespace"] = secretNamespace
+	parts3 := strings.Split(keyPath, secretNamespace)
+	if len(parts2) >= 1 {
+		m["base"] = parts3[0]
+	}
+	return m
+}
+
+func joinKeyPathParts(m map[string]string) string {
+	keys := []string{"base", "secretNamespace", "secretName", "sigType", "file"}
+	parts := []string{}
+	for _, key := range keys {
+		if v, ok := m[key]; ok {
+			parts = append(parts, v)
+		} else {
+			return ""
+		}
+	}
+	return strings.Join(parts, "/")
+}
+
+func exists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }

@@ -17,7 +17,6 @@
 package common
 
 import (
-	"encoding/base64"
 	"path/filepath"
 	"strings"
 
@@ -69,8 +68,10 @@ func (self *SignerConfig) GetCandidatePubkeys(ishieldNS string) map[SignatureTyp
 		if string(signatureType) == "" {
 			signatureType = SignatureTypePGP
 		}
+		baseDir := "/tmp"
 		keyPath := signerCondition.makeFilePath(ishieldNS)
-		candidatePubkeys[signatureType] = append(candidatePubkeys[signatureType], keyPath)
+		keyFullPath := filepath.Join(baseDir, keyPath)
+		candidatePubkeys[signatureType] = append(candidatePubkeys[signatureType], keyFullPath)
 	}
 	return candidatePubkeys
 }
@@ -111,18 +112,7 @@ func (sc *SignerCondition) makeFilePath(ishieldNS string) string {
 	if string(signatureType) == "" {
 		signatureType = SignatureTypePGP
 	}
-	keyConfig := sc.Name
-	if keyConfig == "" {
-		rawKey := secretNamespace + "/" + secretName
-		longKey := base64.StdEncoding.EncodeToString([]byte(rawKey))
-		index := 8
-		if len(longKey) < index {
-			index = len(longKey)
-		}
-		keyConfig = longKey[:index]
-	}
-	baseDir := "/"
-	parts := []string{baseDir, keyConfig, secretNamespace, secretName, string(signatureType)}
+	parts := []string{secretNamespace, secretName, string(signatureType)}
 	keyPath := filepath.Join(parts...)
 	return keyPath
 }

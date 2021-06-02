@@ -237,11 +237,6 @@ func (in *IntegrityShieldSpec) DeepCopyInto(out *IntegrityShieldSpec) {
 		copy(*out, *in)
 	}
 	in.Security.DeepCopyInto(&out.Security)
-	if in.KeyConfig != nil {
-		in, out := &in.KeyConfig, &out.KeyConfig
-		*out = make([]KeyConfig, len(*in))
-		copy(*out, *in)
-	}
 	in.Server.DeepCopyInto(&out.Server)
 	in.Logger.DeepCopyInto(&out.Logger)
 	in.Observer.DeepCopyInto(&out.Observer)

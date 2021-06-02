@@ -61,42 +61,6 @@ func BuildShieldConfigForIShield(cr *apiv1alpha1.IntegrityShield, scheme *runtim
 	if ecc.Spec.ShieldConfig.IShieldServerUserName == "" {
 		ecc.Spec.ShieldConfig.IShieldServerUserName = fmt.Sprintf("system:serviceaccount:%s:%s", cr.Namespace, cr.GetServiceAccountName())
 	}
-	if len(ecc.Spec.ShieldConfig.KeyPathList) == 0 {
-		keyPathList := []string{}
-		for _, keyConf := range cr.Spec.KeyConfig {
-			sigType := keyConf.SignatureType
-			if sigType == common.SignatureTypeDefault {
-				sigType = common.SignatureTypePGP
-			}
-			if sigType == common.SignatureTypePGP {
-				fileName := keyConf.FileName
-				if fileName == "" {
-					fileName = apiv1alpha1.DefaultKeyringFilename
-				}
-				// specify .gpg file name in case of pgp --> change to dir name?
-				keyPath := fmt.Sprintf("/%s/%s/%s/%s", keyConf.Name, keyConf.SecretName, sigType, fileName)
-				keyPathList = append(keyPathList, keyPath)
-			} else if sigType == common.SignatureTypeX509 {
-				// specify only mounted dir name in case of x509
-				keyPath := fmt.Sprintf("/%s/%s/%s/", keyConf.Name, keyConf.SecretName, sigType)
-				keyPathList = append(keyPathList, keyPath)
-			} else if sigType == common.SignatureTypeSigStore {
-				// specify sigstore secret (if default root cert, empty filename)
-				fileName := keyConf.FileName
-				if fileName == "" {
-					fileName = apiv1alpha1.DefaultSigstoreRootCertFilename
-				}
-				secretName := keyConf.SecretName
-				if secretName == "" {
-					secretName = cr.GetSigStoreDefaultRootSecretName()
-				}
-				keyPath := fmt.Sprintf("/%s/%s/%s/%s", keyConf.Name, secretName, sigType, fileName)
-				keyPathList = append(keyPathList, keyPath)
-			}
-
-		}
-		ecc.Spec.ShieldConfig.KeyPathList = keyPathList
-	}
 	operatorSA := getOperatorServiceAccount()
 
 	iShieldOperatorResources, iShieldServerResources := cr.GetIShieldResourceList(scheme)

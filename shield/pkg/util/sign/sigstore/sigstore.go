@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
@@ -98,7 +99,7 @@ func LoadCertPoolDir(certDir string) (*x509.CertPool, error) {
 	rootCertPath := ""
 	for _, f := range files {
 		if !f.IsDir() && (path.Ext(f.Name()) == ".crt" || path.Ext(f.Name()) == ".pem") {
-			fpath := path.Join(certDir, f.Name())
+			fpath := filepath.Join(certDir, f.Name())
 			_, err := LoadCert(fpath)
 			if err != nil {
 				continue
@@ -109,7 +110,7 @@ func LoadCertPoolDir(certDir string) (*x509.CertPool, error) {
 
 		}
 	}
-	if rootCertPath != "" {
+	if rootCertPath == "" {
 		return nil, fmt.Errorf("failed to get root cert path from cert dir")
 	}
 	rootPem, err := ioutil.ReadFile(rootCertPath)

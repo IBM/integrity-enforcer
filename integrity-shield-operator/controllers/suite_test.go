@@ -106,15 +106,17 @@ func embedRSP(cr *apisv1alpha1.IntegrityShield) *apisv1alpha1.IntegrityShield {
 		{
 			Name: "sample-rsp",
 			ResourceSigningProfileSpec: &rsp.ResourceSigningProfileSpec{
-				TargetNamespaceSelector: &common.NamespaceSelector{
-					Include: []string{"test-other-ns"},
-				},
-				ProtectRules: []*common.Rule{
-					{
-						Match: []*common.RequestPatternWithNamespace{
-							{
-								RequestPattern: &common.RequestPattern{
-									Kind: &secretPattern,
+				Match: rsp.MatchCondition{
+					TargetNamespaceSelector: &common.NamespaceSelector{
+						Include: []string{"test-other-ns"},
+					},
+					ProtectRules: []*common.Rule{
+						{
+							Match: []*common.RequestPatternWithNamespace{
+								{
+									RequestPattern: &common.RequestPattern{
+										Kind: &secretPattern,
+									},
 								},
 							},
 						},

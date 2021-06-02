@@ -332,6 +332,9 @@ func isSelfSignedCert(cert *x509.Certificate) bool {
 func NewSignerInfoFromCert(cert *x509.Certificate) *common.SignerInfo {
 	si := NewSignerInfoFromPKIXName(cert.Subject)
 	si.SerialNumber = cert.SerialNumber
+	if len(cert.EmailAddresses) > 0 {
+		si.Email = cert.EmailAddresses[0]
+	}
 	return si
 }
 

@@ -27,7 +27,14 @@ import (
 	rsp "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	sconf "github.com/IBM/integrity-enforcer/shield/pkg/apis/shieldconfig/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
+	admv1 "k8s.io/api/admission/v1"
 )
+
+// util func for checking format validation on admission request directly
+func ValidateResourceForAdmissionRequest(req *admv1.AdmissionRequest, shieldNamespace string) (bool, string) {
+	reqc, reqobj := common.NewRequestContext(req)
+	return ValidateResource(reqc, reqobj, shieldNamespace)
+}
 
 func ValidateResource(reqc *common.RequestContext, reqobj *common.RequestObject, shieldNamespace string) (bool, string) {
 	if reqc.IsDeleteRequest() {
@@ -70,12 +77,12 @@ func ValidateResourceSigningProfile(reqc *common.RequestContext, reqobj *common.
 	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
-	if reqc.Namespace != shieldNamespace && data.Spec.TargetNamespaceSelector != nil {
+	if reqc.Namespace != shieldNamespace && data.Spec.Match.TargetNamespaceSelector != nil {
 		return false, fmt.Errorf("%s.Spec.TargetNamespaceSelector is allowed only for %s in %s.", common.ProfileCustomResourceKind, common.ProfileCustomResourceKind, shieldNamespace)
 	}
 	if reqc.Namespace != shieldNamespace {
-		rules := data.Spec.ProtectRules
-		rules = append(rules, data.Spec.IgnoreRules...)
+		rules := data.Spec.Match.ProtectRules
+		rules = append(rules, data.Spec.Parameters.IgnoreRules...)
 		for _, r := range rules {
 			for _, m := range r.Match {
 				if m.Namespace != nil {
@@ -84,8 +91,8 @@ func ValidateResourceSigningProfile(reqc *common.RequestContext, reqobj *common.
 			}
 		}
 
-		attrs := data.Spec.IgnoreAttrs
-		attrs = append(attrs, data.Spec.ProtectAttrs...)
+		attrs := data.Spec.Parameters.IgnoreAttrs
+		attrs = append(attrs, data.Spec.Parameters.ProtectAttrs...)
 		for _, a := range attrs {
 			for _, m := range a.Match {
 				if m.Namespace != nil {

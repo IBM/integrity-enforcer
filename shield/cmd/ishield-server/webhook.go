@@ -44,17 +44,40 @@ import (
 
 var config *sconfloder.Config
 
-var rspLoader *RSPLoader
-var nsLoader *NamespaceLoader
-var ruletable *RuleTable
-
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 )
 
 type WebhookServer struct {
-	mux               *http.ServeMux
-	certPath, keyPath string
+	mux      *http.ServeMux
+	certPath string
+	keyPath  string
+	data     *runtimeData
+}
+
+type runtimeData struct {
+	rspLoader *RSPLoader
+	nsLoader  *NamespaceLoader
+	ruletable *RuleTable
+}
+
+// create runtimeData instance, load RSPs and NSs and set ruletable
+func newRuntimeData() *runtimeData {
+	d := &runtimeData{}
+	d.rspLoader = NewRSPLoader()
+	d.nsLoader = NewNamespaceLoader()
+	rspList, _ := d.rspLoader.GetData(true)
+	nsList, _ := d.nsLoader.GetData(true)
+	d.ruletable = NewRuleTable(rspList, nsList, config.ShieldConfig.CommonProfile, config.ShieldConfig.Namespace)
+	if d.ruletable == nil {
+		logger.Error("Failed to initialize rule table.")
+	}
+	return d
+}
+
+func (d *runtimeData) clearCache() {
+	d.rspLoader.ClearCache()
+	d.nsLoader.ClearCache()
 }
 
 func init() {
@@ -70,28 +93,12 @@ func init() {
 	// if apiBaseURL == "" {
 	// 	apiBaseURL = defaultAPIBaseURL
 	// }
-
-	rspLoader = NewRSPLoader()
-	nsLoader = NewNamespaceLoader()
-	rspList, _ := rspLoader.GetData(true)
-	nsList, _ := nsLoader.GetData(true)
-
-	ruletable = NewRuleTable(rspList, nsList, config.ShieldConfig.CommonProfile, config.ShieldConfig.Namespace)
-	if ruletable == nil {
-		logger.Fatal("Failed to initialize integrity shield rule table. Exitting...")
-	}
-}
-
-func reloadRuleTable() {
-	rspList, _ := rspLoader.GetData(true)
-	nsList, _ := nsLoader.GetData(true)
-	ruletable = NewRuleTable(rspList, nsList, config.ShieldConfig.CommonProfile, config.ShieldConfig.Namespace)
 }
 
 // Check if any profile matches the request (this can be replaced with gatekeeper constraints matching)
 func (server *WebhookServer) groupKindNamespaceCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := shield.AdmissionRequestToReqFields(req)
-	protected, _, matchedProfiels := ruletable.CheckIfProtected(reqFields)
+	protected, _, matchedProfiels := server.data.ruletable.CheckIfProtected(reqFields)
 	if !protected {
 		dr := &common.DecisionResult{
 			Type:       common.DecisionAllow,
@@ -119,6 +126,17 @@ func (server *WebhookServer) deleteCheck(req *admv1.AdmissionRequest) *common.De
 	return common.UndeterminedDecision()
 }
 
+func (server *WebhookServer) formatCheckForIShieldCRDs(req *admv1.AdmissionRequest) *common.DecisionResult {
+	if ok, msg := shield.ValidateResourceForAdmissionRequest(req, config.ShieldConfig.Namespace); !ok {
+		return &common.DecisionResult{
+			Type:       common.DecisionDeny,
+			ReasonCode: common.REASON_VALIDATION_FAIL,
+			Message:    msg,
+		}
+	}
+	return common.UndeterminedDecision()
+}
+
 // func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 // 	var patchBytes []byte
 // 	if conf.PatchEnabled(reqc) {
@@ -140,8 +158,8 @@ func (server *WebhookServer) deleteCheck(req *admv1.AdmissionRequest) *common.De
 // 	return resp
 // }
 
-func createSimpleAdmissionResponse(allowed bool, msg string) *admv1.AdmissionResponse {
-	responseMessage := fmt.Sprintf("%s (Request: %s)", msg)
+func createSimpleAdmissionResponse(allowed bool, msg string, req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
+	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqToInfo(req))
 	resp := &admv1.AdmissionResponse{
 		Allowed: allowed,
 		Result: &metav1.Status{
@@ -151,12 +169,23 @@ func createSimpleAdmissionResponse(allowed bool, msg string) *admv1.AdmissionRes
 	return resp
 }
 
+func reqToInfo(req *admv1.AdmissionRequest) string {
+	info := map[string]string{}
+	info["group"] = req.Kind.Group
+	info["version"] = req.Kind.Version
+	info["kind"] = req.Kind.Kind
+	info["namespace"] = req.Namespace
+	info["name"] = req.Name
+	infoBytes, _ := json.Marshal(info)
+	return string(infoBytes)
+}
+
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
 
 	_ = config.InitShieldConfig()
 
-	// reload rule table using cache
-	reloadRuleTable()
+	// set rule table using cache if provided, otherwise, load RSPs and NSs via K8s API
+	server.data = newRuntimeData()
 
 	// init decision result with `undetermined`
 	dr := common.UndeterminedDecision()
@@ -165,18 +194,29 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 	// TODO: add it
 
 	// check if the request is delete operation; if delete, skip this request
+	// In case of gatekeeper-enabled IShield, this step is done by gatekeeper automatically
 	dr = server.deleteCheck(admissionReviewReq.Request)
 	if !dr.IsUndetermined() {
-		logger.Debug("[DEBUG] allowed by delteCheck() kind: ", admissionReviewReq.Request.Kind, " , name: ", admissionReviewReq.Request.Name)
-		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message)
+		server.finalizeHandling(admissionReviewReq.Request, dr)
+		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request)
+	}
+
+	// check if the requested resource kind is an IShield CRD, and check if the format is valid
+	// In case of gatekeeper-enabled IShield, this step is not invoked because the CRD kind (e.g. ShieldConfig) is not protected by contraints in general
+	// TODO: find a way to set a correct CRD schema in CRD definition by ishield operator
+	dr = server.formatCheckForIShieldCRDs(admissionReviewReq.Request)
+	if !dr.IsUndetermined() {
+		server.finalizeHandling(admissionReviewReq.Request, dr)
+		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request)
 	}
 
 	var matchedProfiels []rspapi.ResourceSigningProfile
 	// check if the group/version/kind is protected in the namespace
+	// In case of gatekeeper-enabled IShield, this step is done by gatekeeper automatically
 	dr, matchedProfiels = server.groupKindNamespaceCheck(admissionReviewReq.Request)
 	if !dr.IsUndetermined() {
-		logger.Debug("[DEBUG] allowed by groupKindNamespaceCheck() kind: ", admissionReviewReq.Request.Kind, " , name: ", admissionReviewReq.Request.Name)
-		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message)
+		server.finalizeHandling(admissionReviewReq.Request, dr)
+		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request)
 	}
 
 	// check mutation & signature & image signature if enabled & some others
@@ -187,11 +227,51 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 		// Run Request Handler
 		resp := requestHandler.Run(admissionReviewReq.Request)
 		multipleResponses = append(multipleResponses, resp)
-		logger.Debug("[DEBUG] temp response: ", admissionReviewReq.Request.Kind, " , name: ", admissionReviewReq.Request.Name, ", message: ", resp.Result.Message, ", profile: ", singleProfile.GetName())
 	}
 	admissionResponse, _ := shield.SummarizeMultipleAdmissionResponses(multipleResponses)
 
+	server.finalizeHandling(admissionReviewReq.Request, dr)
 	return admissionResponse
+}
+
+// clear RSP / NS cache if needed
+func (server *WebhookServer) finalizeHandling(req *admv1.AdmissionRequest, dr *common.DecisionResult) {
+	reqIsAllowed := dr.IsAllowed()
+	if !reqIsAllowed {
+		return
+	}
+	reqForRSP := (req.Kind.Kind == common.ProfileCustomResourceKind)
+	reqForNS := (req.Kind.Kind == "Namespace")
+	if !(reqForRSP || reqForNS) {
+		return
+	}
+	reqByIShieldServer := checkIfIShieldServerRequest(req.UserInfo.Username)
+	reqByIShieldOperator := checkIfIShieldOperatorRequest(req.UserInfo.Username)
+	if reqByIShieldServer || reqByIShieldOperator {
+		return
+	}
+	shouldClearCache := false
+	if reqForRSP {
+		shouldClearCache = true
+	} else if reqForNS {
+		mutationCheckResult, _ := shield.MutationCheckForAdmissionRequest(req)
+		if mutationCheckResult.IsMutated {
+			shouldClearCache = true
+		}
+	}
+
+	if shouldClearCache {
+		server.data.clearCache()
+	}
+	return
+}
+
+func checkIfIShieldServerRequest(username string) bool {
+	return common.MatchPattern(config.ShieldConfig.IShieldServerUserName, username) //"service account for integrity-shield"
+}
+
+func checkIfIShieldOperatorRequest(username string) bool {
+	return common.ExactMatch(config.ShieldConfig.IShieldResourceCondition.OperatorServiceAccount, username) //"service account for integrity-shield-operator"
 }
 
 func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Request) {

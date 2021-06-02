@@ -26,7 +26,6 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 
 	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -50,17 +49,6 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 		EmptyDirVolume("log-volume"),
 		EmptyDirVolume("tmp"),
 	}
-	for _, keyConf := range cr.Spec.KeyConfig {
-		secretName := keyConf.SecretName
-		if secretName == "" && keyConf.SignatureType == common.SignatureTypeSigStore {
-			secretName = cr.GetSigStoreDefaultRootSecretName()
-		}
-		if secretName == "" {
-			continue
-		}
-		tmpSecretVolume := SecretVolume(keyConf.Name, secretName)
-		volumes = append(volumes, tmpSecretVolume)
-	}
 
 	servervolumemounts = []v1.VolumeMount{
 		{
@@ -76,18 +64,6 @@ func BuildDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployme
 			MountPath: "/ishield-app/public",
 			Name:      "log-volume",
 		},
-	}
-	for _, keyConf := range cr.Spec.KeyConfig {
-		sigType := keyConf.SignatureType
-		if sigType == common.SignatureTypeDefault {
-			sigType = common.SignatureTypePGP
-		}
-		secretName := keyConf.SecretName
-		if secretName == "" && sigType == common.SignatureTypeSigStore {
-			secretName = cr.GetSigStoreDefaultRootSecretName()
-		}
-		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/%s/", keyConf.Name, secretName, sigType), Name: keyConf.Name}
-		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
 	}
 
 	if cr.Spec.Logger.EsConfig.Enabled && cr.Spec.Logger.EsConfig.Scheme == "https" {
@@ -359,17 +335,6 @@ func BuildAPIDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deplo
 		EmptyDirVolume("log-volume"),
 		EmptyDirVolume("tmp"),
 	}
-	for _, keyConf := range cr.Spec.KeyConfig {
-		secretName := keyConf.SecretName
-		if secretName == "" && keyConf.SignatureType == common.SignatureTypeSigStore {
-			secretName = cr.GetSigStoreDefaultRootSecretName()
-		}
-		if secretName == "" {
-			continue
-		}
-		tmpSecretVolume := SecretVolume(keyConf.Name, secretName)
-		volumes = append(volumes, tmpSecretVolume)
-	}
 
 	servervolumemounts = []v1.VolumeMount{
 		{
@@ -385,18 +350,6 @@ func BuildAPIDeploymentForIShield(cr *apiv1alpha1.IntegrityShield) *appsv1.Deplo
 			MountPath: "/ishield-app/public",
 			Name:      "log-volume",
 		},
-	}
-	for _, keyConf := range cr.Spec.KeyConfig {
-		sigType := keyConf.SignatureType
-		if sigType == common.SignatureTypeDefault {
-			sigType = common.SignatureTypePGP
-		}
-		secretName := keyConf.SecretName
-		if secretName == "" && sigType == common.SignatureTypeSigStore {
-			secretName = cr.GetSigStoreDefaultRootSecretName()
-		}
-		tmpVolumeMount := v1.VolumeMount{MountPath: fmt.Sprintf("/%s/%s/%s/", keyConf.Name, secretName, sigType), Name: keyConf.Name}
-		servervolumemounts = append(servervolumemounts, tmpVolumeMount)
 	}
 
 	apiContainer := v1.Container{

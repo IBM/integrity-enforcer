@@ -102,7 +102,6 @@ func (self *Handler) Check() *common.DecisionResult {
 
 	dr = protectedCheck(self.reqc, self.config, self.profile, self.ctx)
 	if !dr.IsUndetermined() {
-		logger.Debug("[DEBUG] handler not protected")
 		return dr
 	}
 
@@ -194,6 +193,8 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *common.DecisionRes
 
 	// Note: logEntry() calls ShieldConfig.ConsoleLogEnabled() internally, and this requires ResourceContext.
 	self.logEntry()
+	// Note: self.logInScope is used for checking whether a log of this request should be output in context log or not
+	self.logInScope = true
 
 	runDataLoader := NewLoader(self.config, reqNamespace)
 	self.data.loader = runDataLoader
@@ -205,7 +206,7 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *common.DecisionRes
 func (self *Handler) overwriteDecision(dr *common.DecisionResult) *common.DecisionResult {
 	var sigConf *common.SignerConfig
 	if dr.DenyRSP != nil {
-		sigConf = dr.DenyRSP.(*rspapi.ResourceSigningProfile).Spec.SignerConfig
+		sigConf = dr.DenyRSP.(*rspapi.ResourceSigningProfile).Spec.Parameters.SignerConfig
 	}
 	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, sigConf)
 	isDetectMode := checkIfDetectOnly(self.config)

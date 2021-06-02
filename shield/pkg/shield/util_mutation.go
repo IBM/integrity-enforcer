@@ -22,6 +22,7 @@ import (
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	mapnode "github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
+	admv1 "k8s.io/api/admission/v1"
 )
 
 type MutationChecker interface {
@@ -38,6 +39,12 @@ func MutationCheck(reqc *common.RequestContext, reqobj *common.RequestObject) (*
 	checker := NewMutationChecker()
 	dummyProf := rspapi.ResourceSigningProfile{}
 	return checker.Eval(reqc, reqobj, dummyProf)
+}
+
+// util func for checking mutation on admission request directly
+func MutationCheckForAdmissionRequest(req *admv1.AdmissionRequest) (*common.MutationEvalResult, error) {
+	reqc, reqobj := common.NewRequestContext(req)
+	return MutationCheck(reqc, reqobj)
 }
 
 func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, reqobj *common.RequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {

@@ -29,14 +29,21 @@ const maxHistoryLength = 3
 
 // ResourceSigningProfileSpec defines the desired state of AppEnforcePolicy
 type ResourceSigningProfileSpec struct {
-	// ResourceProfile
-	Disabled bool `json:"disabled,omitempty"`
+	Match      MatchCondition `json:"match,omitempty"`
+	Parameters Parameters     `json:"parameters,omitempty"`
+}
+
+type MatchCondition struct {
 	// `TargetNamespaceSelector` is used only for profile in iShield NS
 	TargetNamespaceSelector *common.NamespaceSelector `json:"targetNamespaceSelector,omitempty"`
 	ProtectRules            []*common.Rule            `json:"protectRules,omitempty"`
-	IgnoreRules             []*common.Rule            `json:"ignoreRules,omitempty"`
-	ProtectAttrs            []*common.AttrsPattern    `json:"protectAttrs,omitempty"`
-	IgnoreAttrs             []*common.AttrsPattern    `json:"ignoreAttrs,omitempty"`
+}
+
+type Parameters struct {
+	// Protection
+	IgnoreRules  []*common.Rule         `json:"ignoreRules,omitempty"`
+	ProtectAttrs []*common.AttrsPattern `json:"protectAttrs,omitempty"`
+	IgnoreAttrs  []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
 
 	// SignerConfig
 	SignerConfig *common.SignerConfig `json:"signerConfig,omitempty"`
@@ -81,7 +88,7 @@ type ResourceSigningProfile struct {
 }
 
 func (self ResourceSigningProfile) IsEmpty() bool {
-	return len(self.Spec.ProtectRules) == 0
+	return len(self.Spec.Match.ProtectRules) == 0
 }
 
 func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS string) (bool, *common.Rule) {
@@ -98,14 +105,14 @@ func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS 
 		strictMatch = true
 	}
 
-	for _, rule := range self.Spec.IgnoreRules {
+	for _, rule := range self.Spec.Parameters.IgnoreRules {
 		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
 			return false, rule
 		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
 			return false, rule
 		}
 	}
-	for _, rule := range self.Spec.ProtectRules {
+	for _, rule := range self.Spec.Match.ProtectRules {
 		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
 			return true, rule
 		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
@@ -118,16 +125,16 @@ func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS 
 
 func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) ResourceSigningProfile {
 	newProfile := self
-	newProfile.Spec.ProtectRules = append(newProfile.Spec.ProtectRules, another.Spec.ProtectRules...)
-	newProfile.Spec.IgnoreRules = append(newProfile.Spec.IgnoreRules, another.Spec.IgnoreRules...)
-	newProfile.Spec.ProtectAttrs = append(newProfile.Spec.ProtectAttrs, another.Spec.ProtectAttrs...)
-	newProfile.Spec.IgnoreAttrs = append(newProfile.Spec.IgnoreAttrs, another.Spec.IgnoreAttrs...)
+	newProfile.Spec.Match.ProtectRules = append(newProfile.Spec.Match.ProtectRules, another.Spec.Match.ProtectRules...)
+	newProfile.Spec.Parameters.IgnoreRules = append(newProfile.Spec.Parameters.IgnoreRules, another.Spec.Parameters.IgnoreRules...)
+	newProfile.Spec.Parameters.ProtectAttrs = append(newProfile.Spec.Parameters.ProtectAttrs, another.Spec.Parameters.ProtectAttrs...)
+	newProfile.Spec.Parameters.IgnoreAttrs = append(newProfile.Spec.Parameters.IgnoreAttrs, another.Spec.Parameters.IgnoreAttrs...)
 	return newProfile
 }
 
 func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
-	for _, attrsPattern := range self.Spec.ProtectAttrs {
+	for _, attrsPattern := range self.Spec.Parameters.ProtectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
@@ -137,7 +144,7 @@ func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*
 
 func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
-	for _, attrsPattern := range self.Spec.IgnoreAttrs {
+	for _, attrsPattern := range self.Spec.Parameters.IgnoreAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}

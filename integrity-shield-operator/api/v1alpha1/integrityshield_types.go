@@ -87,7 +87,6 @@ type IntegrityShieldSpec struct {
 
 	IgnoreDefaultIShieldCR bool              `json:"ignoreDefaultIShieldCR,omitempty"`
 	Security               SecurityConfig    `json:"security,omitempty"`
-	KeyConfig              []KeyConfig       `json:"keyConfig,omitempty"`
 	Server                 ServerContainer   `json:"server,omitempty"`
 	Logger                 LoggerContainer   `json:"logger,omitempty"`
 	Observer               ObserverContainer `json:"observer,omitempty"`

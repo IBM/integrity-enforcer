@@ -765,19 +765,27 @@ func (r *IntegrityShieldReconciler) isKeyRingReady(instance *apiv1alpha1.Integri
 	okCount := 0
 	nonReadyKey := ""
 	namedKeyCount := 0
-	for _, keyConf := range instance.Spec.KeyConfig {
-		if keyConf.SecretName == "" {
-			continue
+	for _, rsp := range instance.Spec.ResourceSigningProfiles {
+		for _, signerCondition := range rsp.ResourceSigningProfileSpec.Parameters.SignerConfig.Signers {
+			if signerCondition.KeySecretName == "" {
+				continue
+			}
+			secretName := signerCondition.KeySecretName
+			sercretNamespace := signerCondition.KeySecretNamespace
+			if sercretNamespace == "" {
+				sercretNamespace = instance.Namespace
+			}
+
+			namedKeyCount += 1
+			err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sercretNamespace}, found)
+			if err == nil {
+				okCount += 1
+			} else {
+				nonReadyKey = sercretNamespace + "/" + secretName
+				break
+			}
 		}
 
-		namedKeyCount += 1
-		err := r.Get(ctx, types.NamespacedName{Name: keyConf.SecretName, Namespace: instance.Namespace}, found)
-		if err == nil {
-			okCount += 1
-		} else {
-			nonReadyKey = keyConf.SecretName
-			break
-		}
 	}
 	ok := (okCount == namedKeyCount)
 	return ok, nonReadyKey

@@ -40,14 +40,14 @@ func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Name
 		Spec: rspapi.ResourceSigningProfileSpec{},
 	}
 	if commonProfile != nil {
-		commonProfileRSP.Spec.IgnoreRules = commonProfile.IgnoreRules
-		commonProfileRSP.Spec.IgnoreAttrs = commonProfile.IgnoreAttrs
+		commonProfileRSP.Spec.Parameters.IgnoreRules = commonProfile.IgnoreRules
+		commonProfileRSP.Spec.Parameters.IgnoreAttrs = commonProfile.IgnoreAttrs
 	}
 	for _, p := range profiles {
 		pNamespace := p.GetNamespace()
 		targetNamespaces := []string{}
 		if pNamespace == shieldNamespace {
-			nsSelector := p.Spec.TargetNamespaceSelector
+			nsSelector := p.Spec.Match.TargetNamespaceSelector
 			if nsSelector != nil {
 				targetNamespaces = matchNamespaceListWithSelector(namespaces, nsSelector)
 			} else {
