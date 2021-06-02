@@ -25,34 +25,29 @@ import (
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
-func protectedCheck(reqc *common.RequestContext, config *config.ShieldConfig, profile rspapi.ResourceSigningProfile, ctx *common.CheckContext) *common.DecisionResult {
+func ignoredCheck(reqc *common.RequestContext, config *config.ShieldConfig, profileParameters rspapi.Parameters, ctx *common.CheckContext) *common.DecisionResult {
 	reqFields := reqc.Map()
-	protected, matchedRule := profile.Match(reqFields)
-	ignoreMatched := false
-	if !protected && matchedRule != nil {
-		ignoreMatched = true
-	}
 
-	if !protected {
+	// if common profile is not embedded in profile parameters yet, then do it
+	if !profileParameters.IsCommonProfilesEmbedded() {
+		commonProfileParameters := rspapi.Parameters{
+			IgnoreRules: config.CommonProfile.IgnoreRules,
+			IgnoreAttrs: config.CommonProfile.IgnoreAttrs,
+		}
+		profileParameters = profileParameters.EmbedCommonProfiles(commonProfileParameters)
+	}
+	ignoreMatched, _ := profileParameters.IgnoreMatch(reqFields)
+
+	if ignoreMatched {
 		ctx.Allow = true
 		ctx.Verified = true
 		ctx.Protected = false
-		if ignoreMatched {
-			ctx.ReasonCode = common.REASON_IGNORE_RULE_MATCHED
-			ctx.Message = common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message
-			return &common.DecisionResult{
-				Type:       common.DecisionAllow,
-				ReasonCode: common.REASON_IGNORE_RULE_MATCHED,
-				Message:    common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message,
-			}
-		} else {
-			ctx.ReasonCode = common.REASON_NOT_PROTECTED
-			ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
-			return &common.DecisionResult{
-				Type:       common.DecisionAllow,
-				ReasonCode: common.REASON_NOT_PROTECTED,
-				Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
-			}
+		ctx.ReasonCode = common.REASON_IGNORE_RULE_MATCHED
+		ctx.Message = common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message
+		return &common.DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_IGNORE_RULE_MATCHED,
+			Message:    common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message,
 		}
 	} else {
 		ctx.Protected = true

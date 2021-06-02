@@ -24,9 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/config"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -55,7 +53,7 @@ func TestCheckFunctions(t *testing.T) {
 		// testFormatCheck(t, i)
 		// testIShieldResourceCheck(t, i)
 		// testDeleteCheck(t, i)
-		testProtectedCheck(t, i)
+		// testProtectedCheck(t, i)
 		testSingleMutationCheck(t, i)
 		testSingleSignatureCheck(t, i)
 	}
@@ -123,34 +121,34 @@ func testFileName(fname string, num int) string {
 // 	}
 // }
 
-func testProtectedCheck(t *testing.T, caseNum int) {
-	reqc, reqobj, _, config, _, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
-	var obj *unstructured.Unstructured
-	_ = json.Unmarshal(reqobj.RawObject, &obj)
-	actualMatchedProfiles, err := GetMatchedProfilesWithResource(obj, config.Namespace)
-	if err != nil {
-		t.Errorf("[Case %s] Test failed for protectedCheck(); failed to get matched profiles; %s", err.Error())
-	}
-	multipleResults := []*common.DecisionResult{}
-	for _, profile := range actualMatchedProfiles {
-		actualDr := protectedCheck(reqc, config, profile, ctx)
-		multipleResults = append(multipleResults, actualDr)
-	}
-	actualDr, _ := SummarizeMultipleDecisionResults(multipleResults)
+// func testProtectedCheck(t *testing.T, caseNum int) {
+// 	reqc, reqobj, _, config, _, ctx, expectedDr, expectedMatchedProf, _ := getTestData(caseNum)
+// 	var obj *unstructured.Unstructured
+// 	_ = json.Unmarshal(reqobj.RawObject, &obj)
+// 	actualMatchedProfiles, err := GetMatchedProfilesWithResource(obj, config.Namespace)
+// 	if err != nil {
+// 		t.Errorf("[Case %s] Test failed for protectedCheck(); failed to get matched profiles; %s", err.Error())
+// 	}
+// 	multipleResults := []*common.DecisionResult{}
+// 	for _, profile := range actualMatchedProfiles {
+// 		actualDr := protectedCheck(reqc, config, profile, ctx)
+// 		multipleResults = append(multipleResults, actualDr)
+// 	}
+// 	actualDr, _ := SummarizeMultipleDecisionResults(multipleResults)
 
-	if !reflect.DeepEqual(actualDr, expectedDr) {
-		actDrBytes, _ := json.Marshal(actualDr)
-		expDrBytes, _ := json.Marshal(expectedDr)
-		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
-	}
-	if len(actualMatchedProfiles) != 1 || !reflect.DeepEqual(actualMatchedProfiles[0], expectedMatchedProf) {
-		actProfBytes, _ := json.Marshal(actualMatchedProfiles[0])
-		expProfBytes, _ := json.Marshal(expectedMatchedProf)
-		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected :\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expProfBytes), string(actProfBytes))
-	} else {
-		t.Logf("[Case %s] Test for protectedCheck() passed.", strconv.Itoa(caseNum))
-	}
-}
+// 	if !reflect.DeepEqual(actualDr, expectedDr) {
+// 		actDrBytes, _ := json.Marshal(actualDr)
+// 		expDrBytes, _ := json.Marshal(expectedDr)
+// 		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected:\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expDrBytes), string(actDrBytes))
+// 	}
+// 	if len(actualMatchedProfiles) != 1 || !reflect.DeepEqual(actualMatchedProfiles[0], expectedMatchedProf) {
+// 		actProfBytes, _ := json.Marshal(actualMatchedProfiles[0])
+// 		expProfBytes, _ := json.Marshal(expectedMatchedProf)
+// 		t.Errorf("[Case %s] Test failed for protectedCheck()\nexpected :\n  %s\nactual:\n  %s", strconv.Itoa(caseNum), string(expProfBytes), string(actProfBytes))
+// 	} else {
+// 		t.Logf("[Case %s] Test for protectedCheck() passed.", strconv.Itoa(caseNum))
+// 	}
+// }
 
 func testSingleMutationCheck(t *testing.T, caseNum int) {
 	reqc, reqobj, _, config, data, ctx, initialDr, prof, expectedDr := getTestData(caseNum)

@@ -115,6 +115,13 @@ func (self *Handler) Check() *common.DecisionResult {
 	var dr *common.DecisionResult
 	dr = common.UndeterminedDecision()
 
+	// when this func is called, it implies that the requested resource is protected.
+	// but need to check if the user of this request is ignored or not.
+	dr = ignoredCheck(self.reqc, self.config, self.profileParameters, self.ctx)
+	if !dr.IsUndetermined() {
+		return dr
+	}
+
 	dr = mutationCheckWithSingleProfile(self.profileParameters, self.reqc, self.reqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr

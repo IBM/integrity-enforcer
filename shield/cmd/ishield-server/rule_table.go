@@ -48,7 +48,7 @@ func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Name
 		if nsSelector != nil {
 			targetNamespaces = matchNamespaceListWithSelector(namespaces, nsSelector)
 		}
-		pWithCommon := p.Merge(commonProfileRSP)
+		pWithCommon := p.EmbedCommonProfiles(commonProfileRSP)
 		items = append(items, RuleItem{Profile: pWithCommon, TargetNamespaces: targetNamespaces})
 		allTargetNamespaces = common.GetUnionOfArrays(allTargetNamespaces, targetNamespaces)
 	}

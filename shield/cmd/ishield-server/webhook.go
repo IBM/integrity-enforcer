@@ -140,6 +140,8 @@ func (server *WebhookServer) iShieldResourceCheck(req *admv1.AdmissionRequest) *
 }
 
 // Check if any profile matches the request (this can be replaced with gatekeeper constraints matching + rego)
+// This will check IgnoreRules too, but it will be done by Request Handler in case of gatekeeper-enabled IShield.
+// So, in the rego logic, it is enough to check RSP.Spec.Match and RSP.Spec.Parameters.AdditionalProtectRules.
 func (server *WebhookServer) protectedCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := shield.AdmissionRequestToReqFields(req)
 	protected, _, matchedProfiles := server.data.ruletable.CheckIfProtected(reqFields)

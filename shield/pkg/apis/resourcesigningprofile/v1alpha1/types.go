@@ -51,6 +51,9 @@ type Parameters struct {
 
 	// ImageProfile
 	ImageProfile *common.ImageProfile `json:"imageProfile,omitempty"`
+
+	// some other controlls
+	commonProfilesEmbedded bool `json:"-"`
 }
 
 // ResourceSigningProfileStatus defines the observed state of AppEnforcePolicy
@@ -144,13 +147,21 @@ func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *co
 	return false, nil
 }
 
+func (self ResourceSigningProfile) EmbedCommonProfiles(another ResourceSigningProfile) ResourceSigningProfile {
+	newProfile := self.Merge(another)
+	newProfile.Spec.Parameters.commonProfilesEmbedded = true
+	return newProfile
+}
+
 func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) ResourceSigningProfile {
 	newProfile := self
 	newProfile.Spec.Match.ProtectRules = append(newProfile.Spec.Match.ProtectRules, another.Spec.Match.ProtectRules...)
-	newProfile.Spec.Parameters.IgnoreRules = append(newProfile.Spec.Parameters.IgnoreRules, another.Spec.Parameters.IgnoreRules...)
-	newProfile.Spec.Parameters.ProtectAttrs = append(newProfile.Spec.Parameters.ProtectAttrs, another.Spec.Parameters.ProtectAttrs...)
-	newProfile.Spec.Parameters.IgnoreAttrs = append(newProfile.Spec.Parameters.IgnoreAttrs, another.Spec.Parameters.IgnoreAttrs...)
+	newProfile.Spec.Parameters = newProfile.Spec.Parameters.Merge(another.Spec.Parameters)
 	return newProfile
+}
+
+func (self ResourceSigningProfile) IsCommonProfilesEmbedded() bool {
+	return self.Spec.Parameters.commonProfilesEmbedded
 }
 
 func (self Parameters) GetProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
@@ -171,6 +182,45 @@ func (self Parameters) GetIgnoreAttrs(reqFields map[string]string) []*common.Att
 		}
 	}
 	return patterns
+}
+
+func (self Parameters) EmbedCommonProfiles(another Parameters) Parameters {
+	newParameters := self.Merge(another)
+	newParameters.commonProfilesEmbedded = true
+	return newParameters
+}
+
+func (self Parameters) Merge(another Parameters) Parameters {
+	newParameters := self
+	newParameters.IgnoreRules = append(newParameters.IgnoreRules, another.IgnoreRules...)
+	newParameters.ProtectAttrs = append(newParameters.ProtectAttrs, another.ProtectAttrs...)
+	newParameters.IgnoreAttrs = append(newParameters.IgnoreAttrs, another.IgnoreAttrs...)
+	return newParameters
+}
+
+func (self Parameters) IsCommonProfilesEmbedded() bool {
+	return self.commonProfilesEmbedded
+}
+
+func (self Parameters) IgnoreMatch(reqFields map[string]string) (bool, *common.Rule) {
+	scope := "Namespaced"
+	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {
+		scope = reqScope
+	}
+
+	strictMatch := false
+	if scope == "Cluster" {
+		strictMatch = true
+	}
+
+	for _, rule := range self.IgnoreRules {
+		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
+			return true, rule
+		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
+			return true, rule
+		}
+	}
+	return false, nil
 }
 
 func (self *ResourceSigningProfile) UpdateStatus(request *common.Request, errMsg string) *ResourceSigningProfile {
