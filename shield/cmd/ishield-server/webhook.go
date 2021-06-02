@@ -260,8 +260,11 @@ func (server *WebhookServer) admissionSideCheck(req *admv1.AdmissionRequest) (*c
 
 	var matchedProfiles []rspapi.ResourceSigningProfile
 	// check if the group/version/kind is protected in the namespace
-	// In case of gatekeeper-enabled IShield, this step is separated into 2 logics.
-	// One is done by gatekeeper automatically, and another should be implemented in rego
+	// In case of gatekeeper-enabled IShield, this step is separated into 3 logics.
+	// One is done by gatekeeper constraint automatically, another should be implemented in rego, and the rest is done by handler.
+	// detail) check with RSP.Spec.Match --> constraint
+	//         check with RSP.Spec.Parameters.AdditionalProtectRuled --> rego
+	//         check with RSP.Spec.Parameters.IgnoreRules --> handler
 	dr, matchedProfiles = server.protectedCheck(req)
 	if !dr.IsUndetermined() {
 		return dr, nil

@@ -52,7 +52,7 @@ type Parameters struct {
 	// ImageProfile
 	ImageProfile *common.ImageProfile `json:"imageProfile,omitempty"`
 
-	// some other controlls
+	// some other controls
 	commonProfilesEmbedded bool `json:"-"`
 }
 
