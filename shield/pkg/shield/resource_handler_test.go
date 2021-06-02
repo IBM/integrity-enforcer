@@ -51,7 +51,7 @@ func resourceHandlerTest() {
 			multipleResults := []*common.DecisionResult{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(changedReq, test2Config)
-				testHandler := NewResourceCheckHandler(test2Config, metaLogger, profile)
+				testHandler := NewResourceCheckHandler(test2Config, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(res)
 				multipleResults = append(multipleResults, result)
@@ -76,7 +76,7 @@ func resourceHandlerTest() {
 			multipleResults := []*common.DecisionResult{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(changedReq, testConfig)
-				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(res)
 				multipleResults = append(multipleResults, result)
@@ -101,7 +101,7 @@ func resourceHandlerTest() {
 			multipleResults := []*common.DecisionResult{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(modReq, testConfig)
-				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(res)
 				multipleResults = append(multipleResults, result)
@@ -127,7 +127,7 @@ func resourceHandlerTest() {
 			multipleResults := []*common.DecisionResult{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(updReq, testConfig)
-				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(res)
 				multipleResults = append(multipleResults, result)
@@ -153,7 +153,7 @@ func resourceHandlerTest() {
 			multipleResults := []*common.DecisionResult{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(updReq, testConfig)
-				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile)
+				testHandler := NewResourceCheckHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(res)
 				multipleResults = append(multipleResults, result)
@@ -179,7 +179,7 @@ func resourceHandlerTest() {
 			multipleResults := []*common.DecisionResult{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(crdReq, crdTestConfig)
-				testHandler := NewResourceCheckHandler(crdTestConfig, metaLogger, profile)
+				testHandler := NewResourceCheckHandler(crdTestConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(res)
 				multipleResults = append(multipleResults, result)

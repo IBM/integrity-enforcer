@@ -41,7 +41,7 @@ import (
 ***********************************************/
 
 type VerifierInterface interface {
-	Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error)
+	Verify(sig *GeneralSignature, resc *common.ResourceContext, profileParameters rspapi.Parameters) (*SigVerifyResult, []string, error)
 }
 
 /**********************************************
@@ -68,7 +68,7 @@ func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPath
 	return nil
 }
 
-func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, profileParameters rspapi.Parameters) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error
@@ -79,8 +79,8 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	var kustomizeList []*common.KustomizePattern
 	allowDiffPatterns := makeAllowDiffPatterns(resc, kustomizeList)
 
-	protectAttrsList := signingProfile.ProtectAttrs(resc.Map())
-	ignoreAttrsList := signingProfile.IgnoreAttrs(resc.Map())
+	protectAttrsList := profileParameters.GetProtectAttrs(resc.Map())
+	ignoreAttrsList := profileParameters.GetIgnoreAttrs(resc.Map())
 
 	resSigUID := sig.data["resourceSignatureUID"]
 	sigFrom := ""
@@ -485,7 +485,7 @@ type HelmVerifier struct {
 	KeyPathList []string
 }
 
-func (self *HelmVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, signingProfile rspapi.ResourceSigningProfile) (*SigVerifyResult, []string, error) {
+func (self *HelmVerifier) Verify(sig *GeneralSignature, resc *common.ResourceContext, profileParameters rspapi.Parameters) (*SigVerifyResult, []string, error) {
 	var vcerr *common.CheckError
 	var vsinfo *common.SignerInfo
 	var retErr error

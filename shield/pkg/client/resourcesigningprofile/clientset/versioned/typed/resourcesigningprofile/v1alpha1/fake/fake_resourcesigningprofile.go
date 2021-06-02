@@ -33,7 +33,6 @@ import (
 // FakeResourceSigningProfiles implements ResourceSigningProfileInterface
 type FakeResourceSigningProfiles struct {
 	Fake *FakeApisV1alpha1
-	ns   string
 }
 
 var resourcesigningprofilesResource = schema.GroupVersionResource{Group: "apis.integrityshield.io", Version: "v1alpha1", Resource: "resourcesigningprofiles"}
@@ -43,8 +42,7 @@ var resourcesigningprofilesKind = schema.GroupVersionKind{Group: "apis.integrity
 // Get takes name of the resourceSigningProfile, and returns the corresponding resourceSigningProfile object, and an error if there is any.
 func (c *FakeResourceSigningProfiles) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(resourcesigningprofilesResource, c.ns, name), &v1alpha1.ResourceSigningProfile{})
-
+		Invokes(testing.NewRootGetAction(resourcesigningprofilesResource, name), &v1alpha1.ResourceSigningProfile{})
 	if obj == nil {
 		return nil, err
 	}
@@ -54,8 +52,7 @@ func (c *FakeResourceSigningProfiles) Get(ctx context.Context, name string, opti
 // List takes label and field selectors, and returns the list of ResourceSigningProfiles that match those selectors.
 func (c *FakeResourceSigningProfiles) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ResourceSigningProfileList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(resourcesigningprofilesResource, resourcesigningprofilesKind, c.ns, opts), &v1alpha1.ResourceSigningProfileList{})
-
+		Invokes(testing.NewRootListAction(resourcesigningprofilesResource, resourcesigningprofilesKind, opts), &v1alpha1.ResourceSigningProfileList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -76,15 +73,13 @@ func (c *FakeResourceSigningProfiles) List(ctx context.Context, opts v1.ListOpti
 // Watch returns a watch.Interface that watches the requested resourceSigningProfiles.
 func (c *FakeResourceSigningProfiles) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(resourcesigningprofilesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(resourcesigningprofilesResource, opts))
 }
 
 // Create takes the representation of a resourceSigningProfile and creates it.  Returns the server's representation of the resourceSigningProfile, and an error, if there is any.
 func (c *FakeResourceSigningProfiles) Create(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.CreateOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(resourcesigningprofilesResource, c.ns, resourceSigningProfile), &v1alpha1.ResourceSigningProfile{})
-
+		Invokes(testing.NewRootCreateAction(resourcesigningprofilesResource, resourceSigningProfile), &v1alpha1.ResourceSigningProfile{})
 	if obj == nil {
 		return nil, err
 	}
@@ -94,8 +89,18 @@ func (c *FakeResourceSigningProfiles) Create(ctx context.Context, resourceSignin
 // Update takes the representation of a resourceSigningProfile and updates it. Returns the server's representation of the resourceSigningProfile, and an error, if there is any.
 func (c *FakeResourceSigningProfiles) Update(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.UpdateOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(resourcesigningprofilesResource, c.ns, resourceSigningProfile), &v1alpha1.ResourceSigningProfile{})
+		Invokes(testing.NewRootUpdateAction(resourcesigningprofilesResource, resourceSigningProfile), &v1alpha1.ResourceSigningProfile{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ResourceSigningProfile), err
+}
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeResourceSigningProfiles) UpdateStatus(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.UpdateOptions) (*v1alpha1.ResourceSigningProfile, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(resourcesigningprofilesResource, "status", resourceSigningProfile), &v1alpha1.ResourceSigningProfile{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,14 +110,13 @@ func (c *FakeResourceSigningProfiles) Update(ctx context.Context, resourceSignin
 // Delete takes name of the resourceSigningProfile and deletes it. Returns an error if one occurs.
 func (c *FakeResourceSigningProfiles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(resourcesigningprofilesResource, c.ns, name), &v1alpha1.ResourceSigningProfile{})
-
+		Invokes(testing.NewRootDeleteAction(resourcesigningprofilesResource, name), &v1alpha1.ResourceSigningProfile{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeResourceSigningProfiles) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(resourcesigningprofilesResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(resourcesigningprofilesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ResourceSigningProfileList{})
 	return err
@@ -121,8 +125,7 @@ func (c *FakeResourceSigningProfiles) DeleteCollection(ctx context.Context, opts
 // Patch applies the patch and returns the patched resourceSigningProfile.
 func (c *FakeResourceSigningProfiles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ResourceSigningProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(resourcesigningprofilesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ResourceSigningProfile{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(resourcesigningprofilesResource, name, pt, data, subresources...), &v1alpha1.ResourceSigningProfile{})
 	if obj == nil {
 		return nil, err
 	}

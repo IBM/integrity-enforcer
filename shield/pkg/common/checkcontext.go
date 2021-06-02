@@ -14,14 +14,12 @@
 // limitations under the License.
 //
 
-package shield
+package common
 
 import (
 	"strconv"
 	"time"
 
-	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
-	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 )
 
@@ -44,24 +42,24 @@ type CheckContext struct {
 	Error                 error  `json:"error"`
 	Message               string `json:"msg"`
 
-	SignatureEvalResult *common.SignatureEvalResult `json:"signature"`
-	MutationEvalResult  *common.MutationEvalResult  `json:"mutation"`
+	SignatureEvalResult *SignatureEvalResult `json:"signature"`
+	MutationEvalResult  *MutationEvalResult  `json:"mutation"`
 
 	ReasonCode int `json:"reasonCode"`
 }
 
-func InitCheckContext(config *config.ShieldConfig) *CheckContext {
+func InitCheckContext() *CheckContext {
 	cc := &CheckContext{
 		IgnoredSA: false,
 		Protected: false,
 		Aborted:   false,
 		Allow:     false,
 		Verified:  false,
-		SignatureEvalResult: &common.SignatureEvalResult{
+		SignatureEvalResult: &SignatureEvalResult{
 			Allow:   false,
 			Checked: false,
 		},
-		MutationEvalResult: &common.MutationEvalResult{
+		MutationEvalResult: &MutationEvalResult{
 			IsMutated: false,
 			Checked:   false,
 		},
@@ -69,7 +67,7 @@ func InitCheckContext(config *config.ShieldConfig) *CheckContext {
 	return cc
 }
 
-func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext, lggr *logger.Logger) map[string]interface{} {
+func (self *CheckContext) ConvertToLogRecord(reqc *RequestContext, lggr *logger.Logger) map[string]interface{} {
 
 	// cc := self
 	logRecord := map[string]interface{}{
@@ -102,7 +100,7 @@ func (self *CheckContext) convertToLogRecord(reqc *common.RequestContext, lggr *
 		"detectOnly":      self.DetectOnlyModeEnabled,
 
 		//reason code
-		"reasonCode": common.ReasonCodeMap[self.ReasonCode].Code,
+		"reasonCode": ReasonCodeMap[self.ReasonCode].Code,
 	}
 
 	if self.Error != nil {

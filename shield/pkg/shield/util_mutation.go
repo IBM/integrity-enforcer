@@ -26,7 +26,7 @@ import (
 )
 
 type MutationChecker interface {
-	Eval(reqc *common.RequestContext, reqobj *common.RequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error)
+	Eval(reqc *common.RequestContext, reqobj *common.RequestObject, profileParameters rspapi.Parameters) (*common.MutationEvalResult, error)
 }
 
 type ConcreteMutationChecker struct{}
@@ -37,7 +37,7 @@ func NewMutationChecker() MutationChecker {
 
 func MutationCheck(reqc *common.RequestContext, reqobj *common.RequestObject) (*common.MutationEvalResult, error) {
 	checker := NewMutationChecker()
-	dummyProf := rspapi.ResourceSigningProfile{}
+	dummyProf := rspapi.Parameters{}
 	return checker.Eval(reqc, reqobj, dummyProf)
 }
 
@@ -47,7 +47,7 @@ func MutationCheckForAdmissionRequest(req *admv1.AdmissionRequest) (*common.Muta
 	return MutationCheck(reqc, reqobj)
 }
 
-func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, reqobj *common.RequestObject, signingProfile rspapi.ResourceSigningProfile) (*common.MutationEvalResult, error) {
+func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, reqobj *common.RequestObject, profileParameters rspapi.Parameters) (*common.MutationEvalResult, error) {
 
 	mask := []string{
 		common.ResourceIntegrityLabelKey,
@@ -112,7 +112,7 @@ func (self *ConcreteMutationChecker) Eval(reqc *common.RequestContext, reqobj *c
 	reqFields := reqc.Map()
 	excludeDiffValue := reqc.ExcludeDiffValue()
 
-	ignoreAttrsList := signingProfile.IgnoreAttrs(reqFields)
+	ignoreAttrsList := profileParameters.GetIgnoreAttrs(reqFields)
 
 	if mr, err := GetMAResult(ma4kInput, ignoreAttrsList, excludeDiffValue); err != nil {
 		maResult.Error = &common.CheckError{

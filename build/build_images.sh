@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 CMDNAME=`basename $0`
 if [ $# -ne 1 ]; then
   echo "Usage: $CMDNAME <no-cache>" 1>&2

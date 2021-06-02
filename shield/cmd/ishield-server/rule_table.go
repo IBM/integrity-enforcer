@@ -28,9 +28,8 @@ type RuleItem struct {
 }
 
 type RuleTable struct {
-	Items           []RuleItem `json:"items,omitempty"`
-	Namespaces      []string   `json:"namespaces,omitempty"`
-	ShieldNamespace string     `json:"shieldNamespace,omitempty"`
+	Items      []RuleItem `json:"items,omitempty"`
+	Namespaces []string   `json:"namespaces,omitempty"`
 }
 
 func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Namespace, commonProfile *common.CommonProfile, shieldNamespace string) *RuleTable {
@@ -44,26 +43,18 @@ func NewRuleTable(profiles []rspapi.ResourceSigningProfile, namespaces []v1.Name
 		commonProfileRSP.Spec.Parameters.IgnoreAttrs = commonProfile.IgnoreAttrs
 	}
 	for _, p := range profiles {
-		pNamespace := p.GetNamespace()
 		targetNamespaces := []string{}
-		if pNamespace == shieldNamespace {
-			nsSelector := p.Spec.Match.TargetNamespaceSelector
-			if nsSelector != nil {
-				targetNamespaces = matchNamespaceListWithSelector(namespaces, nsSelector)
-			} else {
-				targetNamespaces = append(targetNamespaces, pNamespace)
-			}
-		} else {
-			targetNamespaces = append(targetNamespaces, pNamespace)
+		nsSelector := p.Spec.Match.TargetNamespaceSelector
+		if nsSelector != nil {
+			targetNamespaces = matchNamespaceListWithSelector(namespaces, nsSelector)
 		}
 		pWithCommon := p.Merge(commonProfileRSP)
 		items = append(items, RuleItem{Profile: pWithCommon, TargetNamespaces: targetNamespaces})
 		allTargetNamespaces = common.GetUnionOfArrays(allTargetNamespaces, targetNamespaces)
 	}
 	return &RuleTable{
-		Items:           items,
-		Namespaces:      allTargetNamespaces,
-		ShieldNamespace: shieldNamespace,
+		Items:      items,
+		Namespaces: allTargetNamespaces,
 	}
 }
 
@@ -96,7 +87,7 @@ func (self *RuleTable) CheckIfProtected(reqFields map[string]string) (bool, bool
 		if reqScope == "Namespaced" && !common.ExactMatchWithPatternArray(reqNs, item.TargetNamespaces) {
 			continue
 		}
-		if tmpProtected, matchedRule := item.Profile.Match(reqFields, self.ShieldNamespace); tmpProtected {
+		if tmpProtected, matchedRule := item.Profile.Match(reqFields); tmpProtected {
 			protected = true
 			matchedProfiles = append(matchedProfiles, item.Profile)
 		} else if !tmpProtected && matchedRule != nil {

@@ -73,7 +73,7 @@ func GetMatchedProfilesWithRequest(req *admv1.AdmissionRequest, ishieldNS string
 	reqFeilds := AdmissionRequestToReqFields(req)
 	matchedProfiles := []rspapi.ResourceSigningProfile{}
 	for _, rsp := range rspList {
-		if matched, _ := rsp.Match(reqFeilds, ishieldNS); matched {
+		if matched, _ := rsp.Match(reqFeilds); matched {
 			matchedProfiles = append(matchedProfiles, rsp)
 		}
 	}
@@ -88,7 +88,7 @@ func GetMatchedProfilesWithResource(res *unstructured.Unstructured, ishieldNS st
 	reqFeilds := ResourceToReqFields(res)
 	matchedProfiles := []rspapi.ResourceSigningProfile{}
 	for _, rsp := range rspList {
-		if matched, _ := rsp.Match(reqFeilds, ishieldNS); matched {
+		if matched, _ := rsp.Match(reqFeilds); matched {
 			matchedProfiles = append(matchedProfiles, rsp)
 		}
 	}
@@ -104,7 +104,7 @@ func ListProfiles() ([]rspapi.ResourceSigningProfile, error) {
 	if err != nil {
 		return nil, err
 	}
-	rspList, err := rspClient.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
+	rspList, err := rspClient.ResourceSigningProfiles().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

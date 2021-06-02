@@ -41,9 +41,10 @@ type MatchCondition struct {
 
 type Parameters struct {
 	// Protection
-	IgnoreRules  []*common.Rule         `json:"ignoreRules,omitempty"`
-	ProtectAttrs []*common.AttrsPattern `json:"protectAttrs,omitempty"`
-	IgnoreAttrs  []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
+	AdditionalProtectRules []*common.Rule         `json:"additionalProtectRules,omitempty"`
+	IgnoreRules            []*common.Rule         `json:"ignoreRules,omitempty"`
+	ProtectAttrs           []*common.AttrsPattern `json:"protectAttrs,omitempty"`
+	IgnoreAttrs            []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
 
 	// SignerConfig
 	SignerConfig *common.SignerConfig `json:"signerConfig,omitempty"`
@@ -70,9 +71,9 @@ type ProfileStatusDetail struct {
 }
 
 // +genclient
-// +genclient:noStatus
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=resourcesigningprofile,scope=Namespaced
+// +resource:path=resourcesigningprofile,scope=Cluster
 
 // EnforcePolicy is the CRD. Use this command to generate deepcopy for it:
 // ./k8s.io/code-generator/generate-groups.sh all github.com/IBM/pas-client-go/pkg/crd/packageadmissionsignature/v1/apis github.com/IBM/pas-client-go/pkg/crd/ "packageadmissionsignature:v1"
@@ -91,17 +92,14 @@ func (self ResourceSigningProfile) IsEmpty() bool {
 	return len(self.Spec.Match.ProtectRules) == 0
 }
 
-func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS string) (bool, *common.Rule) {
-
-	rspNS := self.ObjectMeta.Namespace
-
+func (self ResourceSigningProfile) Match(reqFields map[string]string) (bool, *common.Rule) {
 	scope := "Namespaced"
 	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {
 		scope = reqScope
 	}
 
 	strictMatch := false
-	if scope == "Cluster" && rspNS != iShieldNS {
+	if scope == "Cluster" {
 		strictMatch = true
 	}
 
@@ -112,12 +110,35 @@ func (self ResourceSigningProfile) Match(reqFields map[string]string, iShieldNS 
 			return false, rule
 		}
 	}
-	for _, rule := range self.Spec.Match.ProtectRules {
+	protectRuleMatched := false
+	var matchedRule *common.Rule
+	for i, rule := range self.Spec.Match.ProtectRules {
 		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
-			return true, rule
+			protectRuleMatched = true
+			matchedRule = self.Spec.Match.ProtectRules[i]
+			break
 		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
-			return true, rule
+			protectRuleMatched = true
+			matchedRule = self.Spec.Match.ProtectRules[i]
+			break
 		}
+	}
+
+	if protectRuleMatched && len(self.Spec.Parameters.AdditionalProtectRules) > 0 {
+		additionalProtectRuleMatched := false
+		for _, rule := range self.Spec.Parameters.AdditionalProtectRules {
+			if strictMatch && rule.StrictMatchWithRequest(reqFields) {
+				additionalProtectRuleMatched = true
+				break
+			} else if !strictMatch && rule.MatchWithRequest(reqFields) {
+				additionalProtectRuleMatched = true
+				break
+			}
+		}
+		protectRuleMatched = (protectRuleMatched && additionalProtectRuleMatched)
+	}
+	if protectRuleMatched {
+		return true, matchedRule
 	}
 
 	return false, nil
@@ -132,9 +153,9 @@ func (self ResourceSigningProfile) Merge(another ResourceSigningProfile) Resourc
 	return newProfile
 }
 
-func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
+func (self Parameters) GetProtectAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
-	for _, attrsPattern := range self.Spec.Parameters.ProtectAttrs {
+	for _, attrsPattern := range self.ProtectAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}
@@ -142,9 +163,9 @@ func (self ResourceSigningProfile) ProtectAttrs(reqFields map[string]string) []*
 	return patterns
 }
 
-func (self ResourceSigningProfile) IgnoreAttrs(reqFields map[string]string) []*common.AttrsPattern {
+func (self Parameters) GetIgnoreAttrs(reqFields map[string]string) []*common.AttrsPattern {
 	patterns := []*common.AttrsPattern{}
-	for _, attrsPattern := range self.Spec.Parameters.IgnoreAttrs {
+	for _, attrsPattern := range self.IgnoreAttrs {
 		if attrsPattern.MatchWith(reqFields) {
 			patterns = append(patterns, attrsPattern)
 		}

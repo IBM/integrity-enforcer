@@ -33,25 +33,24 @@ import (
 ***********************************************/
 
 type ResourceCheckHandler struct {
-	profile       rspapi.ResourceSigningProfile
-	config        *config.ShieldConfig
-	ctx           *CheckContext
-	resc          *common.ResourceContext
-	data          *RunData
-	serverLogger  *logger.Logger
-	resourceLog   *log.Entry
-	contextLogger *logger.ContextLogger
-	logInScope    bool
+	config            *config.ShieldConfig
+	ctx               *common.CheckContext
+	resc              *common.ResourceContext
+	data              *RunData
+	serverLogger      *logger.Logger
+	resourceLog       *log.Entry
+	contextLogger     *logger.ContextLogger
+	logInScope        bool
+	profileParameters rspapi.Parameters
 }
 
-func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile) *ResourceCheckHandler {
+func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profileParameters rspapi.Parameters) *ResourceCheckHandler {
 	data := &RunData{}
-	data.EnableForceInitialize() // ResourceCheckHandler will load profiles on every run
-	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger, profile: profile}
+	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger, profileParameters: profileParameters}
 }
 
-func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile, ctx *CheckContext, data *RunData) *ResourceCheckHandler {
-	resHandler := NewResourceCheckHandler(config, metaLogger, profile)
+func NewResourceCheckHandlerWithContext(config *config.ShieldConfig, metaLogger *logger.Logger, profileParameters rspapi.Parameters, ctx *common.CheckContext, data *RunData) *ResourceCheckHandler {
+	resHandler := NewResourceCheckHandler(config, metaLogger, profileParameters)
 	resHandler.ctx = ctx
 	resHandler.data = data
 	return resHandler
@@ -71,7 +70,7 @@ func (self *ResourceCheckHandler) Run(res *unstructured.Unstructured) *common.De
 	return dr
 }
 
-func (self *ResourceCheckHandler) GetCheckContext() *CheckContext {
+func (self *ResourceCheckHandler) GetCheckContext() *common.CheckContext {
 	return self.ctx
 }
 
@@ -79,7 +78,7 @@ func (self *ResourceCheckHandler) Check() *common.DecisionResult {
 	var dr *common.DecisionResult
 	dr = common.UndeterminedDecision()
 
-	dr = signatureCheckWithSingleProfile(self.profile, self.resc, self.config, self.data, self.ctx)
+	dr = signatureCheckWithSingleProfile(self.profileParameters, self.resc, self.config, self.data, self.ctx)
 	if dr.IsAllowed() {
 		// this RSP allowed the resource. will check next RSP.
 	} else {
@@ -142,7 +141,7 @@ func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *co
 	)
 
 	if self.ctx == nil {
-		self.ctx = InitCheckContext(self.config)
+		self.ctx = common.InitCheckContext()
 	}
 
 	reqNamespace := res.GetNamespace()
@@ -157,7 +156,6 @@ func (self *ResourceCheckHandler) initialize(res *unstructured.Unstructured) *co
 		runDataLoader := NewLoader(self.config, reqNamespace)
 		self.data.loader = runDataLoader
 	}
-	self.data.Init(self.config)
 
 	return &common.DecisionResult{Type: common.DecisionUndetermined}
 }

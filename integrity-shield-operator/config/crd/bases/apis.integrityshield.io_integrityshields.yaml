@@ -1125,6 +1125,60 @@ spec:
                       type: string
                     parameters:
                       properties:
+                        additionalProtectRules:
+                          description: Protection
+                          items:
+                            properties:
+                              exclude:
+                                items:
+                                  properties:
+                                    apiGroup:
+                                      description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                      type: string
+                                    apiVersion:
+                                      type: string
+                                    kind:
+                                      type: string
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                    operation:
+                                      type: string
+                                    scope:
+                                      type: string
+                                    usergroup:
+                                      type: string
+                                    username:
+                                      type: string
+                                  type: object
+                                type: array
+                              match:
+                                items:
+                                  properties:
+                                    apiGroup:
+                                      description: Namespace  *RulePattern `json:"namespace,omitempty"`
+                                      type: string
+                                    apiVersion:
+                                      type: string
+                                    kind:
+                                      type: string
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                    operation:
+                                      type: string
+                                    scope:
+                                      type: string
+                                    usergroup:
+                                      type: string
+                                    username:
+                                      type: string
+                                  type: object
+                                type: array
+                            type: object
+                          type: array
                         ignoreAttrs:
                           items:
                             properties:
@@ -1159,7 +1213,6 @@ spec:
                             type: object
                           type: array
                         ignoreRules:
-                          description: Protection
                           items:
                             properties:
                               exclude:

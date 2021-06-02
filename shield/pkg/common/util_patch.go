@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-package shield
+package common
 
 import (
 	"encoding/json"
 	"time"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	gjson "github.com/tidwall/gjson"
 )
 
@@ -32,7 +31,7 @@ type PatchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func generatePatchBytes(reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext) []byte {
+func GeneratePatchBytes(reqName string, rawObject []byte, ctx *CheckContext) []byte {
 	// do not patch for denying request
 	if !ctx.Allow {
 		return nil
@@ -44,34 +43,34 @@ func generatePatchBytes(reqc *common.RequestContext, reqobj *common.RequestObjec
 	// attach `verified` label only when signature is correctly verified
 	// or attach `unverified` label if allowed due to breakglass mode
 	if sigResult.Checked && sigResult.Allow {
-		verifyResultLabel = common.LabelValueVerified
+		verifyResultLabel = LabelValueVerified
 	} else if ctx.BreakGlassModeEnabled && !(sigResult.Checked && sigResult.Allow) {
-		verifyResultLabel = common.LabelValueUnverified
+		verifyResultLabel = LabelValueUnverified
 	}
 	if verifyResultLabel == "" {
 		return nil
 	}
 
-	name := reqc.Name
-	reqJson := reqobj.RawObject
+	name := reqName
+	reqJson := rawObject
 	labels := map[string]string{
-		common.ResourceIntegrityLabelKey: verifyResultLabel,
+		ResourceIntegrityLabelKey: verifyResultLabel,
 	}
 	annotations := map[string]string{}
-	if verifyResultLabel == common.LabelValueVerified {
-		annotations[common.LastVerifiedTimestampAnnotationKey] = time.Now().UTC().Format(metadataTimestampFormat)
+	if verifyResultLabel == LabelValueVerified {
+		annotations[LastVerifiedTimestampAnnotationKey] = time.Now().UTC().Format(metadataTimestampFormat)
 		if sigResult.SignerName != "" {
-			annotations[common.SignedByAnnotationKey] = sigResult.SignerName
+			annotations[SignedByAnnotationKey] = sigResult.SignerName
 		}
 		if sigResult.ResourceSignatureUID != "" {
-			annotations[common.ResourceSignatureUIDAnnotationKey] = sigResult.ResourceSignatureUID
+			annotations[ResourceSignatureUIDAnnotationKey] = sigResult.ResourceSignatureUID
 		}
 	}
 	deleteKeys := []string{
-		common.ResourceIntegrityLabelKey,
-		common.LastVerifiedTimestampAnnotationKey,
-		common.SignedByAnnotationKey,
-		common.ResourceSignatureUIDAnnotationKey,
+		ResourceIntegrityLabelKey,
+		LastVerifiedTimestampAnnotationKey,
+		SignedByAnnotationKey,
+		ResourceSignatureUIDAnnotationKey,
 	}
 	return createJSONPatchBytes(name, string(reqJson), labels, annotations, deleteKeys)
 }

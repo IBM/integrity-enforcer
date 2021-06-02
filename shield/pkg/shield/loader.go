@@ -27,19 +27,13 @@ import (
 ***********************************************/
 
 type Loader struct {
-	RSP               *RSPLoader
-	Namespace         *NamespaceLoader
 	ResourceSignature *ResSigLoader
 }
 
 func NewLoader(cfg *config.ShieldConfig, reqNamespace string) *Loader {
-	shieldNamespace := cfg.Namespace
 	requestNamespace := reqNamespace
 	signatureNamespace := cfg.SignatureNamespace // for non-existing namespace / cluster scope
-	profileNamespace := cfg.ProfileNamespace     // for non-existing namespace / cluster scope
 	loader := &Loader{
-		RSP:               NewRSPLoader(shieldNamespace, profileNamespace, requestNamespace, cfg.CommonProfile),
-		Namespace:         NewNamespaceLoader(),
 		ResourceSignature: NewResSigLoader(signatureNamespace, requestNamespace),
 	}
 	return loader

@@ -68,7 +68,7 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error)
+	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, profileParameters rspapi.Parameters) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
@@ -196,7 +196,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, signingProfile rspapi.ResourceSigningProfile) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, profileParameters rspapi.Parameters) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
 	ref := resc.ResourceRef()
@@ -269,7 +269,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 
 	// verify signature
-	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, signingProfile)
+	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, profileParameters)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{

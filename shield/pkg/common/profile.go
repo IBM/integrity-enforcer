@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/jinzhu/copier"
+	admv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -325,6 +326,19 @@ func NewRequestFromReqContext(reqc *RequestContext) *Request {
 		Kind:       reqc.Kind,
 		Name:       reqc.Name,
 		UserName:   reqc.UserName,
+	}
+	return req
+}
+
+func NewRequestFromAdmissionRequest(adreq *admv1.AdmissionRequest) *Request {
+	req := &Request{
+		Operation:  string(adreq.Operation),
+		Namespace:  adreq.Namespace,
+		ApiGroup:   adreq.Kind.Group,
+		ApiVersion: adreq.Kind.Version,
+		Kind:       adreq.Kind.Kind,
+		Name:       adreq.Name,
+		UserName:   adreq.UserInfo.Username,
 	}
 	return req
 }

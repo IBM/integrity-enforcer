@@ -28,8 +28,8 @@ type FakeApisV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeApisV1alpha1) ResourceSigningProfiles(namespace string) v1alpha1.ResourceSigningProfileInterface {
-	return &FakeResourceSigningProfiles{c, namespace}
+func (c *FakeApisV1alpha1) ResourceSigningProfiles() v1alpha1.ResourceSigningProfileInterface {
+	return &FakeResourceSigningProfiles{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

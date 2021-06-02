@@ -105,7 +105,7 @@ func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.Cust
 		Singular:   "resourcesigningprofile",
 		ShortNames: []string{"rsp", "rsps"},
 	}
-	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames, true)
+	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames, false)
 }
 
 // resourceauditreview crd

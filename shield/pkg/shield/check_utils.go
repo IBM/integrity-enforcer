@@ -17,28 +17,19 @@
 package shield
 
 import (
-	"context"
 	"fmt"
-	"strings"
-	"time"
-
-	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
-	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	admv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
-func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
+func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *common.CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
 	var patchBytes []byte
-	if conf.PatchEnabled(reqc) {
+	if conf.PatchEnabled(reqc.Kind, reqc.ApiGroup) {
 		// `patchBytes` will be nil if no patch
-		patchBytes = generatePatchBytes(reqc, reqobj, ctx)
+		patchBytes = common.GeneratePatchBytes(reqc.Name, reqobj.RawObject, ctx)
 	}
 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
 	resp := &admv1.AdmissionResponse{
@@ -53,225 +44,6 @@ func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestConte
 		resp.PatchType = &patchType
 	}
 	return resp
-}
-
-func createOrUpdateEvent(reqc *common.RequestContext, ctx *CheckContext, sconfig *config.ShieldConfig, denyRSP *rspapi.ResourceSigningProfile) error {
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return err
-	}
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	resultStr := "deny"
-	eventResult := common.EventResultValueDeny
-	if ctx.Allow {
-		resultStr = "allow"
-		eventResult = common.EventResultValueAllow
-	}
-
-	sourceName := "IntegrityShield"
-	evtName := fmt.Sprintf("ishield-%s-%s-%s-%s", resultStr, strings.ToLower(reqc.Operation), strings.ToLower(reqc.Kind), reqc.Name)
-
-	evtNamespace := reqc.Namespace
-	involvedObject := v1.ObjectReference{
-		Namespace:  reqc.Namespace,
-		APIVersion: reqc.GroupVersion(),
-		Kind:       reqc.Kind,
-		Name:       reqc.Name,
-	}
-	if reqc.ResourceScope == "Cluster" {
-		evtNamespace = sconfig.Namespace
-		involvedObject = v1.ObjectReference{
-			Namespace:  sconfig.Namespace,
-			APIVersion: common.IShieldCustomResourceAPIVersion,
-			Kind:       common.IShieldCustomResourceKind,
-			Name:       sconfig.IShieldCRName,
-		}
-	}
-
-	now := time.Now()
-	evt := &v1.Event{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: evtName,
-			Annotations: map[string]string{
-				common.EventTypeAnnotationKey:   common.EventTypeValueVerifyResult,
-				common.EventResultAnnotationKey: eventResult,
-			},
-		},
-		InvolvedObject:      involvedObject,
-		Type:                sourceName,
-		Source:              v1.EventSource{Component: sourceName},
-		ReportingController: sourceName,
-		ReportingInstance:   evtName,
-		Action:              evtName,
-		FirstTimestamp:      metav1.NewTime(now),
-	}
-	isExistingEvent := false
-	current, getErr := client.CoreV1().Events(evtNamespace).Get(context.Background(), evtName, metav1.GetOptions{})
-	if current != nil && getErr == nil {
-		isExistingEvent = true
-		evt = current
-	}
-
-	rspInfo := ""
-	if denyRSP != nil {
-		rspInfo = fmt.Sprintf(" (RSP `namespace: %s, name: %s`)", denyRSP.GetNamespace(), denyRSP.GetName())
-	}
-	responseMessage := fmt.Sprintf("Result: %s, Reason: \"%s\"%s, Request: %s", resultStr, ctx.Message, rspInfo, reqc.Info(nil))
-	tmpMessage := fmt.Sprintf("[IntegrityShieldEvent] %s", responseMessage)
-	// Event.Message can have 1024 chars at most
-	if len(tmpMessage) > 1024 {
-		tmpMessage = tmpMessage[:950] + " ... Trimmed. `Event.Message` can have 1024 chars at maximum."
-	}
-	evt.Message = tmpMessage
-	evt.Reason = common.ReasonCodeMap[ctx.ReasonCode].Code
-	evt.Count = evt.Count + 1
-	evt.EventTime = metav1.NewMicroTime(now)
-	evt.LastTimestamp = metav1.NewTime(now)
-
-	if isExistingEvent {
-		_, err = client.CoreV1().Events(evtNamespace).Update(context.Background(), evt, metav1.UpdateOptions{})
-	} else {
-		_, err = client.CoreV1().Events(evtNamespace).Create(context.Background(), evt, metav1.CreateOptions{})
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func updateRSPStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.RequestContext, errMsg string) error {
-	if rsp == nil {
-		return nil
-	}
-
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return err
-	}
-	client, err := rspclient.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	rspNamespace := rsp.GetNamespace()
-	rspName := rsp.GetName()
-	rspOrg, err := client.ResourceSigningProfiles(rspNamespace).Get(context.Background(), rspName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	req := common.NewRequestFromReqContext(reqc)
-	rspNew := rspOrg.UpdateStatus(req, errMsg)
-
-	_, err = client.ResourceSigningProfiles(rspNamespace).Update(context.Background(), rspNew, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkIfProfileTargetNamespace(reqNamespace, shieldNamespace string, data *RunData) bool {
-	ruleTable := data.GetRuleTable(shieldNamespace)
-	if ruleTable == nil {
-		return false
-	}
-	return ruleTable.CheckIfTargetNamespace(reqNamespace)
-}
-
-func checkIfIshieldScopeNamespace(reqNamespace string, config *config.ShieldConfig) bool {
-	inScopeNSSelector := config.InScopeNamespaceSelector
-	if inScopeNSSelector == nil {
-		return false
-	}
-	return inScopeNSSelector.MatchNamespaceName(reqNamespace)
-}
-
-func checkIfDryRunAdmission(reqc *common.RequestContext) bool {
-	return reqc.DryRun
-}
-
-func checkIfUnprocessedInIShield(reqFeilds map[string]string, config *config.ShieldConfig) bool {
-	for _, d := range config.Ignore {
-		if d.Match(reqFeilds) {
-			return true
-		}
-	}
-	return false
-}
-
-func getRequestNamespace(req *admv1.AdmissionRequest) string {
-	reqNamespace := ""
-	if req.Kind.Kind != "Namespace" && req.Namespace != "" {
-		reqNamespace = req.Namespace
-	}
-	return reqNamespace
-}
-
-func getRequestNamespaceFromRequestContext(reqc *common.RequestContext) string {
-	reqNamespace := ""
-	if reqc.Kind != "Namespace" && reqc.Namespace != "" {
-		reqNamespace = reqc.Namespace
-	}
-	return reqNamespace
-}
-
-func getRequestNamespaceFromResourceContext(resc *common.ResourceContext) string {
-	reqNamespace := ""
-	if resc.Kind != "Namespace" && resc.Namespace != "" {
-		reqNamespace = resc.Namespace
-	}
-	return reqNamespace
-}
-
-func checkIfIShieldAdminRequest(reqc *common.RequestContext, config *config.ShieldConfig) bool {
-	groupMatched := false
-	if config.IShieldAdminUserGroup != "" {
-		groupMatched = common.MatchPatternWithArray(config.IShieldAdminUserGroup, reqc.UserGroups)
-	}
-	userMatched := false
-	if config.IShieldAdminUserName != "" {
-		userMatched = common.MatchPattern(config.IShieldAdminUserName, reqc.UserName)
-	}
-	// TODO: delete this block after OLM SA will be added to `config.IShieldAdminUserName` in CR
-	if common.MatchPattern("system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount", reqc.UserName) {
-		userMatched = true
-	}
-	isAdmin := (groupMatched || userMatched)
-	return isAdmin
-}
-
-func checkIfIShieldServerRequest(reqc *common.RequestContext, config *config.ShieldConfig) bool {
-	return common.MatchPattern(config.IShieldServerUserName, reqc.UserName) //"service account for integrity-shield"
-}
-
-func checkIfIShieldOperatorRequest(reqc *common.RequestContext, config *config.ShieldConfig) bool {
-	return common.ExactMatch(config.IShieldResourceCondition.OperatorServiceAccount, reqc.UserName) //"service account for integrity-shield-operator"
-}
-
-func checkIfGarbageCollectorRequest(reqc *common.RequestContext) bool {
-	// TODO: should be configurable?
-	return reqc.UserName == "system:serviceaccount:kube-system:generic-garbage-collector"
-}
-
-func checkIfSpecialServiceAccountRequest(reqc *common.RequestContext) bool {
-	// TODO: should be configurable?
-	if strings.HasPrefix(reqc.UserName, "system:serviceaccount:kube-") {
-		return true
-	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:openshift-") {
-		return true
-	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:openshift:") {
-		return true
-	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:open-cluster-") {
-		return true
-	} else if strings.HasPrefix(reqc.UserName, "system:serviceaccount:olm:") {
-		return true
-	}
-
-	return false
 }
 
 func getBreakGlassConditions(signerConfig *common.SignerConfig) []common.BreakGlassCondition {

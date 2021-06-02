@@ -33,13 +33,14 @@ import (
 // ResourceSigningProfilesGetter has a method to return a ResourceSigningProfileInterface.
 // A group's client should implement this interface.
 type ResourceSigningProfilesGetter interface {
-	ResourceSigningProfiles(namespace string) ResourceSigningProfileInterface
+	ResourceSigningProfiles() ResourceSigningProfileInterface
 }
 
 // ResourceSigningProfileInterface has methods to work with ResourceSigningProfile resources.
 type ResourceSigningProfileInterface interface {
 	Create(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.CreateOptions) (*v1alpha1.ResourceSigningProfile, error)
 	Update(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.UpdateOptions) (*v1alpha1.ResourceSigningProfile, error)
+	UpdateStatus(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.UpdateOptions) (*v1alpha1.ResourceSigningProfile, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ResourceSigningProfile, error)
@@ -52,14 +53,12 @@ type ResourceSigningProfileInterface interface {
 // resourceSigningProfiles implements ResourceSigningProfileInterface
 type resourceSigningProfiles struct {
 	client rest.Interface
-	ns     string
 }
 
 // newResourceSigningProfiles returns a ResourceSigningProfiles
-func newResourceSigningProfiles(c *ApisV1alpha1Client, namespace string) *resourceSigningProfiles {
+func newResourceSigningProfiles(c *ApisV1alpha1Client) *resourceSigningProfiles {
 	return &resourceSigningProfiles{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -67,7 +66,6 @@ func newResourceSigningProfiles(c *ApisV1alpha1Client, namespace string) *resour
 func (c *resourceSigningProfiles) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
 	result = &v1alpha1.ResourceSigningProfile{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -84,7 +82,6 @@ func (c *resourceSigningProfiles) List(ctx context.Context, opts v1.ListOptions)
 	}
 	result = &v1alpha1.ResourceSigningProfileList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -101,7 +98,6 @@ func (c *resourceSigningProfiles) Watch(ctx context.Context, opts v1.ListOptions
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -112,7 +108,6 @@ func (c *resourceSigningProfiles) Watch(ctx context.Context, opts v1.ListOptions
 func (c *resourceSigningProfiles) Create(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.CreateOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
 	result = &v1alpha1.ResourceSigningProfile{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(resourceSigningProfile).
@@ -125,9 +120,23 @@ func (c *resourceSigningProfiles) Create(ctx context.Context, resourceSigningPro
 func (c *resourceSigningProfiles) Update(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.UpdateOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
 	result = &v1alpha1.ResourceSigningProfile{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		Name(resourceSigningProfile.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(resourceSigningProfile).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *resourceSigningProfiles) UpdateStatus(ctx context.Context, resourceSigningProfile *v1alpha1.ResourceSigningProfile, opts v1.UpdateOptions) (result *v1alpha1.ResourceSigningProfile, err error) {
+	result = &v1alpha1.ResourceSigningProfile{}
+	err = c.client.Put().
+		Resource("resourcesigningprofiles").
+		Name(resourceSigningProfile.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(resourceSigningProfile).
 		Do(ctx).
@@ -138,7 +147,6 @@ func (c *resourceSigningProfiles) Update(ctx context.Context, resourceSigningPro
 // Delete takes name of the resourceSigningProfile and deletes it. Returns an error if one occurs.
 func (c *resourceSigningProfiles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		Name(name).
 		Body(&opts).
@@ -153,7 +161,6 @@ func (c *resourceSigningProfiles) DeleteCollection(ctx context.Context, opts v1.
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -166,7 +173,6 @@ func (c *resourceSigningProfiles) DeleteCollection(ctx context.Context, opts v1.
 func (c *resourceSigningProfiles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ResourceSigningProfile, err error) {
 	result = &v1alpha1.ResourceSigningProfile{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("resourcesigningprofiles").
 		Name(name).
 		SubResource(subresources...).

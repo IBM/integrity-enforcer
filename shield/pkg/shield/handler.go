@@ -38,9 +38,8 @@ import (
 ***********************************************/
 
 type Handler struct {
-	profile       rspapi.ResourceSigningProfile
 	config        *config.ShieldConfig
-	ctx           *CheckContext
+	ctx           *common.CheckContext
 	reqc          *common.RequestContext
 	reqobj        *common.RequestObject
 	resc          *common.ResourceContext
@@ -50,11 +49,13 @@ type Handler struct {
 	contextLogger *logger.ContextLogger
 	logInScope    bool
 
+	profileParameters rspapi.Parameters
+
 	resHandler *ResourceCheckHandler
 }
 
-func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile) *Handler {
-	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, profile: profile}
+func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profileParameters rspapi.Parameters) *Handler {
+	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, profileParameters: profileParameters}
 }
 
 func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
@@ -83,29 +84,38 @@ func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
 	self.logResponse(req, dr)
 	self.logContext()
 
-	// create Event & update RSP status
-	var denyRSP *rspapi.ResourceSigningProfile
-	if dr.DenyRSP != nil {
-		denyRSP = dr.DenyRSP.(*rspapi.ResourceSigningProfile)
-	}
-	_ = self.Report(denyRSP)
-
-	// clear some cache if needed
+	// just logExit
 	self.finalize(dr)
 
 	return resp
+}
+
+func (self *Handler) Decide(req *admv1.AdmissionRequest) *common.DecisionResult {
+
+	// init ctx, reqc and data & init logger
+	self.initialize(req)
+
+	// make DecisionResult based on reqc, config and data
+	dr := self.Check()
+
+	// overwrite DecisionResult if needed (DetectMode & BreakGlass)
+	dr = self.overwriteDecision(dr)
+
+	// log results
+	self.logResponse(req, dr)
+	self.logContext()
+
+	// just logExit
+	self.finalize(dr)
+
+	return dr
 }
 
 func (self *Handler) Check() *common.DecisionResult {
 	var dr *common.DecisionResult
 	dr = common.UndeterminedDecision()
 
-	dr = protectedCheck(self.reqc, self.config, self.profile, self.ctx)
-	if !dr.IsUndetermined() {
-		return dr
-	}
-
-	dr = mutationCheckWithSingleProfile(self.profile, self.reqc, self.reqobj, self.config, self.data, self.ctx)
+	dr = mutationCheckWithSingleProfile(self.profileParameters, self.reqc, self.reqobj, self.config, self.data, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
 	}
@@ -127,40 +137,8 @@ func (self *Handler) Check() *common.DecisionResult {
 	return dr
 }
 
-func (self *Handler) Report(denyRSP *rspapi.ResourceSigningProfile) error {
-	// report only for denying request or for IShield resource request by IShield Admin
-	shouldReport := false
-	if !self.ctx.Allow && self.config.SideEffect.CreateDenyEventEnabled() {
-		shouldReport = true
-	}
-	iShieldAdmin := checkIfIShieldAdminRequest(self.reqc, self.config)
-	if self.ctx.IShieldResource && !iShieldAdmin && self.config.SideEffect.CreateIShieldResourceEventEnabled() {
-		shouldReport = true
-	}
-
-	if !shouldReport {
-		return nil
-	}
-
-	var err error
-	// create/update Event
-	if self.config.SideEffect.CreateEventEnabled() {
-		err = createOrUpdateEvent(self.reqc, self.ctx, self.config, denyRSP)
-		if err != nil {
-			self.requestLog.Error("Failed to create event; ", err)
-			return err
-		}
-	}
-
-	// update RSP status
-	if self.config.SideEffect.UpdateRSPStatusEnabled() {
-		err = updateRSPStatus(denyRSP, self.reqc, self.ctx.Message)
-		if err != nil {
-			self.requestLog.Error("Failed to update status; ", err)
-		}
-	}
-
-	return nil
+func (self *Handler) GetCheckContext() *common.CheckContext {
+	return self.ctx
 }
 
 // load resoruces / set default values
@@ -178,12 +156,15 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *common.DecisionRes
 	)
 
 	// init CheckContext
-	self.ctx = InitCheckContext(self.config)
+	self.ctx = common.InitCheckContext()
 
 	// init resource handler with shared CheckContext
-	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.profile, self.ctx, self.data)
+	self.resHandler = NewResourceCheckHandlerWithContext(self.config, self.serverLogger, self.profileParameters, self.ctx, self.data)
 
-	reqNamespace := getRequestNamespace(req)
+	reqNamespace := ""
+	if req.Kind.Kind != "Namespace" && req.Namespace != "" {
+		reqNamespace = req.Namespace
+	}
 
 	// init RequestContext & RequestObject
 	self.reqc, self.reqobj = common.NewRequestContext(req)
@@ -198,16 +179,12 @@ func (self *Handler) initialize(req *admv1.AdmissionRequest) *common.DecisionRes
 
 	runDataLoader := NewLoader(self.config, reqNamespace)
 	self.data.loader = runDataLoader
-	self.data.Init(self.config)
 
 	return &common.DecisionResult{Type: common.DecisionUndetermined}
 }
 
 func (self *Handler) overwriteDecision(dr *common.DecisionResult) *common.DecisionResult {
-	var sigConf *common.SignerConfig
-	if dr.DenyRSP != nil {
-		sigConf = dr.DenyRSP.(*rspapi.ResourceSigningProfile).Spec.Parameters.SignerConfig
-	}
+	sigConf := self.profileParameters.SignerConfig
 	isBreakGlass := checkIfBreakGlassEnabled(self.reqc, sigConf)
 	isDetectMode := checkIfDetectOnly(self.config)
 
@@ -238,27 +215,6 @@ func (self *Handler) overwriteDecision(dr *common.DecisionResult) *common.Decisi
 }
 
 func (self *Handler) finalize(dr *common.DecisionResult) {
-	if dr.IsAllowed() {
-		resetRuleTableCache := false
-		iShieldServer := checkIfIShieldServerRequest(self.reqc, self.config)
-		iShieldOperator := checkIfIShieldOperatorRequest(self.reqc, self.config)
-		if self.reqc.Kind == "Namespace" {
-			if self.reqc.IsUpdateRequest() {
-				mtResult, _ := MutationCheck(self.reqc, self.reqobj)
-				if mtResult != nil && mtResult.IsMutated {
-					resetRuleTableCache = true
-				}
-			} else {
-				resetRuleTableCache = true
-			}
-		} else if self.reqc.Kind == common.ProfileCustomResourceKind && !iShieldServer && !iShieldOperator {
-			resetRuleTableCache = true
-		}
-		if resetRuleTableCache {
-			// if namespace/RSP request is allowed, then reset cache for RuleTable (RSP list & NS list).
-			self.data.resetRuleTableCache()
-		}
-	}
 	self.logExit()
 	return
 }
@@ -275,7 +231,7 @@ func (self *Handler) logEntry() {
 func (self *Handler) logContext() {
 	if self.config.ContextLogEnabled(self.resc) && self.logInScope {
 		self.contextLogger = logger.InitContextLogger(self.config.ContextLoggerConfig())
-		logRecord := self.ctx.convertToLogRecord(self.reqc, self.serverLogger)
+		logRecord := self.ctx.ConvertToLogRecord(self.reqc, self.serverLogger)
 		if self.config.Log.IncludeRequest && !self.reqc.IsSecret() {
 			logRecord["request.dump"] = self.reqc.RequestJsonStr
 		}

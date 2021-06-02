@@ -67,7 +67,7 @@ func (self *RSPLoader) Load(doK8sApiCall bool) bool {
 
 	keyName = "RSPLoader/list"
 	if cached := cache.GetString(keyName); cached == "" && doK8sApiCall {
-		list1, err = self.Client.ResourceSigningProfiles("").List(context.Background(), metav1.ListOptions{})
+		list1, err = self.Client.ResourceSigningProfiles().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			logger.Error("failed to get ResourceSigningProfile:", err)
 			return false
@@ -96,9 +96,8 @@ func (self *RSPLoader) Load(doK8sApiCall bool) bool {
 }
 
 func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *common.RequestContext, resc *common.ResourceContext, errMsg string) error {
-	rspNamespace := rsp.GetNamespace()
 	rspName := rsp.GetName()
-	rspOrg, err := self.Client.ResourceSigningProfiles(rspNamespace).Get(context.Background(), rspName, metav1.GetOptions{})
+	rspOrg, err := self.Client.ResourceSigningProfiles().Get(context.Background(), rspName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -106,7 +105,7 @@ func (self *RSPLoader) UpdateStatus(rsp *rspapi.ResourceSigningProfile, reqc *co
 	req := common.NewRequestFromReqContext(reqc)
 	rspNew := rspOrg.UpdateStatus(req, errMsg)
 
-	_, err = self.Client.ResourceSigningProfiles(rspNamespace).Update(context.Background(), rspNew, metav1.UpdateOptions{})
+	_, err = self.Client.ResourceSigningProfiles().Update(context.Background(), rspNew, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}

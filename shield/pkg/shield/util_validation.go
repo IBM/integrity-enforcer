@@ -77,30 +77,37 @@ func ValidateResourceSigningProfile(reqc *common.RequestContext, reqobj *common.
 	if err := dec.Decode(&data); err != nil {
 		return false, err
 	}
-	if reqc.Namespace != shieldNamespace && data.Spec.Match.TargetNamespaceSelector != nil {
-		return false, fmt.Errorf("%s.Spec.TargetNamespaceSelector is allowed only for %s in %s.", common.ProfileCustomResourceKind, common.ProfileCustomResourceKind, shieldNamespace)
-	}
-	if reqc.Namespace != shieldNamespace {
-		rules := data.Spec.Match.ProtectRules
-		rules = append(rules, data.Spec.Parameters.IgnoreRules...)
-		for _, r := range rules {
-			for _, m := range r.Match {
-				if m.Namespace != nil {
-					return false, fmt.Errorf("namespace condition is not allowed in RSP.")
-				}
-			}
-		}
 
-		attrs := data.Spec.Parameters.IgnoreAttrs
-		attrs = append(attrs, data.Spec.Parameters.ProtectAttrs...)
-		for _, a := range attrs {
-			for _, m := range a.Match {
-				if m.Namespace != nil {
-					return false, fmt.Errorf("namespace condition is not allowed in RSP.")
-				}
+	pRules := data.Spec.Match.ProtectRules
+	for _, r := range pRules {
+		for _, m := range r.Match {
+			if m.Name != nil {
+				return false, fmt.Errorf("name cannot be defined in RSP.Spec.Match.ProtectRules. Please use RSP.Spec.Parameters.AdditionalProtectRules.")
+			}
+			if m.Namespace != nil {
+				return false, fmt.Errorf("namespace cannot be defined in RSP.Spec.Match.ProtectRules. Please define it with RSP.Spec.Match.TargetNamespaceSelector.")
 			}
 		}
 	}
+	iRules := data.Spec.Parameters.IgnoreRules
+	for _, r := range iRules {
+		for _, m := range r.Match {
+			if m.Namespace != nil {
+				return false, fmt.Errorf("namespace cannot be defined in RSP.Spec.Match.ProtectRules, please define it with RSP.Spec.Match.TargetNamespaceSelector.")
+			}
+		}
+	}
+
+	attrs := data.Spec.Parameters.IgnoreAttrs
+	attrs = append(attrs, data.Spec.Parameters.ProtectAttrs...)
+	for _, a := range attrs {
+		for _, m := range a.Match {
+			if m.Namespace != nil {
+				return false, fmt.Errorf("namespace cannot be defined in attrs conditions of RSP, please define it with RSP.Spec.Match.TargetNamespaceSelector.")
+			}
+		}
+	}
+
 	return true, nil
 }
 

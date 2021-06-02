@@ -32,6 +32,7 @@ import (
 	admv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
@@ -42,7 +43,7 @@ import (
 
 // var apiBaseURL string
 
-var config *sconfloder.Config
+var sConfig *sconfloder.Config
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
@@ -68,7 +69,7 @@ func newRuntimeData() *runtimeData {
 	d.nsLoader = NewNamespaceLoader()
 	rspList, _ := d.rspLoader.GetData(true)
 	nsList, _ := d.nsLoader.GetData(true)
-	d.ruletable = NewRuleTable(rspList, nsList, config.ShieldConfig.CommonProfile, config.ShieldConfig.Namespace)
+	d.ruletable = NewRuleTable(rspList, nsList, sConfig.ShieldConfig.CommonProfile, sConfig.ShieldConfig.Namespace)
 	if d.ruletable == nil {
 		logger.Error("Failed to initialize rule table.")
 	}
@@ -81,12 +82,12 @@ func (d *runtimeData) clearCache() {
 }
 
 func init() {
-	config = sconfloder.NewConfig()
-	_ = config.InitShieldConfig()
+	sConfig = sconfloder.NewConfig()
+	_ = sConfig.InitShieldConfig()
 
 	log.SetFormatter(&log.JSONFormatter{})
 
-	logger.SetSingletonLoggerLevel(config.ShieldConfig.Log.LogLevel)
+	logger.SetSingletonLoggerLevel(sConfig.ShieldConfig.Log.LogLevel)
 	logger.Info("Integrity Shield has been started.")
 
 	// apiBaseURL = os.Getenv(apiBaseURLEnvKey)
@@ -95,10 +96,53 @@ func init() {
 	// }
 }
 
-// Check if any profile matches the request (this can be replaced with gatekeeper constraints matching)
-func (server *WebhookServer) groupKindNamespaceCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
+func (server *WebhookServer) iShieldResourceCheck(req *admv1.AdmissionRequest) *common.DecisionResult {
+	gv := schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
+	resRef := &common.ResourceRef{
+		ApiVersion: gv.String(),
+		Kind:       req.Kind.Kind,
+		Namespace:  req.Namespace,
+		Name:       req.Name,
+	}
+	iShieldOperatorResource := sConfig.ShieldConfig.IShieldResourceCondition.IsOperatorResource(resRef)
+	iShieldServerResource := sConfig.ShieldConfig.IShieldResourceCondition.IsServerResource(resRef)
+
+	isIShieldResource := false
+	if !iShieldOperatorResource && !iShieldServerResource {
+		return common.UndeterminedDecision()
+	} else {
+		isIShieldResource = true
+	}
+
+	adminReq := checkIfIShieldAdminRequest(req.UserInfo.Username, req.UserInfo.Groups, sConfig.ShieldConfig)
+	serverReq := checkIfIShieldServerRequest(req.UserInfo.Username, sConfig.ShieldConfig)
+	operatorReq := checkIfIShieldOperatorRequest(req.UserInfo.Username, sConfig.ShieldConfig)
+	gcReq := checkIfGarbageCollectorRequest(req.UserInfo.Username)
+	spSAReq := checkIfSpecialServiceAccountRequest(req.UserInfo.Username) && (req.Kind.Kind != "ClusterServiceVersion")
+
+	if (iShieldOperatorResource && (adminReq || operatorReq || gcReq || spSAReq)) || (iShieldServerResource && (operatorReq || serverReq || gcReq || spSAReq)) {
+		return &common.DecisionResult{
+			Type:            common.DecisionAllow,
+			Verified:        true,
+			IShieldResource: isIShieldResource,
+			ReasonCode:      common.REASON_ISHIELD_ADMIN,
+			Message:         common.ReasonCodeMap[common.REASON_ISHIELD_ADMIN].Message,
+		}
+	} else {
+		return &common.DecisionResult{
+			Type:            common.DecisionDeny,
+			Verified:        false,
+			IShieldResource: isIShieldResource,
+			ReasonCode:      common.REASON_BLOCK_ISHIELD_RESOURCE_OPERATION,
+			Message:         common.ReasonCodeMap[common.REASON_BLOCK_ISHIELD_RESOURCE_OPERATION].Message,
+		}
+	}
+}
+
+// Check if any profile matches the request (this can be replaced with gatekeeper constraints matching + rego)
+func (server *WebhookServer) protectedCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := shield.AdmissionRequestToReqFields(req)
-	protected, _, matchedProfiels := server.data.ruletable.CheckIfProtected(reqFields)
+	protected, _, matchedProfiles := server.data.ruletable.CheckIfProtected(reqFields)
 	if !protected {
 		dr := &common.DecisionResult{
 			Type:       common.DecisionAllow,
@@ -108,7 +152,7 @@ func (server *WebhookServer) groupKindNamespaceCheck(req *admv1.AdmissionRequest
 		}
 		return dr, nil
 	}
-	return common.UndeterminedDecision(), matchedProfiels
+	return common.UndeterminedDecision(), matchedProfiles
 }
 
 // Check if the request is delete operation
@@ -127,7 +171,7 @@ func (server *WebhookServer) deleteCheck(req *admv1.AdmissionRequest) *common.De
 }
 
 func (server *WebhookServer) formatCheckForIShieldCRDs(req *admv1.AdmissionRequest) *common.DecisionResult {
-	if ok, msg := shield.ValidateResourceForAdmissionRequest(req, config.ShieldConfig.Namespace); !ok {
+	if ok, msg := shield.ValidateResourceForAdmissionRequest(req, sConfig.ShieldConfig.Namespace); !ok {
 		return &common.DecisionResult{
 			Type:       common.DecisionDeny,
 			ReasonCode: common.REASON_VALIDATION_FAIL,
@@ -137,101 +181,136 @@ func (server *WebhookServer) formatCheckForIShieldCRDs(req *admv1.AdmissionReque
 	return common.UndeterminedDecision()
 }
 
-// func createAdmissionResponse(allowed bool, msg string, reqc *common.RequestContext, reqobj *common.RequestObject, ctx *CheckContext, conf *config.ShieldConfig) *admv1.AdmissionResponse {
-// 	var patchBytes []byte
-// 	if conf.PatchEnabled(reqc) {
-// 		// `patchBytes` will be nil if no patch
-// 		patchBytes = generatePatchBytes(reqc, reqobj, ctx)
-// 	}
-// 	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqc.Info(nil))
-// 	resp := &admv1.AdmissionResponse{
-// 		Allowed: allowed,
-// 		Result: &metav1.Status{
-// 			Message: responseMessage,
-// 		},
-// 	}
-// 	if patchBytes != nil {
-// 		patchType := admv1.PatchTypeJSONPatch
-// 		resp.Patch = patchBytes
-// 		resp.PatchType = &patchType
-// 	}
-// 	return resp
-// }
-
-func createSimpleAdmissionResponse(allowed bool, msg string, req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
-	responseMessage := fmt.Sprintf("%s (Request: %s)", msg, reqToInfo(req))
-	resp := &admv1.AdmissionResponse{
-		Allowed: allowed,
-		Result: &metav1.Status{
-			Message: responseMessage,
-		},
-	}
-	return resp
-}
-
-func reqToInfo(req *admv1.AdmissionRequest) string {
-	info := map[string]string{}
-	info["group"] = req.Kind.Group
-	info["version"] = req.Kind.Version
-	info["kind"] = req.Kind.Kind
-	info["namespace"] = req.Namespace
-	info["name"] = req.Name
-	infoBytes, _ := json.Marshal(info)
-	return string(infoBytes)
-}
-
 func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.AdmissionReview) *admv1.AdmissionResponse {
 
-	_ = config.InitShieldConfig()
+	server.initializeHandling()
 
-	// set rule table using cache if provided, otherwise, load RSPs and NSs via K8s API
-	server.data = newRuntimeData()
+	dr, ctx, profile := server.checkByAdmissionRequest(admissionReviewReq.Request)
 
+	_ = server.report(admissionReviewReq.Request, dr, profile)
+
+	server.finalizeHandling(admissionReviewReq.Request, dr)
+
+	return createAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request, ctx, sConfig.ShieldConfig)
+}
+
+func (server *WebhookServer) checkByAdmissionRequest(req *admv1.AdmissionRequest) (*common.DecisionResult, *common.CheckContext, *rspapi.ResourceSigningProfile) {
+	// init decision result with `undetermined`
+	dr := common.UndeterminedDecision()
+
+	// this step is an alternative step of gatekeeper+constraints+rego
+	var matchedProfiles []rspapi.ResourceSigningProfile
+	dr, matchedProfiles = server.admissionSideCheck(req)
+	if !dr.IsUndetermined() {
+		return dr, nil, nil
+	}
+
+	// check mutation & signature & image signature if enabled & some others
+	multipleResults := []*common.DecisionResult{}
+	multipleCtx := []*common.CheckContext{}
+	for _, profile := range matchedProfiles {
+		metaLogger := logger.NewLogger(sConfig.ShieldConfig.LoggerConfig())
+		requestHandler := shield.NewHandler(sConfig.ShieldConfig, metaLogger, profile.Spec.Parameters)
+		// Run Request Handler
+		tmpDr := requestHandler.Decide(req)
+		tmpCtx := requestHandler.GetCheckContext()
+		multipleResults = append(multipleResults, tmpDr)
+		multipleCtx = append(multipleCtx, tmpCtx)
+	}
+	var index int
+	dr, index = shield.SummarizeMultipleDecisionResults(multipleResults)
+	var ctx *common.CheckContext
+	var profile *rspapi.ResourceSigningProfile
+	if index > 0 {
+		ctx = multipleCtx[index]
+		profile = &(matchedProfiles[index])
+	}
+	return dr, ctx, profile
+}
+
+// check if the request should be checked by the subsequent steps
+// (i.e. this is an alternative step of gatekeeper+constraints+rego)
+func (server *WebhookServer) admissionSideCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
 	// init decision result with `undetermined`
 	dr := common.UndeterminedDecision()
 
 	// check if the resource is owned by integrity shield and the operation can be allowed
-	// TODO: add it
+	// In case of gatekeeper-enabled IShield, this step should be implemented in rego
+	dr = server.iShieldResourceCheck(req)
+	if !dr.IsUndetermined() {
+		return dr, nil
+	}
 
 	// check if the request is delete operation; if delete, skip this request
 	// In case of gatekeeper-enabled IShield, this step is done by gatekeeper automatically
-	dr = server.deleteCheck(admissionReviewReq.Request)
+	dr = server.deleteCheck(req)
 	if !dr.IsUndetermined() {
-		server.finalizeHandling(admissionReviewReq.Request, dr)
-		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request)
+		return dr, nil
 	}
 
 	// check if the requested resource kind is an IShield CRD, and check if the format is valid
 	// In case of gatekeeper-enabled IShield, this step is not invoked because the CRD kind (e.g. ShieldConfig) is not protected by contraints in general
-	// TODO: find a way to set a correct CRD schema in CRD definition by ishield operator
-	dr = server.formatCheckForIShieldCRDs(admissionReviewReq.Request)
+	// TODO: need to find a way to set a correct CRD schema in ishield operator
+	dr = server.formatCheckForIShieldCRDs(req)
 	if !dr.IsUndetermined() {
-		server.finalizeHandling(admissionReviewReq.Request, dr)
-		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request)
+		return dr, nil
 	}
 
-	var matchedProfiels []rspapi.ResourceSigningProfile
+	var matchedProfiles []rspapi.ResourceSigningProfile
 	// check if the group/version/kind is protected in the namespace
-	// In case of gatekeeper-enabled IShield, this step is done by gatekeeper automatically
-	dr, matchedProfiels = server.groupKindNamespaceCheck(admissionReviewReq.Request)
+	// In case of gatekeeper-enabled IShield, this step is separated into 2 logics.
+	// One is done by gatekeeper automatically, and another should be implemented in rego
+	dr, matchedProfiles = server.protectedCheck(req)
 	if !dr.IsUndetermined() {
-		server.finalizeHandling(admissionReviewReq.Request, dr)
-		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message, admissionReviewReq.Request)
+		return dr, nil
 	}
 
-	// check mutation & signature & image signature if enabled & some others
-	multipleResponses := []*admv1.AdmissionResponse{}
-	for _, singleProfile := range matchedProfiels {
-		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-		requestHandler := shield.NewHandler(config.ShieldConfig, metaLogger, singleProfile)
-		// Run Request Handler
-		resp := requestHandler.Run(admissionReviewReq.Request)
-		multipleResponses = append(multipleResponses, resp)
-	}
-	admissionResponse, _ := shield.SummarizeMultipleAdmissionResponses(multipleResponses)
+	return common.UndeterminedDecision(), matchedProfiles
+}
 
-	server.finalizeHandling(admissionReviewReq.Request, dr)
-	return admissionResponse
+// create Event & update RSP status if sideEffectConfig enabled
+func (server *WebhookServer) report(req *admv1.AdmissionRequest, dr *common.DecisionResult, denyRSP *rspapi.ResourceSigningProfile) error {
+
+	// report only for denying request or for IShield resource request by IShield Admin
+	shouldReport := false
+	if !dr.IsAllowed() && sConfig.ShieldConfig.SideEffect.CreateDenyEventEnabled() {
+		shouldReport = true
+	}
+	iShieldAdmin := checkIfIShieldAdminRequest(req.UserInfo.Username, req.UserInfo.Groups, sConfig.ShieldConfig)
+	if dr.IShieldResource && !iShieldAdmin && sConfig.ShieldConfig.SideEffect.CreateIShieldResourceEventEnabled() {
+		shouldReport = true
+	}
+
+	if !shouldReport {
+		return nil
+	}
+
+	var err error
+	// create/update Event
+	if sConfig.ShieldConfig.SideEffect.CreateEventEnabled() {
+		err = createOrUpdateEvent(req, dr, sConfig.ShieldConfig, denyRSP)
+		if err != nil {
+			logger.Error("Failed to create event; ", err)
+			return err
+		}
+	}
+
+	// update RSP status for deny event
+	if sConfig.ShieldConfig.SideEffect.UpdateRSPStatusEnabled() && dr.IsDenied() && denyRSP != nil {
+		err = updateRSPStatus(denyRSP, req, dr.Message)
+		if err != nil {
+			logger.Error("Failed to update status; ", err)
+		}
+	}
+
+	return nil
+}
+
+func (server *WebhookServer) initializeHandling() {
+	_ = sConfig.InitShieldConfig()
+
+	// set rule table using cache if provided, otherwise, load RSPs and NSs via K8s API
+	server.data = newRuntimeData()
 }
 
 // clear RSP / NS cache if needed
@@ -245,8 +324,8 @@ func (server *WebhookServer) finalizeHandling(req *admv1.AdmissionRequest, dr *c
 	if !(reqForRSP || reqForNS) {
 		return
 	}
-	reqByIShieldServer := checkIfIShieldServerRequest(req.UserInfo.Username)
-	reqByIShieldOperator := checkIfIShieldOperatorRequest(req.UserInfo.Username)
+	reqByIShieldServer := checkIfIShieldServerRequest(req.UserInfo.Username, sConfig.ShieldConfig)
+	reqByIShieldOperator := checkIfIShieldOperatorRequest(req.UserInfo.Username, sConfig.ShieldConfig)
 	if reqByIShieldServer || reqByIShieldOperator {
 		return
 	}
@@ -264,14 +343,6 @@ func (server *WebhookServer) finalizeHandling(req *admv1.AdmissionRequest, dr *c
 		server.data.clearCache()
 	}
 	return
-}
-
-func checkIfIShieldServerRequest(username string) bool {
-	return common.MatchPattern(config.ShieldConfig.IShieldServerUserName, username) //"service account for integrity-shield"
-}
-
-func checkIfIShieldOperatorRequest(username string) bool {
-	return common.ExactMatch(config.ShieldConfig.IShieldResourceCondition.OperatorServiceAccount, username) //"service account for integrity-shield-operator"
 }
 
 func (server *WebhookServer) checkLiveness(w http.ResponseWriter, r *http.Request) {

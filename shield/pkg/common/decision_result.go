@@ -27,12 +27,11 @@ import (
 ***********************************************/
 
 type DecisionResult struct {
-	Type       DecisionType `json:"type,omitempty"`
-	Verified   bool         `json:"verified,omitempty"`
-	ReasonCode int          `json:"reasonCode,omitempty"`
-	Message    string       `json:"message,omitempty"`
-
-	DenyRSP interface{}
+	Type            DecisionType `json:"type,omitempty"`
+	Verified        bool         `json:"verified,omitempty"`
+	IShieldResource bool         `json:"ishieldResource,omitempty"`
+	ReasonCode      int          `json:"reasonCode,omitempty"`
+	Message         string       `json:"message,omitempty"`
 }
 
 func UndeterminedDecision() *DecisionResult {

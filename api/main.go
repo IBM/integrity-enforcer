@@ -61,7 +61,7 @@ func handleRequest(admissionReq *admv1.AdmissionRequest) *admv1.AdmissionRespons
 	multipleResps := []*admv1.AdmissionResponse{}
 	for _, profile := range matchedProfiles {
 		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-		reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, profile)
+		reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, profile.Spec.Parameters)
 		//process request
 		result := reqHandler.Run(admissionReq)
 		multipleResps = append(multipleResps, result)
@@ -72,23 +72,23 @@ func handleRequest(admissionReq *admv1.AdmissionRequest) *admv1.AdmissionRespons
 
 }
 
-func handleResource(resource *unstructured.Unstructured) (*common.DecisionResult, *shield.CheckContext) {
+func handleResource(resource *unstructured.Unstructured) (*common.DecisionResult, *common.CheckContext) {
 
 	_ = config.InitShieldConfig()
 
 	matchedProfiles, _ := shield.GetMatchedProfilesWithResource(resource, config.ShieldConfig.Namespace)
 	multipleResps := []*common.DecisionResult{}
-	multipleCtx := []*shield.CheckContext{}
+	multipleCtx := []*common.CheckContext{}
 	for _, profile := range matchedProfiles {
 		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-		resHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, profile)
+		resHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, profile.Spec.Parameters)
 		//process request
 		result := resHandler.Run(resource)
 		multipleResps = append(multipleResps, result)
 		multipleCtx = append(multipleCtx, resHandler.GetCheckContext())
 	}
 	dr, drIndex := shield.SummarizeMultipleDecisionResults(multipleResps)
-	var ctx *shield.CheckContext
+	var ctx *common.CheckContext
 	if drIndex > 0 {
 		ctx = multipleCtx[drIndex]
 	}

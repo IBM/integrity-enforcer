@@ -190,7 +190,7 @@ var _ = Describe("Test integrity shield", func() {
 				cmd_err := Kubectl("apply", "-f", test_rsp, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
-					_, err := framework.RSPClient.ResourceSigningProfiles(test_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+					_, err := framework.RSPClient.ResourceSigningProfiles().Get(goctx.Background(), expected, metav1.GetOptions{})
 					if err != nil {
 						return err
 					}
@@ -378,7 +378,7 @@ var _ = Describe("Test integrity shield", func() {
 				cmd_err := Kubectl("delete", "-f", test_rsp, "-n", test_namespace)
 				Expect(cmd_err).To(BeNil())
 				Eventually(func() error {
-					_, err := framework.RSPClient.ResourceSigningProfiles(test_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+					_, err := framework.RSPClient.ResourceSigningProfiles().Get(goctx.Background(), expected, metav1.GetOptions{})
 					return err
 				}, timeout, 1).ShouldNot(BeNil())
 			})
@@ -422,7 +422,7 @@ var _ = Describe("Test integrity shield", func() {
 				Expect(cmd_err).To(BeNil())
 				By("Checking rsp is created properly: " + test_rsp_ishield + " ns: " + ishield_namespace)
 				Eventually(func() error {
-					_, err := framework.RSPClient.ResourceSigningProfiles(ishield_namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+					_, err := framework.RSPClient.ResourceSigningProfiles().Get(goctx.Background(), expected, metav1.GetOptions{})
 					if err != nil {
 						return err
 					}

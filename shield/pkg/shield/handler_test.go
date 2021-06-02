@@ -60,7 +60,7 @@ var schemes *runtime.Scheme
 var req *admv1.AdmissionRequest
 var testConfig *config.ShieldConfig
 
-func getTestData(num int) (*common.RequestContext, *common.RequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *CheckContext, *common.DecisionResult, rspapi.ResourceSigningProfile, *common.DecisionResult) {
+func getTestData(num int) (*common.RequestContext, *common.RequestObject, *common.ResourceContext, *config.ShieldConfig, *RunData, *common.CheckContext, *common.DecisionResult, rspapi.ResourceSigningProfile, *common.DecisionResult) {
 
 	var reqc *common.RequestContext
 	var reqobj *common.RequestObject
@@ -68,7 +68,7 @@ func getTestData(num int) (*common.RequestContext, *common.RequestObject, *commo
 
 	var data *RunData
 	var cfg *config.ShieldConfig
-	var ctx *CheckContext
+	var ctx *common.CheckContext
 	var dr0 *common.DecisionResult
 	var prof rspapi.ResourceSigningProfile
 	var dr *common.DecisionResult
@@ -252,18 +252,18 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).Should(BeNil())
 	Expect(req).ToNot(BeNil())
 
-	_, _, _, _, crdTestData, _, _, _, _ := getTestData(4)
+	// _, _, _, _, crdTestData, _, _, _, _ := getTestData(4)
 
 	err = k8sClient.Create(context.Background(), &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testConfig.Namespace}})
 	Expect(err).Should(BeNil())
 
-	// create namespaces in test data
-	for _, nsData := range data.NSList {
-		ns := &v1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: nsData.Name},
-		}
-		_ = k8sClient.Create(context.Background(), ns)
-	}
+	// // create namespaces in test data
+	// for _, nsData := range data.NSList {
+	// 	ns := &v1.Namespace{
+	// 		ObjectMeta: metav1.ObjectMeta{Name: nsData.Name},
+	// 	}
+	// 	_ = k8sClient.Create(context.Background(), ns)
+	// }
 
 	// create ShieldConfig in test data
 	sconf := &ec.ShieldConfig{
@@ -273,17 +273,17 @@ var _ = BeforeSuite(func(done Done) {
 	err = k8sClient.Create(context.Background(), sconf)
 	Expect(err).Should(BeNil())
 
-	// create rsps in test data
-	for _, rsp := range data.RSPList {
-		rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
-		err = k8sClient.Create(context.Background(), &rsp)
-		Expect(err).Should(BeNil())
-	}
-	for _, rsp := range crdTestData.RSPList {
-		rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
-		err = k8sClient.Create(context.Background(), &rsp)
-		Expect(err).Should(BeNil())
-	}
+	// // create rsps in test data
+	// for _, rsp := range data.RSPList {
+	// 	rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
+	// 	err = k8sClient.Create(context.Background(), &rsp)
+	// 	Expect(err).Should(BeNil())
+	// }
+	// for _, rsp := range crdTestData.RSPList {
+	// 	rsp.ObjectMeta = metav1.ObjectMeta{Name: rsp.Name, Namespace: rsp.Namespace}
+	// 	err = k8sClient.Create(context.Background(), &rsp)
+	// 	Expect(err).Should(BeNil())
+	// }
 
 	// create ressigs in test data
 	for _, rsig := range data.ResSigList.Items {
@@ -319,7 +319,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(req, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(req)
 				multipleResults = append(multipleResults, result)
@@ -344,7 +344,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(invalidRSPReq, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(invalidRSPReq)
 				multipleResults = append(multipleResults, result)
@@ -368,7 +368,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(invalidSConfReq, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(invalidSConfReq)
 				multipleResults = append(multipleResults, result)
@@ -397,7 +397,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(changedReq, test2Config)
-				testHandler := NewHandler(test2Config, metaLogger, profile)
+				testHandler := NewHandler(test2Config, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(changedReq)
 				multipleResults = append(multipleResults, result)
@@ -421,7 +421,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(changedReq, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(changedReq)
 				multipleResults = append(multipleResults, result)
@@ -445,7 +445,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(modReq, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(modReq)
 				multipleResults = append(multipleResults, result)
@@ -470,7 +470,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(updReq, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(updReq)
 				multipleResults = append(multipleResults, result)
@@ -495,7 +495,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(updReq, testConfig)
-				testHandler := NewHandler(testConfig, metaLogger, profile)
+				testHandler := NewHandler(testConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(updReq)
 				multipleResults = append(multipleResults, result)
@@ -520,7 +520,7 @@ func handlerTest() {
 			multipleResults := []*admv1.AdmissionResponse{}
 			for _, profile := range matchedProfiles {
 				metaLogger := getTestLogger(crdReq, crdTestConfig)
-				testHandler := NewHandler(crdTestConfig, metaLogger, profile)
+				testHandler := NewHandler(crdTestConfig, metaLogger, profile.Spec.Parameters)
 				//process request
 				result := testHandler.Run(crdReq)
 				multipleResults = append(multipleResults, result)

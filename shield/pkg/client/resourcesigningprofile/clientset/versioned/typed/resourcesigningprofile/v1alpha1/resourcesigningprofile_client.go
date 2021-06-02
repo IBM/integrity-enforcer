@@ -34,8 +34,8 @@ type ApisV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ApisV1alpha1Client) ResourceSigningProfiles(namespace string) ResourceSigningProfileInterface {
-	return newResourceSigningProfiles(c, namespace)
+func (c *ApisV1alpha1Client) ResourceSigningProfiles() ResourceSigningProfileInterface {
+	return newResourceSigningProfiles(c)
 }
 
 // NewForConfig creates a new ApisV1alpha1Client for the given config.
