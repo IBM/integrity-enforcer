@@ -48,7 +48,7 @@ func Verify(message, signature, certificate []byte, path string, opts map[string
 	return true, signerInfo, "", nil
 }
 
-func verify(message, signature, certPem, bundle []byte, rootPemPath *string) (bool, error) {
+func verify(message, signature, certPem, bundle []byte, rootPemDir *string) (bool, error) {
 
 	// clean up temporary files at the end of verification
 	defer deleteTmpYamls()
@@ -58,29 +58,9 @@ func verify(message, signature, certPem, bundle []byte, rootPemPath *string) (bo
 		return false, errors.Wrap(err, "error creating yaml files for verification")
 	}
 
-	cp := x509.NewCertPool()
-
-	if rootPemPath == nil {
-		pemPath := DefaultRootPemPath
-		if !exists(pemPath) {
-			rootPemBytes, err := download(defaultRootPemURL)
-			if err != nil {
-				return false, errors.Wrap(err, "failed to downalod root cert pem data")
-			}
-			err = ioutil.WriteFile(pemPath, rootPemBytes, 0644)
-			if err != nil {
-				return false, errors.Wrap(err, "failed to create root cert pem file")
-			}
-		}
-		rootPemPath = &pemPath
-	}
-	rootPem, err := ioutil.ReadFile(*rootPemPath)
+	cp, err := LoadCertPoolDir(*rootPemDir)
 	if err != nil {
-		return false, errors.Wrap(err, "error reading root cert pem file")
-	}
-	ok := cp.AppendCertsFromPEM(rootPem)
-	if !ok {
-		return false, fmt.Errorf("error creating root cert pool")
+		return false, errors.Wrap(err, "error loading cert pool")
 	}
 
 	co := &cosign.CheckOpts{
@@ -106,6 +86,41 @@ func LoadCert(certPath string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 	return cosign.LoadCerts(string(pem))
+}
+
+func LoadCertPoolDir(certDir string) (*x509.CertPool, error) {
+	cp := x509.NewCertPool()
+
+	files, err := ioutil.ReadDir(certDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get files from cert dir; %s", err.Error())
+	}
+	rootCertPath := ""
+	for _, f := range files {
+		if !f.IsDir() && (path.Ext(f.Name()) == ".crt" || path.Ext(f.Name()) == ".pem") {
+			fpath := path.Join(certDir, f.Name())
+			_, err := LoadCert(fpath)
+			if err != nil {
+				continue
+			} else {
+				rootCertPath = fpath
+				break
+			}
+
+		}
+	}
+	if rootCertPath != "" {
+		return nil, fmt.Errorf("failed to get root cert path from cert dir")
+	}
+	rootPem, err := ioutil.ReadFile(rootCertPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading root cert pem file")
+	}
+	ok := cp.AppendCertsFromPEM(rootPem)
+	if !ok {
+		return nil, fmt.Errorf("error creating root cert pool")
+	}
+	return cp, nil
 }
 
 func createTmpYamls(msg, sig, cert, bndl []byte) error {

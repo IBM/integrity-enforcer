@@ -17,7 +17,8 @@
 package common
 
 import (
-	"fmt"
+	"encoding/base64"
+	"path/filepath"
 	"strings"
 
 	"github.com/jinzhu/copier"
@@ -61,140 +62,80 @@ func (p *SignerConfig) DeepCopy() *SignerConfig {
 	return p2
 }
 
-func (self *SignerConfig) GetSignerMap() map[string][]SubjectCondition {
-	signerMap := map[string][]SubjectCondition{}
-	for _, si := range self.Signers {
-		tmpSC := []SubjectCondition{}
-		for _, sj := range si.Subjects {
-			sc := SubjectCondition{
-				Name:      si.Name,
-				KeyConfig: si.KeyConfig,
-				Subject:   sj,
-			}
-			tmpSC = append(tmpSC, sc)
+func (self *SignerConfig) GetCandidatePubkeys(ishieldNS string) map[SignatureType][]string {
+	candidatePubkeys := map[SignatureType][]string{}
+	for _, signerCondition := range self.Signers {
+		signatureType := signerCondition.SignatureType
+		if string(signatureType) == "" {
+			signatureType = SignatureTypePGP
 		}
-		signerMap[si.Name] = tmpSC
+		keyPath := signerCondition.makeFilePath(ishieldNS)
+		candidatePubkeys[signatureType] = append(candidatePubkeys[signatureType], keyPath)
 	}
-	return signerMap
+	return candidatePubkeys
 }
 
-func (self *SignerConfig) Merge(data *SignerConfig) *SignerConfig {
-	merged := &SignerConfig{}
-	merged.Signers = append(self.Signers, data.Signers...)
-	merged.BreakGlass = append(self.BreakGlass, data.BreakGlass...)
-	merged.Description = self.Description
-	return merged
-}
-
-func (self *SignerConfig) GetCandidatePubkeys(keyPathList []string, namespace string) map[SignatureType][]string {
-	candidates := []string{}
-	for _, spc := range self.Policies {
-		var included, excluded bool
-		if namespace == "" {
-			if spc.Scope == ScopeCluster {
-				included = true
-				excluded = false
-			}
-		} else {
-			if spc.Scope != ScopeCluster {
-				included = MatchWithPatternArray(namespace, spc.Namespaces)
-				excluded = MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
-			}
-		}
-		if !included || excluded {
-			continue
-		}
-		for _, signerName := range spc.Signers {
-			for _, signerCondition := range self.Signers {
-				if signerCondition.Name == signerName {
-					candidates = append(candidates, signerCondition.KeyConfig)
-				}
-			}
-		}
-	}
-	candidateKeys := map[SignatureType][]string{
-		SignatureTypePGP:      {},
-		SignatureTypeX509:     {},
-		SignatureTypeSigStore: {},
-	}
-	for _, keyPath := range keyPathList {
-		for _, keyConfName := range candidates {
-			keyConfPattern := fmt.Sprintf("/%s/", keyConfName)
-			pgpPattern := fmt.Sprintf("/%s/", string(SignatureTypePGP))
-			x509Pattern := fmt.Sprintf("/%s/", string(SignatureTypeX509))
-			sigStorePattern := fmt.Sprintf("/%s/", string(SignatureTypeSigStore))
-			if strings.Contains(keyPath, keyConfPattern) && strings.Contains(keyPath, pgpPattern) {
-				candidateKeys[SignatureTypePGP] = append(candidateKeys[SignatureTypePGP], keyPath)
-				break
-			} else if strings.Contains(keyPath, keyConfPattern) && strings.Contains(keyPath, x509Pattern) {
-				candidateKeys[SignatureTypeX509] = append(candidateKeys[SignatureTypeX509], keyPath)
-				break
-			} else if strings.Contains(keyPath, keyConfPattern) && strings.Contains(keyPath, sigStorePattern) {
-				candidateKeys[SignatureTypeSigStore] = append(candidateKeys[SignatureTypeSigStore], keyPath)
+func (self *SignerConfig) Match(signer *SignerInfo, verifiedKeyPathList []string, ishieldNS string) (bool, *SignerCondition) {
+	for _, signerCondition := range self.Signers {
+		keyPath := signerCondition.makeFilePath(ishieldNS)
+		keyMatched := false
+		for _, verifiedKeyPath := range verifiedKeyPathList {
+			if strings.Contains(verifiedKeyPath, keyPath) {
+				keyMatched = true
 				break
 			}
 		}
-	}
-	return candidateKeys
-}
-
-func (self *SignerConfig) Match(namespace string, signer *SignerInfo, verifiedKeyPathList []string) (bool, *SignerConfigCondition) {
-	signerMap := self.GetSignerMap()
-	for _, spc := range self.Policies {
-		var included, excluded bool
-		if namespace == "" {
-			if spc.Scope == ScopeCluster {
-				included = true
-				excluded = false
-			}
-		} else {
-			if spc.Scope != ScopeCluster {
-				included = MatchWithPatternArray(namespace, spc.Namespaces)
-				excluded = MatchWithPatternArray(namespace, spc.ExcludeNamespaces)
-			}
-		}
-		signerMatched := false
-		for _, signerName := range spc.Signers {
-			subjectConditions, ok := signerMap[signerName]
-			if !ok {
-				continue
-			}
-			for _, subjectCondition := range subjectConditions {
-				if subjectOk := subjectCondition.Match(signer); !subjectOk {
-					continue
-				}
-				for _, keyPath := range verifiedKeyPathList {
-					if strings.Contains(keyPath, fmt.Sprintf("/%s/", subjectCondition.KeyConfig)) {
-						signerMatched = true
-						break
-					}
-				}
-			}
-			if signerMatched {
-				break
-			}
-		}
-		matched := included && !excluded && signerMatched
-		if matched {
-			return true, &spc
+		signerMatched := signerCondition.Match(signer)
+		if keyMatched && signerMatched {
+			return true, &signerCondition
 		}
 	}
 	return false, nil
-}
-
-type SignerConfigCondition struct {
-	Scope             ScopeType `json:"scope,omitempty"`
-	Namespaces        []string  `json:"namespaces,omitempty"`
-	ExcludeNamespaces []string  `json:"excludeNamespaces,omitempty"`
-	Signers           []string  `json:"signers,omitempty"`
 }
 
 type SignerCondition struct {
 	Name               string                `json:"name,omitempty"`
 	SignatureType      SignatureType         `json:"signatureType,omitempty"`
 	KeySecretName      string                `json:"keySecretName,omitempty"`
-	keySecretNamespace string                `json:"keySecretNamespace,omitempty"`
+	KeySecretNamespace string                `json:"keySecretNamespace,omitempty"`
 	Subjects           []SubjectMatchPattern `json:"subjects,omitempty"`
+}
+
+func (sc *SignerCondition) makeFilePath(ishieldNS string) string {
+	secretName := sc.KeySecretName
+	secretNamespace := sc.KeySecretNamespace
+	signatureType := sc.SignatureType
+	if secretNamespace == "" {
+		secretNamespace = ishieldNS
+	}
+	if string(signatureType) == "" {
+		signatureType = SignatureTypePGP
+	}
+	keyConfig := sc.Name
+	if keyConfig == "" {
+		rawKey := secretNamespace + "/" + secretName
+		longKey := base64.StdEncoding.EncodeToString([]byte(rawKey))
+		index := 8
+		if len(longKey) < index {
+			index = len(longKey)
+		}
+		keyConfig = longKey[:index]
+	}
+	baseDir := "/"
+	parts := []string{baseDir, keyConfig, secretNamespace, secretName, string(signatureType)}
+	keyPath := filepath.Join(parts...)
+	return keyPath
+}
+
+func (sc *SignerCondition) Match(signer *SignerInfo) bool {
+	matched := false
+	for _, sub := range sc.Subjects {
+		if sub.Match(signer) {
+			matched = true
+			break
+		}
+	}
+	return matched
 }
 
 type BreakGlassCondition struct {
@@ -216,22 +157,16 @@ type SubjectMatchPattern struct {
 	SerialNumber       string `json:"serialNumber,omitempty"`
 }
 
-type SubjectCondition struct {
-	Name      string              `json:"name"`
-	KeyConfig string              `json:"keyConfig"`
-	Subject   SubjectMatchPattern `json:"subject"`
-}
-
-func (self *SubjectCondition) Match(signer *SignerInfo) bool {
-	return MatchPattern(self.Subject.Email, signer.Email) &&
-		MatchPattern(self.Subject.Uid, signer.Uid) &&
-		MatchPattern(self.Subject.Country, signer.Country) &&
-		MatchPattern(self.Subject.Organization, signer.Organization) &&
-		MatchPattern(self.Subject.OrganizationalUnit, signer.OrganizationalUnit) &&
-		MatchPattern(self.Subject.Locality, signer.Locality) &&
-		MatchPattern(self.Subject.Province, signer.Province) &&
-		MatchPattern(self.Subject.StreetAddress, signer.StreetAddress) &&
-		MatchPattern(self.Subject.PostalCode, signer.PostalCode) &&
-		MatchPattern(self.Subject.CommonName, signer.CommonName) &&
-		MatchBigInt(self.Subject.SerialNumber, signer.SerialNumber)
+func (self *SubjectMatchPattern) Match(signer *SignerInfo) bool {
+	return MatchPattern(self.Email, signer.Email) &&
+		MatchPattern(self.Uid, signer.Uid) &&
+		MatchPattern(self.Country, signer.Country) &&
+		MatchPattern(self.Organization, signer.Organization) &&
+		MatchPattern(self.OrganizationalUnit, signer.OrganizationalUnit) &&
+		MatchPattern(self.Locality, signer.Locality) &&
+		MatchPattern(self.Province, signer.Province) &&
+		MatchPattern(self.StreetAddress, signer.StreetAddress) &&
+		MatchPattern(self.PostalCode, signer.PostalCode) &&
+		MatchPattern(self.CommonName, signer.CommonName) &&
+		MatchBigInt(self.SerialNumber, signer.SerialNumber)
 }

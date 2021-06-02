@@ -18,7 +18,9 @@ package pgp
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -91,7 +93,7 @@ func verifySignature(keyPath string, msg, sig string) (bool, string, *Signer, []
 	cfgReader := strings.NewReader(msg)
 	sigReader := strings.NewReader(sig)
 
-	if keyRing, err := LoadKeyRing(keyPath); err != nil {
+	if keyRing, err := LoadKeyRingDir(keyPath); err != nil {
 		return false, "Error when loading key ring", nil, nil, err
 	} else if signer, err := openpgp.CheckArmoredDetachedSignature(keyRing, cfgReader, sigReader); signer == nil {
 		logger.Debug("msg:", msg)
@@ -201,4 +203,27 @@ func LoadKeyRing(keyPath string) (openpgp.EntityList, error) {
 		}
 	}
 	return openpgp.EntityList(entities), retErr
+}
+
+func LoadKeyRingDir(keyDir string) (openpgp.EntityList, error) {
+	entities := []*openpgp.Entity{}
+
+	files, err := ioutil.ReadDir(keyDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get files from keyring dir; %s", err.Error())
+	}
+	for _, f := range files {
+		if !f.IsDir() && (path.Ext(f.Name()) == ".gpg" || path.Ext(f.Name()) == ".pem") {
+			fpath := path.Join(keyDir, f.Name())
+			keyRing, err := LoadKeyRing(fpath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load keyring file \"%s\" ; %s", fpath, err.Error())
+			}
+			for _, e := range keyRing {
+				entities = append(entities, e)
+			}
+		}
+	}
+
+	return openpgp.EntityList(entities), nil
 }

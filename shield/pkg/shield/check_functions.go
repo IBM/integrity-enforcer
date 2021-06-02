@@ -17,9 +17,11 @@
 package shield
 
 import (
+	"encoding/json"
 	"strings"
 
 	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
+	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
@@ -178,6 +180,10 @@ func deleteCheck(reqc *common.RequestContext, config *config.ShieldConfig, data 
 func protectedCheck(reqc *common.RequestContext, config *config.ShieldConfig, profile rspapi.ResourceSigningProfile, ctx *CheckContext) *common.DecisionResult {
 	reqFields := reqc.Map()
 	protected, matchedRule := profile.Match(reqFields, config.Namespace)
+	logger.Debug("[DEBUG] reqFields: ", reqFields)
+	profileBytes, _ := json.Marshal(profile.Spec)
+	logger.Debug("[DEBUG] profile: ", string(profileBytes))
+	logger.Debug("[DEBUG] protected: ", protected)
 	ignoreMatched := false
 	if !protected && matchedRule != nil {
 		ignoreMatched = true

@@ -54,7 +54,7 @@ type Handler struct {
 }
 
 func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profile rspapi.ResourceSigningProfile) *Handler {
-	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger}
+	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, profile: profile}
 }
 
 func (self *Handler) Run(req *admv1.AdmissionRequest) *admv1.AdmissionResponse {
@@ -102,6 +102,7 @@ func (self *Handler) Check() *common.DecisionResult {
 
 	dr = protectedCheck(self.reqc, self.config, self.profile, self.ctx)
 	if !dr.IsUndetermined() {
+		logger.Debug("[DEBUG] handler not protected")
 		return dr
 	}
 

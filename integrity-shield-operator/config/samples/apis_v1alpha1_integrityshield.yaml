@@ -13,20 +13,6 @@ spec:
       exclude:
       - "kube-*"
       - "openshift-*"
-  signerConfig:
-    policies:
-    - namespaces:
-      - "*"
-      signers:
-      - "SampleSigner"
-    - scope: "Cluster"
-      signers:
-      - "SampleSigner"
-    signers:
-    - name: "SampleSigner"
-      keyConfig: sample-signer-keyconfig
-      subjects:
-      - email: "*"
   keyConfig:
   - name: sample-signer-keyconfig
     secretName: keyring-secret

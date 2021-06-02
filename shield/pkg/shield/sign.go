@@ -208,19 +208,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
-	candidatePubkeys = map[common.SignatureType][]string{}
-	for _, signerCondition := self.signerConfig.Signers {
-		secretName := signerCondition.KeySecretName
-		secretNamespace := signerCondition.keySecretNamespace
-		signatureType := signerCondition.SignatureType
-		if secretNamespace == "" {
-			secretNamespace = self.config.Namespace
-		}
-		if string(signatureType) == "" {
-			signatureType = common.SignatureTypePGP
-		}
-	}
-	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.KeyPathList, resc.Namespace)
+	candidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.Namespace)
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
 	sigstoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
@@ -230,7 +218,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	if candidateKeyCount > 0 {
 		validKeyCount := 0
 		for _, keyPath := range pgpPubkeys {
-			if loaded, _ := pgp.LoadKeyRing(keyPath); len(loaded) > 0 {
+			if loaded, _ := pgp.LoadKeyRingDir(keyPath); len(loaded) > 0 {
 				validKeyCount += 1
 			}
 		}
@@ -242,7 +230,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 		}
 
 		for _, certPath := range sigstoreCerts {
-			if loaded, _ := sigstore.LoadCert(certPath); len(loaded) > 0 {
+			if loaded, _ := sigstore.LoadCertPoolDir(certPath); loaded != nil {
 				validKeyCount += 1
 			}
 		}
@@ -261,9 +249,13 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
 
 	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
-	err := verifier.LoadSecrets(self.config.Namespace)
+	overwriteSecretsBaseDir := ""
+	if !kubeutil.IsInCluster() {
+		overwriteSecretsBaseDir = "./tmp"
+	}
+	err := verifier.LoadSecrets(overwriteSecretsBaseDir)
 	if err != nil {
-		logger.Warn("Error while loading pubkey secrets;", err.Error())
+		logger.Warn("Error while loading pubkey/certificate secrets;", err.Error())
 	}
 
 	// verify signature
@@ -312,19 +304,19 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	signer := sigVerifyResult.Signer
 
 	// check signer config
-	signerMatched, matchedSignerConfig := self.signerConfig.Match(resc.Namespace, signer, verifiedKeyPathList)
+	signerMatched, matchedSignerCondition := self.signerConfig.Match(signer, verifiedKeyPathList, self.config.Namespace)
 	if signerMatched {
-		matchedSignerConfigStr := ""
-		if matchedSignerConfig != nil {
-			tmpMatchedConfig, _ := json.Marshal(matchedSignerConfig)
-			matchedSignerConfigStr = string(tmpMatchedConfig)
+		matchedSignerConditionStr := ""
+		if matchedSignerCondition != nil {
+			tmpMatchedCondition, _ := json.Marshal(matchedSignerCondition)
+			matchedSignerConditionStr = string(tmpMatchedCondition)
 		}
 		return &common.SignatureEvalResult{
 			Signer:               signer,
 			SignerName:           signer.GetName(),
 			Allow:                true,
 			Checked:              true,
-			MatchedSignerConfig:  matchedSignerConfigStr,
+			MatchedSignerConfig:  matchedSignerConditionStr,
 			Error:                nil,
 			ResourceSignatureUID: rsigUID,
 		}, nil

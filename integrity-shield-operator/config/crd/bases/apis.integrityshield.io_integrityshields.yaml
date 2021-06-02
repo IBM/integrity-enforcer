@@ -1243,31 +1243,16 @@ spec:
                           type: array
                         description:
                           type: string
-                        policies:
-                          items:
-                            properties:
-                              excludeNamespaces:
-                                items:
-                                  type: string
-                                type: array
-                              namespaces:
-                                items:
-                                  type: string
-                                type: array
-                              scope:
-                                type: string
-                              signers:
-                                items:
-                                  type: string
-                                type: array
-                            type: object
-                          type: array
                         signers:
                           items:
                             properties:
-                              keyConfig:
+                              keySecretName:
+                                type: string
+                              keySecretNamespace:
                                 type: string
                               name:
+                                type: string
+                              signatureType:
                                 type: string
                               subjects:
                                 items:

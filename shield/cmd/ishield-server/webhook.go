@@ -82,6 +82,12 @@ func init() {
 	}
 }
 
+func reloadRuleTable() {
+	rspList, _ := rspLoader.GetData(true)
+	nsList, _ := nsLoader.GetData(true)
+	ruletable = NewRuleTable(rspList, nsList, config.ShieldConfig.CommonProfile, config.ShieldConfig.Namespace)
+}
+
 // Check if any profile matches the request (this can be replaced with gatekeeper constraints matching)
 func (server *WebhookServer) groupKindNamespaceCheck(req *admv1.AdmissionRequest) (*common.DecisionResult, []rspapi.ResourceSigningProfile) {
 	reqFields := shield.AdmissionRequestToReqFields(req)
@@ -149,6 +155,9 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 
 	_ = config.InitShieldConfig()
 
+	// reload rule table using cache
+	reloadRuleTable()
+
 	// init decision result with `undetermined`
 	dr := common.UndeterminedDecision()
 
@@ -158,6 +167,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 	// check if the request is delete operation; if delete, skip this request
 	dr = server.deleteCheck(admissionReviewReq.Request)
 	if !dr.IsUndetermined() {
+		logger.Debug("[DEBUG] allowed by delteCheck() kind: ", admissionReviewReq.Request.Kind, " , name: ", admissionReviewReq.Request.Name)
 		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message)
 	}
 
@@ -165,6 +175,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 	// check if the group/version/kind is protected in the namespace
 	dr, matchedProfiels = server.groupKindNamespaceCheck(admissionReviewReq.Request)
 	if !dr.IsUndetermined() {
+		logger.Debug("[DEBUG] allowed by groupKindNamespaceCheck() kind: ", admissionReviewReq.Request.Kind, " , name: ", admissionReviewReq.Request.Name)
 		return createSimpleAdmissionResponse(dr.IsAllowed(), dr.Message)
 	}
 
@@ -176,6 +187,7 @@ func (server *WebhookServer) handleAdmissionRequest(admissionReviewReq *admv1.Ad
 		// Run Request Handler
 		resp := requestHandler.Run(admissionReviewReq.Request)
 		multipleResponses = append(multipleResponses, resp)
+		logger.Debug("[DEBUG] temp response: ", admissionReviewReq.Request.Kind, " , name: ", admissionReviewReq.Request.Name, ", message: ", resp.Result.Message, ", profile: ", singleProfile.GetName())
 	}
 	admissionResponse, _ := shield.SummarizeMultipleAdmissionResponses(multipleResponses)
 

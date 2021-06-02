@@ -18,20 +18,6 @@ spec:
       useDefaultRootCert: true
     imageVerificationConfig:
       enabled: true
-  signerConfig:
-    policies:
-    - namespaces:
-      - "*"
-      signers:
-      - "SampleSigner"
-    - scope: "Cluster"
-      signers:
-      - "SampleSigner"
-    signers:
-    - name: "SampleSigner"
-      keyConfig: sample-signer-keyconfig
-      subjects:
-      - commonName: "*"
   keyConfig:
   - name: sample-signer-keyconfig
     signatureType: sigstore
