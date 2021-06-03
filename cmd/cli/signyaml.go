@@ -23,6 +23,7 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
 	"github.com/sigstore/cosign/pkg/cosign/pivkey"
@@ -136,7 +137,7 @@ func (c *SignYamlCommand) SignPayload(ctx context.Context, payloadJson []byte) (
 		signer = k
 	default: // Keyless!
 		fmt.Fprintln(os.Stderr, "Generating ephemeral keys...")
-		k, err := fulcio.NewSigner(ctx)
+		k, err := fulcio.NewSigner(ctx, "")
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "Getting key from Fulcio")
 		}
@@ -162,7 +163,11 @@ func (c *SignYamlCommand) SignPayload(ctx context.Context, payloadJson []byte) (
 		rekorBytes = pemBytes
 	}
 
-	entry, err := cosign.UploadTLog(sig, payloadJson, rekorBytes)
+	rekorClient, err := app.GetRekorClient(cli.TlogServer())
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to get rekor client")
+	}
+	entry, err := cosign.UploadTLog(rekorClient, sig, payloadJson, rekorBytes)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to upload to tlog")
 	}

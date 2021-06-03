@@ -76,7 +76,7 @@ func FindSingleYaml(message []byte, apiVersion, kind, name, namespace string) (b
 	for _, ri := range resourcesInMessage {
 		msgInfo := ri.Map()
 		if matchResourceInfo(msgInfo, reqInfos, []string{"group", "kind", "name", "namespace"}) {
-			matchedItems2 = append(matchedItems, ri)
+			matchedItems2 = append(matchedItems2, ri)
 		}
 	}
 	if len(matchedItems2) == 0 {
@@ -140,7 +140,7 @@ func ParseMessage(message []byte) []ResourceInfo {
 func Base64decode(str string) string {
 	decBytes, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
-		return ""
+		return str
 	}
 	dec := string(decBytes)
 	return dec

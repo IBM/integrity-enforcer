@@ -60,6 +60,7 @@ const (
 	SignatureTypeAnnotationKey = "integrityshield.io/signatureType"
 	MessageScopeAnnotationKey  = "integrityshield.io/messageScope"
 	MutableAttrsAnnotationKey  = "integrityshield.io/mutableAttrs"
+	SigImageRefAnnotationKey   = "integrityshield.io/sigImageRef"
 
 	ResSigLabelApiVer = "integrityshield.io/sigobject-apiversion"
 	ResSigLabelKind   = "integrityshield.io/sigobject-kind"
@@ -265,6 +266,7 @@ type SignatureAnnotation struct {
 	MessageScope   string
 	MutableAttrs   string
 	SigStoreBundle string
+	SigImageRef    string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
@@ -276,6 +278,7 @@ func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 		MessageScope:   self.getString(MessageScopeAnnotationKey),
 		MutableAttrs:   self.getString(MutableAttrsAnnotationKey),
 		SigStoreBundle: self.getString(BundleAnnotationKey),
+		SigImageRef:    self.getString(SigImageRefAnnotationKey),
 	}
 }
 

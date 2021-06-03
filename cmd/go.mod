@@ -9,10 +9,10 @@ require (
 	github.com/google/go-containerregistry v0.5.1
 	github.com/peterbourgon/ff/v3 v3.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/sigstore/cosign v0.4.1-0.20210519011730-5fc9c791d7ef
+	github.com/sigstore/cosign v0.4.1-0.20210602105506-5cb21aa7fbf9
 	github.com/sigstore/rekor v0.1.2-0.20210519014330-b5480728bde6
-	github.com/sigstore/sigstore v0.0.0-20210516171352-bee6a385d4af
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sigstore/sigstore v0.0.0-20210530211317-99216b8b86a6
+	github.com/sirupsen/logrus v1.8.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apimachinery v0.21.1
 )
