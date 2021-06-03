@@ -174,7 +174,7 @@ func getYAMLsInArtifact(gzipStream io.Reader) ([][]byte, error) {
 				return nil, errors.Wrap(err, "io.Copy() failed while decompressing tar gz")
 			}
 		default:
-			return nil, fmt.Errorf("faced uknown type %s in %s while decompressing tar gz", string(header.Typeflag), header.Name)
+			return nil, fmt.Errorf("faced unknown type %s in %s while decompressing tar gz", string(header.Typeflag), header.Name)
 		}
 	}
 
