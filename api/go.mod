@@ -14,7 +14,7 @@ replace (
 	github.com/IBM/integrity-enforcer/cmd => ../cmd
 	github.com/IBM/integrity-enforcer/controller => ../controller
 	github.com/IBM/integrity-enforcer/shield => ../shield
-	github.com/sigstore/cosign => ../../../gajananan/cosign
+	github.com/sigstore/cosign => github.com/sigstore/cosign v0.4.1-0.20210602105506-5cb21aa7fbf9
 	k8s.io/api => k8s.io/api v0.19.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0

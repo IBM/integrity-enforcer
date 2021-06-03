@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"path"
 
+	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	sconfloader "github.com/IBM/integrity-enforcer/shield/pkg/config/loader"
 	shield "github.com/IBM/integrity-enforcer/shield/pkg/shield"
@@ -53,45 +54,28 @@ func init() {
 	logger.Info("ShieldConfig is loaded.")
 }
 
-func handleRequest(admissionReq *admv1.AdmissionRequest) *admv1.AdmissionResponse {
+func handleRequest(admissionReq *admv1.AdmissionRequest, parameters *rspapi.Parameters) *admv1.AdmissionResponse {
 
 	_ = config.InitShieldConfig()
 
-	matchedProfiles, _ := shield.GetMatchedProfilesWithRequest(admissionReq, config.ShieldConfig.Namespace)
-	multipleResps := []*admv1.AdmissionResponse{}
-	for _, profile := range matchedProfiles {
-		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-		reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, profile.Spec.Parameters)
-		//process request
-		result := reqHandler.Run(admissionReq)
-		multipleResps = append(multipleResps, result)
-	}
-	result, _ := shield.SummarizeMultipleAdmissionResponses(multipleResps)
+	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+	reqHandler := shield.NewHandler(config.ShieldConfig, metaLogger, *parameters)
+	//process request
+	resp := reqHandler.Run(admissionReq)
 
-	return result
+	return resp
 
 }
 
-func handleResource(resource *unstructured.Unstructured) (*common.DecisionResult, *common.CheckContext) {
+func handleResource(resource *unstructured.Unstructured, parameters *rspapi.Parameters) (*common.DecisionResult, *common.CheckContext) {
 
 	_ = config.InitShieldConfig()
 
-	matchedProfiles, _ := shield.GetMatchedProfilesWithResource(resource, config.ShieldConfig.Namespace)
-	multipleResps := []*common.DecisionResult{}
-	multipleCtx := []*common.CheckContext{}
-	for _, profile := range matchedProfiles {
-		metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
-		resHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, profile.Spec.Parameters)
-		//process request
-		result := resHandler.Run(resource)
-		multipleResps = append(multipleResps, result)
-		multipleCtx = append(multipleCtx, resHandler.GetCheckContext())
-	}
-	dr, drIndex := shield.SummarizeMultipleDecisionResults(multipleResps)
-	var ctx *common.CheckContext
-	if drIndex > 0 {
-		ctx = multipleCtx[drIndex]
-	}
+	metaLogger := logger.NewLogger(config.ShieldConfig.LoggerConfig())
+	resHandler := shield.NewResourceCheckHandler(config.ShieldConfig, metaLogger, *parameters)
+	//process request
+	dr := resHandler.Run(resource)
+	ctx := resHandler.GetCheckContext()
 
 	return dr, ctx
 
@@ -126,14 +110,45 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Body:", string(body))
 
+	var inputMap map[string]interface{}
 	var request *admv1.AdmissionRequest
-	err := json.Unmarshal(body, &request)
+	var parameters *rspapi.Parameters
+	err := json.Unmarshal(body, &inputMap)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("unmarshaling input data as admission review: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("unmarshaling input data as map[string]interface{}: %v", err), http.StatusInternalServerError)
+		return
+	}
+	requestIf, requestFound := inputMap["request"]
+	if !requestFound {
+		http.Error(w, "failed to find `request` key in input object", http.StatusInternalServerError)
+		return
+	}
+	if requestIf != nil {
+		requestMap := requestIf.(map[string]interface{})
+		requestBytes, _ := json.Marshal(requestMap)
+		_ = json.Unmarshal(requestBytes, &request)
+	}
+	if request == nil {
+		http.Error(w, fmt.Sprintf("failed to convert `request` in input object into %T", request), http.StatusInternalServerError)
 		return
 	}
 
-	result := handleRequest(request)
+	parametersIf, parametersFound := inputMap["parameters"]
+	if !parametersFound {
+		http.Error(w, "failed to find `parameters` key in input object", http.StatusInternalServerError)
+		return
+	}
+	if parametersIf != nil {
+		parametersMap := parametersIf.(map[string]interface{})
+		parametersBytes, _ := json.Marshal(parametersMap)
+		_ = json.Unmarshal(parametersBytes, &parameters)
+	}
+	if parameters == nil {
+		http.Error(w, fmt.Sprintf("failed to convert `parameters` in input object into %T", parameters), http.StatusInternalServerError)
+		return
+	}
+
+	result := handleRequest(request, parameters)
 
 	resp, err := json.Marshal(result)
 	if err != nil {
@@ -167,14 +182,45 @@ func resourceHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Body:", string(body))
 
+	var inputMap map[string]interface{}
 	var resource *unstructured.Unstructured
-	err := json.Unmarshal(body, &resource)
+	var parameters *rspapi.Parameters
+	err := json.Unmarshal(body, &inputMap)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("unmarshaling input data as unstructured.Unstructured: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("unmarshaling input data as map[string]interface{}: %v", err), http.StatusInternalServerError)
+		return
+	}
+	resourceIf, resourceFound := inputMap["resource"]
+	if !resourceFound {
+		http.Error(w, "failed to find `resource` key in input object", http.StatusInternalServerError)
+		return
+	}
+	if resourceIf != nil {
+		resourceMap := resourceIf.(map[string]interface{})
+		resourceBytes, _ := json.Marshal(resourceMap)
+		_ = json.Unmarshal(resourceBytes, &resource)
+	}
+	if resource == nil {
+		http.Error(w, fmt.Sprintf("failed to convert `resource` in input object into %T", resource), http.StatusInternalServerError)
 		return
 	}
 
-	dr, ctx := handleResource(resource)
+	parametersIf, parametersFound := inputMap["parameters"]
+	if !parametersFound {
+		http.Error(w, "failed to find `parameters` key in input object", http.StatusInternalServerError)
+		return
+	}
+	if parametersIf != nil {
+		parametersMap := parametersIf.(map[string]interface{})
+		parametersBytes, _ := json.Marshal(parametersMap)
+		_ = json.Unmarshal(parametersBytes, &parameters)
+	}
+	if parameters == nil {
+		http.Error(w, fmt.Sprintf("failed to convert `parameters` in input object into %T", parameters), http.StatusInternalServerError)
+		return
+	}
+
+	dr, ctx := handleResource(resource, parameters)
 
 	result := map[string]interface{}{
 		"result":  dr,

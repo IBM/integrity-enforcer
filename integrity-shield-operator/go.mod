@@ -6,12 +6,12 @@ require (
 	github.com/IBM/integrity-enforcer/shield v0.0.0-20201001024601-320551d946dc
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-logr/logr v0.3.0
+	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.5
-	github.com/onsi/ginkgo v1.14.2
-	github.com/onsi/gomega v1.10.3
+	github.com/onsi/ginkgo v1.15.0
+	github.com/onsi/gomega v1.11.0
 	github.com/openshift/api v3.9.0+incompatible
-	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	k8s.io/api v0.21.1
 	k8s.io/apiextensions-apiserver v0.20.2
 	k8s.io/apimachinery v0.21.1

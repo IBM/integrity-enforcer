@@ -17,6 +17,7 @@ import (
 
 	gyaml "github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
@@ -173,7 +174,7 @@ func verifyBundleAndTlog(ctx context.Context, co *cosign.CheckOpts, sp *cosign.S
 		}
 
 		// TODO: Figure out if we'll need a client before creating one.
-		rekorClient, err := app.GetRekorClient(cosign.TlogServer())
+		rekorClient, err := app.GetRekorClient(cli.TlogServer())
 		if err != nil {
 			return nil, errors.Wrap(err, "retriving rekor client")
 		}

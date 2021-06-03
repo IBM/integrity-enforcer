@@ -182,7 +182,7 @@ func prepareBundleJson(entry *models.LogEntryAnon) ([]byte, error) {
 		Body:                 entry.Body,
 		IntegratedTime:       *it,
 		LogIndex:             entry.LogIndex,
-		LogID:                entry.LogID,
+		LogID:                *entry.LogID,
 	}
 
 	bundleJson, err := json.Marshal(bundle)
