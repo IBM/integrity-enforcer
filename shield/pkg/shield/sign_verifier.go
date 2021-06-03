@@ -19,6 +19,7 @@ package shield
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	hrm "github.com/IBM/integrity-enforcer/shield/pkg/apis/helmreleasemetadata/v1alpha1"
@@ -165,10 +166,18 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	certificateStr, certFound := sig.data["certificate"]
 	certificate := []byte(certificateStr)
 	sigstoreBundleStr, bundleFound := sig.data["sigstoreBundle"]
+	imageRefStr, imageRefFound := sig.data["imageRef"]
+	verifyWithImage := sig.option["verifyWithImage"]
 
 	opts := map[string]string{}
 	if self.sigstoreEnabled && bundleFound {
 		opts["sigstoreBundle"] = sigstoreBundleStr
+	}
+	if self.sigstoreEnabled && imageRefFound {
+		opts["imageRef"] = imageRefStr
+	}
+	if self.sigstoreEnabled && verifyWithImage {
+		opts["verifyWithImage"] = strconv.FormatBool(verifyWithImage)
 	}
 
 	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .
@@ -186,7 +195,8 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 
 	if self.sigstoreEnabled {
 		verifiers["sigstore"] = sign.NewVerifier(sigstore.Verify, self.SigStoreCertPathList, sigFrom)
-		certRequired["sigstore"] = true
+		// disable certRequired for `sigImageRef` verification, since imageRef itself does not have certificate
+		// certRequired["sigstore"] = true
 	}
 
 	verifiedKeyPathList := []string{}
@@ -572,6 +582,7 @@ var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),
+	fmt.Sprintf("metadata.annotations.\"%s\"", common.SigImageRefAnnotationKey),
 	"metadata.annotations.namespace",
 	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
 	"metadata.managedFields",

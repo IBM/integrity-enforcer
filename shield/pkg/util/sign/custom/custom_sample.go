@@ -27,13 +27,9 @@ import (
 // All functions that implements "sign.VerifierFunc" can be called in sign_verifier.go in "shield" package.
 // About how to call your verify function, please refer to sign_verifier.go .
 
-var ensureVerifyFunc sign.VerifierFunc
-
-func init() {
-	// if a build error is found here, your custom Verify() function
-	// does not match with type of sign.VerifeirFunc
-	ensureVerifyFunc = Verify
-}
+// if a compile error occured here, your custom Verify() function
+// does not implement sign.VerifeirFunc
+var _ sign.VerifierFunc = Verify
 
 func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
 	var signerInfo *common.SignerInfo

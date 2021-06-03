@@ -4,18 +4,24 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
+	"github.com/IBM/integrity-enforcer/shield/pkg/util/sign"
 	ishieldx509 "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/x509"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 
 	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
 )
@@ -28,7 +34,17 @@ const DefaultRootPemPath = "/tmp/root.pem"
 
 const defaultRootPemURL = "https://raw.githubusercontent.com/sigstore/fulcio/main/config/ctfe/root.pem"
 
+// ensure Verify() implements sign.VerifierFunc
+var _ sign.VerifierFunc = Verify
+
 func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
+	if imgVerifyStr, ok := opts["verifyWithImage"]; ok {
+		imageVerifyEnabled, err := strconv.ParseBool(imgVerifyStr)
+		if imageVerifyEnabled && err == nil {
+			return imageVerify(path, opts)
+		}
+	}
+
 	var bundle []byte
 	if b, ok := opts["sigstoreBundle"]; ok && b != "" {
 		bundle = []byte(b)
@@ -79,6 +95,49 @@ func verify(message, signature, certPem, bundle []byte, rootPemDir *string) (boo
 		return false, fmt.Errorf("signature does not match")
 	}
 	return true, nil
+}
+
+func imageVerify(path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
+	var imageRef string
+	if ir, ok := opts["imageRef"]; ok && ir != "" {
+		imageRef = ir
+	}
+	ref, err := name.ParseReference(imageRef)
+	if err != nil {
+		return false, nil, fmt.Sprintf("Failed to parse image ref `%s`; %s", imageRef, err.Error()), err
+	}
+	cp, err := LoadCertPoolDir(path)
+	if err != nil {
+		return false, nil, fmt.Sprintf("error loading cert pool; %s", err.Error()), err
+	}
+
+	co := &cosign.CheckOpts{
+		Claims: true,
+		Tlog:   true,
+		Roots:  cp,
+	}
+
+	rekorSever := cli.TlogServer()
+	verified, err := cosign.Verify(context.Background(), ref, co, rekorSever)
+	if err != nil {
+		return false, nil, fmt.Sprintf("error occured while verifying image `%s`; %s", imageRef, err.Error()), err
+	}
+	if len(verified) == 0 {
+		reasonFail := fmt.Sprintf("no verified signatures in the image `%s`; %s", imageRef, err.Error())
+		return false, nil, reasonFail, errors.New(reasonFail)
+	}
+	var cert *x509.Certificate
+	for _, vp := range verified {
+		ss := payload.SimpleContainerImage{}
+		err := json.Unmarshal(vp.Payload, &ss)
+		if err != nil {
+			continue
+		}
+		cert = vp.Cert
+		break
+	}
+	signerInfo := ishieldx509.NewSignerInfoFromCert(cert)
+	return true, signerInfo, "", nil
 }
 
 func LoadCert(certPath string) ([]*x509.Certificate, error) {

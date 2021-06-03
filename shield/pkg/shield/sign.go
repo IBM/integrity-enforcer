@@ -31,6 +31,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
+	image "github.com/IBM/integrity-enforcer/shield/pkg/util/image"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
@@ -162,7 +163,40 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		}
 	}
 
-	//3. pick ResourceSignature from external store if available
+	//3. pick Signature from OCI registry if available
+	if sigAnnotations.SigImageRef != "" {
+		imageRef := sigAnnotations.SigImageRef
+		img, err := image.PullImage(imageRef)
+		var concatYAMLBytes []byte
+		if err != nil {
+			logger.Error("failed to pull image: ", err.Error())
+		} else {
+			var blobBytes []byte
+			blobBytes, err = image.GetBlob(img)
+			if err != nil {
+				logger.Error("failed to get blob from image: ", err.Error())
+			}
+			concatYAMLBytes, err = image.GenerateConcatYAMLsFromBlob(blobBytes)
+			if err != nil {
+				logger.Error("failed to generate concat yaml from blob: ", err.Error())
+			}
+		}
+		fmt.Println("[DEBUG] concatYAMLBytes in image blob:\n", string(concatYAMLBytes))
+		found, yamlBytes := ishieldyaml.FindSingleYaml(concatYAMLBytes, ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
+		fmt.Println("[DEBUG] found yamlBytes in image blob:\n", string(yamlBytes))
+
+		if found {
+			signType := SignedResourceTypeResource
+			matchRequired := true
+			scopedSignature := false
+			verifyWithImage := true
+			return &GeneralSignature{
+				SignType: signType,
+				data:     map[string]string{"imageRef": imageRef, "yamlBytes": string(yamlBytes)},
+				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature, "verifyWithImage": verifyWithImage},
+			}
+		}
+	}
 
 	//4. helm resource (release secret, helm cahrt resources)
 	if ok := self.plugins["helm"]; ok {

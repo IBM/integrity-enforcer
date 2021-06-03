@@ -32,6 +32,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/fulcio"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -66,7 +67,8 @@ func (sci *SigCheckImages) imageSignatureCheck() {
 			sci.ImagesToVerify[i] = img
 			continue
 		}
-		verified, err := cosign.Verify(context.Background(), ref, co)
+		rekorSever := cli.TlogServer()
+		verified, err := cosign.Verify(context.Background(), ref, co, rekorSever)
 		if err != nil {
 			//  cosign verify err
 			res.Allowed = false
