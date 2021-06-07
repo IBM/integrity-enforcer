@@ -69,20 +69,20 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, profileParameters rspapi.Parameters) (*common.SignatureEvalResult, error)
+	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
-	config       *config.ShieldConfig
-	signerConfig *common.SignerConfig
-	plugins      map[string]bool
+	config            *config.ShieldConfig
+	profileParameters rspapi.Parameters
+	plugins           map[string]bool
 }
 
-func NewSignatureEvaluator(config *config.ShieldConfig, signerConfig *common.SignerConfig, plugins map[string]bool) (SignatureEvaluator, error) {
+func NewSignatureEvaluator(config *config.ShieldConfig, profileParameters rspapi.Parameters, plugins map[string]bool) (SignatureEvaluator, error) {
 	return &ConcreteSignatureEvaluator{
-		config:       config,
-		signerConfig: signerConfig,
-		plugins:      plugins,
+		config:            config,
+		profileParameters: profileParameters,
+		plugins:           plugins,
 	}, nil
 }
 
@@ -164,9 +164,15 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	}
 
 	//3. pick Signature from OCI registry if available
-	if sigAnnotations.SigImageRef != "" {
-		imageRef := sigAnnotations.SigImageRef
-		img, err := image.PullImage(imageRef)
+	manifestImageRef := ""
+	if manifestImageRef == "" && sigAnnotations.ManifestImageRef != "" {
+		manifestImageRef = sigAnnotations.ManifestImageRef
+	}
+	if manifestImageRef == "" && self.profileParameters.ManifestReference != nil {
+		manifestImageRef = self.profileParameters.ManifestReference.Image
+	}
+	if manifestImageRef != "" {
+		img, err := image.PullImage(manifestImageRef)
 		var concatYAMLBytes []byte
 		if err != nil {
 			logger.Error("failed to pull image: ", err.Error())
@@ -192,7 +198,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			verifyWithImage := true
 			return &GeneralSignature{
 				SignType: signType,
-				data:     map[string]string{"imageRef": imageRef, "yamlBytes": string(yamlBytes)},
+				data:     map[string]string{"imageRef": manifestImageRef, "yamlBytes": string(yamlBytes)},
 				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature, "verifyWithImage": verifyWithImage},
 			}
 		}
@@ -230,7 +236,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, profileParameters rspapi.Parameters) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
 	ref := resc.ResourceRef()
@@ -248,7 +254,8 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
-	originalCandidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.Namespace)
+	signerConfig := self.profileParameters.SignerConfig
+	originalCandidatePubkeys := signerConfig.GetCandidatePubkeys(self.config.Namespace)
 
 	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
 	overwriteSecretsBaseDir := ""
@@ -303,7 +310,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 
 	// verify signature
-	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, profileParameters)
+	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, self.profileParameters)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{
@@ -348,7 +355,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	signer := sigVerifyResult.Signer
 
 	// check signer config
-	signerMatched, matchedSignerCondition := self.signerConfig.Match(signer, verifiedKeyPathList, self.config.Namespace)
+	signerMatched, matchedSignerCondition := signerConfig.Match(signer, verifiedKeyPathList, self.config.Namespace)
 	if signerMatched {
 		matchedSignerConditionStr := ""
 		if matchedSignerCondition != nil {

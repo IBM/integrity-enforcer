@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: argo-simulator
+  name: argocd-builder
 spec:
   selector:
     matchLabels:
-      app: argo-simulator
+      app: argocd-builder
   template:
     metadata:
       labels:
-        app: argo-simulator
+        app: argocd-builder
     spec:
-      serviceAccountName: argo-simulator
+      serviceAccountName: argocd-builder
       containers:
       - name: simulator
-        image: localhost:5000/argo-simulator:latest
+        image: localhost:5000/argocd-builder:latest
         imagePullPolicy: Always
         resources:
           limits:

@@ -6,13 +6,17 @@ require (
 	github.com/argoproj/argo-cd/v2 v2.0.0-20210519194304-cc4eea0d6951
 	github.com/argoproj/gitops-engine v0.3.2 // indirect
 	github.com/ghodss/yaml v1.0.0
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
-	google.golang.org/grpc v1.33.1
+	github.com/spf13/cobra v1.1.1
+	k8s.io/api v0.20.7
 	k8s.io/apimachinery v0.20.7
 	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
+	sigs.k8s.io/controller-runtime v0.8.3
 )
 
 replace (
+	github.com/IBM/integrity-enforcer/argocd => ./
 	k8s.io/api => k8s.io/api v0.20.7
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.20.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.20.7

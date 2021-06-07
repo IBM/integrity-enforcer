@@ -53,14 +53,14 @@ const (
 	LastVerifiedTimestampAnnotationKey = "integrityshield.io/lastVerifiedTimestamp"
 	ResourceSignatureUIDAnnotationKey  = "integrityshield.io/resourceSignatureUID"
 
-	SignatureAnnotationKey     = "integrityshield.io/signature"
-	MessageAnnotationKey       = "integrityshield.io/message"
-	CertificateAnnotationKey   = "integrityshield.io/certificate"
-	BundleAnnotationKey        = "integrityshield.io/bundle"
-	SignatureTypeAnnotationKey = "integrityshield.io/signatureType"
-	MessageScopeAnnotationKey  = "integrityshield.io/messageScope"
-	MutableAttrsAnnotationKey  = "integrityshield.io/mutableAttrs"
-	SigImageRefAnnotationKey   = "integrityshield.io/sigImageRef"
+	SignatureAnnotationKey        = "integrityshield.io/signature"
+	MessageAnnotationKey          = "integrityshield.io/message"
+	CertificateAnnotationKey      = "integrityshield.io/certificate"
+	BundleAnnotationKey           = "integrityshield.io/bundle"
+	SignatureTypeAnnotationKey    = "integrityshield.io/signatureType"
+	MessageScopeAnnotationKey     = "integrityshield.io/messageScope"
+	MutableAttrsAnnotationKey     = "integrityshield.io/mutableAttrs"
+	ManifestImageRefAnnotationKey = "integrityshield.io/manifestImageRef"
 
 	ResSigLabelApiVer = "integrityshield.io/sigobject-apiversion"
 	ResSigLabelKind   = "integrityshield.io/sigobject-kind"
@@ -259,26 +259,26 @@ type ResourceAnnotation struct {
 }
 
 type SignatureAnnotation struct {
-	SignatureType  string
-	Signature      string
-	Certificate    string
-	Message        string
-	MessageScope   string
-	MutableAttrs   string
-	SigStoreBundle string
-	SigImageRef    string
+	SignatureType    string
+	Signature        string
+	Certificate      string
+	Message          string
+	MessageScope     string
+	MutableAttrs     string
+	SigStoreBundle   string
+	ManifestImageRef string
 }
 
 func (self *ResourceAnnotation) SignatureAnnotations() *SignatureAnnotation {
 	return &SignatureAnnotation{
-		Signature:      self.getString(SignatureAnnotationKey),
-		SignatureType:  self.getString(SignatureTypeAnnotationKey),
-		Certificate:    self.getString(CertificateAnnotationKey),
-		Message:        self.getString(MessageAnnotationKey),
-		MessageScope:   self.getString(MessageScopeAnnotationKey),
-		MutableAttrs:   self.getString(MutableAttrsAnnotationKey),
-		SigStoreBundle: self.getString(BundleAnnotationKey),
-		SigImageRef:    self.getString(SigImageRefAnnotationKey),
+		Signature:        self.getString(SignatureAnnotationKey),
+		SignatureType:    self.getString(SignatureTypeAnnotationKey),
+		Certificate:      self.getString(CertificateAnnotationKey),
+		Message:          self.getString(MessageAnnotationKey),
+		MessageScope:     self.getString(MessageScopeAnnotationKey),
+		MutableAttrs:     self.getString(MutableAttrsAnnotationKey),
+		SigStoreBundle:   self.getString(BundleAnnotationKey),
+		ManifestImageRef: self.getString(ManifestImageRefAnnotationKey),
 	}
 }
 

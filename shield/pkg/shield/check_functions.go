@@ -107,15 +107,14 @@ func signatureCheckWithSingleProfile(profileParameters rspapi.Parameters, resc *
 
 	var err error
 
-	signerConfig := profileParameters.SignerConfig
 	plugins := config.GetEnabledPlugins()
-	evaluator, err := NewSignatureEvaluator(config, signerConfig, plugins)
+	evaluator, err := NewSignatureEvaluator(config, profileParameters, plugins)
 	if err != nil {
 		allowed = false
 		evalMessage = err.Error()
 		evalReason = common.REASON_ERROR
 	} else {
-		sigResult, err = evaluator.Eval(resc, rsigList, profileParameters)
+		sigResult, err = evaluator.Eval(resc, rsigList)
 		if err != nil {
 			allowed = false
 			evalMessage = err.Error()

@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,9 +28,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
 	argocontroller "github.com/argoproj/argo-cd/v2/controller"
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	"github.com/argoproj/argo-cd/v2/reposerver/apiclient"
 	reposervercache "github.com/argoproj/argo-cd/v2/reposerver/cache"
 	"github.com/argoproj/argo-cd/v2/reposerver/repository"
@@ -40,83 +43,83 @@ import (
 	settingsutil "github.com/argoproj/argo-cd/v2/util/settings"
 	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	apierr "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/IBM/integrity-enforcer/argocd/pkg/util"
+	builderutil "github.com/IBM/integrity-enforcer/argocd/pkg/util"
 	"github.com/argoproj/argo-cd/v2/reposerver/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
-const defaultArgoCDNamespace = "argocd"
+const configManagementPluginsKey = "configManagementPlugins"
 
+var debugMode bool
 var argoCDNamespace string
 var config *rest.Config
-var clientConfig clientcmd.ClientConfig
+
+const argoCDNamespaceEnv = "ARGOCD_NAMESPACE"
+const inContainerAppConfigPath = "/tmp/appconfig"
+
+type argoCDConfiguration struct {
+	namespace             string
+	argocdCm              *corev1.ConfigMap
+	argocdSecret          *corev1.Secret
+	argocdRbacCm          *corev1.ConfigMap
+	argocdTlsCertsCm      *corev1.ConfigMap
+	argocdSshKnownHostsCm *corev1.ConfigMap
+}
+
+func (c *argoCDConfiguration) createConfigs() error {
+	ctx := context.Background()
+	kubeclientset := kubernetes.NewForConfigOrDie(config)
+
+	argoNS := builderutil.GetArgoCDNamespace()
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: argoNS,
+		},
+	}
+	var err error
+	_, err = kubeclientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeclientset.CoreV1().ConfigMaps(argoNS).Create(ctx, c.argocdCm, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func init() {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	overrides := clientcmd.ConfigOverrides{}
-	clientConfig = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &overrides)
+
+	testEnv := &envtest.Environment{}
+
 	var err error
-	config, err = clientConfig.ClientConfig()
+	config, err = testEnv.Start()
 	if err != nil {
-		fmt.Println("[DEBUG] get config err; ", err)
-		return
+		fmt.Fprintln(os.Stderr, "failed to start testenv", err)
+		os.Exit(1)
 	}
 }
 
-func GetArgoCDNamespace() string {
-	if argoCDNamespace != "" {
-		return argoCDNamespace
-	}
-	return defaultArgoCDNamespace
-}
+func getManifestObjectsFromApplication(a *v1alpha1.Application, p *v1alpha1.AppProject, c *argoCDConfiguration) ([]*unstructured.Unstructured, error) {
 
-func SetArgoCDNamespace(n string) {
-	argoCDNamespace = n
-}
-
-func getApplicationByAppName(appName string) (*v1alpha1.Application, error) {
-	namespace := GetArgoCDNamespace()
-	appClient, err := appclientset.NewForConfig(config)
+	err := c.createConfigs()
 	if err != nil {
-		fmt.Println("[DEBUG] create application client err; ", err)
-		return nil, err
+		return nil, fmt.Errorf("[DEBUG] create config err; %s", err.Error())
 	}
-	app, err := appClient.ArgoprojV1alpha1().Applications(namespace).Get(context.Background(), appName, metav1.GetOptions{})
-	if err != nil {
-		fmt.Println("[DEBUG] get application err; ", err)
-		return nil, err
-	}
-	return app, nil
-}
 
-func getAppProjectByAppName(apjName string) (*v1alpha1.AppProject, error) {
-	namespace := GetArgoCDNamespace()
-	appClient, err := appclientset.NewForConfig(config)
-	if err != nil {
-		fmt.Println("[DEBUG] create application client err; ", err)
-		return nil, err
-	}
-	apj, err := appClient.ArgoprojV1alpha1().AppProjects(namespace).Get(context.Background(), apjName, metav1.GetOptions{})
-	if err != nil {
-		fmt.Println("[DEBUG] get application err; ", err)
-		return nil, err
-	}
-	return apj, nil
-}
-
-func getManifestObjectsFromApplication(a *v1alpha1.Application) ([]*unstructured.Unstructured, error) {
-
-	namespace := GetArgoCDNamespace()
+	namespace := builderutil.GetArgoCDNamespace()
 	kubeclientset := kubernetes.NewForConfigOrDie(config)
 	settingsMgr := settingsutil.NewSettingsManager(context.Background(), kubeclientset, namespace)
 
@@ -141,22 +144,12 @@ func getManifestObjectsFromApplication(a *v1alpha1.Application) ([]*unstructured
 		return nil, fmt.Errorf("[DEBUG] list HelmRepositories err; %s", err.Error())
 	}
 
-	proj, err := getAppProjectByAppName(a.Spec.Project)
-	if err != nil {
-		if apierr.IsNotFound(err) {
-			err := status.Errorf(codes.InvalidArgument, "application references project %s which does not exist", a.Spec.Project)
-			return nil, fmt.Errorf("[DEBUG] get AppProject err; %s", err.Error())
-		} else {
-			return nil, fmt.Errorf("[DEBUG] get AppProject err; %s", err.Error())
-		}
-	}
-
-	permittedHelmRepos, err := argo.GetPermittedRepos(proj, helmRepos)
+	permittedHelmRepos, err := argo.GetPermittedRepos(p, helmRepos)
 	if err != nil {
 		return nil, fmt.Errorf("[DEBUG] get permittedHelmRepos err; %s", err.Error())
 	}
 
-	plugins, err := getPlugins(settingsMgr)
+	plugins, err := getPluginsFromCM(c.argocdCm)
 	if err != nil {
 		return nil, fmt.Errorf("[DEBUG] get plugins err; %s", err.Error())
 	}
@@ -165,11 +158,6 @@ func getManifestObjectsFromApplication(a *v1alpha1.Application) ([]*unstructured
 	serverVersion, err := kubectl.GetServerVersion(config)
 	if err != nil {
 		return nil, fmt.Errorf("[DEBUG] get serverVersion err; %s", err.Error())
-	}
-
-	apiGroups, err := kubectl.GetAPIGroups(config)
-	if err != nil {
-		return nil, fmt.Errorf("[DEBUG] get apiGroups err; %s", err.Error())
 	}
 
 	kustomizeSettings, err := settingsMgr.GetKustomizeSettings()
@@ -201,7 +189,6 @@ func getManifestObjectsFromApplication(a *v1alpha1.Application) ([]*unstructured
 		Plugins:           plugins,
 		KustomizeOptions:  kustomizeOptions,
 		KubeVersion:       serverVersion,
-		ApiVersions:       argo.APIGroupsToVersions(apiGroups),
 		// HelmRepoCreds:     permittedHelmCredentials,
 	}
 
@@ -232,8 +219,14 @@ func getManifestObjectsFromApplication(a *v1alpha1.Application) ([]*unstructured
 
 }
 
-func getPlugins(settingsMgr *settingsutil.SettingsManager) ([]*v1alpha1.ConfigManagementPlugin, error) {
-	plugins, err := settingsMgr.GetConfigManagementPlugins()
+func getPluginsFromCM(cm *corev1.ConfigMap) ([]*v1alpha1.ConfigManagementPlugin, error) {
+	pluginDataBytes, ok := cm.Data[configManagementPluginsKey]
+	if !ok {
+		// accept no data in the CM
+		return []*v1alpha1.ConfigManagementPlugin{}, nil
+	}
+	var plugins []v1alpha1.ConfigManagementPlugin
+	err := yaml.Unmarshal([]byte(pluginDataBytes), &plugins)
 	if err != nil {
 		return nil, err
 	}
@@ -341,24 +334,96 @@ func silentCallFunc(f interface{}, i ...interface{}) ([]interface{}, string) {
 	return o, vStdout
 }
 
-func main() {
-	appName := ""
-	if len(os.Args) > 0 {
-		appName = os.Args[1]
+func NewArgocdBuilderCoreCommand() *cobra.Command {
+	var debug bool
+	cmd := &cobra.Command{
+		Use:   "argocd-builder-core",
+		Short: "A command to generate YAMLs from ArgoCD Application definition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if debug {
+				debugMode = true
+			}
+			manifest, err := generateYAMLs()
+			if err != nil {
+				return err
+			}
+			fmt.Println(manifest)
+			return nil
+		},
 	}
-	app, err := getApplicationByAppName(appName)
+
+	cmd.PersistentFlags().BoolVar(&debug, "debug", false, "debug mode")
+
+	return cmd
+}
+
+func main() {
+
+	cmd := NewArgocdBuilderCoreCommand()
+	cmd.SetOutput(os.Stdout)
+	if err := cmd.Execute(); err != nil {
+		cmd.SetOutput(os.Stderr)
+		cmd.Println(err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func base64Decode(in string) string {
+	out, err := base64.StdEncoding.DecodeString(in)
 	if err != nil {
-		fmt.Println("[DEBUG] getApplicationByAppName err", err)
-		return
+		return in
+	}
+	return string(out)
+}
+
+func generateYAMLs() (string, error) {
+
+	inputObjs, err := util.LoadAllResources(inContainerAppConfigPath)
+	if err != nil {
+		return "", errors.Wrap(err, "[DEBUG] failed to load input YAMLs;")
+	}
+
+	var app *v1alpha1.Application
+	var proj *v1alpha1.AppProject
+	var argocdCM *corev1.ConfigMap
+	for _, obj := range inputObjs {
+		kind := obj.GetKind()
+		name := obj.GetName()
+		if kind == "Application" {
+			objB, _ := json.Marshal(obj)
+			_ = json.Unmarshal(objB, &app)
+		} else if kind == "AppProject" {
+			objB, _ := json.Marshal(obj)
+			_ = json.Unmarshal(objB, &proj)
+		} else if kind == "ConfigMap" && name == "argocd-cm" {
+			objB, _ := json.Marshal(obj)
+			_ = json.Unmarshal(objB, &argocdCM)
+		}
+	}
+	if app == nil {
+		return "", errors.New("[DEBUG] failed to load Application from input directory")
+	}
+	if proj == nil {
+		return "", errors.New("[DEBUG] failed to load AppProject from input directory")
+	}
+	if argocdCM == nil {
+		return "", errors.New("[DEBUG] failed to load `argocd-cm` ConfigMap from input directory")
 	}
 
 	var objs []*unstructured.Unstructured
 
+	argoConfig := &argoCDConfiguration{
+		argocdCm: argocdCM,
+	}
+
 	// ArgoCD functions prints various logs in stdout, so use silentCallFunc() to discard them
-	retVal, internalLogs := silentCallFunc(getManifestObjectsFromApplication, app)
+	retVal, internalLogs := silentCallFunc(getManifestObjectsFromApplication, app, proj, argoConfig)
+	if debugMode {
+		fmt.Println("[DEUBG] internalLogs:", internalLogs)
+	}
 	if len(retVal) != 2 {
-		fmt.Println("[DEBUG] unexpected returned value from getManifestObjectsFromApplication()")
-		return
+		return "", errors.Wrap(err, "[DEBUG] unexpected returned value from getManifestObjectsFromApplication()")
 	}
 	if retVal[0] != nil {
 		objs = retVal[0].([]*unstructured.Unstructured)
@@ -367,18 +432,14 @@ func main() {
 		err = retVal[1].(error)
 	}
 	if err != nil {
-		fmt.Println("internal logs: ", internalLogs)
-		fmt.Println("[DEBUG] getManifestObjectsFromApplication err", err)
-		return
+		return "", errors.Wrap(err, fmt.Sprintf("[DEBUG] getManifestObjectsFromApplication err; internal err logs: %s", internalLogs))
 	}
 
 	manifest, err := generateManifestFromObjects(objs)
 	if err != nil {
-		fmt.Println("[DEBUG] generateManifestFromObjects err", err)
-		return
+		return "", errors.Wrap(err, "[DEBUG] generateManifestFromObjects err")
 	}
-	fmt.Println(string(manifest))
-
+	return string(manifest), nil
 }
 
 func getAPIResources() ([]metav1.APIResource, error) {

@@ -46,6 +46,9 @@ type Parameters struct {
 	ProtectAttrs           []*common.AttrsPattern `json:"protectAttrs,omitempty"`
 	IgnoreAttrs            []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
 
+	// ManifestReference
+	ManifestReference *ManifestReference `json:"manifestRef,omitempty"`
+
 	// SignerConfig
 	SignerConfig *common.SignerConfig `json:"signerConfig,omitempty"`
 
@@ -262,6 +265,10 @@ func (self *ResourceSigningProfile) UpdateStatus(request *common.Request, errMsg
 	}
 	self.Status.Latest = newLatestEvents
 	return self
+}
+
+type ManifestReference struct {
+	Image string `json:"image,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
