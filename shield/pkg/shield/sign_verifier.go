@@ -599,11 +599,7 @@ var CommonMessageMask = []string{
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.SignatureTypeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MessageScopeAnnotationKey),
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.MutableAttrsAnnotationKey),
-<<<<<<< HEAD
 	fmt.Sprintf("metadata.annotations.\"%s\"", common.ManifestImageRefAnnotationKey),
-=======
-	fmt.Sprintf("metadata.annotations.\"%s\"", common.SigImageRefAnnotationKey),
->>>>>>> b7e0c9e (support sig image reference)
 	"metadata.annotations.namespace",
 	"metadata.annotations.kubectl.\"kubernetes.io/last-applied-configuration\"",
 	"metadata.managedFields",

@@ -23,14 +23,19 @@ RUN git lfs install
 COPY install.sh /tmp/install.sh
 RUN /tmp/install.sh
 
+ENV ENVTEST_ASSETS_DIR /usr/local/kubebuilder/
+COPY setup-envtest.sh $ENVTEST_ASSETS_DIR/setup-envtest.sh
+RUN mkdir -p ENVTEST_ASSETS_DIR && source $ENVTEST_ASSETS_DIR/setup-envtest.sh; fetch_envtest_tools $ENVTEST_ASSETS_DIR; setup_envtest_env $ENVTEST_ASSETS_DIR
+
 RUN mkdir -p /ishield-app && mkdir -p /ishield-app/public
 
-COPY build/_bin/simulate-argocd /ishield-app/simulate-argocd
+COPY build/_bin/argocd-builder-core /usr/local/bin/argocd-builder-core
+COPY replace-image.sh /tmp/replace-image.sh
 
 RUN chgrp -R 0 /ishield-app && chmod -R g=u /ishield-app
 
 WORKDIR /ishield-app
 
-ENTRYPOINT ["sleep", "600"]
+ENTRYPOINT ["argocd-builder-core"]
 
 
