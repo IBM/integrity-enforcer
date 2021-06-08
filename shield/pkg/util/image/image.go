@@ -26,6 +26,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+
+	goyaml "gopkg.in/yaml.v2"
+
+	"github.com/ghodss/yaml"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -46,15 +53,8 @@ func PullImage(imageRef string) (v1.Image, error) {
 	return img, nil
 }
 
-func GetBlob(img v1.Image) ([]byte, error) {
-	layers, err := img.Layers()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get layers in image")
-	}
-	if len(layers) == 0 {
-		return nil, errors.New("failed to get blob in image; this image has no layers")
-	}
-	rc, err := layers[0].Compressed()
+func GetBlob(layer v1.Layer) ([]byte, error) {
+	rc, err := layer.Compressed()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get blob in image")
 	}
@@ -62,12 +62,38 @@ func GetBlob(img v1.Image) ([]byte, error) {
 	return ioutil.ReadAll(rc)
 }
 
-func GenerateConcatYAMLsFromBlob(blob []byte) ([]byte, error) {
-	blobStream := bytes.NewBuffer(blob)
-	yamls, err := decompressTarGz(blobStream)
+func GenerateConcatYAMLsFromImage(img v1.Image) ([]byte, error) {
+	layers, err := img.Layers()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decompress tar gz blob")
+		return nil, errors.Wrap(err, "failed to get layers in image")
 	}
+	if len(layers) == 0 {
+		return nil, errors.New("failed to get blob in image; this image has no layers")
+	}
+	yamls := [][]byte{}
+	sumErr := []string{}
+	for _, layer := range layers {
+		blob, err := GetBlob(layer)
+		if err != nil {
+			sumErr = append(sumErr, errors.Wrap(err, "failed to get artifact from image layer").Error())
+			continue
+		}
+		blobStream := bytes.NewBuffer(blob)
+		yamlsInLayer, err := getYAMLsInArtifact(blobStream)
+		if err != nil {
+			sumErr = append(sumErr, errors.Wrap(err, "failed to decompress tar gz blob").Error())
+			continue
+		}
+		yamls = append(yamls, yamlsInLayer...)
+	}
+	if len(yamls) == 0 && len(sumErr) > 0 {
+		return nil, errors.New(strings.Join(sumErr, "; "))
+	}
+	concatYamls := concatenateYAMLs(yamls)
+	return concatYamls, nil
+}
+
+func concatenateYAMLs(yamls [][]byte) []byte {
 	concatYamls := ""
 	for i, y := range yamls {
 		concatYamls = fmt.Sprintf("%s%s", concatYamls, string(y))
@@ -75,10 +101,34 @@ func GenerateConcatYAMLsFromBlob(blob []byte) ([]byte, error) {
 			concatYamls = fmt.Sprintf("%s\n---\n", concatYamls)
 		}
 	}
-	return []byte(concatYamls), nil
+	return []byte(concatYamls)
 }
 
-func decompressTarGz(gzipStream io.Reader) ([][]byte, error) {
+func splitConcatYAMLs(yaml []byte) [][]byte {
+	yamls := [][]byte{}
+	r := bytes.NewReader(yaml)
+	dec := k8syaml.NewYAMLToJSONDecoder(r)
+	var t interface{}
+	for dec.Decode(&t) == nil {
+		tB, err := goyaml.Marshal(t)
+		if err != nil {
+			continue
+		}
+		yamls = append(yamls, tB)
+	}
+	return yamls
+}
+
+func isK8sResourceYAML(data []byte) bool {
+	var obj *unstructured.Unstructured
+	err := yaml.Unmarshal(data, &obj)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
+func getYAMLsInArtifact(gzipStream io.Reader) ([][]byte, error) {
 	uncompressedStream, err := gzip.NewReader(gzipStream)
 	if err != nil {
 		return nil, errors.Wrap(err, "gzip.NewReader() failed while decompressing tar gz")
@@ -119,16 +169,15 @@ func decompressTarGz(gzipStream io.Reader) ([][]byte, error) {
 				return nil, errors.Wrap(err, "io.Copy() failed while decompressing tar gz")
 			}
 		default:
-			return nil, fmt.Errorf("faced uknown type %s in %s while decompressing tar gz", header.Typeflag, header.Name)
+			return nil, fmt.Errorf("faced uknown type %s in %s while decompressing tar gz", string(header.Typeflag), header.Name)
 		}
 	}
 
 	foundYAMLs := [][]byte{}
 	err = filepath.Walk(dir, func(fpath string, info os.FileInfo, err error) error {
 		if err == nil && (path.Ext(info.Name()) == ".yaml" || path.Ext(info.Name()) == ".yml") {
-			fmt.Println("[DEBUG] found yaml file path: ", fpath)
 			yamlBytes, err := ioutil.ReadFile(fpath)
-			if err == nil {
+			if err == nil && isK8sResourceYAML(yamlBytes) {
 				foundYAMLs = append(foundYAMLs, yamlBytes)
 			}
 		}

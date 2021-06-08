@@ -177,19 +177,14 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		if err != nil {
 			logger.Error("failed to pull image: ", err.Error())
 		} else {
-			var blobBytes []byte
-			blobBytes, err = image.GetBlob(img)
+			concatYAMLBytes, err = image.GenerateConcatYAMLsFromImage(img)
 			if err != nil {
-				logger.Error("failed to get blob from image: ", err.Error())
-			}
-			concatYAMLBytes, err = image.GenerateConcatYAMLsFromBlob(blobBytes)
-			if err != nil {
-				logger.Error("failed to generate concat yaml from blob: ", err.Error())
+				logger.Error("failed to generate concat yaml from image: ", err.Error())
 			}
 		}
-		fmt.Println("[DEBUG] concatYAMLBytes in image blob:\n", string(concatYAMLBytes))
+		fmt.Println("[DEBUG] concatYAMLBytes in image:\n", string(concatYAMLBytes))
 		found, yamlBytes := ishieldyaml.FindSingleYaml(concatYAMLBytes, ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
-		fmt.Println("[DEBUG] found yamlBytes in image blob:\n", string(yamlBytes))
+		fmt.Println("[DEBUG] found yamlBytes in image:\n", string(yamlBytes))
 
 		if found {
 			signType := SignedResourceTypeResource
