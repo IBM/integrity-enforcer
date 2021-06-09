@@ -55,6 +55,14 @@ type Handler struct {
 }
 
 func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profileParameters rspapi.Parameters) *Handler {
+	// if common profile is not embedded in profile parameters yet, then do it
+	if !profileParameters.IsCommonProfilesEmbedded() {
+		commonProfileParameters := rspapi.Parameters{
+			IgnoreRules: config.CommonProfile.IgnoreRules,
+			IgnoreAttrs: config.CommonProfile.IgnoreAttrs,
+		}
+		profileParameters = profileParameters.EmbedCommonProfiles(commonProfileParameters)
+	}
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, profileParameters: profileParameters}
 }
 

@@ -2,9 +2,12 @@ package sigstore
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/mapnode"
@@ -21,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/cosign/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 
 	"github.com/IBM/integrity-enforcer/cmd/pkg/yamlsign"
@@ -38,10 +43,20 @@ const defaultRootPemURL = "https://raw.githubusercontent.com/sigstore/fulcio/mai
 var _ sign.VerifierFunc = Verify
 
 func Verify(message, signature, certificate []byte, path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
+	rootCertDir := ""
+	if d, ok := opts["rootCertPath"]; ok && d != "" {
+		rootCertDir = d
+	}
+
+	var pubKeyDir *string
+	if path != "" && !strings.Contains(path, common.SigStoreDummyKeyName) {
+		pubKeyDir = &path
+	}
+
 	if imgVerifyStr, ok := opts["verifyWithImage"]; ok {
 		imageVerifyEnabled, err := strconv.ParseBool(imgVerifyStr)
 		if imageVerifyEnabled && err == nil {
-			return imageVerify(path, opts)
+			return imageVerify(rootCertDir, pubKeyDir, opts)
 		}
 	}
 
@@ -50,7 +65,7 @@ func Verify(message, signature, certificate []byte, path string, opts map[string
 		bundle = []byte(b)
 	}
 
-	ok, err := verify(message, signature, certificate, bundle, &path)
+	ok, err := verify(message, signature, certificate, bundle, rootCertDir, pubKeyDir)
 	if err != nil {
 		return false, nil, fmt.Sprintf("Failed to verify sigstore signature; %s", err.Error()), err
 	} else if !ok {
@@ -65,7 +80,7 @@ func Verify(message, signature, certificate []byte, path string, opts map[string
 	return true, signerInfo, "", nil
 }
 
-func verify(message, signature, certPem, bundle []byte, rootPemDir *string) (bool, error) {
+func verify(message, signature, certPem, bundle []byte, rootCertDir string, pubkeyDir *string) (bool, error) {
 
 	// clean up temporary files at the end of verification
 	defer deleteTmpYamls()
@@ -75,7 +90,7 @@ func verify(message, signature, certPem, bundle []byte, rootPemDir *string) (boo
 		return false, errors.Wrap(err, "error creating yaml files for verification")
 	}
 
-	cp, err := LoadCertPoolDir(*rootPemDir)
+	cp, err := LoadCertPoolDir(rootCertDir)
 	if err != nil {
 		return false, errors.Wrap(err, "error loading cert pool")
 	}
@@ -84,6 +99,14 @@ func verify(message, signature, certPem, bundle []byte, rootPemDir *string) (boo
 		Claims: true,
 		Tlog:   true,
 		Roots:  cp,
+	}
+
+	if pubkeyDir != nil {
+		tmpPubkey, err := LoadPubkeyFromDir(*pubkeyDir)
+		if err != nil {
+			return false, errors.Wrap(err, "error loading public key")
+		}
+		co.PubKey = tmpPubkey
 	}
 
 	fpath := path.Join(tmpDir, tmpSignedFileName)
@@ -97,7 +120,7 @@ func verify(message, signature, certPem, bundle []byte, rootPemDir *string) (boo
 	return true, nil
 }
 
-func imageVerify(path string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
+func imageVerify(rootCertDir string, pubkeyDir *string, opts map[string]string) (bool, *common.SignerInfo, string, error) {
 	var imageRef string
 	if ir, ok := opts["imageRef"]; ok && ir != "" {
 		imageRef = ir
@@ -106,7 +129,7 @@ func imageVerify(path string, opts map[string]string) (bool, *common.SignerInfo,
 	if err != nil {
 		return false, nil, fmt.Sprintf("Failed to parse image ref `%s`; %s", imageRef, err.Error()), err
 	}
-	cp, err := LoadCertPoolDir(path)
+	cp, err := LoadCertPoolDir(rootCertDir)
 	if err != nil {
 		return false, nil, fmt.Sprintf("error loading cert pool; %s", err.Error()), err
 	}
@@ -115,6 +138,14 @@ func imageVerify(path string, opts map[string]string) (bool, *common.SignerInfo,
 		Claims: true,
 		Tlog:   true,
 		Roots:  cp,
+	}
+
+	if pubkeyDir != nil {
+		tmpPubkey, err := LoadPubkeyFromDir(*pubkeyDir)
+		if err != nil {
+			return false, nil, fmt.Sprintf("error loading public key; %s", err.Error()), err
+		}
+		co.PubKey = tmpPubkey
 	}
 
 	rekorSever := cli.TlogServer()
@@ -146,6 +177,69 @@ func LoadCert(certPath string) ([]*x509.Certificate, error) {
 		return nil, err
 	}
 	return cosign.LoadCerts(string(pem))
+}
+
+func LoadPubkeyFromDir(pubkeyDir string) (cosign.PublicKey, error) {
+	files, err := ioutil.ReadDir(pubkeyDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get files from pubkey dir; %s", err.Error())
+	}
+	var pubkey cosign.PublicKey
+	sumErr := []string{}
+	for _, f := range files {
+		if !f.IsDir() && (path.Ext(f.Name()) == ".pem" || path.Ext(f.Name()) == ".pub") {
+			fpath := filepath.Join(pubkeyDir, f.Name())
+			tmpPubkey, err := LoadPublicKey(fpath)
+			if err != nil {
+				sumErr = append(sumErr, err.Error())
+				continue
+			} else {
+				pubkey = tmpPubkey
+				break
+			}
+		}
+	}
+	if pubkey == nil {
+		return nil, errors.New(strings.Join(sumErr, "; "))
+	}
+	return pubkey, nil
+}
+
+func LoadPublicKey(keyPath string) (cosign.PublicKey, error) {
+	keyBytes, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	pems := parsePubkeyPems(keyBytes)
+	var pubkey cosign.PublicKey
+	sumErr := []string{}
+	for _, p := range pems {
+		key, err := x509.ParsePKIXPublicKey(p.Bytes)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		pubkey = signature.ECDSAVerifier{Key: key.(*ecdsa.PublicKey), HashAlg: crypto.SHA256}
+		break
+	}
+	if pubkey == nil {
+		return nil, errors.New(strings.Join(sumErr, "; "))
+	}
+	return pubkey, nil
+}
+
+func parsePubkeyPems(b []byte) []*pem.Block {
+	p, rest := pem.Decode(b)
+	if p == nil {
+		return nil
+	}
+	pems := []*pem.Block{p}
+
+	if rest != nil {
+		return append(pems, parsePubkeyPems(rest)...)
+	}
+	return pems
 }
 
 func LoadCertPoolDir(certDir string) (*x509.CertPool, error) {

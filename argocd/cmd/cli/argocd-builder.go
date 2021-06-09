@@ -83,17 +83,12 @@ func cmdExec(baseCmd string, args ...string) (string, error) {
 func runCore(appConfigDirPath, imageRef, namespace string) (string, error) {
 
 	volumeOption := fmt.Sprintf("%s:%s", appConfigDirPath, inContainerAppConfigPath)
-	envOption := fmt.Sprintf("%s=%s", argocdNamespaceEnv, namespace)
 	baseCmd := "docker"
 	cmdArgs := []string{
 		"run",
 		"--rm",
-		"--name",
-		"argocd-builder",
 		"--volume",
 		volumeOption,
-		"--env",
-		envOption,
 		imageRef,
 		"argocd-builder-core",
 	}

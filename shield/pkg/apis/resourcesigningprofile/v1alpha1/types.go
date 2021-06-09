@@ -45,6 +45,7 @@ type Parameters struct {
 	IgnoreRules            []*common.Rule         `json:"ignoreRules,omitempty"`
 	ProtectAttrs           []*common.AttrsPattern `json:"protectAttrs,omitempty"`
 	IgnoreAttrs            []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
+	TargetServiceAccount   string                 `json:"targetServiceAccount,omitempty"`
 
 	// ManifestReference
 	ManifestReference *ManifestReference `json:"manifestRef,omitempty"`

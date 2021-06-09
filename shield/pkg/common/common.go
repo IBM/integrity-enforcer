@@ -98,6 +98,10 @@ const (
 	DecisionError        = "error"
 )
 
+const (
+	DefaultSigStoreRootCertSecretName = "ishield-sigstore-root-cert"
+)
+
 /**********************************************
 
                 NamespaceSelector

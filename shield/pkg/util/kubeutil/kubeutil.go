@@ -184,3 +184,58 @@ func GetResource(apiVersion, kind, namespace, name string) (*unstructured.Unstru
 	}
 	return resource, nil
 }
+
+func ListResources(apiVersion, kind, namespace string) ([]*unstructured.Unstructured, error) {
+	gv, err := schema.ParseGroupVersion(apiVersion)
+	if err != nil {
+		return nil, fmt.Errorf("Error in parsing apiVersion; %s", err.Error())
+	}
+	apiResources, err := GetAPIResources()
+	if err != nil {
+		return nil, fmt.Errorf("Error in getting API Resources; %s", err.Error())
+	}
+	namespaced := true
+	gvr := schema.GroupVersionResource{}
+	for _, r := range apiResources {
+		gOk := (r.Group == gv.Group)
+		vOk := (r.Version == gv.Version)
+		kOk := (r.Kind == kind)
+		if gOk && vOk && kOk {
+			gvr = schema.GroupVersionResource{
+				Group:    r.Group,
+				Version:  r.Version,
+				Resource: r.Name,
+			}
+			namespaced = r.Namespaced
+		}
+	}
+	if gvr.Resource == "" {
+		return nil, fmt.Errorf("Failed to find GroupVersionKind matches apiVerions: %s, kind: %s", apiVersion, kind)
+	}
+
+	config, err := GetKubeConfig()
+	if err != nil {
+		return nil, fmt.Errorf("Error in getting k8s config; %s", err.Error())
+	}
+
+	dyClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("Error in creating DynamicClient; %s", err.Error())
+	}
+
+	var resourceList *unstructured.UnstructuredList
+	if namespaced {
+		resourceList, err = dyClient.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+	} else {
+		resourceList, err = dyClient.Resource(gvr).List(context.Background(), metav1.ListOptions{})
+	}
+	if err != nil {
+		return nil, fmt.Errorf("Error in getting resource; %s", err.Error())
+	}
+	resources := []*unstructured.Unstructured{}
+	for i := range resourceList.Items {
+		res := resourceList.Items[i]
+		resources = append(resources, &res)
+	}
+	return resources, nil
+}

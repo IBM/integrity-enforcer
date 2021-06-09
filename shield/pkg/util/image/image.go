@@ -160,6 +160,11 @@ func getYAMLsInArtifact(gzipStream io.Reader) ([][]byte, error) {
 			}
 		case tar.TypeReg:
 			fpath := filepath.Join(dir, header.Name)
+			fdir := filepath.Dir(fpath)
+			err := os.MkdirAll(fdir, 0755)
+			if err != nil {
+				return nil, errors.Wrap(err, "os.MkdirAll() failed while decompressing tar gz")
+			}
 			outFile, err := os.Create(fpath)
 			if err != nil {
 				return nil, errors.Wrap(err, "os.Create() failed while decompressing tar gz")

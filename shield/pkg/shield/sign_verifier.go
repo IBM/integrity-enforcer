@@ -58,11 +58,20 @@ type ResourceVerifier struct {
 	AllMountedKeyPathList []string
 	dryRunNamespace       string // namespace for dryrun; should be empty for cluster scope request
 	sigstoreEnabled       bool
+	sigstoreRootCertPath  string
 }
 
-func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509CertPathList, sigStoreCertPathList, allKeyPathList []string, sigstoreEnabled bool) VerifierInterface {
+func NewVerifier(signType SignedResourceType, dryRunNamespace string, pgpKeyPathList, x509CertPathList, sigStorePubkeyPathList, allKeyPathList []string, sigstoreEnabled bool, sigstoreRootCertPath string) VerifierInterface {
 	if signType == SignedResourceTypeResource || signType == SignedResourceTypeApplyingResource || signType == SignedResourceTypePatch {
-		return &ResourceVerifier{dryRunNamespace: dryRunNamespace, PGPKeyPathList: pgpKeyPathList, X509CertPathList: x509CertPathList, SigStoreCertPathList: sigStoreCertPathList, AllMountedKeyPathList: allKeyPathList, sigstoreEnabled: sigstoreEnabled}
+		return &ResourceVerifier{
+			dryRunNamespace:       dryRunNamespace,
+			PGPKeyPathList:        pgpKeyPathList,
+			X509CertPathList:      x509CertPathList,
+			SigStoreCertPathList:  sigStorePubkeyPathList,
+			AllMountedKeyPathList: allKeyPathList,
+			sigstoreEnabled:       sigstoreEnabled,
+			sigstoreRootCertPath:  sigstoreRootCertPath,
+		}
 	} else if signType == SignedResourceTypeHelm {
 		return &HelmVerifier{Namespace: dryRunNamespace, KeyPathList: pgpKeyPathList}
 	}
@@ -178,6 +187,9 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 	}
 	if self.sigstoreEnabled && verifyWithImage {
 		opts["verifyWithImage"] = strconv.FormatBool(verifyWithImage)
+	}
+	if self.sigstoreEnabled && self.sigstoreRootCertPath != "" {
+		opts["rootCertPath"] = self.sigstoreRootCertPath
 	}
 
 	// To use your custom verifier, first implement Verify() function in "shield/pkg/util/sign/yourcustompackage" .

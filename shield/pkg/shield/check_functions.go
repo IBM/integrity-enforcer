@@ -27,15 +27,27 @@ import (
 
 func ignoredCheck(reqc *common.RequestContext, config *config.ShieldConfig, profileParameters rspapi.Parameters, ctx *common.CheckContext) *common.DecisionResult {
 	reqFields := reqc.Map()
+	ignoreMatched, _ := profileParameters.IgnoreMatch(reqFields)
 
-	// if common profile is not embedded in profile parameters yet, then do it
-	if !profileParameters.IsCommonProfilesEmbedded() {
-		commonProfileParameters := rspapi.Parameters{
-			IgnoreRules: config.CommonProfile.IgnoreRules,
-			IgnoreAttrs: config.CommonProfile.IgnoreAttrs,
+	if ignoreMatched {
+		ctx.Allow = true
+		ctx.Verified = true
+		ctx.Protected = false
+		ctx.ReasonCode = common.REASON_IGNORE_RULE_MATCHED
+		ctx.Message = common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message
+		return &common.DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_IGNORE_RULE_MATCHED,
+			Message:    common.ReasonCodeMap[common.REASON_IGNORE_RULE_MATCHED].Message,
 		}
-		profileParameters = profileParameters.EmbedCommonProfiles(commonProfileParameters)
+	} else {
+		ctx.Protected = true
 	}
+	return common.UndeterminedDecision()
+}
+
+func ignoredCheckWithResource(resc *common.ResourceContext, config *config.ShieldConfig, profileParameters rspapi.Parameters, ctx *common.CheckContext) *common.DecisionResult {
+	reqFields := resc.Map()
 	ignoreMatched, _ := profileParameters.IgnoreMatch(reqFields)
 
 	if ignoreMatched {

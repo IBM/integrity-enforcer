@@ -39,6 +39,8 @@ const (
 	DetectMode  IntegrityShieldMode = "detect"
 )
 
+const SigStoreDummyKeyName = "SIGSTORE_DUMMY_KEY"
+
 /**********************************************
 
 					SignerConfig
@@ -103,9 +105,14 @@ type SignerCondition struct {
 }
 
 func (sc *SignerCondition) makeFilePath(ishieldNS string) string {
-	secretName := sc.KeySecretName
-	secretNamespace := sc.KeySecretNamespace
 	signatureType := sc.SignatureType
+	secretName := sc.KeySecretName
+	if signatureType == SignatureTypeSigStore && secretName == "" {
+		// TODO: should avoid to use key path list for the key less singing
+		secretName = SigStoreDummyKeyName
+	}
+	secretNamespace := sc.KeySecretNamespace
+
 	if secretNamespace == "" {
 		secretNamespace = ishieldNS
 	}

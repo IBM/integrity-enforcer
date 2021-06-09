@@ -163,6 +163,9 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		}
 	}
 
+	paramB, _ := json.Marshal(self.profileParameters)
+	fmt.Println("[DEBUG] resource:", ref, "parameters: ", string(paramB))
+
 	//3. pick Signature from OCI registry if available
 	manifestImageRef := ""
 	if manifestImageRef == "" && sigAnnotations.ManifestImageRef != "" {
@@ -182,9 +185,9 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 				logger.Error("failed to generate concat yaml from image: ", err.Error())
 			}
 		}
-		fmt.Println("[DEBUG] concatYAMLBytes in image:\n", string(concatYAMLBytes))
+		fmt.Println("[DEBUG] resource:", ref, "concatYAMLBytes in image:\n", string(concatYAMLBytes))
 		found, yamlBytes := ishieldyaml.FindSingleYaml(concatYAMLBytes, ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
-		fmt.Println("[DEBUG] found yamlBytes in image:\n", string(yamlBytes))
+		fmt.Println("[DEBUG] resource:", ref, "found yamlBytes in image:\n", string(yamlBytes))
 
 		if found {
 			signType := SignedResourceTypeResource
@@ -267,16 +270,24 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
-	sigstoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
+	sigstorePubkeys := candidatePubkeys[common.SignatureTypeSigStore]
 
 	sigstoreEnabled := self.config.SigStoreEnabled()
+	sigstoreRootCertPath := ""
+	if sigstoreEnabled {
+		rootCertSecret := common.DefaultSigStoreRootCertSecretName
+		sigstoreRootCertPath, err = loadSigstoreRootCert(self.config.Namespace, rootCertSecret, overwriteSecretsBaseDir)
+		if err != nil {
+			logger.Error("Error while loading ", rootCertSecret, " secret;", err.Error())
+		}
+	}
 
 	// create verifier
 	dryRunNamespace := ""
 	if resc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstorePubkeys, self.config.KeyPathList, sigstoreEnabled, sigstoreRootCertPath)
 
 	keyLoadingError := false
 	candidateKeyCount := len(pgpPubkeys) + len(x509Certs)
@@ -294,8 +305,8 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 			}
 		}
 
-		for _, certPath := range sigstoreCerts {
-			if loaded, _ := sigstore.LoadCertPoolDir(certPath); loaded != nil {
+		for _, keyPath := range sigstorePubkeys {
+			if loaded, _ := sigstore.LoadPubkeyFromDir(keyPath); loaded != nil {
 				validKeyCount += 1
 			}
 		}
@@ -406,6 +417,9 @@ func loadSecrets(candidatePubkeys map[common.SignatureType][]string, overwriteSe
 			// otherwise, try getting secret and save it as tmp local file, and then update keyPathList at the end
 			keyPathParts := parseKeyPath(keyPath)
 			secretName := keyPathParts["secretName"]
+			if secretName == common.SigStoreDummyKeyName {
+				continue
+			}
 			secretNamespace := keyPathParts["secretNamespace"]
 			if secretName == "" {
 				continue
@@ -461,6 +475,44 @@ func loadSecrets(candidatePubkeys map[common.SignatureType][]string, overwriteSe
 		newCandidatePubkeys[sigType] = newKeyPathList
 	}
 	return newCandidatePubkeys, nil
+}
+
+func loadSigstoreRootCert(secretNamespace, secretName, overwriteBaseDir string) (string, error) {
+	obj, err := kubeutil.GetResource("v1", "Secret", secretNamespace, secretName)
+	if err != nil {
+		return "", err
+	}
+	objBytes, _ := json.Marshal(obj)
+	var res corev1.Secret
+	_ = json.Unmarshal(objBytes, &res)
+	baseDir := "/tmp"
+	if overwriteBaseDir != "" {
+		baseDir = overwriteBaseDir
+	}
+	savedCount := 0
+	sumErr := []string{}
+	sigstoreRootCertDir := filepath.Join(baseDir, secretNamespace, secretName, string(common.SignatureTypeSigStore))
+
+	for fname, pubkeyBytes := range res.Data {
+		fpath := filepath.Join(sigstoreRootCertDir, fname)
+		fpathDir := filepath.Dir(fpath)
+		var err error
+		err = os.MkdirAll(fpathDir, 0755)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		err = ioutil.WriteFile(fpath, pubkeyBytes, 0644)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		savedCount += 1
+	}
+	if savedCount == 0 && len(sumErr) > 0 {
+		return "", fmt.Errorf("failed to save sigstore root cert; %s", strings.Join(sumErr, "; "))
+	}
+	return sigstoreRootCertDir, nil
 }
 
 func parseKeyPath(keyPath string) map[string]string {
