@@ -53,9 +53,6 @@ type Parameters struct {
 	// ManifestReference
 	ManifestReference *ManifestReference `json:"manifestRef,omitempty"`
 
-	// ManifestReference
-	ManifestReference *ManifestReference `json:"manifestRef,omitempty"`
-
 	// SignerConfig
 	SignerConfig *common.SignerConfig `json:"signerConfig,omitempty"`
 

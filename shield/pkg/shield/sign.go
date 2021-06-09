@@ -183,6 +183,9 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(orgRef *common.Reso
 		}
 	}
 
+	paramB, _ := json.Marshal(self.profileParameters)
+	fmt.Println("[DEBUG] resource:", ref, "parameters: ", string(paramB))
+
 	//3. pick Signature from OCI registry if available
 	manifestImageRef := ""
 	if manifestImageRef == "" && sigAnnotations.ManifestImageRef != "" {

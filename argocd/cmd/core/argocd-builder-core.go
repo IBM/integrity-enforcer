@@ -53,7 +53,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/IBM/integrity-enforcer/argocd/pkg/util"
-	builderutil "github.com/IBM/integrity-enforcer/argocd/pkg/util"
 	"github.com/argoproj/argo-cd/v2/reposerver/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
@@ -61,10 +60,8 @@ import (
 const configManagementPluginsKey = "configManagementPlugins"
 
 var debugMode bool
-var argoCDNamespace string
 var config *rest.Config
 
-const argoCDNamespaceEnv = "ARGOCD_NAMESPACE"
 const inContainerAppConfigPath = "/tmp/appconfig"
 
 type argoCDConfiguration struct {
@@ -80,7 +77,7 @@ func (c *argoCDConfiguration) createConfigs() error {
 	ctx := context.Background()
 	kubeclientset := kubernetes.NewForConfigOrDie(config)
 
-	argoNS := builderutil.GetArgoCDNamespace()
+	argoNS := c.namespace
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: argoNS,
@@ -119,7 +116,7 @@ func getManifestObjectsFromApplication(a *v1alpha1.Application, p *v1alpha1.AppP
 		return nil, fmt.Errorf("[DEBUG] create config err; %s", err.Error())
 	}
 
-	namespace := builderutil.GetArgoCDNamespace()
+	namespace := c.namespace
 	kubeclientset := kubernetes.NewForConfigOrDie(config)
 	settingsMgr := settingsutil.NewSettingsManager(context.Background(), kubeclientset, namespace)
 
@@ -414,7 +411,8 @@ func generateYAMLs() (string, error) {
 	var objs []*unstructured.Unstructured
 
 	argoConfig := &argoCDConfiguration{
-		argocdCm: argocdCM,
+		namespace: argocdCM.GetNamespace(),
+		argocdCm:  argocdCM,
 	}
 
 	// ArgoCD functions prints various logs in stdout, so use silentCallFunc() to discard them
