@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -29,7 +30,8 @@ import (
 
 var config *sconfloder.Config
 
-const getReviewResultMaxRetry = 3
+const cacheInStatusAvailableSecond = 10
+const getReviewResultMaxRetry = 5
 const getReviewResultRetryInterval = 2
 
 var rareviewClient clientset.Interface
@@ -115,8 +117,8 @@ func createResourceAuditReview(obj unstructured.Unstructured) error {
 	rar := generateResourceAuditReview(obj)
 	rarName := rar.GetName()
 
-	aleradyExsits := false
-	_, err := rareviewClient.ApisV1alpha1().ResourceAuditReviews().Get(context.TODO(), rarName, metav1.GetOptions{})
+	alreadyExists := false
+	current, err := rareviewClient.ApisV1alpha1().ResourceAuditReviews().Get(context.TODO(), rarName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			// if not found, then just create a new one
@@ -124,9 +126,15 @@ func createResourceAuditReview(obj unstructured.Unstructured) error {
 			return err
 		}
 	} else {
-		aleradyExsits = true
+		alreadyExists = true
 	}
-	if aleradyExsits {
+	if alreadyExists {
+		now := time.Now().UTC()
+		if now.Sub(current.Status.LastUpdated.Time) <= time.Second*cacheInStatusAvailableSecond {
+			return nil
+		}
+	}
+	if alreadyExists {
 		err = rareviewClient.ApisV1alpha1().ResourceAuditReviews().Delete(context.TODO(), rarName, metav1.DeleteOptions{})
 		if err != nil {
 			return err
@@ -159,7 +167,8 @@ func getResourceAuditReviewResult(obj unstructured.Unstructured) (*ResourceResul
 		if resultFound {
 			break
 		} else {
-			interval := time.Second * getReviewResultRetryInterval
+			multiplier := time.Duration(math.Pow(float64(getReviewResultRetryInterval), float64(i-2)))
+			interval := time.Second * multiplier
 			time.Sleep(interval)
 		}
 	}
