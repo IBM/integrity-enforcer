@@ -209,6 +209,27 @@ func (self Parameters) IsCommonProfilesEmbedded() bool {
 	return self.commonProfilesEmbedded
 }
 
+func (self Parameters) PreotectMatch(reqFields map[string]string) (bool, *common.Rule) {
+	scope := "Namespaced"
+	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {
+		scope = reqScope
+	}
+
+	strictMatch := false
+	if scope == "Cluster" {
+		strictMatch = true
+	}
+
+	for _, rule := range self.AdditionalProtectRules {
+		if strictMatch && rule.StrictMatchWithRequest(reqFields) {
+			return true, rule
+		} else if !strictMatch && rule.MatchWithRequest(reqFields) {
+			return true, rule
+		}
+	}
+	return false, nil
+}
+
 func (self Parameters) IgnoreMatch(reqFields map[string]string) (bool, *common.Rule) {
 	scope := "Namespaced"
 	if reqScope, ok := reqFields["ResourceScope"]; ok && reqScope == "Cluster" {

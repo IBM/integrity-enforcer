@@ -86,6 +86,13 @@ func (self *ResourceCheckHandler) Check() *common.DecisionResult {
 	var dr *common.DecisionResult
 	dr = common.UndeterminedDecision()
 
+	// TODO: implement imageRef protect matching
+	// check if this resource is protected by additionalProtectRules or imageRef manifest in profileParameters
+	dr = protectCheckWithResource(self.resc, self.config, self.profileParameters, self.ctx)
+	if !dr.IsUndetermined() {
+		return dr
+	}
+
 	// check if this resource is ignored by ignore rules in profileParameters
 	dr = ignoredCheckWithResource(self.resc, self.config, self.profileParameters, self.ctx)
 	if !dr.IsUndetermined() {

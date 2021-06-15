@@ -25,6 +25,48 @@ import (
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 )
 
+func protectCheck(reqc *common.RequestContext, config *config.ShieldConfig, profileParameters rspapi.Parameters, ctx *common.CheckContext) *common.DecisionResult {
+	reqFields := reqc.Map()
+	protectMatched, _ := profileParameters.ProtectMatch(reqFields)
+
+	if !protectMatched {
+		ctx.Allow = true
+		ctx.Verified = true
+		ctx.Protected = false
+		ctx.ReasonCode = common.REASON_NOT_PROTECTED
+		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
+		return &common.DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_NOT_PROTECTED,
+			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+		}
+	} else {
+		ctx.Protected = true
+	}
+	return common.UndeterminedDecision()
+}
+
+func protectCheckWithResource(resc *common.ResourceContext, config *config.ShieldConfig, profileParameters rspapi.Parameters, ctx *common.CheckContext) *common.DecisionResult {
+	reqFields := resc.Map()
+	protectMatched, _ := profileParameters.ProtectMatch(reqFields)
+
+	if !protectMatched {
+		ctx.Allow = true
+		ctx.Verified = true
+		ctx.Protected = false
+		ctx.ReasonCode = common.REASON_NOT_PROTECTED
+		ctx.Message = common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message
+		return &common.DecisionResult{
+			Type:       common.DecisionAllow,
+			ReasonCode: common.REASON_NOT_PROTECTED,
+			Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+		}
+	} else {
+		ctx.Protected = true
+	}
+	return common.UndeterminedDecision()
+}
+
 func ignoredCheck(reqc *common.RequestContext, config *config.ShieldConfig, profileParameters rspapi.Parameters, ctx *common.CheckContext) *common.DecisionResult {
 	reqFields := reqc.Map()
 	ignoreMatched, _ := profileParameters.IgnoreMatch(reqFields)

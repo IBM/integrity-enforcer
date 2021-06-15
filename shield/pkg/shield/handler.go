@@ -125,9 +125,11 @@ func (self *Handler) Check() *common.DecisionResult {
 
 	// TODO: need to implement protection check based on RSP.Spec.Parameters
 	// it would use `additionalProtectRules` and `manifestRef.image`
+	dr = protectCheck(self.reqc, self.config, self.profileParameters, self.ctx)
+	if !dr.IsUndetermined() {
+		return dr
+	}
 
-	// when this func is called, it implies that the requested resource is protected.
-	// but need to check if the user of this request is ignored or not.
 	dr = ignoredCheck(self.reqc, self.config, self.profileParameters, self.ctx)
 	if !dr.IsUndetermined() {
 		return dr
