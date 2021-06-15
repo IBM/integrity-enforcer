@@ -140,7 +140,7 @@ func (self *ResourceCheckHandler) Check() *common.DecisionResult {
 // image
 func (self *ResourceCheckHandler) ImageCheck() *common.DecisionResult {
 	idr := common.UndeterminedDecision()
-	needSigCheck, imageToVerify, _ := requestCheckForImageCheck(self.resc)
+	needSigCheck, imageToVerify, _ := requestCheckForImageCheck(self.resc, self.profileParameters.ImageProfile)
 	if !needSigCheck {
 		return idr
 	}
