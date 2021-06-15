@@ -47,6 +47,9 @@ type Parameters struct {
 	IgnoreAttrs            []*common.AttrsPattern `json:"ignoreAttrs,omitempty"`
 	TargetServiceAccount   string                 `json:"targetServiceAccount,omitempty"`
 
+	// MetadataChangePattern
+	MetadataChangePatterns []*common.MetadataChangePattern `json:"metadataChangePatterns,omitempty"`
+
 	// ManifestReference
 	ManifestReference *ManifestReference `json:"manifestRef,omitempty"`
 

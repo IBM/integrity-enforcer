@@ -85,9 +85,14 @@ func (self *ResourceVerifier) Verify(sig *GeneralSignature, resc *common.Resourc
 
 	excludeDiffValue := resc.ExcludeDiffValue()
 
-	// TODO: need new implementation of kustomizeList
-	var kustomizeList []*common.KustomizePattern
-	allowDiffPatterns := makeAllowDiffPatterns(resc, kustomizeList)
+	// make allowDiffPatterns if metadata change patterns are defined
+	metadataChangePatterns := []*common.MetadataChangePattern{}
+	for _, p := range profileParameters.MetadataChangePatterns {
+		if p.MatchWith(resc.Map()) {
+			metadataChangePatterns = append(metadataChangePatterns, p.DeepCopy())
+		}
+	}
+	allowDiffPatterns := makeAllowDiffPatterns(resc, metadataChangePatterns)
 
 	protectAttrsList := profileParameters.GetProtectAttrs(resc.Map())
 	ignoreAttrsList := profileParameters.GetIgnoreAttrs(resc.Map())
@@ -467,22 +472,22 @@ func GenerateMessageFromRawObj(rawObj []byte, filter, mutableAttrs string) strin
 	return message
 }
 
-func makeAllowDiffPatterns(resc *common.ResourceContext, kustomizeList []*common.KustomizePattern) []*mapnode.DiffPattern {
+func makeAllowDiffPatterns(resc *common.ResourceContext, metaChangePatterns []*common.MetadataChangePattern) []*mapnode.DiffPattern {
 	ref := resc.ResourceRef()
 	name := resc.Name
-	kustomizedName := name
-	for _, pattern := range kustomizeList {
+	changedName := name
+	for _, pattern := range metaChangePatterns {
 		newRef := pattern.Override(ref)
-		kustomizedName = newRef.Name
+		changedName = newRef.Name
 	}
-	if kustomizedName == name {
+	if changedName == name {
 		return nil
 	}
 
 	key := "metadata.name"
 	values := map[string]interface{}{
 		"before": name,
-		"after":  kustomizedName,
+		"after":  changedName,
 	}
 	allowDiffPattern := &mapnode.DiffPattern{
 		Key:    key,

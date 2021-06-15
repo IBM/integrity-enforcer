@@ -114,6 +114,16 @@ func (in *Parameters) DeepCopyInto(out *Parameters) {
 			}
 		}
 	}
+	if in.MetadataChangePatterns != nil {
+		in, out := &in.MetadataChangePatterns, &out.MetadataChangePatterns
+		*out = make([]*common.MetadataChangePattern, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = (*in).DeepCopy()
+			}
+		}
+	}
 	if in.ManifestReference != nil {
 		in, out := &in.ManifestReference, &out.ManifestReference
 		*out = new(ManifestReference)

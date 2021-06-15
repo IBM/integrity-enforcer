@@ -86,7 +86,27 @@ func NewSignatureEvaluator(config *config.ShieldConfig, profileParameters rspapi
 	}, nil
 }
 
-func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.ResourceRef, resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
+func (self *ConcreteSignatureEvaluator) GetResourceSignature(orgRef *common.ResourceRef, resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
+
+	ref := &common.ResourceRef{
+		ApiVersion: orgRef.ApiVersion,
+		Kind:       orgRef.Kind,
+		Name:       orgRef.Name,
+		Namespace:  orgRef.Namespace,
+	}
+	// overwrite resource ref if metadata change patterns are defined
+	if len(self.profileParameters.MetadataChangePatterns) > 0 {
+		var matchedPattern *common.MetadataChangePattern
+		for _, p := range self.profileParameters.MetadataChangePatterns {
+			if p.MatchWith(resc.Map()) {
+				matchedPattern = p.DeepCopy()
+				break
+			}
+		}
+		if matchedPattern != nil {
+			ref = matchedPattern.Override(ref)
+		}
+	}
 
 	sigAnnotations := resc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
@@ -162,9 +182,6 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 			}
 		}
 	}
-
-	paramB, _ := json.Marshal(self.profileParameters)
-	fmt.Println("[DEBUG] resource:", ref, "parameters: ", string(paramB))
 
 	//3. pick Signature from OCI registry if available
 	manifestImageRef := ""
