@@ -15,6 +15,8 @@ ignoreAttrs:
     - kind: ServiceAccount
   - attrs:
     - spec.ports.*.nodePort
+    - spec.clusterIP
+    - spec.clusterIPs.0
     match:
     - kind: Service
 ignoreRules: 

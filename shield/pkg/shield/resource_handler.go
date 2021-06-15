@@ -46,6 +46,14 @@ type ResourceCheckHandler struct {
 
 func NewResourceCheckHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profileParameters rspapi.Parameters) *ResourceCheckHandler {
 	data := &RunData{}
+	// if common profile is not embedded in profile parameters yet, then do it
+	if !profileParameters.IsCommonProfilesEmbedded() {
+		commonProfileParameters := rspapi.Parameters{
+			IgnoreRules: config.CommonProfile.IgnoreRules,
+			IgnoreAttrs: config.CommonProfile.IgnoreAttrs,
+		}
+		profileParameters = profileParameters.EmbedCommonProfiles(commonProfileParameters)
+	}
 	return &ResourceCheckHandler{config: config, data: data, serverLogger: metaLogger, profileParameters: profileParameters}
 }
 
@@ -77,6 +85,12 @@ func (self *ResourceCheckHandler) GetCheckContext() *common.CheckContext {
 func (self *ResourceCheckHandler) Check() *common.DecisionResult {
 	var dr *common.DecisionResult
 	dr = common.UndeterminedDecision()
+
+	// check if this resource is ignored by ignore rules in profileParameters
+	dr = ignoredCheckWithResource(self.resc, self.config, self.profileParameters, self.ctx)
+	if !dr.IsUndetermined() {
+		return dr
+	}
 
 	dr = signatureCheckWithSingleProfile(self.profileParameters, self.resc, self.config, self.data, self.ctx)
 	if dr.IsAllowed() {

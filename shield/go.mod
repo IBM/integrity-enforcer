@@ -12,10 +12,11 @@ require (
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
 	github.com/onsi/ginkgo v1.15.0
 	github.com/onsi/gomega v1.11.0
+	github.com/open-policy-agent/gatekeeper v0.0.0-20210217041133-705a40ccc266
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/r3labs/diff v0.0.0-20191120142937-b4ed99a31f5a
-	github.com/sigstore/cosign v0.4.1-0.20210519011730-5fc9c791d7ef
+	github.com/sigstore/cosign v0.4.1-0.20210602105506-5cb21aa7fbf9
 	github.com/sigstore/sigstore v0.0.0-20210530211317-99216b8b86a6
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tidwall/gjson v1.6.7
@@ -37,7 +38,9 @@ replace (
 	github.com/sigstore/cosign => github.com/sigstore/cosign v0.4.1-0.20210602105506-5cb21aa7fbf9
 	google.golang.org/grpc => google.golang.org/grpc v1.36.1
 	k8s.io/api => k8s.io/api v0.19.0
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.0
+	k8s.io/apiserver => k8s.io/apiserver v0.19.0
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.0
 	k8s.io/client-go => k8s.io/client-go v0.19.0
 	k8s.io/code-generator => k8s.io/code-generator v0.19.0

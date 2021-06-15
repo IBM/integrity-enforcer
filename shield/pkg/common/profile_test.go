@@ -110,7 +110,7 @@ func TestKustomizePattern(t *testing.T) {
 	originalName := reqc.Name
 	reqc.Name = "prefix." + reqc.Name
 
-	var kust *KustomizePattern
+	var kust *MetadataChangePattern
 	kustBytes := []byte(`{"match":[{"kind":"ConfigMap"}],"namePrefix":"*.","allowNamespaceChange":true}`)
 	err = json.Unmarshal(kustBytes, &kust)
 	if err != nil {
@@ -119,7 +119,7 @@ func TestKustomizePattern(t *testing.T) {
 	}
 	reqFields := reqc.Map()
 	if ok := kust.MatchWith(reqFields); !ok {
-		t.Errorf("ReqContext does not match with KustomizePattern: %s", string(kustBytes))
+		t.Errorf("ReqContext does not match with MetadataChangePattern: %s", string(kustBytes))
 		return
 	}
 	rawRef := reqc.ResourceRef()

@@ -31,6 +31,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 	config "github.com/IBM/integrity-enforcer/shield/pkg/config"
 	helm "github.com/IBM/integrity-enforcer/shield/pkg/plugins/helm"
+	image "github.com/IBM/integrity-enforcer/shield/pkg/util/image"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
 	pgp "github.com/IBM/integrity-enforcer/shield/pkg/util/sign/pgp"
@@ -68,24 +69,44 @@ type GeneralSignature struct {
 ***********************************************/
 
 type SignatureEvaluator interface {
-	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, profileParameters rspapi.Parameters) (*common.SignatureEvalResult, error)
+	Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) (*common.SignatureEvalResult, error)
 }
 
 type ConcreteSignatureEvaluator struct {
-	config       *config.ShieldConfig
-	signerConfig *common.SignerConfig
-	plugins      map[string]bool
+	config            *config.ShieldConfig
+	profileParameters rspapi.Parameters
+	plugins           map[string]bool
 }
 
-func NewSignatureEvaluator(config *config.ShieldConfig, signerConfig *common.SignerConfig, plugins map[string]bool) (SignatureEvaluator, error) {
+func NewSignatureEvaluator(config *config.ShieldConfig, profileParameters rspapi.Parameters, plugins map[string]bool) (SignatureEvaluator, error) {
 	return &ConcreteSignatureEvaluator{
-		config:       config,
-		signerConfig: signerConfig,
-		plugins:      plugins,
+		config:            config,
+		profileParameters: profileParameters,
+		plugins:           plugins,
 	}, nil
 }
 
-func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.ResourceRef, resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
+func (self *ConcreteSignatureEvaluator) GetResourceSignature(orgRef *common.ResourceRef, resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) *GeneralSignature {
+
+	ref := &common.ResourceRef{
+		ApiVersion: orgRef.ApiVersion,
+		Kind:       orgRef.Kind,
+		Name:       orgRef.Name,
+		Namespace:  orgRef.Namespace,
+	}
+	// overwrite resource ref if metadata change patterns are defined
+	if len(self.profileParameters.MetadataChangePatterns) > 0 {
+		var matchedPattern *common.MetadataChangePattern
+		for _, p := range self.profileParameters.MetadataChangePatterns {
+			if p.MatchWith(resc.Map()) {
+				matchedPattern = p.DeepCopy()
+				break
+			}
+		}
+		if matchedPattern != nil {
+			ref = matchedPattern.Override(ref)
+		}
+	}
 
 	sigAnnotations := resc.ClaimedMetadata.Annotations.SignatureAnnotations()
 
@@ -162,7 +183,41 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 		}
 	}
 
-	//3. pick ResourceSignature from external store if available
+	//3. pick Signature from OCI registry if available
+	manifestImageRef := ""
+	if manifestImageRef == "" && sigAnnotations.ManifestImageRef != "" {
+		manifestImageRef = sigAnnotations.ManifestImageRef
+	}
+	if manifestImageRef == "" && self.profileParameters.ManifestReference != nil {
+		manifestImageRef = self.profileParameters.ManifestReference.Image
+	}
+	if manifestImageRef != "" {
+		img, err := image.PullImage(manifestImageRef)
+		var concatYAMLBytes []byte
+		if err != nil {
+			logger.Error("failed to pull image: ", err.Error())
+		} else {
+			concatYAMLBytes, err = image.GenerateConcatYAMLsFromImage(img)
+			if err != nil {
+				logger.Error("failed to generate concat yaml from image: ", err.Error())
+			}
+		}
+		fmt.Println("[DEBUG] resource:", ref, "concatYAMLBytes in image:\n", string(concatYAMLBytes))
+		found, yamlBytes := ishieldyaml.FindSingleYaml(concatYAMLBytes, ref.ApiVersion, ref.Kind, ref.Name, ref.Namespace)
+		fmt.Println("[DEBUG] resource:", ref, "found yamlBytes in image:\n", string(yamlBytes))
+
+		if found {
+			signType := SignedResourceTypeResource
+			matchRequired := true
+			scopedSignature := false
+			verifyWithImage := true
+			return &GeneralSignature{
+				SignType: signType,
+				data:     map[string]string{"imageRef": manifestImageRef, "yamlBytes": string(yamlBytes)},
+				option:   map[string]bool{"matchRequired": matchRequired, "scopedSignature": scopedSignature, "verifyWithImage": verifyWithImage},
+			}
+		}
+	}
 
 	//4. helm resource (release secret, helm cahrt resources)
 	if ok := self.plugins["helm"]; ok {
@@ -196,7 +251,7 @@ func (self *ConcreteSignatureEvaluator) GetResourceSignature(ref *common.Resourc
 	// return nil
 }
 
-func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList, profileParameters rspapi.Parameters) (*common.SignatureEvalResult, error) {
+func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSigList *vrsig.ResourceSignatureList) (*common.SignatureEvalResult, error) {
 
 	// eval sign policy
 	ref := resc.ResourceRef()
@@ -214,7 +269,8 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 	rsigUID := rsig.data["resourceSignatureUID"] // this will be empty string if annotation signature
 
-	originalCandidatePubkeys := self.signerConfig.GetCandidatePubkeys(self.config.Namespace)
+	signerConfig := self.profileParameters.SignerConfig
+	originalCandidatePubkeys := signerConfig.GetCandidatePubkeys(self.config.Namespace)
 
 	// if this verification is not executed in a K8s pod (e.g. using ishieldctl command), then try loading secrets for pubkeys
 	overwriteSecretsBaseDir := ""
@@ -231,16 +287,24 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 
 	pgpPubkeys := candidatePubkeys[common.SignatureTypePGP]
 	x509Certs := candidatePubkeys[common.SignatureTypeX509]
-	sigstoreCerts := candidatePubkeys[common.SignatureTypeSigStore]
+	sigstorePubkeys := candidatePubkeys[common.SignatureTypeSigStore]
 
 	sigstoreEnabled := self.config.SigStoreEnabled()
+	sigstoreRootCertPath := ""
+	if sigstoreEnabled {
+		rootCertSecret := common.DefaultSigStoreRootCertSecretName
+		sigstoreRootCertPath, err = loadSigstoreRootCert(self.config.Namespace, rootCertSecret, overwriteSecretsBaseDir)
+		if err != nil {
+			logger.Error("Error while loading ", rootCertSecret, " secret;", err.Error())
+		}
+	}
 
 	// create verifier
 	dryRunNamespace := ""
 	if resc.ResourceScope == string(common.ScopeNamespaced) {
 		dryRunNamespace = self.config.Namespace
 	}
-	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstoreCerts, self.config.KeyPathList, sigstoreEnabled)
+	verifier := NewVerifier(rsig.SignType, dryRunNamespace, pgpPubkeys, x509Certs, sigstorePubkeys, self.config.KeyPathList, sigstoreEnabled, sigstoreRootCertPath)
 
 	keyLoadingError := false
 	candidateKeyCount := len(pgpPubkeys) + len(x509Certs)
@@ -258,8 +322,8 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 			}
 		}
 
-		for _, certPath := range sigstoreCerts {
-			if loaded, _ := sigstore.LoadCertPoolDir(certPath); loaded != nil {
+		for _, keyPath := range sigstorePubkeys {
+			if loaded, _ := sigstore.LoadPubkeyFromDir(keyPath); loaded != nil {
 				validKeyCount += 1
 			}
 		}
@@ -269,7 +333,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	}
 
 	// verify signature
-	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, profileParameters)
+	sigVerifyResult, verifiedKeyPathList, err := verifier.Verify(rsig, resc, self.profileParameters)
 	if err != nil {
 		reasonFail := fmt.Sprintf("Error during signature verification; %s; %s", sigVerifyResult.Error.Reason, err.Error())
 		return &common.SignatureEvalResult{
@@ -314,7 +378,7 @@ func (self *ConcreteSignatureEvaluator) Eval(resc *common.ResourceContext, resSi
 	signer := sigVerifyResult.Signer
 
 	// check signer config
-	signerMatched, matchedSignerCondition := self.signerConfig.Match(signer, verifiedKeyPathList, self.config.Namespace)
+	signerMatched, matchedSignerCondition := signerConfig.Match(signer, verifiedKeyPathList, self.config.Namespace)
 	if signerMatched {
 		matchedSignerConditionStr := ""
 		if matchedSignerCondition != nil {
@@ -370,6 +434,9 @@ func loadSecrets(candidatePubkeys map[common.SignatureType][]string, overwriteSe
 			// otherwise, try getting secret and save it as tmp local file, and then update keyPathList at the end
 			keyPathParts := parseKeyPath(keyPath)
 			secretName := keyPathParts["secretName"]
+			if secretName == common.SigStoreDummyKeyName {
+				continue
+			}
 			secretNamespace := keyPathParts["secretNamespace"]
 			if secretName == "" {
 				continue
@@ -425,6 +492,44 @@ func loadSecrets(candidatePubkeys map[common.SignatureType][]string, overwriteSe
 		newCandidatePubkeys[sigType] = newKeyPathList
 	}
 	return newCandidatePubkeys, nil
+}
+
+func loadSigstoreRootCert(secretNamespace, secretName, overwriteBaseDir string) (string, error) {
+	obj, err := kubeutil.GetResource("v1", "Secret", secretNamespace, secretName)
+	if err != nil {
+		return "", err
+	}
+	objBytes, _ := json.Marshal(obj)
+	var res corev1.Secret
+	_ = json.Unmarshal(objBytes, &res)
+	baseDir := "/tmp"
+	if overwriteBaseDir != "" {
+		baseDir = overwriteBaseDir
+	}
+	savedCount := 0
+	sumErr := []string{}
+	sigstoreRootCertDir := filepath.Join(baseDir, secretNamespace, secretName, string(common.SignatureTypeSigStore))
+
+	for fname, pubkeyBytes := range res.Data {
+		fpath := filepath.Join(sigstoreRootCertDir, fname)
+		fpathDir := filepath.Dir(fpath)
+		var err error
+		err = os.MkdirAll(fpathDir, 0755)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		err = ioutil.WriteFile(fpath, pubkeyBytes, 0644)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		savedCount += 1
+	}
+	if savedCount == 0 && len(sumErr) > 0 {
+		return "", fmt.Errorf("failed to save sigstore root cert; %s", strings.Join(sumErr, "; "))
+	}
+	return sigstoreRootCertDir, nil
 }
 
 func parseKeyPath(keyPath string) map[string]string {

@@ -55,6 +55,14 @@ type Handler struct {
 }
 
 func NewHandler(config *config.ShieldConfig, metaLogger *logger.Logger, profileParameters rspapi.Parameters) *Handler {
+	// if common profile is not embedded in profile parameters yet, then do it
+	if !profileParameters.IsCommonProfilesEmbedded() {
+		commonProfileParameters := rspapi.Parameters{
+			IgnoreRules: config.CommonProfile.IgnoreRules,
+			IgnoreAttrs: config.CommonProfile.IgnoreAttrs,
+		}
+		profileParameters = profileParameters.EmbedCommonProfiles(commonProfileParameters)
+	}
 	return &Handler{config: config, data: &RunData{}, serverLogger: metaLogger, profileParameters: profileParameters}
 }
 
@@ -114,6 +122,9 @@ func (self *Handler) Decide(req *admv1.AdmissionRequest) *common.DecisionResult 
 func (self *Handler) Check() *common.DecisionResult {
 	var dr *common.DecisionResult
 	dr = common.UndeterminedDecision()
+
+	// TODO: need to implement protection check based on RSP.Spec.Parameters
+	// it would use `additionalProtectRules` and `manifestRef.image`
 
 	// when this func is called, it implies that the requested resource is protected.
 	// but need to check if the user of this request is ignored or not.

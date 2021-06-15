@@ -46,7 +46,9 @@ import (
 	rareviewscheme "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/clientset/versioned/scheme"
 	informers "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/informers/externalversions/resourceauditreview/v1alpha1"
 	listers "github.com/IBM/integrity-enforcer/controller/pkg/client/resourceauditreview/listers/resourceauditreview/v1alpha1"
+	rspapi "github.com/IBM/integrity-enforcer/shield/pkg/apis/resourcesigningprofile/v1alpha1"
 	"github.com/IBM/integrity-enforcer/shield/pkg/common"
+	"github.com/IBM/integrity-enforcer/shield/pkg/shield"
 	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 )
 
@@ -255,7 +257,6 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	resAttrs := rar.Spec.ResourceAttributes
-	fmt.Println("[DEBUG] resAttrs: ", resAttrs)
 
 	gv := metav1.GroupVersion{Group: resAttrs.Group, Version: resAttrs.Version}
 	apiVersion := gv.String()
@@ -268,11 +269,42 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	dr, ctx, err := resourceCheck(obj)
+	matchedProfiles, err := getMatchedProfiles(obj)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("error returned from integrity shield api; %s", err.Error()))
+		utilruntime.HandleError(fmt.Errorf("failed to get protection profiles via integrity shield api; %s", err.Error()))
 		return nil
 	}
+
+	var dr *common.DecisionResult
+	var ctx *common.CheckContext
+	if len(matchedProfiles) == 0 {
+		dr, ctx = notProtectedDecisionResultAndCheckContext()
+	} else {
+		multipleDecisionResults := []*common.DecisionResult{}
+		multipleCheckContexts := []*common.CheckContext{}
+		for _, profile := range matchedProfiles {
+			tmpDr, tmpCtx, err := resourceCheck(obj, profile.Spec.Parameters)
+			if err != nil {
+				utilruntime.HandleError(fmt.Errorf("failed to check resource via integrity shield api; %s", err.Error()))
+				return nil
+			}
+			multipleDecisionResults = append(multipleDecisionResults, tmpDr)
+			multipleCheckContexts = append(multipleCheckContexts, tmpCtx)
+		}
+
+		var index int
+		dr, index = shield.SummarizeMultipleDecisionResults(multipleDecisionResults)
+		if index >= 0 && index <= len(multipleCheckContexts)-1 {
+			ctx = multipleCheckContexts[index]
+		}
+	}
+
+	drBytes, _ := json.Marshal(dr)
+	ctxBytes, _ := json.Marshal(ctx)
+
+	fmt.Println("[DEBUG] resname:", resname, "len(matchedProfiles):", len(matchedProfiles))
+	fmt.Println("[DEBUG] resname:", resname, "dr:", string(drBytes))
+	fmt.Println("[DEBUG] resname:", resname, "ctx:", string(ctxBytes))
 
 	// Finally, we update the status block of the ResourceAuditReview resource to reflect the
 	// current state of the world
@@ -285,6 +317,20 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
+func notProtectedDecisionResultAndCheckContext() (*common.DecisionResult, *common.CheckContext) {
+	dr := &common.DecisionResult{
+		Type:       common.DecisionAllow,
+		ReasonCode: common.REASON_NOT_PROTECTED,
+		Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+	}
+	ctx := &common.CheckContext{
+		Allow:      true,
+		ReasonCode: common.REASON_NOT_PROTECTED,
+		Message:    common.ReasonCodeMap[common.REASON_NOT_PROTECTED].Message,
+	}
+	return dr, ctx
+}
+
 func (c *Controller) updateResourceAuditReviewStatus(rar *rareviewv1alpha1.ResourceAuditReview, dr *common.DecisionResult, ctx *common.CheckContext) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
@@ -293,7 +339,11 @@ func (c *Controller) updateResourceAuditReviewStatus(rar *rareviewv1alpha1.Resou
 
 	rarCopy.Status.Audit = dr.IsAllowed()
 	rarCopy.Status.Protected = ctx.Protected
-	rarCopy.Status.Signer = ctx.SignatureEvalResult.SignerName
+	signer := ""
+	if ctx.SignatureEvalResult != nil {
+		signer = ctx.SignatureEvalResult.GetSignerName()
+	}
+	rarCopy.Status.Signer = signer
 	rarCopy.Status.Message = ctx.Message
 	rarCopy.Status.LastUpdated = metav1.NewTime(time.Now().UTC())
 
@@ -366,9 +416,15 @@ func ishieldAPIURl() string {
 	return url
 }
 
-func resourceCheck(obj *unstructured.Unstructured) (*common.DecisionResult, *common.CheckContext, error) {
-	objB, _ := json.Marshal(obj)
-	dataB := bytes.NewBuffer(objB)
+func resourceCheck(obj *unstructured.Unstructured, parameters rspapi.Parameters) (*common.DecisionResult, *common.CheckContext, error) {
+
+	inputData := map[string]interface{}{}
+	inputData["resource"] = obj
+	inputData["parameters"] = parameters
+
+	inputDataB, _ := json.Marshal(inputData)
+	dataB := bytes.NewBuffer(inputDataB)
+
 	url := ishieldAPIURl() + "/api/resource"
 
 	req, err := http.NewRequest("POST", url, dataB)
@@ -391,6 +447,37 @@ func resourceCheck(obj *unstructured.Unstructured) (*common.DecisionResult, *com
 	dr, ctx := parseResourceAPIResult(result)
 
 	return dr, ctx, nil
+}
+
+func getMatchedProfiles(obj *unstructured.Unstructured) ([]rspapi.ResourceSigningProfile, error) {
+	objB, _ := json.Marshal(obj)
+	dataB := bytes.NewBuffer(objB)
+	url := ishieldAPIURl() + "/api/profile"
+
+	req, err := http.NewRequest("POST", url, dataB)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var matchedProfiles []rspapi.ResourceSigningProfile
+	err = json.Unmarshal(respBytes, &matchedProfiles)
+	if err != nil {
+		return nil, err
+	}
+
+	return matchedProfiles, nil
 }
 
 func parseResourceAPIResult(result []byte) (*common.DecisionResult, *common.CheckContext) {

@@ -81,6 +81,16 @@ func handleResource(resource *unstructured.Unstructured, parameters *rspapi.Para
 
 }
 
+func handleProfile(resource *unstructured.Unstructured) []rspapi.ResourceSigningProfile {
+
+	_ = config.InitShieldConfig()
+
+	matchedProfiles, _ := shield.GetMatchedGeneralProfilesWithResource(resource, config.ShieldConfig.Namespace)
+
+	return matchedProfiles
+
+}
+
 func defaultHandler(w http.ResponseWriter, r *http.Request) {
 	errorHandler(w, r, http.StatusNotFound)
 }
@@ -241,6 +251,52 @@ func resourceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func profileHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if r.Header.Get("Content-Type") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	bufbody := new(bytes.Buffer)
+	_, _ = bufbody.ReadFrom(r.Body)
+	body := bufbody.Bytes()
+
+	fmt.Println("Body:", string(body))
+
+	var resource *unstructured.Unstructured
+	err := json.Unmarshal(body, &resource)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("unmarshaling input data as *unstructured.Unstructured: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if resource == nil {
+		http.Error(w, "failed to get `resource` in input object", http.StatusInternalServerError)
+		return
+	}
+
+	matchedProfiles := handleProfile(resource)
+
+	resultBytes, err := json.Marshal(matchedProfiles)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("marshaling resource handler result: %v", err), http.StatusInternalServerError)
+		return
+
+	}
+	fmt.Println("Result:", string(resultBytes))
+
+	if _, err := w.Write(resultBytes); err != nil {
+		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
 func checkLiveness(w http.ResponseWriter, r *http.Request) {
 	msg := "liveness ok"
 	_, _ = w.Write([]byte(msg))
@@ -266,7 +322,7 @@ func main() {
 	mux.HandleFunc("/api", defaultHandler)
 	mux.HandleFunc("/api/request", requestHandler)
 	mux.HandleFunc("/api/resource", resourceHandler)
-	mux.HandleFunc("/api/profile", defaultHandler)
+	mux.HandleFunc("/api/profile", profileHandler)
 	mux.HandleFunc("/health/liveness", checkLiveness)
 	mux.HandleFunc("/health/readiness", checkReadiness)
 

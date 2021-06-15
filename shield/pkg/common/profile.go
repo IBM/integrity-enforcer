@@ -49,7 +49,7 @@ type RequestPattern struct {
 	UserGroup  *RulePattern `json:"usergroup,omitempty"`
 }
 
-type KustomizePattern struct {
+type MetadataChangePattern struct {
 	Match                []*RequestPattern `json:"match,omitempty"`
 	NamePrefix           *RulePattern      `json:"namePrefix,omitempty"`
 	NameSuffix           *RulePattern      `json:"nameSuffix,omitempty"`
@@ -194,13 +194,13 @@ func reverse(s string) string {
 	return string(runes)
 }
 
-func (self *KustomizePattern) Override(ref *ResourceRef) *ResourceRef {
+func (self *MetadataChangePattern) Override(ref *ResourceRef) *ResourceRef {
 	ref = self.overrideName(ref)
 	ref = self.overrideNamespace(ref)
 	return ref
 }
 
-func (self *KustomizePattern) overrideName(ref *ResourceRef) *ResourceRef {
+func (self *MetadataChangePattern) overrideName(ref *ResourceRef) *ResourceRef {
 	name := ref.Name
 	if self.NamePrefix == nil && self.NameSuffix == nil {
 		return ref
@@ -247,7 +247,7 @@ func (self *KustomizePattern) overrideName(ref *ResourceRef) *ResourceRef {
 	return ref
 }
 
-func (self *KustomizePattern) overrideNamespace(ref *ResourceRef) *ResourceRef {
+func (self *MetadataChangePattern) overrideNamespace(ref *ResourceRef) *ResourceRef {
 	namespace := ref.Namespace
 	if self.AllowNamespaceChange {
 		namespace = "*"
@@ -259,7 +259,7 @@ func (self *KustomizePattern) overrideNamespace(ref *ResourceRef) *ResourceRef {
 	return ref
 }
 
-func (self *KustomizePattern) MatchWith(reqFields map[string]string) bool {
+func (self *MetadataChangePattern) MatchWith(reqFields map[string]string) bool {
 	for _, reqPattern := range self.Match {
 		if reqPattern.Match(reqFields) {
 			return true
@@ -368,12 +368,12 @@ func (p *RequestPattern) DeepCopy() *RequestPattern {
 	return p2
 }
 
-func (p *KustomizePattern) DeepCopyInto(p2 *KustomizePattern) {
+func (p *MetadataChangePattern) DeepCopyInto(p2 *MetadataChangePattern) {
 	copier.Copy(&p2, &p)
 }
 
-func (p *KustomizePattern) DeepCopy() *KustomizePattern {
-	p2 := &KustomizePattern{}
+func (p *MetadataChangePattern) DeepCopy() *MetadataChangePattern {
+	p2 := &MetadataChangePattern{}
 	p.DeepCopyInto(p2)
 	return p2
 }
