@@ -24,6 +24,7 @@ import (
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -71,13 +72,25 @@ func requestCheckForImageCheck(resc *common.ResourceContext, iprofile *common.Im
 		return false, nil, "no image is referenced"
 	}
 	// get images
-	podspec, err := getPodSpec(resc.RawObject, resc.ApiGroup, resc.ApiVersion, resc.Kind)
-	if err != nil {
-		// "no image referenced: fail to get podspec"
-		logger.Trace("no image is referenced: fail to get podspec")
-		return false, nil, "no image is referenced: fail to get podspec"
+	var containers []corev1.Container
+	if resc.Kind == "ClusterServiceVersion" {
+		containers = getContainersfromCSV(resc.RawObject)
+		if containers == nil {
+			// "no image referenced: fail to get podspec"
+			logger.Trace("no image is referenced: fail to get containers")
+			return false, nil, "no image is referenced: fail to get containers"
+		}
+	} else {
+		podspec, err := getPodSpec(resc.RawObject, resc.ApiGroup, resc.ApiVersion, resc.Kind)
+		if err != nil {
+			// "no image referenced: fail to get podspec"
+			logger.Trace("no image is referenced: fail to get podspec")
+			return false, nil, "no image is referenced: fail to get podspec"
+		}
+		containers = podspec.Containers
 	}
-	images := getImages(podspec.Containers)
+
+	images := getImages(containers)
 	imagesToVerify, msg := getImageProfile(resc.Namespace, images, iprofile)
 	if len(imagesToVerify) == 0 {
 		return false, nil, msg
@@ -176,7 +189,7 @@ func isMatchImage(pattern, value string) bool {
 }
 
 func filterByKind(resource string) bool {
-	if resource == "Pod" || resource == "Deployment" || resource == "Replicaset" || resource == "Daemonset" || resource == "Statefulset" || resource == "Job" || resource == "Cronjob" {
+	if resource == "Pod" || resource == "Deployment" || resource == "Replicaset" || resource == "Daemonset" || resource == "Statefulset" || resource == "Job" || resource == "Cronjob" || resource == "ClusterServiceVersion" {
 		return true
 	}
 	return false
@@ -188,6 +201,19 @@ func getImages(containers []corev1.Container) []string {
 		images = append(images, c.Image)
 	}
 	return images
+}
+
+func getContainersfromCSV(rawObj []byte) []corev1.Container {
+	csv := operatorsv1alpha1.ClusterServiceVersion{}
+	if err := json.Unmarshal(rawObj, &csv); err != nil {
+		return nil
+	}
+	deployments := csv.Spec.InstallStrategy.StrategySpec.DeploymentSpecs
+	var containers []corev1.Container
+	for _, dep := range deployments {
+		containers = append(containers, dep.Spec.Template.Spec.Containers...)
+	}
+	return containers
 }
 
 func getPodSpec(rawObj []byte, group, version, kind string) (*corev1.PodSpec, error) {
