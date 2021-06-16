@@ -17,16 +17,14 @@
 package shield
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	common "github.com/IBM/integrity-enforcer/shield/pkg/common"
 
-	"github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
 	logger "github.com/IBM/integrity-enforcer/shield/pkg/util/logger"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -35,8 +33,6 @@ import (
 	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type SigCheckImages struct {
@@ -66,24 +62,36 @@ type ImageCheckProfile struct {
 	CosignExperimental bool   `json:"cosignExperimental"`
 }
 
-func requestCheckForImageCheck(resc *common.ResourceContext) (bool, *SigCheckImages, string) {
+func requestCheckForImageCheck(resc *common.ResourceContext, iprofile *common.ImageProfile) (bool, *SigCheckImages, string) {
 	// return needsigcheck, image, msg
 	// scope check
 	inscope := filterByKind(resc.Kind)
 	if !inscope {
 		// no image referenced
-		logger.Trace("no image referenced")
-		return false, nil, "no image referenced"
+		logger.Trace("no image is referenced")
+		return false, nil, "no image is referenced"
 	}
 	// get images
-	podspec, err := getPodSpec(resc.RawObject, resc.ApiGroup, resc.ApiVersion, resc.Kind)
-	if err != nil {
-		// "no image referenced: fail to get podspec"
-		logger.Trace("no image referenced: fail to get podspec")
-		return false, nil, "no image referenced: fail to get podspec"
+	var containers []corev1.Container
+	if resc.Kind == "ClusterServiceVersion" {
+		containers = getContainersfromCSV(resc.RawObject)
+		if containers == nil {
+			// "no image referenced: fail to get podspec"
+			logger.Trace("no image is referenced: fail to get containers")
+			return false, nil, "no image is referenced: fail to get containers"
+		}
+	} else {
+		podspec, err := getPodSpec(resc.RawObject, resc.ApiGroup, resc.ApiVersion, resc.Kind)
+		if err != nil {
+			// "no image referenced: fail to get podspec"
+			logger.Trace("no image is referenced: fail to get podspec")
+			return false, nil, "no image is referenced: fail to get podspec"
+		}
+		containers = podspec.Containers
 	}
-	images := getImages(podspec.Containers)
-	imagesToVerify, msg := getImageProfile(resc.Namespace, images)
+
+	images := getImages(containers)
+	imagesToVerify, msg := getImageProfile(resc.Namespace, images, iprofile)
 	if len(imagesToVerify) == 0 {
 		return false, nil, msg
 	}
@@ -143,20 +151,15 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func getImageProfile(namespace string, images []string) ([]ImageToVerify, string) {
+func getImageProfile(namespace string, images []string, ip *common.ImageProfile) ([]ImageToVerify, string) {
 	var imagesToVerify []ImageToVerify
-	// load image profile
-	ip, err := getConfigmapProfile(namespace, "image-profile-cm")
-	if err != nil {
-		return imagesToVerify, "fail to load image profile"
-	}
 	// check if there are policies for the given image
 	for _, img := range images {
 		if isMatchImage(ip.Image, img) {
 			var imageToVerify ImageToVerify
 			imageToVerify.Image = img
 			imageToVerify.Profile.CommonName = ip.CommonName
-			imageToVerify.Profile.CosignExperimental = ip.CosignExperimental
+			imageToVerify.Profile.CosignExperimental = ip.TransparencyLog
 			imageToVerify.Profile.Image = ip.Image
 			imagesToVerify = append(imagesToVerify, imageToVerify)
 		}
@@ -186,7 +189,7 @@ func isMatchImage(pattern, value string) bool {
 }
 
 func filterByKind(resource string) bool {
-	if resource == "Pod" || resource == "Deployment" || resource == "Replicaset" || resource == "Daemonset" || resource == "Statefulset" || resource == "Job" || resource == "Cronjob" {
+	if resource == "Pod" || resource == "Deployment" || resource == "Replicaset" || resource == "Daemonset" || resource == "Statefulset" || resource == "Job" || resource == "Cronjob" || resource == "ClusterServiceVersion" {
 		return true
 	}
 	return false
@@ -200,34 +203,17 @@ func getImages(containers []corev1.Container) []string {
 	return images
 }
 
-func getConfigmapProfile(namespace, profileName string) (*ImageCheckProfile, error) {
-	// Retrieve secret
-	config, _ := kubeutil.GetKubeConfig()
-	c, _ := corev1client.NewForConfig(config)
-	cm, err := c.ConfigMaps(namespace).Get(context.Background(), profileName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
+func getContainersfromCSV(rawObj []byte) []corev1.Container {
+	csv := operatorsv1alpha1.ClusterServiceVersion{}
+	if err := json.Unmarshal(rawObj, &csv); err != nil {
+		return nil
 	}
-	// Obtain the key data
-	var imageProfile ImageCheckProfile
-	if transparencyLog, ok := cm.Data["transparencyLog"]; ok {
-		tlog, _ := strconv.ParseBool(transparencyLog)
-		imageProfile.CosignExperimental = tlog
+	deployments := csv.Spec.InstallStrategy.StrategySpec.DeploymentSpecs
+	var containers []corev1.Container
+	for _, dep := range deployments {
+		containers = append(containers, dep.Spec.Template.Spec.Containers...)
 	}
-	if cn, ok := cm.Data["commonName"]; ok {
-		imageProfile.CommonName = cn
-	}
-	if key, ok := cm.Data["keySecret"]; ok {
-		imageProfile.Key = key
-	}
-	if keySecretNamespace, ok := cm.Data["keySecretNamespace"]; ok {
-		imageProfile.KeyNamespace = keySecretNamespace
-	}
-	if image, ok := cm.Data["image"]; ok {
-		imageProfile.Image = image
-		return &imageProfile, nil
-	}
-	return nil, fmt.Errorf("no image is defined in image profile configmap", namespace)
+	return containers
 }
 
 func getPodSpec(rawObj []byte, group, version, kind string) (*corev1.PodSpec, error) {

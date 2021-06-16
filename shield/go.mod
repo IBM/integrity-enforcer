@@ -10,10 +10,11 @@ require (
 	github.com/google/go-containerregistry v0.5.1
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
-	github.com/onsi/ginkgo v1.15.0
-	github.com/onsi/gomega v1.11.0
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.13.0
 	github.com/open-policy-agent/gatekeeper v0.0.0-20210217041133-705a40ccc266
 	github.com/openshift/api v3.9.0+incompatible
+	github.com/operator-framework/api v0.10.0
 	github.com/pkg/errors v0.9.1
 	github.com/r3labs/diff v0.0.0-20191120142937-b4ed99a31f5a
 	github.com/sigstore/cosign v0.4.1-0.20210602105506-5cb21aa7fbf9
@@ -25,10 +26,10 @@ require (
 	helm.sh/helm/v3 v3.0.2
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.20.2
+	k8s.io/client-go v0.21.1
 	k8s.io/kube-openapi v0.0.0-20210113233702-8566a335510f
 	k8s.io/kubectl v0.19.4
-	sigs.k8s.io/controller-runtime v0.8.2
+	sigs.k8s.io/controller-runtime v0.9.0
 )
 
 replace (
