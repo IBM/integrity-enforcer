@@ -60,7 +60,7 @@ const (
 	SignatureTypeAnnotationKey    = "cosign.sigstore.dev/signatureType"
 	MessageScopeAnnotationKey     = "cosign.sigstore.dev/messageScope"
 	MutableAttrsAnnotationKey     = "cosign.sigstore.dev/mutableAttrs"
-	ManifestImageRefAnnotationKey = "cosign.sigstore.dev/manifestImageRef"
+	ManifestImageRefAnnotationKey = "cosign.sigstore.dev/imageRef"
 
 	ResSigLabelApiVer = "integrityshield.io/sigobject-apiversion"
 	ResSigLabelKind   = "integrityshield.io/sigobject-kind"
