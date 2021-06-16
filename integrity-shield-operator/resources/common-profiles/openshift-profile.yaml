@@ -4,6 +4,7 @@ ignoreAttrs:
   - metadata.labels.operators.coreos.com/*
   - metadata.annotations.*
   - spec.install.spec.deployments.*.spec.template.spec.containers.*.resources.limits.cpu
+  - spec.cleanup.enabled
   match:
   - kind: ClusterServiceVersion
 ignoreRules: 

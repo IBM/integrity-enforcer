@@ -8,16 +8,16 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.6
-	github.com/onsi/ginkgo v1.15.0
-	github.com/onsi/gomega v1.11.0
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.13.0
 	github.com/openshift/api v3.9.0+incompatible
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	k8s.io/api v0.21.1
-	k8s.io/apiextensions-apiserver v0.20.2
+	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.20.2
+	k8s.io/client-go v0.21.1
 	k8s.io/klog v1.0.0
-	sigs.k8s.io/controller-runtime v0.8.3
+	sigs.k8s.io/controller-runtime v0.9.0
 )
 
 replace (
