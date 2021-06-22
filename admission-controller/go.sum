@@ -1830,6 +1830,8 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuji-watanabe-jp/k8s-manifest-sigstore v0.0.0-20210614125345-f77cfab7eb0e h1:dLuUB/+EuuuEblffUKgJcf2tsIupZU52t9vkbjz2DF8=
 github.com/yuji-watanabe-jp/k8s-manifest-sigstore v0.0.0-20210614125345-f77cfab7eb0e/go.mod h1:56xyzq5md0/AxS02f+Y8ri1xwxNDvTp2sY09I6FtUKo=
+github.com/yuji-watanabe-jp/k8s-manifest-sigstore v0.0.0-20210617041144-9d27c6cc6d34 h1:zsBCE32H6Lsr4VSkExQnouirOf70dsyt6ONS/gdouEQ=
+github.com/yuji-watanabe-jp/k8s-manifest-sigstore v0.0.0-20210617041144-9d27c6cc6d34/go.mod h1:56xyzq5md0/AxS02f+Y8ri1xwxNDvTp2sY09I6FtUKo=
 github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43/go.mod h1:aX5oPXxHm3bOH+xeAttToC8pqch2ScQN/JoXYupl6xs=
 github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50/go.mod h1:NUSPSUX/bi6SeDMUh6brw0nXpxHnc96TguQh0+r/ssA=
 github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f/go.mod h1:GlGEuHIJweS1mbCqG+7vt2nvWLzLLnRHbXz5JKd/Qbg=
