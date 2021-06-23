@@ -36,7 +36,12 @@ import (
 
 const configKeyInConfigMap = "config.yaml"
 
-type ManifestIntegrityConfig struct {
+type ConstraintObject struct {
+	Match      k8smanifest.ObjectReferenceList `json:"match,omitempty"` // TODO: same structure with gatekeeper?
+	Parameters ParameterObject                 `json:"parameters,omitempty"`
+}
+
+type ParameterObject struct {
 	k8smanifest.VerifyOption `json:""`
 	InScopeObjects           k8smanifest.ObjectReferenceList `json:"inScopeObjects,omitempty"`
 	SkipUsers                ObjectUserBindingList           `json:"skipUsers,omitempty"`
@@ -50,6 +55,10 @@ type ObjectUserBindingList []ObjectUserBinding
 type ObjectUserBinding struct {
 	Objects k8smanifest.ObjectReferenceList `json:"objects,omitempty"`
 	Users   []string                        `json:"users,omitempty"`
+}
+
+func GetParametersFromConstraint(constraint ConstraintObject) *ParameterObject {
+	return &constraint.Parameters
 }
 
 func (l ObjectUserBindingList) Match(obj unstructured.Unstructured, username string) bool {
@@ -73,7 +82,7 @@ func (u ObjectUserBinding) Match(obj unstructured.Unstructured, username string)
 	return false
 }
 
-func LoadConfig(namespace, name string) (*ManifestIntegrityConfig, error) {
+func LoadConfig(namespace, name string) (*ConstraintObject, error) {
 	obj, err := kubeutil.GetResource("v1", "ConfigMap", namespace, name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -88,7 +97,7 @@ func LoadConfig(namespace, name string) (*ManifestIntegrityConfig, error) {
 	if !found {
 		return nil, errors.New(fmt.Sprintf("`%s` is not found in configmap", configKeyInConfigMap))
 	}
-	var conf *ManifestIntegrityConfig
+	var conf *ConstraintObject
 	err = yaml.Unmarshal([]byte(cfgBytes), &conf)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", conf))

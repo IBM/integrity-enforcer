@@ -18,12 +18,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 
 	k8smnfconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
+	"github.com/IBM/integrity-shield/admission-controller/pkg/shield"
 	log "github.com/sirupsen/logrus"
 	"github.com/yuji-watanabe-jp/k8s-manifest-sigstore/pkg/k8smanifest"
 
@@ -31,7 +30,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -69,34 +67,34 @@ func (h *k8sManifestHandler) Handle(ctx context.Context, req admission.Request) 
 
 	log.Info("[DEBUG] request: ", req.Kind, ", ", req.Name)
 
-	//unmarshal admission request object
-	var rawObj unstructured.Unstructured
-	objectBytes := req.AdmissionRequest.Object.Raw
-	err := json.Unmarshal(objectBytes, &rawObj)
-	if err != nil {
-		log.Errorf("failed to Unmarshal a requested object into %T; %s", rawObj, err.Error())
-		return admission.Allowed("error but allow for development")
-	}
-
-	//config (constraint) を取る
+	//load config (constraint)
 	constraints, err := getConstraints()
 	if err != nil {
 		log.Errorf("failed to load manifest integrity config; %s", err.Error())
 		return admission.Allowed("error but allow for development")
 	}
 
-	results := []ResultFromRequestHandler{}
+	results := []shield.ResultFromRequestHandler{}
 
 	for _, constraint := range constraints {
 
-		//TODO: match check
+		//TODO: match check: kind, namespace
+		isMatched := matchCheck(req, constraint.Match)
+		if !isMatched {
+			r := shield.ResultFromRequestHandler{
+				Allow:   true,
+				Message: "not protected",
+			}
+			results = append(results, r)
+			continue
+		}
 
 		//TODO: pick parameters from constaint
-		paramObj := getParametersFromConstraint(constraint)
+		paramObj := k8smnfconfig.GetParametersFromConstraint(constraint)
 
-		//TODO: call request handler
+		// TODO: call request handler
 		// TODO: receive result from request handler (allow, message)
-		r := requestHandler(req, paramObj)
+		r := shield.RequestHandler(req, paramObj)
 
 		results = append(results, *r)
 	}
@@ -109,129 +107,58 @@ func (h *k8sManifestHandler) Handle(ctx context.Context, req admission.Request) 
 	// TODO: update status
 
 	// return admission response
-	if ar.allow {
-		return admission.Allowed(ar.message)
+	if ar.Allow {
+		return admission.Allowed(ar.Message)
 	} else {
-		return admission.Denied(ar.message)
+		return admission.Denied(ar.Message)
 	}
 }
 
-//RequestHandler
-
-func requestHandler(req admission.Request, paramObj *ParameterObject) *ResultFromRequestHandler {
-
-	//unmarshal admission request object
-	var rawObj unstructured.Unstructured
-	objectBytes := req.AdmissionRequest.Object.Raw
-	err := json.Unmarshal(objectBytes, &rawObj)
-	if err != nil {
-		log.Errorf("failed to Unmarshal a requested object into %T; %s", rawObj, err.Error())
-		return &ResultFromRequestHandler{
-			allow:   true,
-			message: "error but allow for development",
-		}
-	}
-
-	//filter by user
-	skipUserMatched := paramObj.SkipUsers.Match(rawObj, req.AdmissionRequest.UserInfo.Username)
-
-	//check scope
-	inScopeObjMatched := paramObj.InScopeObjects.Match(rawObj)
-
-	allow := true
-	message := ""
-	if skipUserMatched {
-		allow = true
-		message = "ignore user config matched"
-	} else if !inScopeObjMatched {
-		allow = true
-		message = "this resource is not in scope of verification"
-	} else {
-		imageRef := paramObj.ImageRef
-		keyPath := ""
-		if paramObj.KeySecertName != "" {
-			keyPath, _ = k8smnfconfig.LoadKeySecret(paramObj.KeySecertNamespace, paramObj.KeySecertName)
-		}
-		vo := &(paramObj.VerifyOption)
-		result, err := k8smanifest.VerifyResource(rawObj, imageRef, keyPath, vo)
-		if err != nil {
-			log.Errorf("failed to check a requested resource; %s", err.Error())
-			return &ResultFromRequestHandler{
-				allow:   true,
-				message: "error but allow for development",
-			}
-		}
-		if result.InScope {
-			if result.Verified {
-				allow = true
-				message = fmt.Sprintf("singed by a valid signer: %s", result.Signer)
-			} else {
-				allow = false
-				message = "no signature found"
-				if result.Diff != nil && result.Diff.Size() > 0 {
-					message = fmt.Sprintf("diff found: %s", result.Diff.String())
-				}
-				if result.Signer != "" {
-					message = fmt.Sprintf("signer config not matched, this is signed by %s", result.Signer)
-				}
-			}
-		} else {
-			allow = true
-			message = "not protected"
-		}
-	}
-
-	r := &ResultFromRequestHandler{
-		allow:   allow,
-		message: message,
-	}
-
-	log.Info("[DEBUG] result:", message)
-
-	return r
-}
-
-type ParameterObject struct {
-	k8smanifest.VerifyOption `json:""`
-	InScopeObjects           k8smanifest.ObjectReferenceList    `json:"inScopeObjects,omitempty"`
-	SkipUsers                k8smnfconfig.ObjectUserBindingList `json:"skipUsers,omitempty"`
-	KeySecertName            string                             `json:"keySecretName,omitempty"`
-	KeySecertNamespace       string                             `json:"keySecretNamespace,omitempty"`
-	ImageRef                 string                             `json:"imageRef,omitempty"`
-}
-
-type ConstraintObject struct {
-	constraint string
-}
-
-type ResultFromRequestHandler struct {
-	allow   bool
-	message string
-}
-
-func getConstraints() ([]k8smnfconfig.ManifestIntegrityConfig, error) {
+func getConstraints() ([]k8smnfconfig.ConstraintObject, error) {
 	//TODO: constraintに変える
 	configNamespace := getPodNamespace()
 	configName := defaultManifestIntegrityConfigMapName
 	constraint, err := k8smnfconfig.LoadConfig(configNamespace, configName)
-	constratins := []k8smnfconfig.ManifestIntegrityConfig{}
+	log.Info("[DEBUG] constraint: ", constraint)
+	constraints := []k8smnfconfig.ConstraintObject{}
 	if err == nil && constraint != nil {
-		constratins = append(constratins, *constraint)
+		constraints = append(constraints, *constraint)
 	}
-	return constratins, err
-}
-
-func getParametersFromConstraint(constraint k8smnfconfig.ManifestIntegrityConfig) *ParameterObject {
-	return &ParameterObject{}
+	return constraints, err
 }
 
 type AccumulatedResult struct {
-	allow   bool
-	message string
+	Allow   bool
+	Message string
 }
 
-func getAccumulatedResult(results []ResultFromRequestHandler) *AccumulatedResult {
-	return &AccumulatedResult{}
+func matchCheck(req admission.Request, match k8smanifest.ObjectReferenceList) bool {
+	// TODO: fix
+	if len(match) == 0 {
+		return true
+	}
+	for _, m := range match {
+		if m.Kind == "" {
+			return true
+		}
+		if m.Kind == req.Kind.Kind {
+			return true
+		}
+	}
+	return false
+}
+
+func getAccumulatedResult(results []shield.ResultFromRequestHandler) *AccumulatedResult {
+	accumulatedRes := &AccumulatedResult{}
+	for _, result := range results {
+		if !result.Allow {
+			accumulatedRes.Allow = false
+			accumulatedRes.Message = result.Message
+			return accumulatedRes
+		}
+	}
+	accumulatedRes.Allow = true
+	return accumulatedRes
 }
 
 func init() {
