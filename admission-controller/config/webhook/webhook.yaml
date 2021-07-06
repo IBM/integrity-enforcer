@@ -20,9 +20,9 @@ webhooks:
       k8s-manifest-sigstore: "true"
   rules:
   - apiGroups:
-    - ''
+    - '*'
     apiVersions:
-    - 'v1'
+    - '*'
     operations:
     - CREATE
     - UPDATE
