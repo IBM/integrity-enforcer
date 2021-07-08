@@ -179,10 +179,9 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			keyPath, _ = k8smnfconfig.LoadKeySecret(paramObj.KeySecertNamespace, paramObj.KeySecertName)
 		}
 		vo := setVerifyOption(&paramObj.VerifyOption, rhconfig)
-		//vo := &(paramObj.VerifyOption)
 		// call VerifyResource with resource, verifyOption, keypath, imageRef
 		result, err := k8smanifest.VerifyResource(resource, imageRef, keyPath, vo)
-		log.Info("[DEBUG] result from VerifyResource: ", result)
+		log.Info("[DEBUG] VerifyResource: ", result)
 		if err != nil {
 			log.Errorf("failed to check a requested resource; %s", err.Error())
 			return &ResultFromRequestHandler{
@@ -216,15 +215,15 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	}
 
 	// log
-	logMsg := fmt.Sprintf("%s %s %s > %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(r.Allow), r.Message)
-	log.Info("[DEBUG] RequestHandler result: ", logMsg)
+	logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(r.Allow), r.Message)
+	log.Info("[DEBUG] RequestHandler: ", logMsg)
 
 	return r
 }
 
 type ResultFromRequestHandler struct {
-	Allow   bool
-	Message string
+	Allow   bool   `json:"allow"`
+	Message string `json:"message"`
 }
 
 func isUpdateRequest(operation v1.Operation) bool {
@@ -293,7 +292,7 @@ func setVerifyOption(vo *k8smanifest.VerifyOption, config *k8smnfconfig.RequestH
 	fields = append(fields, vo.IgnoreFields...)
 	fields = append(fields, config.RequestFilterProfile.IgnoreFields...)
 	vo.IgnoreFields = fields
-	log.Info("[DEBUG] setVerifyOption: ", vo)
+	// log.Info("[DEBUG] setVerifyOption: ", vo)
 	return vo
 }
 

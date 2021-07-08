@@ -108,7 +108,7 @@ func ProcessRequest(req admission.Request) admission.Response {
 	// TODO: update status
 
 	// return admission response
-	logMsg := fmt.Sprintf("%s %s %s > %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(ar.Allow), ar.Message)
+	logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(ar.Allow), ar.Message)
 	log.Info("[DEBUG] AC2 result: ", logMsg)
 	if ar.Allow {
 		return admission.Allowed(ar.Message)

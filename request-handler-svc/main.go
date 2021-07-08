@@ -75,6 +75,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("unmarshaling input data as map[string]interface{}: %v", err), http.StatusInternalServerError)
 		return
 	}
+
 	requestIf, requestFound := inputMap["request"]
 	if !requestFound {
 		http.Error(w, "failed to find `request` key in input object", http.StatusInternalServerError)
@@ -104,16 +105,15 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to convert `parameters` in input object into %T", parameters), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("parameters:", parameters)
-	result := handler.RequestHandler(*request, parameters)
 
+	result := handler.RequestHandler(*request, parameters)
 	resp, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("marshaling request handler result: %v", err), http.StatusInternalServerError)
 		return
 
 	}
-	// fmt.Println("Response:", string(resp))
+	fmt.Println("Response:", string(resp))
 
 	if _, err := w.Write(resp); err != nil {
 		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)

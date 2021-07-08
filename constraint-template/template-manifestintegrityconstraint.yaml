@@ -1,0 +1,151 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: manifestintegrityconstraint
+spec:
+  crd:
+    spec:
+      names:
+        kind: ManifestIntegrityConstraint
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          properties:
+            options:
+              type: array
+              items: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package integrityshieldcheck
+        violation[{"msg": msg}] {
+          not is_allowed_kind
+          not is_excluded
+          is_create_or_update
+          ishield_input := {"parameters":input.parameters, "request":input.review}
+          reqdata := json.marshal(ishield_input)
+          url := "https://integrity-shield-api.k8s-manifest-sigstore.svc:8123/api/request"
+          resp := http_post(url, reqdata)
+          resp.status_code == 200
+          result := json.unmarshal(resp.raw_body)
+          result.allow == false
+          msg := sprintf("denied; %v", [result])
+        }
+
+        http_post(url, postdata) = resp {
+          resp := http.send({
+            "url": url,
+            "method": "POST",
+            "headers": {
+              "Accept": "application/json",
+              "Content-type": "application/json",
+            },
+            "raw_body": postdata,
+            "tls_insecure_skip_verify": true
+          })
+        }
+        
+        # request check
+        is_create_or_update { is_create }
+        is_create_or_update { is_update }
+        is_create { input.review.operation == "CREATE" }
+        is_update { input.review.operation == "UPDATE" }
+
+        # shield config: allow
+        is_allowed_kind { kinds[_].kind == input.review.kind.kind }
+        # shield config: inScopeNamespaceSelector
+        is_excluded { exclude_namespaces[_] = input.review.namespace}
+
+        # default setting
+        kinds = [
+                  {
+                    "kind": "Event"
+                  },
+                  {
+                    "kind": "Lease"
+                  },
+                  {
+                    "kind": "Endpoints"
+                  },
+                  {
+                    "kind": "TokenReview"
+                  },
+                  {
+                    "kind": "SubjectAccessReview"
+                  },
+                  {
+                    "kind": "SelfSubjectAccessReview"
+                  }
+                ]
+        exclude_namespaces = [
+                              "ignored-ns",
+                              "kube-node-lease",
+                              "kube-public",
+                              "kube-storage-version-migrator-operator",
+                              "kube-system",
+                              "open-cluster-management",
+                              "open-cluster-management-hub",
+                              "open-cluster-management-agent",
+                              "open-cluster-management-agent-addon",
+                              "openshift",
+                              "openshift-apiserver",
+                              "openshift-apiserver-operator",
+                              "openshift-authentication",
+                              "openshift-authentication-operator",
+                              "openshift-cloud-credential-operator",
+                              "openshift-cluster-csi-drivers",
+                              "openshift-cluster-machine-approver",
+                              "openshift-cluster-node-tuning-operator",
+                              "openshift-cluster-samples-operator",
+                              "openshift-cluster-storage-operator",
+                              "openshift-cluster-version",
+                              "openshift-compliance",
+                              "openshift-config",
+                              "openshift-config-managed",
+                              "openshift-config-operator",
+                              "openshift-console",
+                              "openshift-console-operator",
+                              "openshift-console-user-settings",
+                              "openshift-controller-manager",
+                              "openshift-controller-manager-operator",
+                              "openshift-dns",
+                              "openshift-dns-operator",
+                              "openshift-etcd",
+                              "openshift-etcd-operator",
+                              "openshift-gatekeeper-system",
+                              "openshift-image-registry",
+                              "openshift-infra",
+                              "openshift-ingress",
+                              "openshift-ingress-canary",
+                              "openshift-ingress-operator",
+                              "openshift-insights",
+                              "openshift-kni-infra",
+                              "openshift-kube-apiserver",
+                              "openshift-kube-apiserver-operator",
+                              "openshift-kube-controller-manager",
+                              "openshift-kube-controller-manager-operator",
+                              "openshift-kube-scheduler",
+                              "openshift-kube-scheduler-operator",
+                              "openshift-kube-storage-version-migrator",
+                              "openshift-kube-storage-version-migrator-operator",
+                              "openshift-kubevirt-infra",
+                              "openshift-machine-api",
+                              "openshift-machine-config-operator",
+                              "openshift-marketplace",
+                              "openshift-monitoring",
+                              "openshift-multus",
+                              "openshift-network-diagnostics",
+                              "openshift-network-operator",
+                              "openshift-node",
+                              "openshift-oauth-apiserver",
+                              "openshift-openstack-infra",
+                              "openshift-operators",
+                              "openshift-operator-lifecycle-manager",
+                              "openshift-ovirt-infra",
+                              "openshift-ovn-kubernetes",
+                              "openshift-sdn",
+                              "openshift-service-ca",
+                              "openshift-service-ca-operator",
+                              "openshift-user-workload-monitoring",
+                              "openshift-vsphere-infra"
+                          ]
