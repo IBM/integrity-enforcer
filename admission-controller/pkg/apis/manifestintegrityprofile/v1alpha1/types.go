@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	k8smnfconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
+	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
 	"github.com/jinzhu/copier"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

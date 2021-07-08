@@ -5,6 +5,8 @@ metadata:
   namespace: k8s-manifest-sigstore
 data:
   config.yaml: |
+    log:
+      level: Info
     requestFilterProfile: 
       skipObjects:
       - kind: ConfigMap

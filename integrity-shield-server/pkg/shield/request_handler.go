@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handler
+package shield
 
 import (
 	"bytes"
@@ -25,11 +25,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8smnfconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
+	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
@@ -92,7 +91,7 @@ func RequestHandlerController(remote bool, req admission.Request, paramObj *k8sm
 				Message: "error but allow for development",
 			}
 		}
-		log.Info("[DEBUG] Response from remote request handler ", r)
+		log.Debug("Response from remote request handler ", r)
 		return r
 	} else {
 		// local request handler
@@ -115,7 +114,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		}
 	}
 
-	// load shield config
+	// load request handler config
 	rhconfig, err := loadRequestHandlerConfig()
 	if err != nil {
 		log.Errorf("failed to load shield config", err.Error())
@@ -124,6 +123,10 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			Message: "error but allow for development",
 		}
 	}
+
+	// setup log
+	logger := k8smnfconfig.NewLogger(rhconfig.Log.Level, req)
+
 	commonSkipUserMatched := false
 	skipObjectMatched := false
 	if rhconfig != nil {
@@ -145,7 +148,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		ignoreFields := getMatchedIgnoreFields(paramObj.IgnoreFields, rhconfig.RequestFilterProfile.IgnoreFields, resource)
 		mutated, err := mutationCheck(req.AdmissionRequest.OldObject.Raw, req.AdmissionRequest.Object.Raw, ignoreFields)
 		if err != nil {
-			log.Errorf("failed to check mutation", err.Error())
+			logger.Errorf("failed to check mutation", err.Error())
 			return &ResultFromRequestHandler{
 				Allow:   true,
 				Message: "error but allow for development",
@@ -181,9 +184,9 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		vo := setVerifyOption(&paramObj.VerifyOption, rhconfig)
 		// call VerifyResource with resource, verifyOption, keypath, imageRef
 		result, err := k8smanifest.VerifyResource(resource, imageRef, keyPath, vo)
-		log.Info("[DEBUG] VerifyResource: ", result)
+		logger.Debug("VerifyResource: ", result)
 		if err != nil {
-			log.Errorf("failed to check a requested resource; %s", err.Error())
+			logger.Errorf("failed to check a requested resource; %s", err.Error())
 			return &ResultFromRequestHandler{
 				Allow:   true,
 				Message: "error but allow for development",
@@ -215,8 +218,8 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	}
 
 	// log
-	logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(r.Allow), r.Message)
-	log.Info("[DEBUG] RequestHandler: ", logMsg)
+	// logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(r.Allow), r.Message)
+	logger.Debug("RequestHandler: ", r)
 
 	return r
 }

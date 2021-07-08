@@ -27,7 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	ac "github.com/IBM/integrity-shield/admission-controller/pkg/shield"
+	ac "github.com/IBM/integrity-shield/admission-controller/pkg/controller"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"

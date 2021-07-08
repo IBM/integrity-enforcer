@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"path"
 
-	k8smnfconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
-	"github.com/IBM/integrity-shield/admission-controller/pkg/handler"
+	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
+	"github.com/IBM/integrity-shield/integrity-shield-server/pkg/shield"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -106,14 +106,14 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := handler.RequestHandler(*request, parameters)
+	result := shield.RequestHandler(*request, parameters)
 	resp, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("marshaling request handler result: %v", err), http.StatusInternalServerError)
 		return
 
 	}
-	fmt.Println("Response:", string(resp))
+	log.Info("Response:", string(resp))
 
 	if _, err := w.Write(resp); err != nil {
 		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)

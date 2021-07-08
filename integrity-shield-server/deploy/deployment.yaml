@@ -40,6 +40,10 @@ spec:
           env:
             - name: SHIELD_NS
               value: k8s-manifest-sigstore
+            - name: REQUEST_HANDLER_CONFIG_KEY
+              value: "config.yaml"
+            - name: REQUEST_HANDLER_CONFIG_NAME
+              value: "request-handler-config"
           ports:
             - name: ishield-api
               containerPort: 8080
@@ -49,32 +53,11 @@ spec:
             - name: ishield-api-certs
               readOnly: true
               mountPath: /run/secrets/tls
-          image: localhost:5000/k8s-manifest-sigstore-request-handler-svc:0.1.6
+          image: localhost:5000/k8s-manifest-sigstore-integrity-shield:0.1.0
       serviceAccount: ishield-sa
       volumes:
         - name: ishield-api-certs
           secret:
             secretName: ishield-api-tls
             defaultMode: 420
-    # spec:
-    #   serviceAccountName: sample-server-user
-    #   containers:
-    #   - name: ishield-api
-    #     image: localhost:5000/k8s-manifest-sigstore-request-handler-svc:0.1.6
-    #     env:
-    #     - name: SHIELD_NS
-    #       value: k8s-manifest-sigstore
-    #     resources:
-    #       limits:
-    #         memory: "128Mi"
-    #         cpu: "500m"
-        # ports:
-        # - containerPort: 8080
-      #   volumeMounts:
-      #   - mountPath: /sample-signer-keyconfig/pgp/
-      #     name: sample-signer-keyconfig
-      # volumes:
-      # - name: sample-signer-keyconfig
-      #   secret:
-      #     defaultMode: 420
-      #     secretName: sample-server-secret
+

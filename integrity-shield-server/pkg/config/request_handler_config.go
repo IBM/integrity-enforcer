@@ -24,10 +24,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 type RequestHandlerConfig struct {
@@ -40,6 +41,7 @@ type RequestHandlerConfig struct {
 }
 
 type LogConfig struct {
+	Level string `json:"level,omitempty"`
 }
 
 type ImageVerificationConfig struct {
@@ -52,6 +54,35 @@ type RequestFilterProfile struct {
 	SkipObjects  k8smanifest.ObjectReferenceList    `json:"skipObjects,omitempty"`
 	SkipUsers    ObjectUserBindingList              `json:"skipUsers,omitempty"`
 	IgnoreFields k8smanifest.ObjectFieldBindingList `json:"ignoreFields,omitempty"`
+}
+
+func NewLogger(level string, req admission.Request) *log.Logger {
+	logger := log.New()
+	logger.SetFormatter(&log.JSONFormatter{})
+	// set field
+	logger.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+	})
+	// set level
+	if level == "Trace" {
+		logger.SetLevel(log.TraceLevel)
+	}
+	if level == "Info" {
+		logger.SetLevel(log.InfoLevel)
+	}
+	if level == "Debug" {
+		logger.SetLevel(log.DebugLevel)
+	}
+	if level == "Warn" {
+		logger.SetLevel(log.WarnLevel)
+	}
+	if level == "Error" {
+		logger.SetLevel(log.ErrorLevel)
+	}
+	return logger
 }
 
 func LoadKeySecret(keySecertNamespace, keySecertName string) (string, error) {

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package shield
+package controller
 
 import (
 	"context"
@@ -26,8 +26,9 @@ import (
 
 	miprofile "github.com/IBM/integrity-shield/admission-controller/pkg/apis/manifestintegrityprofile/v1alpha1"
 	mipclient "github.com/IBM/integrity-shield/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1alpha1"
-	k8smnfconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
-	"github.com/IBM/integrity-shield/admission-controller/pkg/handler"
+	acconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
+	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
+	"github.com/IBM/integrity-shield/integrity-shield-server/pkg/shield"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	k8smnfutil "github.com/sigstore/k8s-manifest-sigstore/pkg/util"
@@ -42,7 +43,7 @@ import (
 
 const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "k8s-manifest-sigstore"
-const defaultShieldConfigMapName = "shield-config"
+const defaultControllerConfigName = "k8s-manifest-controller-config"
 
 type AccumulatedResult struct {
 	Allow   bool
@@ -74,14 +75,14 @@ func ProcessRequest(req admission.Request) admission.Response {
 		return admission.Allowed("error but allow for development")
 	}
 
-	results := []handler.ResultFromRequestHandler{}
+	results := []shield.ResultFromRequestHandler{}
 
 	for _, constraint := range constraints {
 
 		//match check: kind, namespace, label
 		isMatched := matchCheck(req, constraint.Match)
 		if !isMatched {
-			r := handler.ResultFromRequestHandler{
+			r := shield.ResultFromRequestHandler{
 				Allow:   true,
 				Message: "not protected",
 			}
@@ -94,7 +95,7 @@ func ProcessRequest(req admission.Request) admission.Response {
 
 		// call request handler & receive result from request handler (allow, message)
 		useRemote, _ := strconv.ParseBool(os.Getenv("USE_REMOTE_HANDLER"))
-		r := handler.RequestHandlerController(useRemote, req, paramObj)
+		r := shield.RequestHandlerController(useRemote, req, paramObj)
 		// r := handler.RequestHandler(req, paramObj)
 
 		results = append(results, *r)
@@ -109,7 +110,7 @@ func ProcessRequest(req admission.Request) admission.Response {
 
 	// return admission response
 	logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(ar.Allow), ar.Message)
-	log.Info("[DEBUG] AC2 result: ", logMsg)
+	log.Info("AC2 result: ", logMsg)
 	if ar.Allow {
 		return admission.Allowed(ar.Message)
 	} else {
@@ -121,21 +122,20 @@ func GetParametersFromConstraint(constraint miprofile.ManifestIntegrityProfileSp
 	return &constraint.Parameters
 }
 
-func loadShieldConfig() (*k8smnfconfig.ShieldConfig, error) {
+func loadShieldConfig() (*acconfig.ShieldConfig, error) {
 	namespace := os.Getenv("POD_NAMESPACE")
 	if namespace == "" {
 		namespace = defaultPodNamespace
 	}
-	configName := os.Getenv("SHIELD_CONFIG_NAME")
+	configName := os.Getenv("CONTROLLER_CONFIG_NAME")
 	if configName == "" {
-		configName = defaultShieldConfigMapName
+		configName = defaultControllerConfigName
 	}
-	configKey := os.Getenv("SHIELD_CONFIG_KEY")
+	configKey := os.Getenv("CONTROLLER_CONFIG_KEY")
 	if configKey == "" {
 		configKey = defaultConfigKeyInConfigMap
 	}
 	// load
-	// log.Info("[DEBUG] loadShieldConfig: ", namespace, ", ", configName)
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return nil, nil
@@ -154,12 +154,11 @@ func loadShieldConfig() (*k8smnfconfig.ShieldConfig, error) {
 	if !found {
 		return nil, errors.New(fmt.Sprintf("`%s` is not found in configmap", configKey))
 	}
-	var sc *k8smnfconfig.ShieldConfig
+	var sc *acconfig.ShieldConfig
 	err = yaml.Unmarshal([]byte(cfgBytes), &sc)
 	if err != nil {
 		return sc, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", sc))
 	}
-	// log.Info("[DEBUG] ShieldConfig: ", sc)
 	return sc, nil
 }
 
@@ -204,7 +203,6 @@ func matchCheck(req admission.Request, match miprofile.MatchCondition) bool {
 	labelMatched = checkLabelMatch(req, match.LabelSelector)
 	nslabelMatched = checkNamespaceLabelMatch(req.Namespace, match.NamespaceSelector)
 
-	// TODO: confirm inScope condition (nsMatch and/or nsLabelMatch)
 	if nsMatched && kindsMatched && nslabelMatched && labelMatched {
 		return true
 	}
@@ -314,7 +312,7 @@ func checkKindMatch(req admission.Request, match []miprofile.Kinds) bool {
 	return matched
 }
 
-func getAccumulatedResult(results []handler.ResultFromRequestHandler) *AccumulatedResult {
+func getAccumulatedResult(results []shield.ResultFromRequestHandler) *AccumulatedResult {
 	denyMessages := []string{}
 	allowMessages := []string{}
 	accumulatedRes := &AccumulatedResult{}

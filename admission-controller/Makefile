@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-IMG ?= localhost:5000/k8s-manifest-sigstore:dev
+IMG ?= localhost:5000/k8s-manifest-sigstore-admission-controller:dev
 
 TMP_KUSTOMIZE_DIR ?= /tmp/k8s-manifest-sigstore
 

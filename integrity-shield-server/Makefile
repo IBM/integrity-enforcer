@@ -1,5 +1,5 @@
-NAME=localhost:5000/k8s-manifest-sigstore-request-handler-svc
-VERSION=0.1.6
+NAME=localhost:5000/k8s-manifest-sigstore-integrity-shield
+VERSION=0.1.0
 
 CERT_DIR ?= cert/
 SERVICE_NAME ?= integrity-shield-api

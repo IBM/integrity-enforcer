@@ -78,7 +78,6 @@ spec:
                   }
                 ]
         exclude_namespaces = [
-                              "ignored-ns",
                               "kube-node-lease",
                               "kube-public",
                               "kube-storage-version-migrator-operator",
