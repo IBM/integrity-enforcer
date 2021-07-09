@@ -32,7 +32,7 @@ spec:
         - name: CONTROLLER_CONFIG_KEY
           value: "config.yaml"
         - name: CONTROLLER_CONFIG_NAME
-          value: "manifest-integrity-controller-config"
+          value: "admission-controller-config"
         - name: REQUEST_HANDLER_CONFIG_KEY
           value: "config.yaml"
         - name: REQUEST_HANDLER_CONFIG_NAME

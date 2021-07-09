@@ -43,7 +43,7 @@ import (
 
 const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "k8s-manifest-sigstore"
-const defaultControllerConfigName = "k8s-manifest-controller-config"
+const defaultControllerConfigName = "admission-controller-config"
 
 type AccumulatedResult struct {
 	Allow   bool
