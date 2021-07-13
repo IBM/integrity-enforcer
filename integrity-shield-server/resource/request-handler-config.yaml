@@ -12,10 +12,10 @@ data:
       - kind: ConfigMap
         name: kube-root-ca.crt
       ignoreFields:
-      - objects:
-        - kind: ClusterServiceVersion
-        fields:
+      - fields:
         - metadata.namespace
+        objects:
+        - kind: ClusterServiceVersion
       - fields:
         - metadata.managedFields.*
         - metadata.resourceVersion
@@ -23,6 +23,12 @@ data:
         - metadata.annotations.control-plane.alpha.kubernetes.io/leader
         - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
         - metadata.finalizers*
+        - metadata.annotations.namespace
+        - metadata.annotations.deprecated.daemonset.template.generation
+        - metadata.creationTimestamp
+        - metadata.uid
+        - metadata.generation
+        - status
         objects:
         - name: '*'
       - fields:

@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -117,11 +118,15 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	// load request handler config
 	rhconfig, err := loadRequestHandlerConfig()
 	if err != nil {
-		log.Errorf("failed to load shield config", err.Error())
+		log.Errorf("failed to load request handler config", err.Error())
 		return &ResultFromRequestHandler{
 			Allow:   true,
 			Message: "error but allow for development",
 		}
+	}
+	if rhconfig == nil {
+		log.Warning("request handler config is empty")
+		rhconfig = &k8smnfconfig.RequestHandlerConfig{}
 	}
 
 	// setup log
@@ -132,8 +137,8 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	if rhconfig != nil {
 		//filter by user listed in common profile
 		commonSkipUserMatched = rhconfig.RequestFilterProfile.SkipUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
-		// ignore object
-		skipObjectMatched = rhconfig.RequestFilterProfile.SkipObjects.Match(resource)
+		// skip object
+		skipObjectMatched = skipObjectsMatch(rhconfig.RequestFilterProfile.SkipObjects, resource)
 	}
 
 	// Proccess with parameter
@@ -172,18 +177,12 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		message = "this resource is not in scope of verification"
 	} else if skipObjectMatched {
 		allow = true
-		message = "this resource is not in scope of verification"
+		message = "verification of this resource is skipped"
 	} else {
-		// get verifyOption and imageRef from Parameter
-		imageRef := paramObj.ImageRef
-		// prepare local key for verifyResource
-		keyPath := ""
-		if paramObj.KeySecertName != "" {
-			keyPath, _ = k8smnfconfig.LoadKeySecret(paramObj.KeySecertNamespace, paramObj.KeySecertName)
-		}
-		vo := setVerifyOption(&paramObj.VerifyOption, rhconfig)
+		vo := setVerifyOption(paramObj, rhconfig)
+		logger.Debug("VerifyOption: ", vo)
 		// call VerifyResource with resource, verifyOption, keypath, imageRef
-		result, err := k8smanifest.VerifyResource(resource, imageRef, keyPath, vo)
+		result, err := k8smanifest.VerifyResource(resource, vo)
 		logger.Debug("VerifyResource: ", result)
 		if err != nil {
 			logger.Errorf("failed to check a requested resource; %s", err.Error())
@@ -201,8 +200,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 				message = "no signature found"
 				if result.Diff != nil && result.Diff.Size() > 0 {
 					message = fmt.Sprintf("diff found: %s", result.Diff.String())
-				}
-				if result.Signer != "" {
+				} else if result.Signer != "" {
 					message = fmt.Sprintf("signer config not matched, this is signed by %s", result.Signer)
 				}
 			}
@@ -287,15 +285,33 @@ func mutationCheck(rawOldObject, rawObject []byte, IgnoreFields []string) (bool,
 	return true, nil
 }
 
-func setVerifyOption(vo *k8smanifest.VerifyOption, config *k8smnfconfig.RequestHandlerConfig) *k8smanifest.VerifyOption {
-	if config == nil {
+func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfig.RequestHandlerConfig) *k8smanifest.VerifyResourceOption {
+	// get verifyOption and imageRef from Parameter
+	vo := &paramObj.VerifyResourceOption
+	vo.CheckDryRunForApply = true
+	vo.ImageRef = paramObj.ImageRef
+	// prepare local key for verifyResource
+	if len(paramObj.KeyConfigs) != 0 {
+		keyPathList := []string{}
+		for _, keyconfig := range paramObj.KeyConfigs {
+			if keyconfig.KeySecertName != "" {
+				keyPath, _ := k8smnfconfig.LoadKeySecret(keyconfig.KeySecertNamespace, keyconfig.KeySecertName)
+				keyPathList = append(keyPathList, keyPath)
+			}
+		}
+		keyPathString := strings.Join(keyPathList, ",")
+		if keyPathString != "" {
+			vo.KeyPath = keyPathString
+		}
+	}
+	// merge params in request handler config
+	if len(config.RequestFilterProfile.IgnoreFields) == 0 {
 		return vo
 	}
 	fields := k8smanifest.ObjectFieldBindingList{}
 	fields = append(fields, vo.IgnoreFields...)
 	fields = append(fields, config.RequestFilterProfile.IgnoreFields...)
 	vo.IgnoreFields = fields
-	// log.Info("[DEBUG] setVerifyOption: ", vo)
 	return vo
 }
 
@@ -336,8 +352,19 @@ func loadRequestHandlerConfig() (*k8smnfconfig.RequestHandlerConfig, error) {
 	if err != nil {
 		return sc, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", sc))
 	}
-	// log.Info("[DEBUG] HandlerConfig: ", sc)
 	return sc, nil
+}
+
+func skipObjectsMatch(l k8smanifest.ObjectReferenceList, obj unstructured.Unstructured) bool {
+	if len(l) == 0 {
+		return false
+	}
+	for _, r := range l {
+		if r.Match(obj) {
+			return true
+		}
+	}
+	return false
 }
 
 type RemoteRequestHandlerInputMap struct {
