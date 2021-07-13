@@ -29,6 +29,7 @@ spec:
           resp.status_code == 200
           result := json.unmarshal(resp.raw_body)
           result.allow == false
+          not is_detect_mode
           msg := sprintf("denied; %v", [result])
         }
 
@@ -56,7 +57,11 @@ spec:
         # shield config: inScopeNamespaceSelector
         is_excluded { exclude_namespaces[_] = input.review.namespace}
 
+        # detect mode
+        is_detect_mode { mode == "detect" }
+
         # default setting
+        mode = "enforce"
         kinds = [
                   {
                     "kind": "Event"

@@ -37,6 +37,10 @@ spec:
           value: "config.yaml"
         - name: REQUEST_HANDLER_CONFIG_NAME
           value: "request-handler-config"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: LOG_FORMAT
+          value: "json"
         ports:
         - containerPort: 9443
           name: validator-port

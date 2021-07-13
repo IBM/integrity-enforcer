@@ -6,7 +6,8 @@ metadata:
 data:
   config.yaml: |
     log:
-      level: Info
+      level: info
+      format: json
     requestFilterProfile: 
       skipObjects:
       - kind: ConfigMap

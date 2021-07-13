@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	miprofile "github.com/IBM/integrity-shield/admission-controller/pkg/apis/manifestintegrityprofile/v1alpha1"
 	mipclient "github.com/IBM/integrity-shield/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1alpha1"
@@ -44,10 +45,37 @@ import (
 const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "k8s-manifest-sigstore"
 const defaultControllerConfigName = "admission-controller-config"
+const logLevelEnvKey = "LOG_LEVEL"
+
+var logLevelMap = map[string]log.Level{
+	"panic": log.PanicLevel,
+	"fatal": log.FatalLevel,
+	"error": log.ErrorLevel,
+	"warn":  log.WarnLevel,
+	"info":  log.InfoLevel,
+	"debug": log.DebugLevel,
+	"trace": log.TraceLevel,
+}
 
 type AccumulatedResult struct {
 	Allow   bool
 	Message string
+}
+
+func init() {
+	if os.Getenv("LOG_FORMAT") == "json" {
+		log.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
+	}
+	logLevelStr := os.Getenv(logLevelEnvKey)
+	if logLevelStr == "" {
+		logLevelStr = "info"
+	}
+	logLevel, ok := logLevelMap[logLevelStr]
+	if !ok {
+		logLevel = log.InfoLevel
+	}
+
+	log.SetLevel(logLevel)
 }
 
 func ProcessRequest(req admission.Request) admission.Response {
@@ -57,6 +85,7 @@ func ProcessRequest(req admission.Request) admission.Response {
 		log.Errorf("failed to load shield config; %s", err.Error())
 		return admission.Allowed("error but allow for development")
 	}
+
 	// isScope check
 	inScopeNamespace := config.InScopeNamespaceSelector.Match(req.Namespace)
 	if !inScopeNamespace {
@@ -80,37 +109,53 @@ func ProcessRequest(req admission.Request) admission.Response {
 	for _, constraint := range constraints {
 
 		//match check: kind, namespace, label
-		isMatched := matchCheck(req, constraint.Match)
+		isMatched := matchCheck(req, constraint.Spec.Match)
 		if !isMatched {
 			r := shield.ResultFromRequestHandler{
 				Allow:   true,
 				Message: "not protected",
+				Profile: constraint.Name,
 			}
 			results = append(results, r)
 			continue
 		}
 
 		// pick parameters from constaint
-		paramObj := GetParametersFromConstraint(constraint)
+		paramObj := GetParametersFromConstraint(constraint.Spec)
 
 		// call request handler & receive result from request handler (allow, message)
 		useRemote, _ := strconv.ParseBool(os.Getenv("USE_REMOTE_HANDLER"))
 		r := shield.RequestHandlerController(useRemote, req, paramObj)
 		// r := handler.RequestHandler(req, paramObj)
 
+		r.Profile = constraint.Name
 		results = append(results, *r)
 	}
 
 	// accumulate results from constraints
 	ar := getAccumulatedResult(results)
 
+	// mode check
+	isDetectMode := acconfig.CheckIfDetectOnly(config.Mode)
+	if !ar.Allow && isDetectMode {
+		ar.Allow = true
+		msg := "allowed by detection mode: " + ar.Message
+		ar.Message = msg
+	}
+
 	// TODO: generate events
 
 	// TODO: update status
 
 	// return admission response
-	logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(ar.Allow), ar.Message)
-	log.Info("AC2 result: ", logMsg)
+
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+		"allow":     ar.Allow,
+	}).Info(ar.Message)
 	if ar.Allow {
 		return admission.Allowed(ar.Message)
 	} else {
@@ -162,7 +207,7 @@ func loadShieldConfig() (*acconfig.ShieldConfig, error) {
 	return sc, nil
 }
 
-func LoadConstraints() ([]miprofile.ManifestIntegrityProfileSpec, error) {
+func LoadConstraints() ([]miprofile.ManifestIntegrityProfile, error) {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		return nil, nil
@@ -177,11 +222,11 @@ func LoadConstraints() ([]miprofile.ManifestIntegrityProfileSpec, error) {
 		log.Error("failed to get ManifestIntegrityProfiles:", err.Error())
 		return nil, nil
 	}
-	var constraints []miprofile.ManifestIntegrityProfileSpec
-	for _, mip := range miplist.Items {
-		constraints = append(constraints, mip.Spec)
-	}
-	return constraints, nil
+	// var constraints []miprofile.ManifestIntegrityProfileSpec
+	// for _, mip := range miplist.Items {
+	// 	constraints = append(constraints, mip.Spec)
+	// }
+	return miplist.Items, nil
 }
 
 func matchCheck(req admission.Request, match miprofile.MatchCondition) bool {
@@ -318,10 +363,11 @@ func getAccumulatedResult(results []shield.ResultFromRequestHandler) *Accumulate
 	accumulatedRes := &AccumulatedResult{}
 	for _, result := range results {
 		if !result.Allow {
-			accumulatedRes.Message = result.Message
-			denyMessages = append(denyMessages, result.Message)
+			msg := "[" + result.Profile + "]" + result.Message
+			denyMessages = append(denyMessages, msg)
 		} else {
-			allowMessages = append(allowMessages, result.Message)
+			msg := "[" + result.Profile + "]" + result.Message
+			allowMessages = append(allowMessages, msg)
 		}
 	}
 	if len(denyMessages) != 0 {

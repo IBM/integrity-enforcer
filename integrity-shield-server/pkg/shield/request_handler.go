@@ -92,7 +92,12 @@ func RequestHandlerController(remote bool, req admission.Request, paramObj *k8sm
 				Message: "error but allow for development",
 			}
 		}
-		log.Debug("Response from remote request handler ", r)
+		log.WithFields(log.Fields{
+			"namespace": req.Namespace,
+			"name":      req.Name,
+			"kind":      req.Kind.Kind,
+			"operation": req.Operation,
+		}).Debug("Response from remote request handler ", r)
 		return r
 	} else {
 		// local request handler
@@ -130,7 +135,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	}
 
 	// setup log
-	logger := k8smnfconfig.NewLogger(rhconfig.Log.Level, req)
+	k8smnfconfig.SetupLogger(rhconfig.Log, req)
 
 	commonSkipUserMatched := false
 	skipObjectMatched := false
@@ -153,7 +158,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		ignoreFields := getMatchedIgnoreFields(paramObj.IgnoreFields, rhconfig.RequestFilterProfile.IgnoreFields, resource)
 		mutated, err := mutationCheck(req.AdmissionRequest.OldObject.Raw, req.AdmissionRequest.Object.Raw, ignoreFields)
 		if err != nil {
-			logger.Errorf("failed to check mutation", err.Error())
+			log.Errorf("failed to check mutation", err.Error())
 			return &ResultFromRequestHandler{
 				Allow:   true,
 				Message: "error but allow for development",
@@ -180,12 +185,17 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		message = "verification of this resource is skipped"
 	} else {
 		vo := setVerifyOption(paramObj, rhconfig)
-		logger.Debug("VerifyOption: ", vo)
+		log.Debug("VerifyOption: ", vo)
 		// call VerifyResource with resource, verifyOption, keypath, imageRef
 		result, err := k8smanifest.VerifyResource(resource, vo)
-		logger.Debug("VerifyResource: ", result)
+		log.WithFields(log.Fields{
+			"namespace": req.Namespace,
+			"name":      req.Name,
+			"kind":      req.Kind.Kind,
+			"operation": req.Operation,
+		}).Debug("VerifyResource: ", result)
 		if err != nil {
-			logger.Errorf("failed to check a requested resource; %s", err.Error())
+			log.Errorf("failed to check a requested resource; %s", err.Error())
 			return &ResultFromRequestHandler{
 				Allow:   true,
 				Message: "error but allow for development",
@@ -217,7 +227,13 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 
 	// log
 	// logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(r.Allow), r.Message)
-	logger.Debug("RequestHandler: ", r)
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+		"allow":     r.Allow,
+	}).Info(r.Message)
 
 	return r
 }
@@ -225,6 +241,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 type ResultFromRequestHandler struct {
 	Allow   bool   `json:"allow"`
 	Message string `json:"message"`
+	Profile string `json:"profile,omitempty"`
 }
 
 func isUpdateRequest(operation v1.Operation) bool {

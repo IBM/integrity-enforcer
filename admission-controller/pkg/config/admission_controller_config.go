@@ -25,13 +25,11 @@ type ShieldConfig struct {
 	InScopeNamespaceSelector NamespaceSelector `json:"inScopeNamespaceSelector,omitempty"`
 	Allow                    Allow             `json:"allow,omitempty"`
 	SideEffect               SideEffectConfig  `json:"sideEffect,omitempty"`
-	Patch                    PatchConfig       `json:"skipObjects,omitempty"`
 	Mode                     string            `json:"mode,omitempty"`
 	Options                  []string          `json:"option,omitempty"`
 }
 
 type NamespaceSelector struct {
-	// TODO: check how include works, match in constraint
 	Include []string `json:"include,omitempty"`
 	Exclude []string `json:"exclude,omitempty"`
 }
@@ -46,10 +44,6 @@ type SideEffectConfig struct {
 	CreateIShieldResourceEvent bool `json:"createIShieldResourceEvent"`
 	// MIP
 	UpdateMIPStatusForDeniedRequest bool `json:"updateMIPStatusForDeniedRequest"`
-}
-
-type PatchConfig struct {
-	Enabled bool `json:"enabled,omitempty"`
 }
 
 func (ns NamespaceSelector) Match(rns string) bool {
@@ -96,4 +90,8 @@ func (allow Allow) Match(kind metav1.GroupVersionKind) bool {
 		}
 	}
 	return false
+}
+
+func CheckIfDetectOnly(mode string) bool {
+	return mode == "detect"
 }

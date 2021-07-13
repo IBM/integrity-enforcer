@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
@@ -30,6 +32,18 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
+
+const k8sLogLevelEnvKey = "K8S_MANIFEST_SIGSTORE_LOG_LEVEL"
+
+var logLevelMap = map[string]log.Level{
+	"panic": log.PanicLevel,
+	"fatal": log.FatalLevel,
+	"error": log.ErrorLevel,
+	"warn":  log.WarnLevel,
+	"info":  log.InfoLevel,
+	"debug": log.DebugLevel,
+	"trace": log.TraceLevel,
+}
 
 type RequestHandlerConfig struct {
 	ImageVerificationConfig ImageVerificationConfig `json:"imageVerificationConfig,omitempty"`
@@ -41,7 +55,9 @@ type RequestHandlerConfig struct {
 }
 
 type LogConfig struct {
-	Level string `json:"level,omitempty"`
+	Level                    string `json:"level,omitempty"`
+	ManifestSigstoreLogLevel string `json:"manifestSigstoreLogLevel,omitempty"`
+	Format                   string `json:"format,omitempty"`
 }
 
 type ImageVerificationConfig struct {
@@ -56,33 +72,29 @@ type RequestFilterProfile struct {
 	IgnoreFields k8smanifest.ObjectFieldBindingList `json:"ignoreFields,omitempty"`
 }
 
-func NewLogger(level string, req admission.Request) *log.Logger {
-	logger := log.New()
-	logger.SetFormatter(&log.JSONFormatter{})
-	// set field
-	logger.WithFields(log.Fields{
-		"namespace": req.Namespace,
-		"name":      req.Name,
-		"kind":      req.Kind.Kind,
-		"operation": req.Operation,
-	})
-	// set level
-	if level == "Trace" {
-		logger.SetLevel(log.TraceLevel)
+func SetupLogger(config LogConfig, req admission.Request) {
+	logLevelStr := config.Level
+	k8sLogLevelStr := config.ManifestSigstoreLogLevel
+	if logLevelStr == "" && k8sLogLevelStr == "" {
+		logLevelStr = "info"
+		os.Setenv(k8sLogLevelEnvKey, "info")
 	}
-	if level == "Info" {
-		logger.SetLevel(log.InfoLevel)
+	if logLevelStr == "" && k8sLogLevelStr != "" {
+		logLevelStr = k8sLogLevelStr
 	}
-	if level == "Debug" {
-		logger.SetLevel(log.DebugLevel)
+	if logLevelStr != "" && k8sLogLevelStr == "" {
+		os.Setenv(k8sLogLevelEnvKey, logLevelStr)
 	}
-	if level == "Warn" {
-		logger.SetLevel(log.WarnLevel)
+	logLevel, ok := logLevelMap[logLevelStr]
+	if !ok {
+		logLevel = log.InfoLevel
 	}
-	if level == "Error" {
-		logger.SetLevel(log.ErrorLevel)
+
+	log.SetLevel(logLevel)
+	// format
+	if config.Format == "json" {
+		log.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
 	}
-	return logger
 }
 
 func LoadKeySecret(keySecertNamespace, keySecertName string) (string, error) {

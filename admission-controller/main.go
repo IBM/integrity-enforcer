@@ -21,8 +21,6 @@ import (
 	"flag"
 	"os"
 
-	log "github.com/sirupsen/logrus"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +49,6 @@ type k8sManifestHandler struct {
 }
 
 func (h *k8sManifestHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
-	log.Info("[DEBUG] request: ", req.Kind, ", ", req.Name)
 	res := ac.ProcessRequest(req)
 	return res
 }

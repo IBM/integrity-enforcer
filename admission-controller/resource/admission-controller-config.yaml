@@ -84,3 +84,4 @@ data:
       - kind: TokenReview
       - kind: SubjectAccessReview
       - kind: SelfSubjectAccessReview
+    mode: enforce
