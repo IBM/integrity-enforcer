@@ -18,26 +18,22 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	miprofile "github.com/IBM/integrity-shield/admission-controller/pkg/apis/manifestintegrityprofile/v1alpha1"
-	mipclient "github.com/IBM/integrity-shield/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1alpha1"
 	acconfig "github.com/IBM/integrity-shield/admission-controller/pkg/config"
-	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
 	"github.com/IBM/integrity-shield/integrity-shield-server/pkg/shield"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	k8smnfutil "github.com/sigstore/k8s-manifest-sigstore/pkg/util"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -46,6 +42,11 @@ const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "k8s-manifest-sigstore"
 const defaultControllerConfigName = "admission-controller-config"
 const logLevelEnvKey = "LOG_LEVEL"
+
+const (
+	EventTypeAnnotationKey       = "integrityshield.io/eventType"
+	EventTypeAnnotationValueDeny = "deny"
+)
 
 var logLevelMap = map[string]log.Level{
 	"panic": log.PanicLevel,
@@ -80,9 +81,9 @@ func init() {
 
 func ProcessRequest(req admission.Request) admission.Response {
 	// load ac2 config
-	config, err := loadShieldConfig()
+	config, err := loadAdmissionControllerConfig()
 	if err != nil {
-		log.Errorf("failed to load shield config; %s", err.Error())
+		log.Errorf("failed to load admission controller config; %s", err.Error())
 		return admission.Allowed("error but allow for development")
 	}
 
@@ -144,11 +145,15 @@ func ProcessRequest(req admission.Request) admission.Response {
 	}
 
 	// TODO: generate events
+	if config.SideEffect.CreateDenyEvent {
+		_ = createOrUpdateEvent(req, ar)
+	}
+	// update status
+	if config.SideEffect.UpdateMIPStatusForDeniedRequest {
+		updateConstraints(isDetectMode, req, results)
+	}
 
-	// TODO: update status
-
-	// return admission response
-
+	// log
 	log.WithFields(log.Fields{
 		"namespace": req.Namespace,
 		"name":      req.Name,
@@ -156,6 +161,8 @@ func ProcessRequest(req admission.Request) admission.Response {
 		"operation": req.Operation,
 		"allow":     ar.Allow,
 	}).Info(ar.Message)
+
+	// return admission response
 	if ar.Allow {
 		return admission.Allowed(ar.Message)
 	} else {
@@ -163,11 +170,7 @@ func ProcessRequest(req admission.Request) admission.Response {
 	}
 }
 
-func GetParametersFromConstraint(constraint miprofile.ManifestIntegrityProfileSpec) *k8smnfconfig.ParameterObject {
-	return &constraint.Parameters
-}
-
-func loadShieldConfig() (*acconfig.ShieldConfig, error) {
+func loadAdmissionControllerConfig() (*acconfig.AdmissionControllerConfig, error) {
 	namespace := os.Getenv("POD_NAMESPACE")
 	if namespace == "" {
 		namespace = defaultPodNamespace
@@ -199,162 +202,12 @@ func loadShieldConfig() (*acconfig.ShieldConfig, error) {
 	if !found {
 		return nil, errors.New(fmt.Sprintf("`%s` is not found in configmap", configKey))
 	}
-	var sc *acconfig.ShieldConfig
+	var sc *acconfig.AdmissionControllerConfig
 	err = yaml.Unmarshal([]byte(cfgBytes), &sc)
 	if err != nil {
 		return sc, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", sc))
 	}
 	return sc, nil
-}
-
-func LoadConstraints() ([]miprofile.ManifestIntegrityProfile, error) {
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return nil, nil
-	}
-	clientset, err := mipclient.NewForConfig(config)
-	if err != nil {
-		log.Error(err)
-		return nil, nil
-	}
-	miplist, err := clientset.ManifestIntegrityProfiles().List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		log.Error("failed to get ManifestIntegrityProfiles:", err.Error())
-		return nil, nil
-	}
-	// var constraints []miprofile.ManifestIntegrityProfileSpec
-	// for _, mip := range miplist.Items {
-	// 	constraints = append(constraints, mip.Spec)
-	// }
-	return miplist.Items, nil
-}
-
-func matchCheck(req admission.Request, match miprofile.MatchCondition) bool {
-	// check if excludedNamespace
-	if len(match.ExcludedNamespaces) != 0 {
-		for _, ens := range match.ExcludedNamespaces {
-			if k8smnfutil.MatchPattern(ens, req.Namespace) {
-				return false
-			}
-		}
-	}
-	// check if matched kinds/namespace/label
-	var nsMatched bool
-	var kindsMatched bool
-	var labelMatched bool
-	var nslabelMatched bool
-	nsMatched = checkNamespaceMatch(req, match.Namespaces)
-	kindsMatched = checkKindMatch(req, match.Kinds)
-	labelMatched = checkLabelMatch(req, match.LabelSelector)
-	nslabelMatched = checkNamespaceLabelMatch(req.Namespace, match.NamespaceSelector)
-
-	if nsMatched && kindsMatched && nslabelMatched && labelMatched {
-		return true
-	}
-	return false
-}
-
-func checkNamespaceLabelMatch(namespace string, labelSelector *metav1.LabelSelector) bool {
-	if labelSelector == nil {
-		return true
-	}
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return false
-	}
-	clientset, err := kubeclient.NewForConfig(config)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-	ns, err := clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
-	if err != nil {
-		log.Errorf("failed to get a namespace `%s`:`%s`", namespace, err.Error())
-		return false
-	}
-	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
-	if err != nil {
-		log.Errorf("failed to convert the LabelSelector api type into a struct that implements labels.Selector; %s", err.Error())
-		return false
-	}
-	labelsMap := ns.GetLabels()
-	labelsSet := labels.Set(labelsMap)
-	matched := selector.Matches(labelsSet)
-	return matched
-}
-
-func checkLabelMatch(req admission.Request, labelSelector *metav1.LabelSelector) bool {
-	if labelSelector == nil {
-		return true
-	}
-	var resource unstructured.Unstructured
-	objectBytes := req.AdmissionRequest.Object.Raw
-	err := json.Unmarshal(objectBytes, &resource)
-	if err != nil {
-		log.Errorf("failed to Unmarshal a requested object into %T; %s", resource, err.Error())
-		return false
-	}
-	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
-	if err != nil {
-		log.Errorf("failed to convert the LabelSelector api type into a struct that implements labels.Selector; %s", err.Error())
-		return false
-	}
-	labelsMap := resource.GetLabels()
-	labelsSet := labels.Set(labelsMap)
-	matched := selector.Matches(labelsSet)
-	return matched
-}
-
-func checkNamespaceMatch(req admission.Request, match []string) bool {
-	matched := false
-	if len(match) == 0 {
-		matched = true
-	} else {
-		// check if cluster scope
-		if req.Namespace == "" {
-			matched = true
-		}
-		for _, ns := range match {
-			if k8smnfutil.MatchPattern(ns, req.Namespace) {
-				matched = true
-			}
-		}
-	}
-	return matched
-}
-
-func checkKindMatch(req admission.Request, match []miprofile.Kinds) bool {
-	matched := false
-	if len(match) == 0 {
-		matched = true
-	} else {
-		for _, kinds := range match {
-			kind := false
-			group := false
-			if len(kinds.Kinds) == 0 {
-				kind = true
-			} else {
-				for _, k := range kinds.Kinds {
-					if k8smnfutil.MatchPattern(k, req.Kind.Kind) {
-						kind = true
-					}
-				}
-			}
-			if len(kinds.ApiGroups) == 0 {
-				group = true
-			} else {
-				for _, g := range kinds.ApiGroups {
-					if k8smnfutil.MatchPattern(g, req.Kind.Group) {
-						group = true
-					}
-				}
-			}
-			if kind && group {
-				matched = true
-			}
-		}
-	}
-	return matched
 }
 
 func getAccumulatedResult(results []shield.ResultFromRequestHandler) *AccumulatedResult {
@@ -378,4 +231,92 @@ func getAccumulatedResult(results []shield.ResultFromRequestHandler) *Accumulate
 	accumulatedRes.Allow = true
 	accumulatedRes.Message = strings.Join(allowMessages, ";")
 	return accumulatedRes
+}
+
+func createOrUpdateEvent(req admission.Request, ar *AccumulatedResult) error {
+	// no event is generated for allowed request
+	if ar.Allow {
+		return nil
+	}
+
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		return err
+	}
+	client, err := kubeclient.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
+	gv := schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
+	evtNamespace := req.Namespace
+	if evtNamespace == "" {
+		evtNamespace = namespace
+	}
+	involvedObject := corev1.ObjectReference{
+		Namespace:  req.Namespace,
+		APIVersion: gv.String(),
+		Kind:       req.Kind.Kind,
+		Name:       req.Name,
+	}
+	evtName := fmt.Sprintf("ishield-deny-%s-%s-%s", strings.ToLower(string(req.Operation)), strings.ToLower(req.Kind.Kind), req.Name)
+	sourceName := "IntegrityShield"
+
+	now := time.Now()
+	evt := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      evtName,
+			Namespace: evtNamespace,
+			Annotations: map[string]string{
+				EventTypeAnnotationKey: EventTypeAnnotationValueDeny,
+			},
+		},
+		InvolvedObject:      involvedObject,
+		Type:                sourceName,
+		Source:              v1.EventSource{Component: sourceName},
+		ReportingController: sourceName,
+		ReportingInstance:   evtName,
+		Action:              evtName,
+		Reason:              "Deny",
+		FirstTimestamp:      metav1.NewTime(now),
+	}
+	isExistingEvent := false
+	current, getErr := client.CoreV1().Events(evtNamespace).Get(context.Background(), evtName, metav1.GetOptions{})
+	if current != nil && getErr == nil {
+		isExistingEvent = true
+		evt = current
+	}
+
+	tmpMessage := ar.Message
+	// Event.Message can have 1024 chars at most
+	if len(tmpMessage) > 1024 {
+		tmpMessage = tmpMessage[:950] + " ... Trimmed. `Event.Message` can have 1024 chars at maximum."
+	}
+	evt.Message = tmpMessage
+	evt.Count = evt.Count + 1
+	evt.EventTime = metav1.NewMicroTime(now)
+	evt.LastTimestamp = metav1.NewTime(now)
+
+	if isExistingEvent {
+		_, err = client.CoreV1().Events(evtNamespace).Update(context.Background(), evt, metav1.UpdateOptions{})
+	} else {
+		_, err = client.CoreV1().Events(evtNamespace).Create(context.Background(), evt, metav1.CreateOptions{})
+	}
+	if err != nil {
+		log.Errorf("failed to generate deny event; %s", err.Error())
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+	}).Debug("Deny event is generated:", evtName)
+
+	return nil
 }

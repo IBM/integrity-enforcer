@@ -85,3 +85,6 @@ data:
       - kind: SubjectAccessReview
       - kind: SelfSubjectAccessReview
     mode: enforce
+    sideEffect: 
+      updateMIPStatusForDeniedRequest: true
+      createDenyEvent: true

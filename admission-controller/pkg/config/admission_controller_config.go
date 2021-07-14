@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ShieldConfig struct {
+type AdmissionControllerConfig struct {
 	InScopeNamespaceSelector NamespaceSelector `json:"inScopeNamespaceSelector,omitempty"`
 	Allow                    Allow             `json:"allow,omitempty"`
 	SideEffect               SideEffectConfig  `json:"sideEffect,omitempty"`
@@ -40,9 +40,8 @@ type Allow struct {
 
 type SideEffectConfig struct {
 	// Event
-	CreateDenyEvent            bool `json:"createDenyEvent"`
-	CreateIShieldResourceEvent bool `json:"createIShieldResourceEvent"`
-	// MIP
+	CreateDenyEvent bool `json:"createDenyEvent"`
+	// ManifestIntegrityProfile
 	UpdateMIPStatusForDeniedRequest bool `json:"updateMIPStatusForDeniedRequest"`
 }
 

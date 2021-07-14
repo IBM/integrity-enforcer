@@ -17,14 +17,17 @@
 package v1alpha1
 
 import (
+	"time"
+
 	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
 	"github.com/jinzhu/copier"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var layout = "2006-01-02 15:04:05"
 
-const maxHistoryLength = 3
+const maxHistoryLength = 10
 
 // ManifestIntegrityProfileSpec defines the desired state of AppEnforcePolicy
 type ManifestIntegrityProfileSpec struct {
@@ -45,8 +48,18 @@ type Kinds struct {
 	ApiGroups []string `json:"apiGroups,omitempty"`
 }
 
-// ManifestIntegrityProfileStatus defines the observed state of AppEnforcePolicy
+// ManifestIntegrityProfileStatus defines the observed state of ManifestIntegrityProfile
 type ManifestIntegrityProfileStatus struct {
+	DenyCount  int                `json:"denyCount,omitempty"`
+	Violations []*ViolationDetail `json:"violations,omitempty"`
+}
+
+type ViolationDetail struct {
+	Namespace string `json:"namespace,omitempty"`
+	Kind      string `json:"kind,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Timestamp string `json:"timestamp,omitempty"`
 }
 
 // +genclient
@@ -78,4 +91,27 @@ type ManifestIntegrityProfileList struct {
 
 func (p *MatchCondition) DeepCopyInto(p2 *MatchCondition) {
 	copier.Copy(&p2, &p)
+}
+
+func (self *ManifestIntegrityProfile) UpdateStatus(request admission.Request, errMsg string) *ManifestIntegrityProfile {
+
+	// Increment DenyCount
+	self.Status.DenyCount = self.Status.DenyCount + 1
+
+	// Update Latest events
+	violation := &ViolationDetail{
+		Kind:      request.Kind.Kind,
+		Namespace: request.Namespace,
+		Name:      request.Name,
+		Message:   errMsg,
+		Timestamp: time.Now().UTC().Format(layout),
+	}
+	newLatestEvents := []*ViolationDetail{}
+	newLatestEvents = append(newLatestEvents, violation)
+	newLatestEvents = append(newLatestEvents, self.Status.Violations...)
+	if len(newLatestEvents) > maxHistoryLength {
+		newLatestEvents = newLatestEvents[:maxHistoryLength]
+	}
+	self.Status.Violations = newLatestEvents
+	return self
 }

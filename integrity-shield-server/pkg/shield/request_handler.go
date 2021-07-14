@@ -226,7 +226,6 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	}
 
 	// log
-	// logMsg := fmt.Sprintf("%s %s %s : %s %s", req.Kind.Kind, req.Name, req.Operation, strconv.FormatBool(r.Allow), r.Message)
 	log.WithFields(log.Fields{
 		"namespace": req.Namespace,
 		"name":      req.Name,

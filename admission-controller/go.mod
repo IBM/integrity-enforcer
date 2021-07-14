@@ -7,11 +7,11 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/jinzhu/copier v0.3.2
 	github.com/pkg/errors v0.9.1
-	github.com/sigstore/k8s-manifest-sigstore v0.0.0-20210624140046-8db49ca6f5c3
+	github.com/sigstore/k8s-manifest-sigstore v0.0.0-20210712080549-eac5e6aa7d2f
 	github.com/sirupsen/logrus v1.8.1
-	k8s.io/api v0.21.1
-	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.21.1
+	k8s.io/api v0.21.2
+	k8s.io/apimachinery v0.21.2
+	k8s.io/client-go v0.21.2
 	sigs.k8s.io/controller-runtime v0.9.0
 )
 
