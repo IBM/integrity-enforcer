@@ -31,6 +31,11 @@ data:
         - metadata.uid
         - metadata.generation
         - status
+        - metadata.annotations.cosign.sigstore.dev/imageRef
+        - metadata.annotations.cosign.sigstore.dev/bundle
+        - metadata.annotations.cosign.sigstore.dev/message
+        - metadata.annotations.cosign.sigstore.dev/certificate
+        - metadata.annotations.cosign.sigstore.dev/signature
         objects:
         - name: '*'
       - fields:

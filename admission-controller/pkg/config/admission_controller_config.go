@@ -39,8 +39,6 @@ type Allow struct {
 }
 
 type SideEffectConfig struct {
-	// Event
-	CreateDenyEvent bool `json:"createDenyEvent"`
 	// ManifestIntegrityProfile
 	UpdateMIPStatusForDeniedRequest bool `json:"updateMIPStatusForDeniedRequest"`
 }

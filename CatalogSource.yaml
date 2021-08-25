@@ -1,0 +1,13 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: new-integrity-shield-operator-catalog
+  namespace: openshift-marketplace # olm
+spec:
+  displayName: Integrity Shield++ Operator
+  image: gcr.io/clean-resource-318209/integrity-shield-operator-index:0.2.2
+  publisher: IBM
+  sourceType: grpc
+  updateStrategy:
+    registryPoll:
+      interval: 45m

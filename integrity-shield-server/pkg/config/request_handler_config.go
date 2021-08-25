@@ -51,6 +51,7 @@ type RequestHandlerConfig struct {
 	SigStoreConfig          SigStoreConfig          `json:"sigStoreConfig,omitempty"`
 	RequestFilterProfile    RequestFilterProfile    `json:"requestFilterProfile,omitempty"`
 	Log                     LogConfig               `json:"log,omitempty"`
+	SideEffectConfig        SideEffectConfig        `json:"sideEffect,omitempty"`
 	Options                 []string
 }
 
@@ -58,6 +59,11 @@ type LogConfig struct {
 	Level                    string `json:"level,omitempty"`
 	ManifestSigstoreLogLevel string `json:"manifestSigstoreLogLevel,omitempty"`
 	Format                   string `json:"format,omitempty"`
+}
+
+type SideEffectConfig struct {
+	// Event
+	CreateDenyEvent bool `json:"createDenyEvent"`
 }
 
 type ImageVerificationConfig struct {
@@ -77,19 +83,19 @@ func SetupLogger(config LogConfig, req admission.Request) {
 	k8sLogLevelStr := config.ManifestSigstoreLogLevel
 	if logLevelStr == "" && k8sLogLevelStr == "" {
 		logLevelStr = "info"
-		os.Setenv(k8sLogLevelEnvKey, "info")
+		k8sLogLevelStr = "info"
 	}
 	if logLevelStr == "" && k8sLogLevelStr != "" {
 		logLevelStr = k8sLogLevelStr
 	}
 	if logLevelStr != "" && k8sLogLevelStr == "" {
-		os.Setenv(k8sLogLevelEnvKey, logLevelStr)
+		k8sLogLevelStr = logLevelStr
 	}
+	_ = os.Setenv(k8sLogLevelEnvKey, k8sLogLevelStr)
 	logLevel, ok := logLevelMap[logLevelStr]
 	if !ok {
 		logLevel = log.InfoLevel
 	}
-
 	log.SetLevel(logLevel)
 	// format
 	if config.Format == "json" {
@@ -97,18 +103,19 @@ func SetupLogger(config LogConfig, req admission.Request) {
 	}
 }
 
-func LoadKeySecret(keySecertNamespace, keySecertName string) (string, error) {
-	obj, err := kubeutil.GetResource("v1", "Secret", keySecertNamespace, keySecertName)
+func LoadKeySecret(keySecretNamespace, keySecretName string) (string, error) {
+	obj, err := kubeutil.GetResource("v1", "Secret", keySecretNamespace, keySecretName)
 	if err != nil {
-		return "", errors.Wrap(err, fmt.Sprintf("failed to get a secret `%s` in `%s` namespace", keySecertName, keySecertNamespace))
+		return "", errors.Wrap(err, fmt.Sprintf("failed to get a secret `%s` in `%s` namespace", keySecretName, keySecretNamespace))
 	}
 	objBytes, _ := json.Marshal(obj.Object)
 	var secret v1.Secret
 	_ = json.Unmarshal(objBytes, &secret)
-	keyDir := fmt.Sprintf("/tmp/%s/%s/", keySecertNamespace, keySecertName)
+	keyDir := fmt.Sprintf("/tmp/%s/%s/", keySecretNamespace, keySecretName)
 	sumErr := []string{}
 	keyPath := ""
 	for fname, keyData := range secret.Data {
+		os.MkdirAll(keyDir, os.ModePerm)
 		fpath := filepath.Join(keyDir, fname)
 		err := ioutil.WriteFile(fpath, keyData, 0644)
 		if err != nil {
@@ -122,7 +129,7 @@ func LoadKeySecret(keySecertNamespace, keySecertName string) (string, error) {
 		return "", errors.New(fmt.Sprintf("failed to save secret data as a file; %s", strings.Join(sumErr, "; ")))
 	}
 	if keyPath == "" {
-		return "", errors.New(fmt.Sprintf("no key files are found in the secret `%s` in `%s` namespace", keySecertName, keySecertNamespace))
+		return "", errors.New(fmt.Sprintf("no key files are found in the secret `%s` in `%s` namespace", keySecretName, keySecretNamespace))
 	}
 
 	return keyPath, nil

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,10 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -42,11 +38,6 @@ const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "k8s-manifest-sigstore"
 const defaultControllerConfigName = "admission-controller-config"
 const logLevelEnvKey = "LOG_LEVEL"
-
-const (
-	EventTypeAnnotationKey       = "integrityshield.io/eventType"
-	EventTypeAnnotationValueDeny = "deny"
-)
 
 var logLevelMap = map[string]log.Level{
 	"panic": log.PanicLevel,
@@ -125,9 +116,7 @@ func ProcessRequest(req admission.Request) admission.Response {
 		paramObj := GetParametersFromConstraint(constraint.Spec)
 
 		// call request handler & receive result from request handler (allow, message)
-		useRemote, _ := strconv.ParseBool(os.Getenv("USE_REMOTE_HANDLER"))
-		r := shield.RequestHandlerController(useRemote, req, paramObj)
-		// r := handler.RequestHandler(req, paramObj)
+		r := shield.RequestHandler(req, paramObj)
 
 		r.Profile = constraint.Name
 		results = append(results, *r)
@@ -144,10 +133,6 @@ func ProcessRequest(req admission.Request) admission.Response {
 		ar.Message = msg
 	}
 
-	// TODO: generate events
-	if config.SideEffect.CreateDenyEvent {
-		_ = createOrUpdateEvent(req, ar)
-	}
 	// update status
 	if config.SideEffect.UpdateMIPStatusForDeniedRequest {
 		updateConstraints(isDetectMode, req, results)
@@ -231,92 +216,4 @@ func getAccumulatedResult(results []shield.ResultFromRequestHandler) *Accumulate
 	accumulatedRes.Allow = true
 	accumulatedRes.Message = strings.Join(allowMessages, ";")
 	return accumulatedRes
-}
-
-func createOrUpdateEvent(req admission.Request, ar *AccumulatedResult) error {
-	// no event is generated for allowed request
-	if ar.Allow {
-		return nil
-	}
-
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return err
-	}
-	client, err := kubeclient.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	namespace := os.Getenv("POD_NAMESPACE")
-	if namespace == "" {
-		namespace = defaultPodNamespace
-	}
-	gv := schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
-	evtNamespace := req.Namespace
-	if evtNamespace == "" {
-		evtNamespace = namespace
-	}
-	involvedObject := corev1.ObjectReference{
-		Namespace:  req.Namespace,
-		APIVersion: gv.String(),
-		Kind:       req.Kind.Kind,
-		Name:       req.Name,
-	}
-	evtName := fmt.Sprintf("ishield-deny-%s-%s-%s", strings.ToLower(string(req.Operation)), strings.ToLower(req.Kind.Kind), req.Name)
-	sourceName := "IntegrityShield"
-
-	now := time.Now()
-	evt := &corev1.Event{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      evtName,
-			Namespace: evtNamespace,
-			Annotations: map[string]string{
-				EventTypeAnnotationKey: EventTypeAnnotationValueDeny,
-			},
-		},
-		InvolvedObject:      involvedObject,
-		Type:                sourceName,
-		Source:              v1.EventSource{Component: sourceName},
-		ReportingController: sourceName,
-		ReportingInstance:   evtName,
-		Action:              evtName,
-		Reason:              "Deny",
-		FirstTimestamp:      metav1.NewTime(now),
-	}
-	isExistingEvent := false
-	current, getErr := client.CoreV1().Events(evtNamespace).Get(context.Background(), evtName, metav1.GetOptions{})
-	if current != nil && getErr == nil {
-		isExistingEvent = true
-		evt = current
-	}
-
-	tmpMessage := ar.Message
-	// Event.Message can have 1024 chars at most
-	if len(tmpMessage) > 1024 {
-		tmpMessage = tmpMessage[:950] + " ... Trimmed. `Event.Message` can have 1024 chars at maximum."
-	}
-	evt.Message = tmpMessage
-	evt.Count = evt.Count + 1
-	evt.EventTime = metav1.NewMicroTime(now)
-	evt.LastTimestamp = metav1.NewTime(now)
-
-	if isExistingEvent {
-		_, err = client.CoreV1().Events(evtNamespace).Update(context.Background(), evt, metav1.UpdateOptions{})
-	} else {
-		_, err = client.CoreV1().Events(evtNamespace).Create(context.Background(), evt, metav1.CreateOptions{})
-	}
-	if err != nil {
-		log.Errorf("failed to generate deny event; %s", err.Error())
-		return err
-	}
-
-	log.WithFields(log.Fields{
-		"namespace": req.Namespace,
-		"name":      req.Name,
-		"kind":      req.Kind.Kind,
-		"operation": req.Operation,
-	}).Debug("Deny event is generated:", evtName)
-
-	return nil
 }

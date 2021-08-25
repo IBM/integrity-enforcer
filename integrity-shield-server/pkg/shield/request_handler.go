@@ -17,15 +17,12 @@
 package shield
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,71 +37,24 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const remoteRequestHandlerURL = "https://integrity-shield-api.k8s-manifest-sigstore.svc:8123/api/request"
 const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "k8s-manifest-sigstore"
 const defaultHandlerConfigMapName = "request-handler-config"
-
-func RequestHandlerController(remote bool, req admission.Request, paramObj *k8smnfconfig.ParameterObject) *ResultFromRequestHandler {
-	r := &ResultFromRequestHandler{}
-	if remote {
-		// http call to remote request handler service
-		input := &RemoteRequestHandlerInputMap{
-			Request:   req,
-			Parameter: *paramObj,
-		}
-
-		inputjson, _ := json.Marshal(input)
-		transCfg := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		client := &http.Client{Transport: transCfg}
-		res, err := client.Post(remoteRequestHandlerURL, "application/json", bytes.NewBuffer([]byte(inputjson)))
-		if err != nil {
-			log.Error("Error reported from Remote RequestHandler", err.Error())
-			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "error but allow for development",
-			}
-		}
-		if res.StatusCode != 200 {
-			log.Error("Error reported from Remote RequestHandler: statusCode is not 200")
-			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "error but allow for development",
-			}
-		}
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			log.Error("error: fail to read body: ", err)
-			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "error but allow for development",
-			}
-		}
-		err = json.Unmarshal([]byte(string(body)), &r)
-		if err != nil {
-			log.Error("error: fail to Unmarshal: ", err)
-			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "error but allow for development",
-			}
-		}
-		log.WithFields(log.Fields{
-			"namespace": req.Namespace,
-			"name":      req.Name,
-			"kind":      req.Kind.Kind,
-			"operation": req.Operation,
-		}).Debug("Response from remote request handler ", r)
-		return r
-	} else {
-		// local request handler
-		r = RequestHandler(req, paramObj)
-	}
-	return r
-}
+const ImageRefAnnotationKeyShield = "integrityshield.io/signature"
+const AnnotationKeyDomain = "integrityshield.io"
+const SignatureAnnotationTypeShield = "IntegrityShield"
+const (
+	EventTypeAnnotationKey       = "integrityshield.io/eventType"
+	EventResultAnnotationKey     = "integrityshield.io/eventResult"
+	EventTypeValueVerifyResult   = "verify-result"
+	EventTypeAnnotationValueDeny = "deny"
+)
 
 func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObject) *ResultFromRequestHandler {
 	// unmarshal admission request object
@@ -114,19 +64,21 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	err := json.Unmarshal(objectBytes, &resource)
 	if err != nil {
 		log.Errorf("failed to Unmarshal a requested object into %T; %s", resource, err.Error())
+		errMsg := "IntegrityShield failed to decide the response. Failed to Unmarshal a requested object: " + err.Error()
 		return &ResultFromRequestHandler{
-			Allow:   true,
-			Message: "error but allow for development",
+			Allow:   false,
+			Message: errMsg,
 		}
 	}
 
 	// load request handler config
-	rhconfig, err := loadRequestHandlerConfig()
+	rhconfig, err := LoadRequestHandlerConfig()
 	if err != nil {
 		log.Errorf("failed to load request handler config", err.Error())
+		errMsg := "IntegrityShield failed to decide the response. Failed to load request handler config: " + err.Error()
 		return &ResultFromRequestHandler{
-			Allow:   true,
-			Message: "error but allow for development",
+			Allow:   false,
+			Message: errMsg,
 		}
 	}
 	if rhconfig == nil {
@@ -137,14 +89,29 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	// setup log
 	k8smnfconfig.SetupLogger(rhconfig.Log, req)
 
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+		"userName":  req.UserInfo.Username,
+	}).Info("Process new request")
+
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+		"userName":  req.UserInfo.Username,
+	}).Debug("Parameter", paramObj)
+
 	commonSkipUserMatched := false
 	skipObjectMatched := false
-	if rhconfig != nil {
-		//filter by user listed in common profile
-		commonSkipUserMatched = rhconfig.RequestFilterProfile.SkipUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
-		// skip object
-		skipObjectMatched = skipObjectsMatch(rhconfig.RequestFilterProfile.SkipObjects, resource)
-	}
+
+	//filter by user listed in common profile
+	commonSkipUserMatched = rhconfig.RequestFilterProfile.SkipUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
+	// skip object
+	skipObjectMatched = skipObjectsMatch(rhconfig.RequestFilterProfile.SkipObjects, resource)
 
 	// Proccess with parameter
 	//filter by user
@@ -159,9 +126,10 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		mutated, err := mutationCheck(req.AdmissionRequest.OldObject.Raw, req.AdmissionRequest.Object.Raw, ignoreFields)
 		if err != nil {
 			log.Errorf("failed to check mutation", err.Error())
+			errMsg := "IntegrityShield failed to decide the response. Failed to check mutation: " + err.Error()
 			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "error but allow for development",
+				Allow:   false,
+				Message: errMsg,
 			}
 		}
 		if !mutated {
@@ -172,20 +140,25 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		}
 	}
 
-	allow := true
+	allow := false
 	message := ""
 	if skipUserMatched || commonSkipUserMatched {
 		allow = true
-		message = "ignore user config matched"
+		message = "SkipUsers rule matched."
 	} else if !inScopeObjMatched {
 		allow = true
-		message = "this resource is not in scope of verification"
+		message = "InScopeObjects rule did not match. Out of scope of verification."
 	} else if skipObjectMatched {
 		allow = true
-		message = "verification of this resource is skipped"
+		message = "SkipObjects rule matched."
 	} else {
-		vo := setVerifyOption(paramObj, rhconfig)
-		log.Debug("VerifyOption: ", vo)
+		var signatureAnnotationType string
+		annotations := resource.GetAnnotations()
+		_, found := annotations[ImageRefAnnotationKeyShield]
+		if found {
+			signatureAnnotationType = SignatureAnnotationTypeShield
+		}
+		vo := setVerifyOption(paramObj, rhconfig, signatureAnnotationType)
 		// call VerifyResource with resource, verifyOption, keypath, imageRef
 		result, err := k8smanifest.VerifyResource(resource, vo)
 		log.WithFields(log.Fields{
@@ -193,13 +166,25 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			"name":      req.Name,
 			"kind":      req.Kind.Kind,
 			"operation": req.Operation,
-		}).Debug("VerifyResource: ", result)
+			"userName":  req.UserInfo.Username,
+		}).Debug("VerifyResource result: ", result)
 		if err != nil {
-			log.Errorf("failed to check a requested resource; %s", err.Error())
-			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "error but allow for development",
+			log.WithFields(log.Fields{
+				"namespace": req.Namespace,
+				"name":      req.Name,
+				"kind":      req.Kind.Kind,
+				"operation": req.Operation,
+				"userName":  req.UserInfo.Username,
+			}).Warning("Signature verification is required for this request, but verifyResource return error ; %s", err.Error())
+			r := &ResultFromRequestHandler{
+				Allow:   false,
+				Message: err.Error(),
 			}
+			// generate events
+			if rhconfig.SideEffectConfig.CreateDenyEvent {
+				_ = createOrUpdateEvent(req, r, paramObj.ConstraintName)
+			}
+			return r
 		}
 		if result.InScope {
 			if result.Verified {
@@ -207,11 +192,11 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 				message = fmt.Sprintf("singed by a valid signer: %s", result.Signer)
 			} else {
 				allow = false
-				message = "no signature found"
+				message = "Signature verification is required for this request, but no signature is found."
 				if result.Diff != nil && result.Diff.Size() > 0 {
-					message = fmt.Sprintf("diff found: %s", result.Diff.String())
+					message = fmt.Sprintf("Signature verification is required for this request, but failed to verify signature. diff found: %s", result.Diff.String())
 				} else if result.Signer != "" {
-					message = fmt.Sprintf("signer config not matched, this is signed by %s", result.Signer)
+					message = fmt.Sprintf("Signature verification is required for this request, but no signer config matches with this resource. This is signed by %s", result.Signer)
 				}
 			}
 		} else {
@@ -225,12 +210,18 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		Message: message,
 	}
 
+	// generate events
+	if rhconfig.SideEffectConfig.CreateDenyEvent {
+		_ = createOrUpdateEvent(req, r, paramObj.ConstraintName)
+	}
+
 	// log
 	log.WithFields(log.Fields{
 		"namespace": req.Namespace,
 		"name":      req.Name,
 		"kind":      req.Kind.Kind,
 		"operation": req.Operation,
+		"userName":  req.UserInfo.Username,
 		"allow":     r.Allow,
 	}).Info(r.Message)
 
@@ -287,7 +278,7 @@ func mutationCheck(rawOldObject, rawObject []byte, IgnoreFields []string) (bool,
 	}
 	// diff
 	dr := oldObject.Diff(newObject)
-	if dr.Size() == 0 {
+	if dr == nil || dr.Size() == 0 {
 		return false, nil
 	}
 	// ignoreField check
@@ -301,17 +292,28 @@ func mutationCheck(rawOldObject, rawObject []byte, IgnoreFields []string) (bool,
 	return true, nil
 }
 
-func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfig.RequestHandlerConfig) *k8smanifest.VerifyResourceOption {
+func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfig.RequestHandlerConfig, signatureAnnotationType string) *k8smanifest.VerifyResourceOption {
 	// get verifyOption and imageRef from Parameter
 	vo := &paramObj.VerifyResourceOption
 	vo.CheckDryRunForApply = true
 	vo.ImageRef = paramObj.ImageRef
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
+	vo.DryRunNamespace = namespace
+	if signatureAnnotationType == SignatureAnnotationTypeShield {
+		vo.AnnotationConfig.AnnotationKeyDomain = AnnotationKeyDomain
+	}
 	// prepare local key for verifyResource
 	if len(paramObj.KeyConfigs) != 0 {
 		keyPathList := []string{}
 		for _, keyconfig := range paramObj.KeyConfigs {
-			if keyconfig.KeySecertName != "" {
-				keyPath, _ := k8smnfconfig.LoadKeySecret(keyconfig.KeySecertNamespace, keyconfig.KeySecertName)
+			if keyconfig.KeySecretName != "" {
+				keyPath, err := k8smnfconfig.LoadKeySecret(keyconfig.KeySecretNamespace, keyconfig.KeySecretName)
+				if err != nil {
+					log.Errorf("failed to load key secret", err.Error())
+				}
 				keyPathList = append(keyPathList, keyPath)
 			}
 		}
@@ -331,7 +333,7 @@ func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfi
 	return vo
 }
 
-func loadRequestHandlerConfig() (*k8smnfconfig.RequestHandlerConfig, error) {
+func LoadRequestHandlerConfig() (*k8smnfconfig.RequestHandlerConfig, error) {
 	namespace := os.Getenv("POD_NAMESPACE")
 	if namespace == "" {
 		namespace = defaultPodNamespace
@@ -340,7 +342,7 @@ func loadRequestHandlerConfig() (*k8smnfconfig.RequestHandlerConfig, error) {
 	if configName == "" {
 		configName = defaultHandlerConfigMapName
 	}
-	configKey := os.Getenv("REQUEST_HANDLER__CONFIG_KEY")
+	configKey := os.Getenv("REQUEST_HANDLER_CONFIG_KEY")
 	if configKey == "" {
 		configKey = defaultConfigKeyInConfigMap
 	}
@@ -383,7 +385,92 @@ func skipObjectsMatch(l k8smanifest.ObjectReferenceList, obj unstructured.Unstru
 	return false
 }
 
-type RemoteRequestHandlerInputMap struct {
-	Request   admission.Request            `json:"request,omitempty"`
-	Parameter k8smnfconfig.ParameterObject `json:"parameters,omitempty"`
+func createOrUpdateEvent(req admission.Request, ar *ResultFromRequestHandler, constraintName string) error {
+	// no event is generated for allowed request
+	if ar.Allow {
+		return nil
+	}
+
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		return err
+	}
+	client, err := kubeclient.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
+	gv := schema.GroupVersion{Group: req.Kind.Group, Version: req.Kind.Version}
+	evtNamespace := req.Namespace
+	if evtNamespace == "" {
+		evtNamespace = namespace
+	}
+	involvedObject := corev1.ObjectReference{
+		Namespace:  req.Namespace,
+		APIVersion: gv.String(),
+		Kind:       req.Kind.Kind,
+		Name:       req.Name,
+	}
+	evtName := fmt.Sprintf("ishield-deny-%s-%s-%s", strings.ToLower(string(req.Operation)), strings.ToLower(req.Kind.Kind), req.Name)
+	sourceName := "IntegrityShield"
+
+	now := time.Now()
+	evt := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      evtName,
+			Namespace: evtNamespace,
+			Annotations: map[string]string{
+				EventTypeAnnotationKey:   EventTypeValueVerifyResult,
+				EventResultAnnotationKey: EventTypeAnnotationValueDeny,
+			},
+		},
+		InvolvedObject:      involvedObject,
+		Type:                sourceName,
+		Source:              corev1.EventSource{Component: sourceName},
+		ReportingController: sourceName,
+		ReportingInstance:   evtName,
+		Action:              evtName,
+		Reason:              "Deny",
+		FirstTimestamp:      metav1.NewTime(now),
+	}
+	isExistingEvent := false
+	current, getErr := client.CoreV1().Events(evtNamespace).Get(context.Background(), evtName, metav1.GetOptions{})
+	if current != nil && getErr == nil {
+		isExistingEvent = true
+		evt = current
+	}
+
+	tmpMessage := "[" + constraintName + "]" + ar.Message
+	// tmpMessage := ar.Message
+	// Event.Message can have 1024 chars at most
+	if len(tmpMessage) > 1024 {
+		tmpMessage = tmpMessage[:950] + " ... Trimmed. `Event.Message` can have 1024 chars at maximum."
+	}
+	evt.Message = tmpMessage
+	evt.Count = evt.Count + 1
+	evt.EventTime = metav1.NewMicroTime(now)
+	evt.LastTimestamp = metav1.NewTime(now)
+
+	if isExistingEvent {
+		_, err = client.CoreV1().Events(evtNamespace).Update(context.Background(), evt, metav1.UpdateOptions{})
+	} else {
+		_, err = client.CoreV1().Events(evtNamespace).Create(context.Background(), evt, metav1.CreateOptions{})
+	}
+	if err != nil {
+		log.Errorf("failed to generate deny event; %s", err.Error())
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+	}).Debug("Deny event is generated:", evtName)
+
+	return nil
 }

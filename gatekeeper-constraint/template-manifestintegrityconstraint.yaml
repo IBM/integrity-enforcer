@@ -8,12 +8,8 @@ spec:
       names:
         kind: ManifestIntegrityConstraint
       validation:
-        # Schema for the `parameters` field
         openAPIV3Schema:
-          properties:
-            options:
-              type: array
-              items: string
+          x-kubernetes-preserve-unknown-fields: true
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
@@ -22,7 +18,8 @@ spec:
           not is_allowed_kind
           not is_excluded
           is_create_or_update
-          ishield_input := {"parameters":input.parameters, "request":input.review}
+          constraint := input.constraint
+          ishield_input := {"parameters":input.parameters, "request":input.review, "constraint":input.constraint.metadata.name}
           reqdata := json.marshal(ishield_input)
           url := "https://integrity-shield-api.k8s-manifest-sigstore.svc:8123/api/request"
           resp := http_post(url, reqdata)
