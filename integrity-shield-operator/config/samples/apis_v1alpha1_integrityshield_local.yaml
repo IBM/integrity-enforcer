@@ -47,6 +47,10 @@ spec:
         name: kube-root-ca.crt
       ignoreFields:
       - fields:
+        - spec.host
+        objects:
+        - kind: Route
+      - fields:
         - metadata.namespace
         objects:
         - kind: ClusterServiceVersion
@@ -258,7 +262,7 @@ spec:
       is_create_or_update
       ishield_input := {"parameters":input.parameters, "request":input.review}
       reqdata := json.marshal(ishield_input)
-      url := "https://integrity-shield-api.RPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
+      url := "https://integrity-shield-api.REPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
       resp := http_post(url, reqdata)
       resp.status_code == 200
       result := json.unmarshal(resp.raw_body)
@@ -404,11 +408,14 @@ spec:
       app: integrity-shield-observer
     logLevel: trace
     interval: "5"
-    observerConfigName: target-constraint-config
-    observerConfigKey: "config.yaml"
-    observerConfig: |
-      targetConstraints:
-        match: ["*"]
-      exportDetailResult: true
-      resultDetailConfigName: verify-resource-result
-    
+    exportDetailResult: true
+    resultDetailConfigName: verify-resource-result
+    resultDetailConfigKey: "config.yaml"
+  constraintConfigKey: "config.yaml"
+  constraintConfigName:  constraint-config
+  constraintConfig: ""
+    # constraints: 
+    # - constraintName: "*"
+    #   action:
+    #     inform: true
+    #     enforce: true

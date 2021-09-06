@@ -17,6 +17,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,15 +26,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const k8sLogLevelEnvKey = "K8S_MANIFEST_SIGSTORE_LOG_LEVEL"
+const defaultConfigKeyInConfigMap = "config.yaml"
+const defaultPodNamespace = "integrity-shield-operator-system"
+const defaultHandlerConfigMapName = "request-handler-config"
 
 var logLevelMap = map[string]log.Level{
 	"panic": log.PanicLevel,
@@ -133,4 +140,44 @@ func LoadKeySecret(keySecretNamespace, keySecretName string) (string, error) {
 	}
 
 	return keyPath, nil
+}
+
+func LoadRequestHandlerConfig() (*RequestHandlerConfig, error) {
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
+	configName := os.Getenv("REQUEST_HANDLER_CONFIG_NAME")
+	if configName == "" {
+		configName = defaultHandlerConfigMapName
+	}
+	configKey := os.Getenv("REQUEST_HANDLER_CONFIG_KEY")
+	if configKey == "" {
+		configKey = defaultConfigKeyInConfigMap
+	}
+
+	// load
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		return nil, nil
+	}
+	clientset, err := kubeclient.NewForConfig(config)
+	if err != nil {
+		log.Error(err)
+		return nil, nil
+	}
+	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), configName, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get a configmap `%s` in `%s` namespace", configName, namespace))
+	}
+	cfgBytes, found := cm.Data[configKey]
+	if !found {
+		return nil, errors.New(fmt.Sprintf("`%s` is not found in configmap", configKey))
+	}
+	var sc *RequestHandlerConfig
+	err = yaml.Unmarshal([]byte(cfgBytes), &sc)
+	if err != nil {
+		return sc, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", sc))
+	}
+	return sc, nil
 }

@@ -47,10 +47,15 @@ spec:
         name: kube-root-ca.crt
       ignoreFields:
       - fields:
+        - spec.host
+        objects:
+        - kind: Route
+      - fields:
         - metadata.namespace
         objects:
         - kind: ClusterServiceVersion
       - fields:
+        - metadata.labels.app.kubernetes.io/instance
         - metadata.managedFields.*
         - metadata.resourceVersion
         - metadata.selfLink
@@ -63,6 +68,7 @@ spec:
         - metadata.uid
         - metadata.generation
         - status
+        - metadata.annotations.deployment.kubernetes.io/revision
         - metadata.annotations.cosign.sigstore.dev/imageRef
         - metadata.annotations.cosign.sigstore.dev/bundle
         - metadata.annotations.cosign.sigstore.dev/message
@@ -258,7 +264,7 @@ spec:
       is_create_or_update
       ishield_input := {"parameters":input.parameters, "request":input.review}
       reqdata := json.marshal(ishield_input)
-      url := "https://integrity-shield-api.RPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
+      url := "https://integrity-shield-api.REPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
       resp := http_post(url, reqdata)
       resp.status_code == 200
       result := json.unmarshal(resp.raw_body)
@@ -404,10 +410,14 @@ spec:
       app: integrity-shield-observer
     logLevel: info
     interval: "5"
-    observerConfigName: observer-config
-    observerConfigKey: "config.yaml"
-    observerConfig: |
-      targetConstraints:
-        match: ["*"]
-      exportDetailResult: true
-      resultDetailConfigName: verify-resource-result
+    exportDetailResult: true
+    resultDetailConfigName: verify-resource-result
+    resultDetailConfigKey: "config.yaml"
+  constraintConfigKey: "config.yaml"
+  constraintConfigName:  constraint-config
+  constraintConfig: ""
+    # constraints: 
+    # - constraintName: "*"
+    #   action:
+    #     inform: true
+    #     enforce: true

@@ -18,6 +18,7 @@ package resources
 
 import (
 	"reflect"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -98,6 +99,14 @@ func BuildDeploymentForIShieldServer(cr *apiv1alpha1.IntegrityShield) *appsv1.De
 			{
 				Name:  "REQUEST_HANDLER_CONFIG_NAME",
 				Value: cr.Spec.RequestHandlerConfigName,
+			},
+			{
+				Name:  "CONSTRAINT_CONFIG_NAME",
+				Value: cr.Spec.ConstraintConfigName,
+			},
+			{
+				Name:  "CONSTRAINT_CONFIG_KEY",
+				Value: cr.Spec.ConstraintConfigKey,
 			},
 		},
 		Resources: cr.Spec.Server.Resources,
@@ -227,6 +236,14 @@ func BuildDeploymentForAdmissionController(cr *apiv1alpha1.IntegrityShield) *app
 				Name:  "REQUEST_HANDLER_CONFIG_NAME",
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
+			{
+				Name:  "CONSTRAINT_CONFIG_NAME",
+				Value: cr.Spec.ConstraintConfigName,
+			},
+			{
+				Name:  "CONSTRAINT_CONFIG_KEY",
+				Value: cr.Spec.ConstraintConfigKey,
+			},
 		},
 		Resources: cr.Spec.ControllerContainer.Resources,
 	}
@@ -307,21 +324,25 @@ func BuildDeploymentForObserver(cr *apiv1alpha1.IntegrityShield) *appsv1.Deploym
 				Name:  "REQUEST_HANDLER_CONFIG_NAME",
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
-			// {
-			// 	Name:  "OBSERVER_RESULT_CONFIG_NAME",
-			// 	Value: cr.Spec.Observer.ResultDetailConfigName,
-			// },
-			// {
-			// 	Name:  "OBSERVER_RESULT_CONFIG_KEY",
-			// 	Value: cr.Spec.Observer.ResultDetailConfigKey,
-			// },
 			{
-				Name:  "OBSERVER_CONFIG_NAME",
-				Value: cr.Spec.Observer.ObserverConfigName,
+				Name:  "OBSERVER_RESULT_ENABLED",
+				Value: strconv.FormatBool(cr.Spec.Observer.ExportDetailResult),
 			},
 			{
-				Name:  "OBSERVER_CONFIG_KEY",
-				Value: cr.Spec.Observer.ObserverConfigKey,
+				Name:  "OBSERVER_RESULT_CONFIG_NAME",
+				Value: cr.Spec.Observer.ResultDetailConfigName,
+			},
+			{
+				Name:  "OBSERVER_RESULT_CONFIG_KEY",
+				Value: cr.Spec.Observer.ResultDetailConfigKey,
+			},
+			{
+				Name:  "CONSTRAINT_CONFIG_NAME",
+				Value: cr.Spec.ConstraintConfigName,
+			},
+			{
+				Name:  "CONSTRAINT_CONFIG_KEY",
+				Value: cr.Spec.ConstraintConfigKey,
 			},
 			{
 				Name:  "INTERVAL",

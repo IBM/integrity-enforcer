@@ -40,7 +40,7 @@ func BuildConstraintTemplateForIShield(cr *apiv1alpha1.IntegrityShield) *v1beta1
 			},
 		},
 	}
-	rego := strings.Replace(cr.Spec.Rego, "RPLACE_WITH_SERVER_NAMESPSCE", cr.Namespace, 1)
+	rego := strings.Replace(cr.Spec.Rego, "REPLACE_WITH_SERVER_NAMESPSCE", cr.Namespace, 1)
 	targets := []v1beta1.Target{
 		{
 			Target: "admission.k8s.gatekeeper.sh",

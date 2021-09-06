@@ -23,14 +23,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
-	ishield "github.com/IBM/integrity-shield/integrity-shield-server/pkg/shield"
 	vrres "github.com/IBM/integrity-shield/observer/pkg/apis/verifyresourcestatus/v1alpha1"
 	vrresclient "github.com/IBM/integrity-shield/observer/pkg/client/verifyresourcestatus/clientset/versioned/typed/verifyresourcestatus/v1alpha1"
-	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
@@ -48,10 +47,15 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
-const defaultConfigKeyInConfigMap = "config.yaml"
-const defaultPodNamespace = "k8s-manifest-sigstore"
-const defaultObserverConfigName = "observer-config"
+const exportDetailResult = "OBSERVER_RESULT_ENABLED"
+const detailResultConfigName = "OBSERVER_RESULT_CONFIG_NAME"
+const detailResultConfigKey = "OBSERVER_RESULT_CONFIG_KEY"
+
+const defaultKeyInConfigMap = "config.yaml"
+const defaultPodNamespace = "integrity-shield-operator-system"
+const defaultExportDetailResult = true
 const defaultObserverResultDetailConfigName = "verify-result-detail"
+
 const logLevelEnvKey = "LOG_LEVEL"
 const k8sLogLevelEnvKey = "K8S_MANIFEST_SIGSTORE_LOG_LEVEL"
 
@@ -64,26 +68,6 @@ type Observer struct {
 	APIResources []groupResource
 
 	dynamicClient dynamic.Interface
-}
-
-// type TargetResourceConfig struct {
-// 	// TargetResources          []groupResourceWithTargetNS        `json:"targetResouces"`
-// 	IgnoreFields k8smanifest.ObjectFieldBindingList `json:"ignoreFields,omitempty"`
-// 	// KeyConfigs               []KeyConfig                        `json:"keyConfigs"`
-// 	// ResourceProvenanceConfig ResourceProvenanceConfig `json:"resourceProvenanceConfig,omitempty"`
-// }
-
-// Observer Config
-type ObserverConfig struct {
-	TargetConstraints      Rule   `json:"targetConstraints,omitempty"`
-	ExportDetailResult     bool   `json:"exportDetailResult,omitempty"`
-	ResultDetailConfigName string `json:"resultDetailConfigName,omitempty"`
-	ResultDetailConfigKey  string `json:"resultDetailConfigKey,omitempty"`
-}
-
-type Rule struct {
-	Match   []string `json:"match,omitempty"`
-	Exclude []string `json:"exclude,omitempty"`
 }
 
 // Observer Result Detail
@@ -173,12 +157,12 @@ func (self *Observer) Init() error {
 
 func (self *Observer) Run() {
 	// load config -> requestHandlerConfig
-	rhconfig, err := ishield.LoadRequestHandlerConfig()
+	rhconfig, err := k8smnfconfig.LoadRequestHandlerConfig()
 	if err != nil {
 		log.Error("Failed to load RequestHandlerConfig; err: ", err.Error())
 	}
 	// load observer config
-	tcconfig, err := loadObserverConfig()
+	cconfig, err := k8smnfconfig.LoadConstraintConfig()
 	if err != nil {
 		log.Error("Failed to load Observer config; err: ", err.Error())
 	}
@@ -194,9 +178,6 @@ func (self *Observer) Run() {
 		var violations []vrres.VerifyResult
 		var nonViolations []vrres.VerifyResult
 		narrowedGVKList := self.getPossibleProtectedGVKs(constraint.Match)
-		log.Debug("narrowedGVKList", narrowedGVKList)
-		ignoreFields := constraint.Parameters.IgnoreFields
-		secrets := constraint.Parameters.KeyConfigs
 		if narrowedGVKList == nil {
 			log.Info("there is no resources to observe in the constraint:", constraint.Parameters.ConstraintName)
 			return
@@ -209,11 +190,12 @@ func (self *Observer) Run() {
 		}
 
 		// check all resources by verifyResource
+		ignoreFields := constraint.Parameters.IgnoreFields
+		secrets := constraint.Parameters.KeyConfigs
 		ignoreFields = append(ignoreFields, rhconfig.RequestFilterProfile.IgnoreFields...)
-		results := ObserveResources(resources, constraint.Parameters.ImageRef, ignoreFields, secrets)
+		results := ObserveResources(resources, constraint.Parameters.SignatureRef, ignoreFields, secrets)
 		for _, res := range results {
 			// simple result
-
 			if res.Violation {
 				vres := vrres.VerifyResult{
 					Namespace:  res.Namespace,
@@ -265,7 +247,7 @@ func (self *Observer) Run() {
 		}
 
 		// check if targeted constraint
-		ignored := checkIfInscopeConstraint(constraintName, tcconfig.TargetConstraints)
+		ignored := k8smnfconfig.CheckIfIgnoredConstraint(constraintName, cconfig.Constraints)
 
 		// export VerifyResult
 		_ = exportVerifyResult(vrr, ignored, violated)
@@ -283,41 +265,8 @@ func (self *Observer) Run() {
 	res := ObservationDetailResults{
 		ConstraintResults: constraintResults,
 	}
-	_ = exportResultDetail(res, tcconfig)
+	_ = exportResultDetail(res)
 	return
-}
-
-func checkIfInscopeConstraint(constraintName string, tcconfig Rule) bool {
-	ignored := false
-	if len(tcconfig.Match) != 0 {
-		match := false
-		for _, p := range tcconfig.Match {
-			included := MatchPattern(p, constraintName)
-			if included {
-				match = true
-			}
-		}
-		if match {
-			ignored = false
-		} else {
-			ignored = true
-		}
-	}
-	if !ignored && len(tcconfig.Exclude) != 0 {
-		match := false
-		for _, p := range tcconfig.Exclude {
-			excluded := MatchPattern(p, constraintName)
-			if excluded {
-				match = true
-			}
-		}
-		if match {
-			ignored = true
-		} else {
-			ignored = false
-		}
-	}
-	return ignored
 }
 
 func exportVerifyResult(vrr vrres.VerifyResourceStatusSpec, ignored bool, violated bool) error {
@@ -379,10 +328,16 @@ func exportVerifyResult(vrr vrres.VerifyResourceStatusSpec, ignored bool, violat
 	return nil
 }
 
-func exportResultDetail(results ObservationDetailResults, oconfig ObserverConfig) error {
-	if !oconfig.ExportDetailResult {
+func exportResultDetail(results ObservationDetailResults) error {
+	exportStr := os.Getenv(exportDetailResult)
+	export := defaultExportDetailResult
+	if exportStr != "" {
+		export, _ = strconv.ParseBool(exportStr)
+	}
+	if !export {
 		return nil
 	}
+
 	if len(results.ConstraintResults) == 0 {
 		log.Info("no observation results")
 		return nil
@@ -391,13 +346,13 @@ func exportResultDetail(results ObservationDetailResults, oconfig ObserverConfig
 	if namespace == "" {
 		namespace = defaultPodNamespace
 	}
-	configName := oconfig.ResultDetailConfigName
+	configName := os.Getenv(detailResultConfigName)
 	if configName == "" {
 		configName = defaultObserverResultDetailConfigName
 	}
-	configKey := oconfig.ResultDetailConfigKey
+	configKey := os.Getenv(detailResultConfigKey)
 	if configKey == "" {
-		configKey = defaultConfigKeyInConfigMap
+		configKey = defaultKeyInConfigMap
 	}
 
 	// load
@@ -513,49 +468,6 @@ func (self *Observer) getAllResoucesByGroupResource(gResourceWithTargetNS groupR
 		return []unstructured.Unstructured{}, nil
 	}
 	return resources, nil
-}
-
-func loadObserverConfig() (ObserverConfig, error) {
-	var empty ObserverConfig
-	namespace := os.Getenv("POD_NAMESPACE")
-	if namespace == "" {
-		namespace = defaultPodNamespace
-	}
-	configName := os.Getenv("OBSERVER_CONFIG_NAME")
-	if configName == "" {
-		configName = defaultObserverConfigName
-	}
-	configKey := os.Getenv("OBSERVER_CONFIG_KEY")
-	if configKey == "" {
-		configKey = defaultConfigKeyInConfigMap
-	}
-
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return empty, err
-	}
-	clientset, err := kubeclient.NewForConfig(config)
-	if err != nil {
-		log.Error(err)
-		return empty, err
-	}
-	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), configName, metav1.GetOptions{})
-	if err != nil {
-		return empty, errors.Wrap(err, fmt.Sprintf("failed to get a configmap `%s` in `%s` namespace", configName, namespace))
-	}
-	cfgBytes, found := cm.Data[configKey]
-	if !found {
-		return empty, errors.New(fmt.Sprintf("`%s` is not found in configmap", configKey))
-	}
-	var tr *ObserverConfig
-	err = yaml.Unmarshal([]byte(cfgBytes), &tr)
-	if err != nil {
-		return empty, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", tr))
-	}
-	if tr == nil {
-		return empty, nil
-	}
-	return *tr, nil
 }
 
 func LoadKeySecret(keySecertNamespace, keySecertName string) (string, error) {
@@ -740,20 +652,4 @@ func getLabelMatchedNamespace(labelSelector *metav1.LabelSelector) []string {
 		}
 	}
 	return matchedNs
-}
-
-func MatchPattern(pattern, value string) bool {
-	if pattern == "" {
-		return true
-	} else if pattern == "*" {
-		return true
-	} else if pattern == "-" && value == "" {
-		return true
-	} else if strings.HasSuffix(pattern, "*") {
-		return strings.HasPrefix(value, strings.TrimRight(pattern, "*"))
-	} else if pattern == value {
-		return true
-	} else {
-		return false
-	}
 }

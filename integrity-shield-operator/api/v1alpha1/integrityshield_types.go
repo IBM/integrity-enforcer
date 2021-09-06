@@ -54,6 +54,11 @@ type IntegrityShieldSpec struct {
 	ApiServiceName           string          `json:"shieldApiServiceName,omitempty"`
 	ApiServicePort           int32           `json:"shieldApiServicePort,omitempty"`
 
+	// constraint config
+	ConstraintConfigKey  string `json:"constraintConfigKey,omitempty"`
+	ConstraintConfigName string `json:"constraintConfigName,omitempty"`
+	ConstraintConfig     string `json:"constraintConfig,omitempty"`
+
 	// admission controller
 	ControllerContainer           ControllerContainer `json:"admissionController,omitempty"`
 	AdmissionControllerConfigKey  string              `json:"admissionControllerConfigKey,omitempty"`
@@ -114,17 +119,17 @@ type LogConfig struct {
 }
 
 type Observer struct {
-	Enabled            bool                `json:"enabled,omitempty"`
-	Name               string              `json:"name,omitempty"`
-	SelectorLabels     map[string]string   `json:"selector,omitempty"`
-	ImagePullPolicy    v1.PullPolicy       `json:"imagePullPolicy,omitempty"`
-	Image              string              `json:"image,omitempty"`
-	SecurityContext    *v1.SecurityContext `json:"securityContext,omitempty"`
-	LogLevel           string              `json:"logLevel,omitempty"`
-	Interval           string              `json:"interval,omitempty"`
-	ObserverConfigKey  string              `json:"observerConfigKey,omitempty"`
-	ObserverConfigName string              `json:"observerConfigName,omitempty"`
-	ObserverConfig     string              `json:"observerConfig,omitempty"`
+	Enabled                bool                `json:"enabled,omitempty"`
+	Name                   string              `json:"name,omitempty"`
+	SelectorLabels         map[string]string   `json:"selector,omitempty"`
+	ImagePullPolicy        v1.PullPolicy       `json:"imagePullPolicy,omitempty"`
+	Image                  string              `json:"image,omitempty"`
+	SecurityContext        *v1.SecurityContext `json:"securityContext,omitempty"`
+	LogLevel               string              `json:"logLevel,omitempty"`
+	Interval               string              `json:"interval,omitempty"`
+	ExportDetailResult     bool                `json:"exportDetailResult,omitempty"`
+	ResultDetailConfigName string              `json:"resultDetailConfigName,omitempty"`
+	ResultDetailConfigKey  string              `json:"resultDetailConfigKey,omitempty"`
 }
 
 // IntegrityShieldStatus defines the observed state of IntegrityShield

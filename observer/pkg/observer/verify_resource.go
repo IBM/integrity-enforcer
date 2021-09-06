@@ -28,21 +28,31 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func ObserveResources(resources []unstructured.Unstructured, imageRef string, ignoreFields k8smanifest.ObjectFieldBindingList, secrets []k8smnfconfig.KeyConfig) []VerifyResultDetail {
+func ObserveResources(resources []unstructured.Unstructured, signatureRef k8smnfconfig.SignatureRef, ignoreFields k8smanifest.ObjectFieldBindingList, secrets []k8smnfconfig.KeyConfig) []VerifyResultDetail {
 	results := []VerifyResultDetail{}
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
 	for _, resource := range resources {
 		log.Debug("Observed Resource:", resource.GetAPIVersion(), resource.GetKind(), resource.GetNamespace(), resource.GetName())
 		vo := &k8smanifest.VerifyResourceOption{}
 		vo.IgnoreFields = ignoreFields
-		vo.CheckDryRunForApply = true
-		vo.ImageRef = imageRef
-		vo.Provenance = true
-		namespace := os.Getenv("POD_NAMESPACE")
-		if namespace == "" {
-			namespace = defaultPodNamespace
-		}
+		// vo.CheckDryRunForApply = true
+		// vo.Provenance = true
 		vo.DryRunNamespace = namespace
 
+		if signatureRef.ImageRef != "" {
+			vo.ImageRef = signatureRef.ImageRef
+		}
+		if signatureRef.SignatureResourceRef.Name != "" && signatureRef.SignatureResourceRef.Namespace != "" {
+			ref := fmt.Sprintf("k8s://ConfigMap/%s/%s", signatureRef.SignatureResourceRef.Namespace, signatureRef.SignatureResourceRef.Name)
+			vo.SignatureResourceRef = ref
+		}
+		if signatureRef.ProvenanceResourceRef.Name != "" && signatureRef.ProvenanceResourceRef.Namespace != "" {
+			ref := fmt.Sprintf("k8s://ConfigMap/%s/%s", signatureRef.ProvenanceResourceRef.Namespace, signatureRef.ProvenanceResourceRef.Name)
+			vo.ProvenanceResourceRef = ref
+		}
 		// secret
 		for _, s := range secrets {
 			if s.KeySecretNamespace == resource.GetNamespace() {

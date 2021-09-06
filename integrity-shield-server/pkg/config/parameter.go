@@ -24,14 +24,25 @@ import (
 )
 
 type ParameterObject struct {
-	k8smanifest.VerifyResourceOption `json:""`
+	ConstraintName                   string                          `json:"constraintName,omitempty"`
+	SignatureRef                     SignatureRef                    `json:"signatureRef,omitempty"`
 	KeyConfigs                       []KeyConfig                     `json:"keyConfigs,omitempty"`
-	ImageRef                         string                          `json:"imageRef,omitempty"`
 	InScopeObjects                   k8smanifest.ObjectReferenceList `json:"inScopeObjects,omitempty"`
 	SkipUsers                        ObjectUserBindingList           `json:"skipUsers,omitempty"`
 	TargetServiceAccount             []string                        `json:"targetServiceAccount,omitempty"`
 	ImageProfile                     ImageProfile                    `json:"imageProfile,omitempty"`
-	ConstraintName                   string                          `json:"constraintName,omitempty"`
+	k8smanifest.VerifyResourceOption `json:""`
+}
+
+type SignatureRef struct {
+	ImageRef              string      `json:"imageRef,omitempty"`
+	SignatureResourceRef  ResourceRef `json:"signatureResourceRef,omitempty"`
+	ProvenanceResourceRef ResourceRef `json:"provenanceResourceRef,omitempty"`
+}
+
+type ResourceRef struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type KeyConfig struct {

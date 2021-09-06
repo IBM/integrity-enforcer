@@ -112,6 +112,12 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
+
+	recResult, recErr = r.createOrUpdateConstraintConfig(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	//Service Account
 	recResult, recErr = r.createOrUpdateIShieldApiServiceAccount(instance)
 	if recErr != nil || recResult.Requeue {
@@ -144,10 +150,6 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Observer
 	if instance.Spec.Observer.Enabled {
 		recResult, recErr = r.createOrUpdateVerifyResourceResultCRD(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
-		recResult, recErr = r.createOrUpdateObserverConfig(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}

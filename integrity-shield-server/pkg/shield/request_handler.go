@@ -27,8 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
-	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/mapnode"
@@ -44,7 +42,7 @@ import (
 )
 
 const defaultConfigKeyInConfigMap = "config.yaml"
-const defaultPodNamespace = "k8s-manifest-sigstore"
+const defaultPodNamespace = "integrity-shield-operator-system"
 const defaultHandlerConfigMapName = "request-handler-config"
 const ImageRefAnnotationKeyShield = "integrityshield.io/signature"
 const AnnotationKeyDomain = "integrityshield.io"
@@ -57,29 +55,30 @@ const (
 )
 
 func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObject) *ResultFromRequestHandler {
+	// load constraint config
+	cconfig, err := k8smnfconfig.LoadConstraintConfig()
+	if err != nil {
+		log.Errorf("failed to load constraint config", err.Error())
+	}
+	// get enforce action
+	enforce := k8smnfconfig.CheckIfEnforceConstraint(paramObj.ConstraintName, cconfig.Constraints)
+
 	// unmarshal admission request object
-	// load Resource from Admission request
 	var resource unstructured.Unstructured
 	objectBytes := req.AdmissionRequest.Object.Raw
-	err := json.Unmarshal(objectBytes, &resource)
+	err = json.Unmarshal(objectBytes, &resource)
 	if err != nil {
 		log.Errorf("failed to Unmarshal a requested object into %T; %s", resource, err.Error())
 		errMsg := "IntegrityShield failed to decide the response. Failed to Unmarshal a requested object: " + err.Error()
-		return &ResultFromRequestHandler{
-			Allow:   false,
-			Message: errMsg,
-		}
+		return makeResultFromRequestHandler(false, errMsg, enforce, req)
 	}
 
 	// load request handler config
-	rhconfig, err := LoadRequestHandlerConfig()
+	rhconfig, err := k8smnfconfig.LoadRequestHandlerConfig()
 	if err != nil {
 		log.Errorf("failed to load request handler config", err.Error())
 		errMsg := "IntegrityShield failed to decide the response. Failed to load request handler config: " + err.Error()
-		return &ResultFromRequestHandler{
-			Allow:   false,
-			Message: errMsg,
-		}
+		return makeResultFromRequestHandler(false, errMsg, enforce, req)
 	}
 	if rhconfig == nil {
 		log.Warning("request handler config is empty")
@@ -97,19 +96,18 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		"userName":  req.UserInfo.Username,
 	}).Info("Process new request")
 
-	log.WithFields(log.Fields{
-		"namespace": req.Namespace,
-		"name":      req.Name,
-		"kind":      req.Kind.Kind,
-		"operation": req.Operation,
-		"userName":  req.UserInfo.Username,
-	}).Debug("Parameter", paramObj)
-
 	commonSkipUserMatched := false
 	skipObjectMatched := false
 
 	//filter by user listed in common profile
 	commonSkipUserMatched = rhconfig.RequestFilterProfile.SkipUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
+	// TODO: inserted ad hoc logic: need to fix
+	if commonSkipUserMatched && req.AdmissionRequest.UserInfo.Username == "system:admin" {
+		if req.Namespace == "akmebank-dev-ns" || req.Namespace == "akmebank-stage-ns" {
+			commonSkipUserMatched = false
+		}
+	}
+
 	// skip object
 	skipObjectMatched = skipObjectsMatch(rhconfig.RequestFilterProfile.SkipObjects, resource)
 
@@ -127,16 +125,10 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		if err != nil {
 			log.Errorf("failed to check mutation", err.Error())
 			errMsg := "IntegrityShield failed to decide the response. Failed to check mutation: " + err.Error()
-			return &ResultFromRequestHandler{
-				Allow:   false,
-				Message: errMsg,
-			}
+			return makeResultFromRequestHandler(false, errMsg, enforce, req)
 		}
 		if !mutated {
-			return &ResultFromRequestHandler{
-				Allow:   true,
-				Message: "no mutation found",
-			}
+			return makeResultFromRequestHandler(true, "no mutation found", enforce, req)
 		}
 	}
 
@@ -159,6 +151,13 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			signatureAnnotationType = SignatureAnnotationTypeShield
 		}
 		vo := setVerifyOption(paramObj, rhconfig, signatureAnnotationType)
+		log.WithFields(log.Fields{
+			"namespace": req.Namespace,
+			"name":      req.Name,
+			"kind":      req.Kind.Kind,
+			"operation": req.Operation,
+			"userName":  req.UserInfo.Username,
+		}).Debug("VerifyOption: ", vo)
 		// call VerifyResource with resource, verifyOption, keypath, imageRef
 		result, err := k8smanifest.VerifyResource(resource, vo)
 		log.WithFields(log.Fields{
@@ -176,16 +175,14 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 				"operation": req.Operation,
 				"userName":  req.UserInfo.Username,
 			}).Warning("Signature verification is required for this request, but verifyResource return error ; %s", err.Error())
-			r := &ResultFromRequestHandler{
-				Allow:   false,
-				Message: err.Error(),
-			}
+			r := makeResultFromRequestHandler(false, err.Error(), enforce, req)
 			// generate events
 			if rhconfig.SideEffectConfig.CreateDenyEvent {
 				_ = createOrUpdateEvent(req, r, paramObj.ConstraintName)
 			}
 			return r
 		}
+
 		if result.InScope {
 			if result.Verified {
 				allow = true
@@ -203,28 +200,31 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			allow = true
 			message = "not protected"
 		}
+		// image verify result
+		imageAllow := true
+		imageMessage := ""
+		if len(result.ImageVerifyResults) != 0 {
+			for _, res := range result.ImageVerifyResults {
+				if res.InScope && !res.Verified {
+					imageAllow = false
+				}
+			}
+		}
+		if !imageAllow {
+			imageMessage = "Image signature verification is required, but failed to verify signature."
+		}
+		if allow && !imageAllow {
+			message = imageMessage
+			allow = false
+		}
 	}
 
-	r := &ResultFromRequestHandler{
-		Allow:   allow,
-		Message: message,
-	}
+	r := makeResultFromRequestHandler(allow, message, enforce, req)
 
 	// generate events
 	if rhconfig.SideEffectConfig.CreateDenyEvent {
 		_ = createOrUpdateEvent(req, r, paramObj.ConstraintName)
 	}
-
-	// log
-	log.WithFields(log.Fields{
-		"namespace": req.Namespace,
-		"name":      req.Name,
-		"kind":      req.Kind.Kind,
-		"operation": req.Operation,
-		"userName":  req.UserInfo.Username,
-		"allow":     r.Allow,
-	}).Info(r.Message)
-
 	return r
 }
 
@@ -232,6 +232,26 @@ type ResultFromRequestHandler struct {
 	Allow   bool   `json:"allow"`
 	Message string `json:"message"`
 	Profile string `json:"profile,omitempty"`
+}
+
+func makeResultFromRequestHandler(allow bool, msg string, enforce bool, req admission.Request) *ResultFromRequestHandler {
+	res := &ResultFromRequestHandler{}
+	res.Allow = allow
+	res.Message = msg
+	if !allow && !enforce {
+		res.Allow = true
+		res.Message = fmt.Sprintf("allowed because not enforced: %s", msg)
+
+	}
+	log.WithFields(log.Fields{
+		"namespace": req.Namespace,
+		"name":      req.Name,
+		"kind":      req.Kind.Kind,
+		"operation": req.Operation,
+		"userName":  req.UserInfo.Username,
+		"allow":     res.Allow,
+	}).Info(res.Message)
+	return res
 }
 
 func isUpdateRequest(operation v1.Operation) bool {
@@ -295,8 +315,19 @@ func mutationCheck(rawOldObject, rawObject []byte, IgnoreFields []string) (bool,
 func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfig.RequestHandlerConfig, signatureAnnotationType string) *k8smanifest.VerifyResourceOption {
 	// get verifyOption and imageRef from Parameter
 	vo := &paramObj.VerifyResourceOption
-	vo.CheckDryRunForApply = true
-	vo.ImageRef = paramObj.ImageRef
+	// vo.CheckDryRunForApply = true
+	if paramObj.SignatureRef.ImageRef != "" {
+		vo.ImageRef = paramObj.SignatureRef.ImageRef
+	}
+	if paramObj.SignatureRef.SignatureResourceRef.Name != "" && paramObj.SignatureRef.SignatureResourceRef.Namespace != "" {
+		ref := fmt.Sprintf("k8s://ConfigMap/%s/%s", paramObj.SignatureRef.SignatureResourceRef.Namespace, paramObj.SignatureRef.SignatureResourceRef.Name)
+		vo.SignatureResourceRef = ref
+	}
+	if paramObj.SignatureRef.ProvenanceResourceRef.Name != "" && paramObj.SignatureRef.ProvenanceResourceRef.Namespace != "" {
+		ref := fmt.Sprintf("k8s://ConfigMap/%s/%s", paramObj.SignatureRef.ProvenanceResourceRef.Namespace, paramObj.SignatureRef.ProvenanceResourceRef.Name)
+		vo.ProvenanceResourceRef = ref
+	}
+
 	namespace := os.Getenv("POD_NAMESPACE")
 	if namespace == "" {
 		namespace = defaultPodNamespace
@@ -331,46 +362,6 @@ func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfi
 	fields = append(fields, config.RequestFilterProfile.IgnoreFields...)
 	vo.IgnoreFields = fields
 	return vo
-}
-
-func LoadRequestHandlerConfig() (*k8smnfconfig.RequestHandlerConfig, error) {
-	namespace := os.Getenv("POD_NAMESPACE")
-	if namespace == "" {
-		namespace = defaultPodNamespace
-	}
-	configName := os.Getenv("REQUEST_HANDLER_CONFIG_NAME")
-	if configName == "" {
-		configName = defaultHandlerConfigMapName
-	}
-	configKey := os.Getenv("REQUEST_HANDLER_CONFIG_KEY")
-	if configKey == "" {
-		configKey = defaultConfigKeyInConfigMap
-	}
-
-	// load
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return nil, nil
-	}
-	clientset, err := kubeclient.NewForConfig(config)
-	if err != nil {
-		log.Error(err)
-		return nil, nil
-	}
-	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), configName, metav1.GetOptions{})
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to get a configmap `%s` in `%s` namespace", configName, namespace))
-	}
-	cfgBytes, found := cm.Data[configKey]
-	if !found {
-		return nil, errors.New(fmt.Sprintf("`%s` is not found in configmap", configKey))
-	}
-	var sc *k8smnfconfig.RequestHandlerConfig
-	err = yaml.Unmarshal([]byte(cfgBytes), &sc)
-	if err != nil {
-		return sc, errors.Wrap(err, fmt.Sprintf("failed to unmarshal config.yaml into %T", sc))
-	}
-	return sc, nil
 }
 
 func skipObjectsMatch(l k8smanifest.ObjectReferenceList, obj unstructured.Unstructured) bool {
