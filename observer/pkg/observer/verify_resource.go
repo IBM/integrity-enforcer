@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
+	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

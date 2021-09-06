@@ -1,0 +1,8 @@
+resources:
+- secret.yaml
+- deployment.yaml
+# - deployment-client.yaml
+- service.yaml
+- serviceaccount.yaml
+- role.yaml
+- role_binding.yaml

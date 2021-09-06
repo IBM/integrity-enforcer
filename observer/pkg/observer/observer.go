@@ -27,9 +27,9 @@ import (
 	"strings"
 	"time"
 
-	k8smnfconfig "github.com/IBM/integrity-shield/integrity-shield-server/pkg/config"
 	vrres "github.com/IBM/integrity-shield/observer/pkg/apis/verifyresourcestatus/v1alpha1"
 	vrresclient "github.com/IBM/integrity-shield/observer/pkg/client/verifyresourcestatus/clientset/versioned/typed/verifyresourcestatus/v1alpha1"
+	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"

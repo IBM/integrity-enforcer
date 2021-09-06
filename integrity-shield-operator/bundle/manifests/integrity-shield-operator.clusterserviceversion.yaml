@@ -11,7 +11,7 @@ metadata:
             "finalizers": [
               "cleanup.finalizers.integrityshield.io"
             ],
-            "name": "integrity-shield-server"
+            "name": "integrity-shield"
           },
           "spec": {
             "affinity": {},
@@ -47,7 +47,7 @@ metadata:
               "serviceAccountName": "integrity-shield-sa"
             },
             "shieldApi": {
-              "image": "gcr.io/clean-resource-318209/integrity-shield-server:0.2.1",
+              "image": "gcr.io/clean-resource-318209/integrity-shield-api:0.2.1",
               "imagePullPolicy": "Always",
               "name": "integrity-shield-api",
               "port": 8080,

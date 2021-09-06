@@ -34,8 +34,8 @@ require (
 )
 
 replace (
-	github.com/IBM/integrity-shield/admission-controller => ../admission-controller
 	github.com/IBM/integrity-shield/integrity-shield-operator => ./
-	github.com/IBM/integrity-shield/integrity-shield-server => ../integrity-shield-server
+	github.com/IBM/integrity-shield/shield => ../shield
+	github.com/IBM/integrity-shield/webhook/admission-controller => ../webhook/admission-controller
 	k8s.io/kubectl => k8s.io/kubectl v0.21.2
 )
