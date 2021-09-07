@@ -1,0 +1,23 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ManifestIntegrityProfile
+metadata:
+  name: constraint-configmap
+spec:
+  match:
+    kinds: 
+    - kinds: ["ConfigMap"]
+    labelSelector:
+      matchExpressions:
+        - operator: "In"
+          key: "integrity-shield-test-resource"
+          values: ["protected"]
+  parameters: 
+    signers:
+    - rkudo@redhat.com
+    ignoreFields:
+    - objects:
+      - kind: ConfigMap
+      fields:
+      - data.comment
+    imageRef: gcr.io/clean-resource-318209/sample-configmap-signature:0.0.1
+

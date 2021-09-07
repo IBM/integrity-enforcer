@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  comment: comment1
+  key1: val1
+  key2: val5
+kind: ConfigMap
+metadata:
+  annotations:
+    cosign.sigstore.dev/imageRef: gcr.io/clean-resource-318209/sample-configmap-signature:0.0.1
+  name: sample-cm
