@@ -50,6 +50,25 @@ type KeyConfig struct {
 	KeySecretNamespace string `json:"keySecretNamespace,omitempty"`
 }
 
+type ImageRef string
+type ImageRefList []ImageRef
+
+func (l ImageRefList) Match(imageRef string) bool {
+	if len(l) == 0 {
+		return true
+	}
+	for _, r := range l {
+		if r.Match(imageRef) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r ImageRef) Match(imageRef string) bool {
+	return k8smnfutil.MatchPattern(string(r), imageRef)
+}
+
 type ObjectUserBindingList []ObjectUserBinding
 
 type ObjectUserBinding struct {
@@ -58,6 +77,9 @@ type ObjectUserBinding struct {
 }
 
 type ImageProfile struct {
+	KeyConfigs []KeyConfig  `json:"keyConfigs,omitempty"`
+	Match      ImageRefList `json:"match,omitempty"`
+	Exclude    ImageRefList `json:"exclude,omitempty"`
 }
 
 func (p *ParameterObject) DeepCopyInto(p2 *ParameterObject) {
@@ -83,4 +105,19 @@ func (l ObjectUserBindingList) Match(obj unstructured.Unstructured, username str
 		}
 	}
 	return false
+}
+
+// if any profile condition is defined, image profile returns enabled = true
+func (p ImageProfile) Enabled() bool {
+	return len(p.Match) > 0 || len(p.Exclude) > 0
+}
+
+// returns if this profile matches the specified image ref or not
+func (p ImageProfile) MatchWith(imageRef string) bool {
+	matched := p.Match.Match(imageRef)
+	excluded := false
+	if len(p.Exclude) > 0 {
+		excluded = p.Exclude.Match(imageRef)
+	}
+	return matched && !excluded
 }

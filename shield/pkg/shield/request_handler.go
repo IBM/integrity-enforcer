@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
+	ishieldimage "github.com/IBM/integrity-shield/shield/pkg/image"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/mapnode"
@@ -217,10 +218,15 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			allow = true
 			message = "not protected"
 		}
-		// image verify result
+
+		// image verify
 		imageAllow := true
 		imageMessage := ""
-		if len(result.ImageVerifyResults) != 0 {
+		var imageVerifyResults []ishieldimage.ImageVerifyResult
+		if paramObj.ImageProfile.Enabled() {
+			ishieldimage.VerifyImageInManifest(resource, paramObj.ImageProfile)
+		}
+		if len(imageVerifyResults) != 0 {
 			for _, res := range result.ImageVerifyResults {
 				if res.InScope && !res.Verified {
 					imageAllow = false
