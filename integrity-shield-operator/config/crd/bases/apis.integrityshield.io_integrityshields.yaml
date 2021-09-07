@@ -6,13 +6,13 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: integrityshields.apis.integrityshield.io
+  name: integrityshieldren.apis.integrityshield.io
 spec:
   group: apis.integrityshield.io
   names:
     kind: IntegrityShield
     listKind: IntegrityShieldList
-    plural: integrityshields
+    plural: integrityshieldren
     singular: integrityshield
   scope: Namespaced
   versions:

@@ -1,0 +1,22 @@
+
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ManifestIntegrityConstraint
+metadata:
+  name: configmap-constraint
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["ConfigMap"] 
+    namespaces:
+    - integrity-shield-test-protected-namespace
+  parameters:
+    constraintName: configmap-constraint
+    signers:
+    - rkudo@redhat.com
+    ignoreFields:
+    - objects:
+      - kind: ConfigMap
+      fields:
+      - data.comment
+    imageRef: gcr.io/clean-resource-318209/sample-configmap-signature:0.0.1

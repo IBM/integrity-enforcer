@@ -19,15 +19,15 @@ if ! [ -x "$(command -v kubectl)" ]; then
     exit 1
 fi
 
-if [ -z "$ISHIELD_NS" ]; then
-    echo "ISHIELD_NS is empty. Please set namespace name for integrity-shield."
+if [ -z "$ISHIELD_OP_NS" ]; then
+    echo "ISHIELD_OP_NS is empty. Please set namespace name for integrity-shield."
     exit 1
 fi
 
-ISHIELD_FORWARDER_POD=`kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-server | grep Running | awk '{print $1}'`
-if [ -z "$ISHIELD_FORWARDER_POD" ]; then
-    echo "ISHIELD_FORWARDER_POD is empty. There is no running integrity-shield-server"
+ISHIELD_AC_SERVER_POD=`kubectl get pod -n ${ISHIELD_OP_NS} | grep integrity-shield-validator | grep Running | awk '{print $1}'`
+if [ -z "$ISHIELD_AC_SERVER_POD" ]; then
+    echo "ISHIELD_AC_SERVER_POD is empty. There is no running integrity-shield-validator"
     exit 1
 fi
 
-kubectl logs -f -n ${ISHIELD_NS} ${ISHIELD_FORWARDER_POD} -c forwarder
+kubectl logs -f -n ${ISHIELD_OP_NS} ${ISHIELD_AC_SERVER_POD} 

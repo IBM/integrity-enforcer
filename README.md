@@ -1,63 +1,76 @@
-# Integrity Shield (IShield)
-   
-Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It includes signature based configuration drift prevention based on [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) on Kubernetes cluster.
+# integrity-shield
+Integrity Shield is a tool for built-in preventive integrity control for regulated cloud workloads. It provides signature-based assurance of integrity for Kubernetes resources at cluster side.  
 
-## Goal
-​
-The goal of Integrity Shield is to provide assurance of the integrity of Kubernetes resources.  
-​
-Resources on a Kubernetes cluster are defined in various form of artifacts such as YAML files, Helm charts, Operator, etc., but those artifacts may be altered maliciously or unintentionally before deploying them to cluster. 
-This could be an integrity issue. For example, some artifact may be modified to inject malicous scripts and configurations inside in stealthy manner, then admininstrator may be in risk of deploying it without knowing the falsification.
-
-Integrity Shield (IShield) provides signature-based assurance of integrity for Kubernetes resources at cluster side. IShield works as an Admission Controller which handles all incoming Kubernetes admission requests, verifies if the requests attached a signature, and blocks any unauthorized requests according to the shield policy before actually persisting in etcd.  will helps cluster adminstrator to ensure
-- Allow to deploy authorized application pakcages only
-- Allow to use signed deployment params only
-- Zero-drift in resource configuration unless allowed explicitly
-- Perform all integrity verification on cluster (admission controller, not in client side)
-- Handle variations in application packaging and deployment (Helm /Operator /YAML / OLM Channel) with no modification in app installer
-​
+Integrity Shield works with OPA/Gatekeeper, verifies if the requests attached a signature, and blocks any unauthorized requests according to the constraint before actually persisting in etcd. 
+Also, you can use the [admission controller](./webhook/admission-controller/README.md) instead of OPA/Gatekeeper.
 
 ![Scenario](./docs/ishield-scenario.png)
 
-## Quick Start
-See [Quick Start](./docs/README_QUICK.md)
+## integrity shield server
 
-## Supported Platforms
+Integrity shield server includes the main logic to verify admission requests. 
+Integrity shield server receives a k8s resource from OPA/Gatekeeper, validates the resource which is included in the admission request based on the profile and sends the verification result to OPA/Gatekeeper.
+Integrity shield server uses [k8s-manifest-sigstore](https://github.com/sigstore/k8s-manifest-sigstore) internally to verify k8s manifest.
 
-Integrity Shield works as Kubernetes Admission Controller using Mutating Admission Webhook, and it can run on any Kubernetes cluster by design. 
-IShield can be deployed with operator. We have verified the feasibility on the following platforms:
+You can enable the protection by integrity shield with a few simple steps.
+Please see [Usage](./shield/README.md).
 
-- [RedHat OpenShift 4.5 and 4.6](https://www.openshift.com/)
-- [RedHat OpenShift 4.3 on IBM Cloud (ROKS)](https://www.openshift.com/products/openshift-ibm-cloud)
-- [IBM Kuberenetes Service (IKS)](https://www.ibm.com/cloud/container-service/) 1.17.14
-- [Minikube v1.19.1](https://kubernetes.io/docs/setup/learning-environment/minikube/)
+## gatekeeper constraint
+Integrity shield works with OPA/Gatekeeper by installing ConstraintTemplate(`template-manifestintegrityconstraint.yaml` ).
+We use [constraint framework](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/#constraints) of OPA/Gatekeeper to define the resources to be protected.
 
-## How Integrity Shield works
-- Resources to be protected in each namespace can be defined in the custom resource called `ResourceSigningProfile`. For example, the following snippet shows an example definition of protected resources in a namespace. This `ResourceSigningProfile` resource includes the matching rule for specifiying resources to such as ConfigMap, Depoloyment, and Service in a namespace `secure-ns`, which is protected by , so any matched request to create/update those resources are verified with signature.  (see [Define Protected Resources](./docs/README_FOR_RESOURCE_SIGNING_PROFILE.md))
-​
-  ```yaml
-  apiVersion: apis.integrityshield.io/v1alpha1
-  kind: ResourceSigningProfile
-  metadata:
-    name: sample-rsp
-  spec:
-    targetNamespaceSelector:
-      include:
-      - "secure-ns"
-      exclude:
-      - "kube-*"
-    protectRules:
-    - match:
-      - kind: ConfigMap
+For example, the following snippet shows an example definition of protected resources in a namespace. 
+```
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ManifestIntegrityConstraint
+metadata:
+  name: deployment-constraint
+spec:
+  match:
+    kinds:
+    - kinds: ["Deployment"]
+      apiGroups: ["apps"]
+    namespaces:
+    - "sample-ns"
+  parameters:
+    inScopeObjects:
+    - name: sample-app
+    signers:
+    - signer@signer.com
+    ignoreFields:
+    - objects:
       - kind: Deployment
-      - kind: Service
-  ```
-​
-- Adminssion request to the protected resources is blocked at Mutating Admission Webhook, and the request is allowed only when the valid signature on the resource in the request is provided.
-- Signer can be defined for each namespace independently. Signer for cluster-scope resources can be also defined. (see [Signer Configuration](./docs/README_SIGNER_CONFIG.md).)
-- Signature is provided in the form of separate signature resource or annotation attached to the resource. (see [How to Sign Resources](./docs/README_RESOURCE_SIGNATURE.md))
-- Integrity Shield admission controller is installed in a dedicated namespace (e.g. `integrity-shield-operator-system` in this document). It can be installed by operator. (see [Integrity Shield Custom Resource](./docs/README_ISHIELD_OPERATOR_CR.md) for detail install options.)
-​
+      fields:
+      - spec.replicas
+```
+`ManifestIntegrityConstraint` resource includes the parameters field. In the parameters field, you can configure the profile for verifying resources such as ignoreFields for allowing some requests that match this rule, signers, and so on.
 
-## Quick Start
-See [Quick Start](./docs/README_QUICK.md)
+## admission controller
+This is an admission controller for verifying k8s manifest with sigstore signing. You can use this admission controller instead of OPA/Gatekeeper.
+In this case, you can decide which resources to be protected in the custom resource called `ManifestIntegrityProfile` instead of OPA/Gatekeeper constraint.
+
+The following snippet is an example of `ManifestIntegrityProfile`.
+```
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ManifestIntegrityProfile
+metadata:
+  name: profile-configmap
+spec:
+  match:
+    kinds:
+    - kinds:
+      - ConfigMap
+    namespaces:
+    - sample-ns
+  parameters:
+    ignoreFields:
+    - fields:
+      - data.comment
+      objects:
+      - kind: ConfigMap
+    signers:
+    - signer@signer.com
+```
+
+You can set up the admission controller with a few simple steps. Please see [admission controller](./webhook/admission-controller/README.md).
+

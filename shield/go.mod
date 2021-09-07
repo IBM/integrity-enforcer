@@ -1,8 +1,9 @@
-module github.com/IBM/integrity-shield/shield
+module github.com/IBM/integrity-enforcer/shield
 
 go 1.16
 
 require (
+	github.com/IBM/integrity-shield/shield v0.0.0-00010101000000-000000000000
 	github.com/ghodss/yaml v1.0.0
 	github.com/jinzhu/copier v0.3.2
 	github.com/pkg/errors v0.9.1

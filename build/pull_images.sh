@@ -26,8 +26,14 @@ if [ -z "$ISHIELD_SERVER_IMAGE_NAME_AND_VERSION" ]; then
     exit 1
 fi
 
-if [ -z "$ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+if [ -z "$ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+    exit 1
+fi
+
+
+if [ -z "$ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
@@ -50,7 +56,7 @@ echo ""
 # Push integrity-shield-logging image
 echo -----------------------------
 echo [2/3] Pulling integrity-shield-logging image.
-docker pull ${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION}
+docker pull ${ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
