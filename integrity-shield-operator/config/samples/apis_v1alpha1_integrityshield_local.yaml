@@ -413,9 +413,9 @@ spec:
     resultDetailConfigKey: "config.yaml"
   constraintConfigKey: "config.yaml"
   constraintConfigName:  constraint-config
-  constraintConfig: ""
-    # constraints: 
-    # - constraintName: "*"
-    #   action:
-    #     inform: true
-    #     enforce: true
+  constraintConfig: |
+    constraints: 
+    - constraintName: "*"
+      action:
+        inform: true
+        enforce: false
