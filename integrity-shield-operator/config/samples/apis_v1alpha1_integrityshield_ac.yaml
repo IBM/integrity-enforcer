@@ -236,7 +236,7 @@ spec:
   admissionController: 
     name: integrity-shield-validator
     imagePullPolicy: Always
-    image: localhost:5000/integrity-shield-admission-controller:0.2.0
+    image: localhost:5000/integrity-shield-admission-controller:0.2.5
     port: 9443
     log: 
       level: inform
@@ -345,58 +345,23 @@ spec:
     resources: ["*"]
   useGatekeeper: false
   observer: 
-    enabled: false
+    enabled: true
     name: integrity-shield-observer
     imagePullPolicy: Always
-    image: localhost:5000/integrity-shield-observer:0.2.0
+    # image: quay.io/open-cluster-management/integrity-shield-observer:0.2.5
+    image: localhost:5000/integrity-shield-observer:0.2.5
     selector:     
       app: integrity-shield-observer
     logLevel: info
-    interval: "60"
-    targetResourceConfigName: target-resource-config
-    targetResourceConfigKey: "config.yaml"
-    targetResourceConfig: |
-      ignoreFields:
-      - fields:
-        - metadata.namespace
-        objects:
-        - kind: ClusterServiceVersion
-      - fields:
-        - metadata.managedFields.*
-        - metadata.resourceVersion
-        - metadata.selfLink
-        - metadata.annotations.control-plane.alpha.kubernetes.io/leader
-        - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
-        - metadata.finalizers*
-        - metadata.annotations.namespace
-        - metadata.annotations.deprecated.daemonset.template.generation
-        - metadata.creationTimestamp
-        - metadata.uid
-        - metadata.generation
-        - status
-        - metadata.annotations.cosign.sigstore.dev/imageRef
-        - metadata.annotations.cosign.sigstore.dev/bundle
-        - metadata.annotations.cosign.sigstore.dev/message
-        - metadata.annotations.cosign.sigstore.dev/certificate
-        - metadata.annotations.cosign.sigstore.dev/signature
-        objects:
-        - name: '*'
-      - fields:
-        - secrets.*.name
-        - imagePullSecrets.*.name
-        objects:
-        - kind: ServiceAccount
-      - fields:
-        - spec.ports.*.nodePort
-        - spec.clusterIP
-        - spec.clusterIPs.0
-        objects:
-        - kind: Service
-      - fields:
-        - metadata.labels.olm.api.*
-        - metadata.labels.operators.coreos.com/*
-        - metadata.annotations.*
-        - spec.install.spec.deployments.*.spec.template.spec.containers.*.resources.limits.cpu
-        - spec.cleanup.enabled
-        objects:
-        - kind: ClusterServiceVersion
+    interval: "5"
+    exportDetailResult: true
+    resultDetailConfigName: verify-resource-result
+    resultDetailConfigKey: "config.yaml"
+  constraintConfigKey: "config.yaml"
+  constraintConfigName:  constraint-config
+  constraintConfig: ""
+    # constraints: 
+    # - constraintName: "*"
+    #   action:
+    #     inform: true
+    #     enforce: true
