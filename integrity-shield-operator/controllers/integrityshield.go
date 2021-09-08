@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"time"
 
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	policyv1 "k8s.io/api/policy/v1beta1"
@@ -46,7 +46,7 @@ import (
 				CRD
 
 ***********************************************/
-func (r *IntegrityShieldReconciler) createOrUpdateCRD(instance *apiv1alpha1.IntegrityShield, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateCRD(instance *apiv1.IntegrityShield, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
 	ctx := context.Background()
 
 	found := &extv1.CustomResourceDefinition{}
@@ -98,7 +98,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateCRD(instance *apiv1alpha1.Inte
 
 }
 
-func (r *IntegrityShieldReconciler) deleteCRD(instance *apiv1alpha1.IntegrityShield, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) deleteCRD(instance *apiv1.IntegrityShield, expected *extv1.CustomResourceDefinition) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &extv1.CustomResourceDefinition{}
 
@@ -125,25 +125,25 @@ func (r *IntegrityShieldReconciler) deleteCRD(instance *apiv1alpha1.IntegrityShi
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateManifestIntegrityProfileCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildManifestIntegrityProfileCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) deleteManifestIntegrityProfileCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildManifestIntegrityProfileCRD(instance)
 	return r.deleteCRD(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateVerifyResourceResultCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildVerifyResourceResultCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) deleteVerifyResourceResultCRD(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildVerifyResourceResultCRD(instance)
 	return r.deleteCRD(instance, expected)
 }
@@ -154,7 +154,7 @@ func (r *IntegrityShieldReconciler) deleteVerifyResourceResultCRD(
 
 ***********************************************/
 
-func (r *IntegrityShieldReconciler) createOrUpdateConfigMap(instance *apiv1alpha1.IntegrityShield, expected *corev1.ConfigMap) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateConfigMap(instance *apiv1.IntegrityShield, expected *corev1.ConfigMap) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.ConfigMap{}
 
@@ -208,19 +208,19 @@ func (r *IntegrityShieldReconciler) createOrUpdateConfigMap(instance *apiv1alpha
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateRequestHandlerConfig(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildReqConfigForIShield(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateACConfig(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildACConfigForIShield(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) createOrUpdateConstraintConfig(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildConstraintConfigForIShield(instance)
 	return r.createOrUpdateConfigMap(instance, expected)
 }
@@ -231,7 +231,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateConstraintConfig(
 
 ***********************************************/
 
-func (r *IntegrityShieldReconciler) createOrUpdateServiceAccount(instance *apiv1alpha1.IntegrityShield, expected *corev1.ServiceAccount) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateServiceAccount(instance *apiv1.IntegrityShield, expected *corev1.ServiceAccount) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.ServiceAccount{}
 
@@ -273,7 +273,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateServiceAccount(instance *apiv1
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateClusterRole(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateClusterRole(instance *apiv1.IntegrityShield, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRole{}
 
@@ -316,7 +316,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRole(instance *apiv1alp
 
 }
 
-func (r *IntegrityShieldReconciler) deleteClusterRole(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) deleteClusterRole(instance *apiv1.IntegrityShield, expected *rbacv1.ClusterRole) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRole{}
 
@@ -343,7 +343,7 @@ func (r *IntegrityShieldReconciler) deleteClusterRole(instance *apiv1alpha1.Inte
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBinding(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBinding(instance *apiv1.IntegrityShield, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRoleBinding{}
 
@@ -385,7 +385,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBinding(instance *a
 
 }
 
-func (r *IntegrityShieldReconciler) deleteClusterRoleBinding(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) deleteClusterRoleBinding(instance *apiv1.IntegrityShield, expected *rbacv1.ClusterRoleBinding) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.ClusterRoleBinding{}
 
@@ -411,7 +411,7 @@ func (r *IntegrityShieldReconciler) deleteClusterRoleBinding(instance *apiv1alph
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateRole(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.Role) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateRole(instance *apiv1.IntegrityShield, expected *rbacv1.Role) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.Role{}
 
@@ -454,7 +454,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateRole(instance *apiv1alpha1.Int
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateRoleBinding(instance *apiv1alpha1.IntegrityShield, expected *rbacv1.RoleBinding) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateRoleBinding(instance *apiv1.IntegrityShield, expected *rbacv1.RoleBinding) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &rbacv1.RoleBinding{}
 
@@ -498,85 +498,85 @@ func (r *IntegrityShieldReconciler) createOrUpdateRoleBinding(instance *apiv1alp
 
 // api sa
 func (r *IntegrityShieldReconciler) createOrUpdateIShieldApiServiceAccount(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildServiceAccountForIShield(instance)
 	return r.createOrUpdateServiceAccount(instance, expected)
 }
 
 // observer sa
 func (r *IntegrityShieldReconciler) createOrUpdateObserverServiceAccount(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildServiceAccountForObserver(instance)
 	return r.createOrUpdateServiceAccount(instance, expected)
 }
 
 // cluster role binding
 func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBindingForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForIShield(instance)
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) deleteClusterRoleBindingForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForIShield(instance)
 	return r.deleteClusterRoleBinding(instance, expected)
 }
 
 // cluster role binding for observer sa
 func (r *IntegrityShieldReconciler) createOrUpdateObserverClusterRoleBindingForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForObserver(instance)
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) deleteObserverClusterRoleBindingForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForObserver(instance)
 	return r.deleteClusterRoleBinding(instance, expected)
 }
 
 // cluster role
 func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForIShield(instance)
 	return r.createOrUpdateClusterRole(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) deleteClusterRoleForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForIShield(instance)
 	return r.deleteClusterRole(instance, expected)
 }
 
 // cluster role for observer sa
 func (r *IntegrityShieldReconciler) createOrUpdateObserverClusterRoleForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForObserver(instance)
 	return r.createOrUpdateClusterRole(instance, expected)
 }
 
 func (r *IntegrityShieldReconciler) deleteObserverClusterRoleForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForObserver(instance)
 	return r.deleteClusterRole(instance, expected)
 }
 
 // role binding
 func (r *IntegrityShieldReconciler) createOrUpdateRoleBindingForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildRoleBindingForIShield(instance)
 	return r.createOrUpdateRoleBinding(instance, expected)
 }
 
 // role
 func (r *IntegrityShieldReconciler) createOrUpdateRoleForIShield(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildRoleForIShield(instance)
 	return r.createOrUpdateRole(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildPodSecurityPolicy(instance)
 	found := &policyv1.PodSecurityPolicy{}
@@ -620,7 +620,7 @@ func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *ap
 }
 
 // delete ishield-psp
-func (r *IntegrityShieldReconciler) deletePodSecurityPolicy(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) deletePodSecurityPolicy(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildPodSecurityPolicy(instance)
 	found := &policyv1.PodSecurityPolicy{}
@@ -652,7 +652,7 @@ func (r *IntegrityShieldReconciler) deletePodSecurityPolicy(instance *apiv1alpha
 
 ***********************************************/
 
-func (r *IntegrityShieldReconciler) createOrUpdateSecret(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateSecret(instance *apiv1.IntegrityShield, expected *corev1.Secret) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Secret{}
 
@@ -696,7 +696,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateSecret(instance *apiv1alpha1.I
 
 }
 
-func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secret, serviceName string) *corev1.Secret {
+func addCertValues(instance *apiv1.IntegrityShield, expected *corev1.Secret, serviceName string) *corev1.Secret {
 	reqLogger := log.WithValues(
 		"Secret.Namespace", instance.Namespace,
 		"Instance.Name", instance.Name,
@@ -721,7 +721,7 @@ func addCertValues(instance *apiv1alpha1.IntegrityShield, expected *corev1.Secre
 
 // api
 func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildTlsSecretForIShield(instance)
 	expected = addCertValues(instance, expected, instance.Spec.ApiServiceName)
 	return r.createOrUpdateSecret(instance, expected)
@@ -729,7 +729,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateTlsSecret(
 
 // webhook
 func (r *IntegrityShieldReconciler) createOrUpdateACTlsSecret(
-	instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildAPITlsSecretForIShield(instance)
 	expected = addCertValues(instance, expected, instance.Spec.WebhookServiceName)
 	return r.createOrUpdateSecret(instance, expected)
@@ -740,7 +740,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateACTlsSecret(
 				Deployment
 
 ***********************************************/
-func (r *IntegrityShieldReconciler) createOrUpdateDeployment(instance *apiv1alpha1.IntegrityShield, expected *appsv1.Deployment) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateDeployment(instance *apiv1.IntegrityShield, expected *appsv1.Deployment) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &appsv1.Deployment{}
 
@@ -794,17 +794,17 @@ func (r *IntegrityShieldReconciler) createOrUpdateDeployment(instance *apiv1alph
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateIShieldServerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateIShieldServerDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildDeploymentForIShieldServer(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateAdmissionControllerDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateAdmissionControllerDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildDeploymentForAdmissionController(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateObserverDeployment(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateObserverDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildDeploymentForObserver(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
@@ -814,7 +814,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateObserverDeployment(instance *a
 				Service
 
 ***********************************************/
-func (r *IntegrityShieldReconciler) createOrUpdateService(instance *apiv1alpha1.IntegrityShield, expected *corev1.Service) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateService(instance *apiv1.IntegrityShield, expected *corev1.Service) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &corev1.Service{}
 
@@ -855,12 +855,12 @@ func (r *IntegrityShieldReconciler) createOrUpdateService(instance *apiv1alpha1.
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateWebhookService(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildServiceForIShield(instance)
 	return r.createOrUpdateService(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateAPIService(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateAPIService(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildAPIServiceForIShield(instance)
 	return r.createOrUpdateService(instance, expected)
 }
@@ -871,7 +871,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateAPIService(instance *apiv1alph
 
 ***********************************************/
 
-func (r *IntegrityShieldReconciler) createOrUpdateWebhook(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateWebhook(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildValidatingWebhookConfigurationForIShield(instance)
 	found := &admregv1.ValidatingWebhookConfiguration{}
@@ -931,7 +931,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhook(instance *apiv1alpha1.
 }
 
 // delete webhookconfiguration
-func (r *IntegrityShieldReconciler) deleteWebhook(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) deleteWebhook(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	expected := res.BuildValidatingWebhookConfigurationForIShield(instance)
 	found := &admregv1.ValidatingWebhookConfiguration{}
@@ -958,7 +958,7 @@ func (r *IntegrityShieldReconciler) deleteWebhook(instance *apiv1alpha1.Integrit
 }
 
 // wait function
-func (r *IntegrityShieldReconciler) isDeploymentAvailable(instance *apiv1alpha1.IntegrityShield) bool {
+func (r *IntegrityShieldReconciler) isDeploymentAvailable(instance *apiv1.IntegrityShield) bool {
 	ctx := context.Background()
 	found := &appsv1.Deployment{}
 	expected := res.BuildDeploymentForAdmissionController(instance)
@@ -978,7 +978,7 @@ func (r *IntegrityShieldReconciler) isDeploymentAvailable(instance *apiv1alpha1.
 	return false
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateWebhookEvent(instance *apiv1alpha1.IntegrityShield, evtName, webhookName string) error {
+func (r *IntegrityShieldReconciler) createOrUpdateWebhookEvent(instance *apiv1.IntegrityShield, evtName, webhookName string) error {
 	ctx := context.Background()
 	evtNamespace := instance.Namespace
 	involvedObject := corev1.ObjectReference{
@@ -1063,7 +1063,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateWebhookEvent(instance *apiv1al
 
 ***********************************************/
 
-func (r *IntegrityShieldReconciler) createOrUpdateConstraintTemplate(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) createOrUpdateConstraintTemplate(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &templatev1.ConstraintTemplate{}
 	expected := res.BuildConstraintTemplateForIShield(instance)
@@ -1105,7 +1105,7 @@ func (r *IntegrityShieldReconciler) createOrUpdateConstraintTemplate(instance *a
 	return ctrl.Result{}, nil
 }
 
-func (r *IntegrityShieldReconciler) isGatekeeperAvailable(instance *apiv1alpha1.IntegrityShield) bool {
+func (r *IntegrityShieldReconciler) isGatekeeperAvailable(instance *apiv1.IntegrityShield) bool {
 	ctx := context.Background()
 	found := &extv1.CustomResourceDefinition{}
 
@@ -1125,7 +1125,7 @@ func (r *IntegrityShieldReconciler) isGatekeeperAvailable(instance *apiv1alpha1.
 }
 
 // delete ishield-psp
-func (r *IntegrityShieldReconciler) deleteConstraintTemplate(instance *apiv1alpha1.IntegrityShield) (ctrl.Result, error) {
+func (r *IntegrityShieldReconciler) deleteConstraintTemplate(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	ctx := context.Background()
 	found := &templatev1.ConstraintTemplate{}
 	expected := res.BuildConstraintTemplateForIShield(instance)

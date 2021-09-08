@@ -17,7 +17,7 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -60,7 +60,7 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 }
 
 //shield config crd
-func BuildManifestIntegrityProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+func BuildManifestIntegrityProfileCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
 		Kind:       "ManifestIntegrityProfile",
 		Plural:     "manifestintegrityprofiles",
@@ -72,7 +72,7 @@ func BuildManifestIntegrityProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.Cu
 }
 
 //shield config crd
-func BuildVerifyResourceResultCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+func BuildVerifyResourceResultCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
 		Kind:       "VerifyResourceCondition",
 		Plural:     "verifyresourceconditions",

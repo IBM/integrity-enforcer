@@ -1,13 +1,11 @@
-apiVersion: apis.integrityshield.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1
 kind: IntegrityShield
 metadata:
-  name: integrity-shield
+  name: integrity-shield-admission-controller
   finalizers:
   - cleanup.finalizers.integrityshield.io
 spec:
   # Add fields here
-  labels:
-    app: ishield-server
   affinity: {}
   security:
     serviceAccountName: integrity-shield-sa
@@ -18,24 +16,10 @@ spec:
     observerRole: integrity-shield-observer-role
     observerRoleBinding: integrity-shield-observer-rolebinding
     securityContext: {}
-  shieldApiTlsSecretName: integrity-shield-api-tls
-  shieldApiServiceName: integrity-shield-api
-  shieldApiServicePort: 8123
-  shieldApi:
-    name: integrity-shield-api
-    imagePullPolicy: Always
-    image: localhost:5000/integrity-shield-api:0.2.5
-    port: 8080
-    selector:     
-      app: integrity-shield-api
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
   requestHandlerConfigKey: config.yaml
   requestHandlerConfigName: request-handler-config
   requestHandlerConfig: |
-    sideEffect:
+    sideEffect: 
       createDenyEvent: true
     log:
       level: info
@@ -46,10 +30,6 @@ spec:
       - kind: ConfigMap
         name: kube-root-ca.crt
       ignoreFields:
-      - fields:
-        - spec.host
-        objects:
-        - kind: Route
       - fields:
         - metadata.namespace
         objects:
@@ -253,160 +233,126 @@ spec:
         - kind: InstallPlan, Role, RoleBinding, Deployment
         users: 
         - system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
-  useGatekeeper: true
-  rego: | 
-    package integrityshieldcheck
-    violation[{"msg": msg}] {
-      not is_allowed_kind
-      not is_excluded
-      is_create_or_update
-      ishield_input := {"parameters":input.parameters, "request":input.review}
-      reqdata := json.marshal(ishield_input)
-      url := "https://integrity-shield-api.REPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
-      resp := http_post(url, reqdata)
-      resp.status_code == 200
-      result := json.unmarshal(resp.raw_body)
-      result.allow == false
-      not is_detect_mode
-      msg := sprintf("denied; %v", [result])
-    }
-
-    http_post(url, postdata) = resp {
-      resp := http.send({
-        "url": url,
-        "method": "POST",
-        "headers": {
-          "Accept": "application/json",
-          "Content-type": "application/json",
-        },
-        "raw_body": postdata,
-        "tls_insecure_skip_verify": true
-      })
-    }
-    
-    # request check
-    is_create_or_update { is_create }
-    is_create_or_update { is_update }
-    is_create { input.review.operation == "CREATE" }
-    is_update { input.review.operation == "UPDATE" }
-
-    # shield config: allow
-    is_allowed_kind { skip_kinds[_].kind == input.review.kind.kind }
-    # shield config: inScopeNamespaceSelector
-    is_excluded { exclude_namespaces[_] = input.review.namespace}
-
-    # detect mode
-    is_detect_mode { enforce_mode == "detect" }
-
-    ################### 
-    # Default setting #
-    ###################
-
-    # Mode whether to deny a invalid request [enforce/detect]
-    enforce_mode = "enforce"
-
-    # kinds to be skipped
-    skip_kinds = [
-              {
-                "kind": "Event"
-              },
-              {
-                "kind": "Lease"
-              },
-              {
-                "kind": "Endpoints"
-              },
-              {
-                "kind": "TokenReview"
-              },
-              {
-                "kind": "SubjectAccessReview"
-              },
-              {
-                "kind": "SelfSubjectAccessReview"
-              }
-            ]
-
-    # exclude namespaces
-    exclude_namespaces = [
-                          "kube-node-lease",
-                          "kube-public",
-                          "kube-storage-version-migrator-operator",
-                          "kube-system",
-                          "open-cluster-management",
-                          "open-cluster-management-hub",
-                          "open-cluster-management-agent",
-                          "open-cluster-management-agent-addon",
-                          "openshift",
-                          "openshift-apiserver",
-                          "openshift-apiserver-operator",
-                          "openshift-authentication",
-                          "openshift-authentication-operator",
-                          "openshift-cloud-credential-operator",
-                          "openshift-cluster-csi-drivers",
-                          "openshift-cluster-machine-approver",
-                          "openshift-cluster-node-tuning-operator",
-                          "openshift-cluster-samples-operator",
-                          "openshift-cluster-storage-operator",
-                          "openshift-cluster-version",
-                          "openshift-compliance",
-                          "openshift-config",
-                          "openshift-config-managed",
-                          "openshift-config-operator",
-                          "openshift-console",
-                          "openshift-console-operator",
-                          "openshift-console-user-settings",
-                          "openshift-controller-manager",
-                          "openshift-controller-manager-operator",
-                          "openshift-dns",
-                          "openshift-dns-operator",
-                          "openshift-etcd",
-                          "openshift-etcd-operator",
-                          "openshift-gatekeeper-system",
-                          "openshift-image-registry",
-                          "openshift-infra",
-                          "openshift-ingress",
-                          "openshift-ingress-canary",
-                          "openshift-ingress-operator",
-                          "openshift-insights",
-                          "openshift-kni-infra",
-                          "openshift-kube-apiserver",
-                          "openshift-kube-apiserver-operator",
-                          "openshift-kube-controller-manager",
-                          "openshift-kube-controller-manager-operator",
-                          "openshift-kube-scheduler",
-                          "openshift-kube-scheduler-operator",
-                          "openshift-kube-storage-version-migrator",
-                          "openshift-kube-storage-version-migrator-operator",
-                          "openshift-kubevirt-infra",
-                          "openshift-machine-api",
-                          "openshift-machine-config-operator",
-                          "openshift-marketplace",
-                          "openshift-monitoring",
-                          "openshift-multus",
-                          "openshift-network-diagnostics",
-                          "openshift-network-operator",
-                          "openshift-node",
-                          "openshift-oauth-apiserver",
-                          "openshift-openstack-infra",
-                          "openshift-operators",
-                          "openshift-operator-lifecycle-manager",
-                          "openshift-ovirt-infra",
-                          "openshift-ovn-kubernetes",
-                          "openshift-sdn",
-                          "openshift-service-ca",
-                          "openshift-service-ca-operator",
-                          "openshift-user-workload-monitoring",
-                          "openshift-vsphere-infra"
-                      ]
+  admissionController: 
+    name: integrity-shield-validator
+    imagePullPolicy: Always
+    image: localhost:5000/integrity-shield-admission-controller:0.2.5
+    port: 9443
+    log: 
+      level: inform
+      format: json
+    selector:     
+      app: integrity-shield-validator
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  webhookServerTlsSecretName: integrity-shield-validator-tls
+  webhookServiceName: integrity-shield-validator-service
+  webhookConfigName: integrity-shield-validating-webhook-configuration
+  admissionControllerConfigKey: config.yaml
+  admissionControllerConfigName: admission-controller-config
+  admissionControllerConfig: |
+    allow:
+      kinds:
+      - kind: Event
+      - kind: Lease
+      - kind: Endpoints
+      - kind: TokenReview
+      - kind: SubjectAccessReview
+      - kind: SelfSubjectAccessReview
+    mode: enforce
+    sideEffect: 
+      updateMIPStatusForDeniedRequest: true
+    inScopeNamespaceSelector:
+      exclude:
+      - kube-node-lease
+      - kube-public
+      - kube-storage-version-migrator-operator
+      - kube-system
+      - open-cluster-management
+      - open-cluster-management-hub
+      - open-cluster-management-agent
+      - open-cluster-management-agent-addon
+      - openshift
+      - openshift-apiserver
+      - openshift-apiserver-operator
+      - openshift-authentication
+      - openshift-authentication-operator
+      - openshift-cloud-credential-operator
+      - openshift-cluster-csi-drivers
+      - openshift-cluster-machine-approver
+      - openshift-cluster-node-tuning-operator
+      - openshift-cluster-samples-operator
+      - openshift-cluster-storage-operator
+      - openshift-cluster-version
+      - openshift-compliance
+      - openshift-config
+      - openshift-config-managed
+      - openshift-config-operator
+      - openshift-console
+      - openshift-console-operator
+      - openshift-console-user-settings
+      - openshift-controller-manager
+      - openshift-controller-manager-operator
+      - openshift-dns
+      - openshift-dns-operator
+      - openshift-etcd
+      - openshift-etcd-operator
+      - openshift-gatekeeper-system
+      - openshift-image-registry
+      - openshift-infra
+      - openshift-ingress
+      - openshift-ingress-canary
+      - openshift-ingress-operator
+      - openshift-insights
+      - openshift-kni-infra
+      - openshift-kube-apiserver
+      - openshift-kube-apiserver-operator
+      - openshift-kube-controller-manager
+      - openshift-kube-controller-manager-operator
+      - openshift-kube-scheduler
+      - openshift-kube-scheduler-operator
+      - openshift-kube-storage-version-migrator
+      - openshift-kube-storage-version-migrator-operator
+      - openshift-kubevirt-infra
+      - openshift-machine-api
+      - openshift-machine-config-operator
+      - openshift-marketplace
+      - openshift-monitoring
+      - openshift-multus
+      - openshift-network-diagnostics
+      - openshift-network-operator
+      - openshift-node
+      - openshift-oauth-apiserver
+      - openshift-openstack-infra
+      - openshift-operators
+      - openshift-operator-lifecycle-manager
+      - openshift-ovirt-infra
+      - openshift-ovn-kubernetes
+      - openshift-sdn
+      - openshift-service-ca
+      - openshift-service-ca-operator
+      - openshift-user-workload-monitoring
+      - openshift-vsphere-infra
+  webhookClusterResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+  webhookNamespacedResource:
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources: ["*"]
+  useGatekeeper: false
   observer: 
     enabled: true
     name: integrity-shield-observer
     imagePullPolicy: Always
+    # image: quay.io/open-cluster-management/integrity-shield-observer:0.2.5
     image: localhost:5000/integrity-shield-observer:0.2.5
     selector:     
       app: integrity-shield-observer
-    logLevel: trace
+    logLevel: info
     interval: "5"
     exportDetailResult: true
     resultDetailConfigName: verify-resource-result

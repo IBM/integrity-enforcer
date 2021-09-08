@@ -1,5 +1,6 @@
 domain: integrityshield.io
-layout: go.kubebuilder.io/v3
+layout:
+- go.kubebuilder.io/v3
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
@@ -13,6 +14,7 @@ resources:
   domain: integrityshield.io
   group: apis
   kind: IntegrityShield
-  path: github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1
-  version: v1alpha1
+  path: github.com/IBM/integrity-shield/integrity-shield-operator/api/v1
+  version: v1
+  plural: IntegrityShields
 version: "3"

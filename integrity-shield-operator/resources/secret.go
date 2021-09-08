@@ -17,13 +17,13 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ishield-server-tls
-func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+func BuildTlsSecretForIShield(cr *apiv1.IntegrityShield) *corev1.Secret {
 	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -41,7 +41,7 @@ func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
 }
 
 // ishield-webhook-tls
-func BuildAPITlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+func BuildAPITlsSecretForIShield(cr *apiv1.IntegrityShield) *corev1.Secret {
 	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

@@ -17,7 +17,7 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,7 +25,7 @@ import (
 )
 
 //sa
-func BuildServiceAccountForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ServiceAccount {
+func BuildServiceAccountForIShield(cr *apiv1.IntegrityShield) *corev1.ServiceAccount {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -42,7 +42,7 @@ func BuildServiceAccountForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Serv
 	return sa
 }
 
-func BuildServiceAccountForObserver(cr *apiv1alpha1.IntegrityShield) *corev1.ServiceAccount {
+func BuildServiceAccountForObserver(cr *apiv1.IntegrityShield) *corev1.ServiceAccount {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -60,7 +60,7 @@ func BuildServiceAccountForObserver(cr *apiv1alpha1.IntegrityShield) *corev1.Ser
 }
 
 //cluster role - server
-func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRole {
+func BuildClusterRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -138,7 +138,7 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 }
 
 //cluster role-binding
-func BuildClusterRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRoleBinding {
+func BuildClusterRoleBindingForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -168,7 +168,7 @@ func BuildClusterRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.
 }
 
 //role dry-run
-func BuildRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
+func BuildRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.Role {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -199,7 +199,7 @@ func BuildRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
 }
 
 // TODO: should be minimum privilege
-func BuildClusterRoleForObserver(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRole {
+func BuildClusterRoleForObserver(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -230,7 +230,7 @@ func BuildClusterRoleForObserver(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluste
 }
 
 //role-binding
-func BuildRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.RoleBinding {
+func BuildRoleBindingForIShield(cr *apiv1.IntegrityShield) *rbacv1.RoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -259,7 +259,7 @@ func BuildRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.RoleBin
 	return rolebinding
 }
 
-func BuildClusterRoleBindingForObserver(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRoleBinding {
+func BuildClusterRoleBindingForObserver(cr *apiv1.IntegrityShield) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -289,7 +289,7 @@ func BuildClusterRoleBindingForObserver(cr *apiv1alpha1.IntegrityShield) *rbacv1
 }
 
 //pod security policy
-func BuildPodSecurityPolicy(cr *apiv1alpha1.IntegrityShield) *policyv1.PodSecurityPolicy {
+func BuildPodSecurityPolicy(cr *apiv1.IntegrityShield) *policyv1.PodSecurityPolicy {
 	labels := map[string]string{
 		"app": cr.Name,
 	}

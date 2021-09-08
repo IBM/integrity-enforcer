@@ -14,7 +14,7 @@ spec:
       displayName: Integrity Shield
       kind: IntegrityShield
       name: integrityshields.apis.integrityshield.io
-      version: v1alpha1
+      version: v1
   description: K8s Integrity Shield is a tool for built-in preventive integrity control
     for regulated cloud workloads. It includes signature based configuration drift
     prevention based on Admission Webhook on Kubernetes cluster.

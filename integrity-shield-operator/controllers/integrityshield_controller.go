@@ -20,13 +20,12 @@ import (
 	"context"
 	"time"
 
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	apisv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -66,7 +65,7 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// your logic here
 	// Fetch the IntegrityShield instance
-	instance := &apisv1alpha1.IntegrityShield{}
+	instance := &apiv1.IntegrityShield{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -84,7 +83,7 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Integrity Shield is under deletion - finalizer step
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if containsString(instance.ObjectMeta.Finalizers, apisv1alpha1.CleanupFinalizerName) {
+		if containsString(instance.ObjectMeta.Finalizers, apiv1.CleanupFinalizerName) {
 			if err := r.deleteClusterScopedChildrenResources(instance); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried
@@ -93,7 +92,7 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 
 			// remove our finalizer from the list and update it.
-			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, apisv1alpha1.CleanupFinalizerName)
+			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, apiv1.CleanupFinalizerName)
 			if err := r.Update(context.Background(), instance); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -255,11 +254,11 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *IntegrityShieldReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apisv1alpha1.IntegrityShield{}).
+		For(&apiv1.IntegrityShield{}).
 		Complete(r)
 }
 
-func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instance *apisv1alpha1.IntegrityShield) error {
+func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instance *apiv1.IntegrityShield) error {
 	// delete any cluster scope resources owned by the instance
 	// (In Iubernetes 1.20 and later, a garbage collector ignore cluster scope children even if their owner is deleted)
 	var err error

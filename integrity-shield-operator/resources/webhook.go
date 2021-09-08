@@ -19,7 +19,7 @@ package resources
 import (
 	"fmt"
 
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ import (
 )
 
 // webhook service
-func BuildServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
+func BuildServiceForIShield(cr *apiv1.IntegrityShield) *corev1.Service {
 	var targetport intstr.IntOrString
 	targetport.Type = intstr.String
 	targetport.StrVal = "validator-port"
@@ -50,7 +50,7 @@ func BuildServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
 }
 
 // api service
-func BuildAPIServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
+func BuildAPIServiceForIShield(cr *apiv1.IntegrityShield) *corev1.Service {
 	var targetport intstr.IntOrString
 	targetport.Type = intstr.String
 	targetport.StrVal = "ishield-api"
@@ -73,7 +73,7 @@ func BuildAPIServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service 
 }
 
 //webhook configuration
-func BuildValidatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield) *admregv1.ValidatingWebhookConfiguration {
+func BuildValidatingWebhookConfigurationForIShield(cr *apiv1.IntegrityShield) *admregv1.ValidatingWebhookConfiguration {
 
 	namespaced := admregv1.NamespacedScope
 	cluster := admregv1.ClusterScope
@@ -91,7 +91,7 @@ func BuildValidatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShie
 	var empty []byte
 
 	sideEffect := admregv1.SideEffectClassNoneOnDryRun
-	timeoutSeconds := int32(apiv1alpha1.DefaultIShieldWebhookTimeout)
+	timeoutSeconds := int32(apiv1.DefaultIShieldWebhookTimeout)
 
 	rules := []admregv1.RuleWithOperations{
 		{
