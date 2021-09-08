@@ -150,7 +150,7 @@ type Framework struct {
 	// Kubernetes API clientsets
 	KubeClientSet          kubernetes.Interface
 	APIExtensionsClientSet apiextcs.Interface
-	MIPClient              mipclient.ApisV1alpha1Interface
+	MIPClient              mipclient.ApisV1Interface
 
 	// Namespace in which all test resources should reside
 	Namespace *v1.Namespace
