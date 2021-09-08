@@ -74,7 +74,7 @@ spec:
     namespaces:
     - "sample-ns"
   parameters:
-    inScopeObjects:
+    objectSelector:
     - name: sample-cm
     signers:
     - signer@signer.com

@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/apis/manifestintegrityprofile/v1alpha1"
+	v1 "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/apis/manifestintegrityprofile/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -52,9 +52,9 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=apis.integrityshield.io, Version=v1alpha1
-	case v1alpha1.SchemeGroupVersion.WithResource("manifestintegrityprofiles"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().ManifestIntegrityProfiles().Informer()}, nil
+	// Group=apis.integrityshield.io, Version=v1
+	case v1.SchemeGroupVersion.WithResource("manifestintegrityprofiles"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1().ManifestIntegrityProfiles().Informer()}, nil
 
 	}
 

@@ -62,6 +62,11 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	}
 	// get enforce action
 	enforce := k8smnfconfig.CheckIfEnforceConstraint(paramObj.ConstraintName, cconfig.Constraints)
+	if enforce {
+		log.Info("enforce action is enabled by constraint config.")
+	} else {
+		log.Info("enforce action is disabled by constraint config.")
+	}
 
 	// unmarshal admission request object
 	var resource unstructured.Unstructured
@@ -139,7 +144,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		message = "SkipUsers rule matched."
 	} else if !inScopeObjMatched {
 		allow = true
-		message = "InScopeObjects rule did not match. Out of scope of verification."
+		message = "ObjectSelector rule did not match. Out of scope of verification."
 	} else if skipObjectMatched {
 		allow = true
 		message = "SkipObjects rule matched."

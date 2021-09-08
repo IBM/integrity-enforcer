@@ -27,8 +27,8 @@ import (
 	"strings"
 	"time"
 
-	vrres "github.com/IBM/integrity-shield/observer/pkg/apis/verifyresourcestatus/v1alpha1"
-	vrresclient "github.com/IBM/integrity-shield/observer/pkg/client/verifyresourcestatus/clientset/versioned/typed/verifyresourcestatus/v1alpha1"
+	vrc "github.com/IBM/integrity-shield/observer/pkg/apis/verifyresourcecondition/v1"
+	vrcclient "github.com/IBM/integrity-shield/observer/pkg/client/verifyresourcecondition/clientset/versioned/typed/verifyresourcecondition/v1"
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
@@ -175,8 +175,8 @@ func (self *Observer) Run() {
 	var constraintResults []ConstraintResult
 	for _, constraint := range constraints {
 		constraintName := constraint.Parameters.ConstraintName
-		var violations []vrres.VerifyResult
-		var nonViolations []vrres.VerifyResult
+		var violations []vrc.VerifyResult
+		var nonViolations []vrc.VerifyResult
 		narrowedGVKList := self.getPossibleProtectedGVKs(constraint.Match)
 		if narrowedGVKList == nil {
 			log.Info("there is no resources to observe in the constraint:", constraint.Parameters.ConstraintName)
@@ -197,7 +197,7 @@ func (self *Observer) Run() {
 		for _, res := range results {
 			// simple result
 			if res.Violation {
-				vres := vrres.VerifyResult{
+				vres := vrc.VerifyResult{
 					Namespace:  res.Namespace,
 					Name:       res.Name,
 					Kind:       res.Kind,
@@ -207,7 +207,7 @@ func (self *Observer) Run() {
 				}
 				violations = append(violations, vres)
 			} else {
-				vres := vrres.VerifyResult{
+				vres := vrc.VerifyResult{
 					Namespace:  res.Namespace,
 					Name:       res.Name,
 					Kind:       res.Kind,
@@ -237,7 +237,7 @@ func (self *Observer) Run() {
 		}
 		count := len(violations)
 
-		vrr := vrres.VerifyResourceStatusSpec{
+		vrr := vrc.VerifyResourceConditionSpec{
 			ConstraintName:  constraintName,
 			Violation:       violated,
 			TotalViolations: count,
@@ -269,13 +269,13 @@ func (self *Observer) Run() {
 	return
 }
 
-func exportVerifyResult(vrr vrres.VerifyResourceStatusSpec, ignored bool, violated bool) error {
+func exportVerifyResult(vrr vrc.VerifyResourceConditionSpec, ignored bool, violated bool) error {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	clientset, err := vrresclient.NewForConfig(config)
+	clientset, err := vrcclient.NewForConfig(config)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -299,29 +299,29 @@ func exportVerifyResult(vrr vrres.VerifyResourceStatusSpec, ignored bool, violat
 		VerifyResourceIgnoreLabel:    iv,
 	}
 
-	obj, err := clientset.VerifyResourceStatuses(namespace).Get(context.Background(), vrr.ConstraintName, metav1.GetOptions{})
+	obj, err := clientset.VerifyResourceConditions(namespace).Get(context.Background(), vrr.ConstraintName, metav1.GetOptions{})
 	if err != nil || obj == nil {
-		log.Info("creating new VerifyResourceStatus resource...")
-		newVRR := &vrres.VerifyResourceStatus{
+		log.Info("creating new VerifyResourceCondition resource...")
+		newVRC := &vrc.VerifyResourceCondition{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: vrr.ConstraintName,
 			},
 			Spec: vrr,
 		}
 
-		newVRR.Labels = labels
-		_, err = clientset.VerifyResourceStatuses(namespace).Create(context.Background(), newVRR, metav1.CreateOptions{})
+		newVRC.Labels = labels
+		_, err = clientset.VerifyResourceConditions(namespace).Create(context.Background(), newVRC, metav1.CreateOptions{})
 		if err != nil {
-			log.Error("failed to create VerifyResourceStatuses:", err.Error())
+			log.Error("failed to create VerifyResourceConditions:", err.Error())
 			return err
 		}
 	} else {
-		log.Info("updating VerifyResourceStatuses resource...")
+		log.Info("updating VerifyResourceConditiones resource...")
 		obj.Spec = vrr
 		obj.Labels = labels
-		_, err = clientset.VerifyResourceStatuses(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
+		_, err = clientset.VerifyResourceConditions(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
 		if err != nil {
-			log.Error("failed to update VerifyResourceStatuses:", err.Error())
+			log.Error("failed to update VerifyResourceConditions:", err.Error())
 			return err
 		}
 	}

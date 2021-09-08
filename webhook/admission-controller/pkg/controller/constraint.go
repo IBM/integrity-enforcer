@@ -22,8 +22,8 @@ import (
 
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/IBM/integrity-shield/shield/pkg/shield"
-	miprofile "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/apis/manifestintegrityprofile/v1alpha1"
-	mipclient "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1alpha1"
+	miprofile "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/apis/manifestintegrityprofile/v1"
+	mipclient "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1"
 	k8smnfutil "github.com/sigstore/k8s-manifest-sigstore/pkg/util"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"

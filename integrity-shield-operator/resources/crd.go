@@ -44,7 +44,7 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 			Scope: scope,
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
-					Name:    "v1alpha1",
+					Name:    "v1",
 					Served:  true,
 					Storage: true,
 					Schema: &extv1.CustomResourceValidation{
@@ -74,11 +74,11 @@ func BuildManifestIntegrityProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.Cu
 //shield config crd
 func BuildVerifyResourceResultCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:       "VerifyResourceStatus",
-		Plural:     "verifyresourcestatuses",
-		ListKind:   "VerifyResourceStatusList",
-		Singular:   "verifyresourcestatus",
-		ShortNames: []string{"vrs"},
+		Kind:       "VerifyResourceCondition",
+		Plural:     "verifyresourceconditions",
+		ListKind:   "VerifyResourceConditionList",
+		Singular:   "verifyresourcecondition",
+		ShortNames: []string{"vrc"},
 	}
-	return buildCRD("verifyresourcestatuses.apis.integrityshield.io", cr.Namespace, crdNames, true)
+	return buildCRD("verifyresourceconditions.apis.integrityshield.io", cr.Namespace, crdNames, true)
 }

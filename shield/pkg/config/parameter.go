@@ -27,7 +27,7 @@ type ParameterObject struct {
 	ConstraintName                   string                          `json:"constraintName,omitempty"`
 	SignatureRef                     SignatureRef                    `json:"signatureRef,omitempty"`
 	KeyConfigs                       []KeyConfig                     `json:"keyConfigs,omitempty"`
-	InScopeObjects                   k8smanifest.ObjectReferenceList `json:"inScopeObjects,omitempty"`
+	InScopeObjects                   k8smanifest.ObjectReferenceList `json:"objectSelector,omitempty"`
 	SkipUsers                        ObjectUserBindingList           `json:"skipUsers,omitempty"`
 	TargetServiceAccount             []string                        `json:"targetServiceAccount,omitempty"`
 	ImageProfile                     ImageProfile                    `json:"imageProfile,omitempty"`

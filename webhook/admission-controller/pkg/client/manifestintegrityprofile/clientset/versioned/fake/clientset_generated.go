@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned"
-	apisv1alpha1 "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1alpha1"
-	fakeapisv1alpha1 "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1alpha1/fake"
+	apisv1 "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1"
+	fakeapisv1 "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -76,7 +76,7 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 
 var _ clientset.Interface = &Clientset{}
 
-// ApisV1alpha1 retrieves the ApisV1alpha1Client
-func (c *Clientset) ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface {
-	return &fakeapisv1alpha1.FakeApisV1alpha1{Fake: &c.Fake}
+// ApisV1 retrieves the ApisV1Client
+func (c *Clientset) ApisV1() apisv1.ApisV1Interface {
+	return &fakeapisv1.FakeApisV1{Fake: &c.Fake}
 }
