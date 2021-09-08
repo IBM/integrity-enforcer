@@ -234,7 +234,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 				for _, res := range imageVerifyResults {
 					if res.InScope && !res.Verified {
 						imageAllow = false
-						imageMessage = fmt.Sprintf("Image signature verification is required, but failed to verify signature: image: %s, reason: %s", res.ImageRef, res.FailReason)
+						imageMessage = "Image signature verification is required, but failed to verify signature: " + res.FailReason
 						break
 					}
 				}
