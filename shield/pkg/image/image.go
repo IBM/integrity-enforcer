@@ -18,8 +18,12 @@ package image
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -33,7 +37,7 @@ import (
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	ishieldconfig "github.com/IBM/integrity-shield/shield/pkg/config"
-	k8smanifestcosign "github.com/sigstore/k8s-manifest-sigstore/pkg/cosign"
+	cosigncli "github.com/sigstore/cosign/cmd/cosign/cli"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -52,15 +56,21 @@ type ImageVerifyOption struct {
 }
 
 // verify all images in a container of the specified resource
-func VerifyImageInManifest(resource unstructured.Unstructured, profile ishieldconfig.ImageProfile) ([]ImageVerifyResult, error) {
+func VerifyImageInManifest(resource unstructured.Unstructured, profile ishieldconfig.ImageProfile) (bool, error) {
 	yamlBytes, err := yaml.Marshal(resource.Object)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to yaml.Marshal() the resource")
+		return false, errors.Wrap(err, "failed to yaml.Marshal() the resource")
 	}
-
-	imageRefList, err := getImagesFromYamlManifest(yamlBytes)
+	tmpDir, err := ioutil.TempDir("", "verify-image")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get image references in a resource")
+		return false, fmt.Errorf("failed to create temp dir: %s", err.Error())
+	}
+	defer os.RemoveAll(tmpDir)
+
+	manifestPath := filepath.Join(tmpDir, "manifest.yaml")
+	err = ioutil.WriteFile(manifestPath, yamlBytes, 0644)
+	if err != nil {
+		return false, fmt.Errorf("failed to create temp manifest file: %s", err.Error())
 	}
 
 	keyPathList := []string{}
@@ -68,7 +78,7 @@ func VerifyImageInManifest(resource unstructured.Unstructured, profile ishieldco
 		if keyConfig.KeySecretName != "" {
 			keyPath, err := ishieldconfig.LoadKeySecret(keyConfig.KeySecretNamespace, keyConfig.KeySecretName)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to load a key secret for image verification")
+				return false, errors.Wrap(err, "failed to load a key secret for image verification")
 			}
 			keyPathList = append(keyPathList, keyPath)
 		}
@@ -77,46 +87,43 @@ func VerifyImageInManifest(resource unstructured.Unstructured, profile ishieldco
 		keyPathList = []string{""} // for keyless verification
 	}
 
-	results := []ImageVerifyResult{}
-	for _, imageRef := range imageRefList {
-		inScope := profile.MatchWith(imageRef)
-		if !inScope {
-			results = append(results, ImageVerifyResult{Object: resource, ImageRef: imageRef, InScope: false})
-			continue
+	allImagesVerified := false
+	failReason := ""
+	// overallFailReason := ""
+	for _, keyPath := range keyPathList {
+		cmd := cosigncli.VerifyManifestCommand{VerifyCommand: cosigncli.VerifyCommand{}}
+		if keyPath != "" {
+			cmd.KeyRef = keyPath
 		}
 
-		verified := false
-		signerName := ""
-		failReason := ""
-		for _, keyPath := range keyPathList {
-			var verifiedWithThisKey bool
-			var iErr error
-			verifiedWithThisKey, signerName, _, iErr = k8smanifestcosign.VerifyImage(imageRef, keyPath)
-			if !verifiedWithThisKey && iErr != nil {
-				failReason = iErr.Error()
-			}
-			if verifiedWithThisKey {
-				verified = true
-				break
-			}
+		var verifiedWithThisKey bool
+		var iErr error
+
+		// currently cosigncli.VerifyManifestCommand.Exec() does not return detail information like image names and their signer names
+		// TODO: create an issue in sigstore/cosign repository
+		iErr = cmd.Exec(context.Background(), []string{manifestPath})
+		if iErr == nil {
+			verifiedWithThisKey = true
+		} else {
+			failReason = iErr.Error()
 		}
-		r := ImageVerifyResult{
-			Object:     resource,
-			ImageRef:   imageRef,
-			Verified:   verified,
-			InScope:    true,
-			Signer:     signerName,
-			FailReason: failReason,
+		if verifiedWithThisKey {
+			allImagesVerified = true
+			break
 		}
-		results = append(results, r)
 	}
-	return results, nil
+	var retErr error
+	if !allImagesVerified {
+		retErr = errors.New(failReason)
+	}
+
+	return allImagesVerified, retErr
 }
 
 // this is a function from `cosign verify-manifest` codes
 // ( https://github.com/sigstore/cosign/blob/v1.1.0/cmd/cosign/cli/verify_manifest.go#L120 )
 //
-// TODO: create a PR in cosign to export the original function and remove this block
+// TODO: create an issue in cosign so that this function could be imported
 func getImagesFromYamlManifest(manifest []byte) ([]string, error) {
 	dec := k8syaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 4096)
 	cScheme := runtime.NewScheme()

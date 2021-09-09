@@ -224,9 +224,9 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		imageMessage := ""
 		var imageVerifyResults []ishieldimage.ImageVerifyResult
 		if paramObj.ImageProfile.Enabled() {
-			imageVerifyResults, err = ishieldimage.VerifyImageInManifest(resource, paramObj.ImageProfile)
+			_, err = ishieldimage.VerifyImageInManifest(resource, paramObj.ImageProfile)
 			if err != nil {
-				log.Errorf("error occurred in image verification", err.Error())
+				log.Errorf("failed to verify images: %s", err.Error())
 				imageAllow = false
 				imageMessage = "Image signature verification is required, but failed to verify signature: " + err.Error()
 
