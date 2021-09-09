@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
+	ishieldimage "github.com/IBM/integrity-shield/shield/pkg/image"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/mapnode"
@@ -217,19 +218,29 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 			allow = true
 			message = "not protected"
 		}
-		// image verify result
+
+		// image verify
 		imageAllow := true
 		imageMessage := ""
-		if len(result.ImageVerifyResults) != 0 {
-			for _, res := range result.ImageVerifyResults {
-				if res.InScope && !res.Verified {
-					imageAllow = false
+		var imageVerifyResults []ishieldimage.ImageVerifyResult
+		if paramObj.ImageProfile.Enabled() {
+			_, err = ishieldimage.VerifyImageInManifest(resource, paramObj.ImageProfile)
+			if err != nil {
+				log.Errorf("failed to verify images: %s", err.Error())
+				imageAllow = false
+				imageMessage = "Image signature verification is required, but failed to verify signature: " + err.Error()
+
+			} else {
+				for _, res := range imageVerifyResults {
+					if res.InScope && !res.Verified {
+						imageAllow = false
+						imageMessage = "Image signature verification is required, but failed to verify signature: " + res.FailReason
+						break
+					}
 				}
 			}
 		}
-		if !imageAllow {
-			imageMessage = "Image signature verification is required, but failed to verify signature."
-		}
+
 		if allow && !imageAllow {
 			message = imageMessage
 			allow = false
