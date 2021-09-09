@@ -1,4 +1,4 @@
-apiVersion: apis.integrityshield.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1
 kind: IntegrityShield
 metadata:
   name: integrity-shield-server

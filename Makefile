@@ -232,7 +232,7 @@ test-verify-cmd:
 
 
 .EXPORT_ALL_VARIABLES:
-TMP_CR_FILE=$(TMP_DIR)apis_v1alpha1_integrityshield.yaml
+TMP_CR_FILE=$(TMP_DIR)apis_v1_integrityshield.yaml
 # export KUBE_CONTEXT_USERNAME=kind-test-managed
 
 test-e2e: export KUBECONFIG=$(SHIELD_OP_DIR)kubeconfig_managed
@@ -365,23 +365,23 @@ delete-operator:
 	kustomize build $(SHIELD_OP_DIR)config/default | kubectl delete -f -
 
 create-cr:
-	kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1alpha1_integrityshield.yaml -n $(ISHIELD_OP_NS)
+	kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1_integrityshield.yaml -n $(ISHIELD_OP_NS)
 
 delete-cr:
-	kubectl delete -f ${SHIELD_OP_DIR}config/samples/apis_v1alpha1_integrityshield.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f ${SHIELD_OP_DIR}config/samples/apis_v1_integrityshield.yaml -n $(ISHIELD_OP_NS)
 
 deploy-cr-ac:
-	kubectl apply -f $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_ac.yaml -n $(ISHIELD_OP_NS)
+	kubectl apply -f $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml -n $(ISHIELD_OP_NS)
 
 delete-cr-ac:
-	kubectl delete -f $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_ac.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml -n $(ISHIELD_OP_NS)
 
 # create a temporary cr with update image names as well as signers
 setup-tmp-cr:
 	@echo
 	@echo prepare cr
 	@echo copy cr into tmp dir
-	cp $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield_local.yaml $(TMP_CR_FILE)
+	cp $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_local.yaml $(TMP_CR_FILE)
 	@echo insert image
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.imagePullPolicy Always
@@ -467,7 +467,7 @@ setup-demo:
 	cp $(TMP_DIR)kustomization.yaml $(SHIELD_OP_DIR)config/manager/kustomization.yaml
 	@echo prepare cr
 	@echo copy cr into tmp dir
-	cp $(SHIELD_OP_DIR)config/samples/apis_v1alpha1_integrityshield.yaml $(TMP_CR_FILE)
+	cp $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield.yaml $(TMP_CR_FILE)
 	@echo insert image
 	yq write -i $(TMP_CR_FILE) spec.observer.image $(DEMO_ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME)
 	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always

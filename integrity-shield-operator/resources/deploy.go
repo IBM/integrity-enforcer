@@ -20,18 +20,18 @@ import (
 	"reflect"
 	"strconv"
 
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 )
 
 //deployment
 
 // shield api
-func BuildDeploymentForIShieldServer(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 	var servervolumemounts []v1.VolumeMount
 	var volumes []v1.Volume
 	labels := cr.Spec.MetaLabels
@@ -153,7 +153,7 @@ func BuildDeploymentForIShieldServer(cr *apiv1alpha1.IntegrityShield) *appsv1.De
 }
 
 // admission controller
-func BuildDeploymentForAdmissionController(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
 
 	volumes := []v1.Volume{
@@ -289,7 +289,7 @@ func BuildDeploymentForAdmissionController(cr *apiv1alpha1.IntegrityShield) *app
 }
 
 // Observer
-func BuildDeploymentForObserver(cr *apiv1alpha1.IntegrityShield) *appsv1.Deployment {
+func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 	labels := cr.Spec.MetaLabels
 	volumes := []v1.Volume{
 		EmptyDirVolume("tmp"),

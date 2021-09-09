@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	apisv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	"github.com/IBM/integrity-shield/integrity-shield-operator/controllers"
 	templates "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1beta1"
 	scc "github.com/openshift/api/security/v1"
@@ -46,7 +46,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(apisv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1beta1.AddToScheme(scheme))
 	utilruntime.Must(scc.AddToScheme(scheme))

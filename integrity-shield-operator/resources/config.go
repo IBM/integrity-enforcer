@@ -17,13 +17,13 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // request handler config
-func BuildReqConfigForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ConfigMap {
+func BuildReqConfigForIShield(cr *apiv1.IntegrityShield) *corev1.ConfigMap {
 	data := map[string]string{
 		cr.Spec.RequestHandlerConfigKey: cr.Spec.RequestHandlerConfig,
 	}
@@ -38,7 +38,7 @@ func BuildReqConfigForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ConfigMap
 }
 
 // request handler config
-func BuildACConfigForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ConfigMap {
+func BuildACConfigForIShield(cr *apiv1.IntegrityShield) *corev1.ConfigMap {
 	data := map[string]string{
 		cr.Spec.AdmissionControllerConfigKey: cr.Spec.AdmissionControllerConfig,
 	}
@@ -53,7 +53,7 @@ func BuildACConfigForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ConfigMap 
 }
 
 // request handler config
-func BuildConstraintConfigForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ConfigMap {
+func BuildConstraintConfigForIShield(cr *apiv1.IntegrityShield) *corev1.ConfigMap {
 	data := map[string]string{
 		cr.Spec.ConstraintConfigKey: cr.Spec.ConstraintConfig,
 	}
