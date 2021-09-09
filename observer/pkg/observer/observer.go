@@ -64,6 +64,8 @@ const k8sLogLevelEnvKey = "K8S_MANIFEST_SIGSTORE_LOG_LEVEL"
 const VerifyResourceViolationLabel = "integrityshield.io/verifyResourceViolation"
 const VerifyResourceIgnoreLabel = "integrityshield.io/verifyResourceIgnored"
 
+const rekorServerEnvKey = "REKOR_SERVER"
+
 type Observer struct {
 	APIResources []groupResource
 
@@ -171,6 +173,18 @@ func (self *Observer) Run() {
 	if err != nil {
 		log.Error("Failed to load constraints; err: ", err.Error())
 	}
+
+	// setup env value for sigstore
+	if rhconfig.SigStoreConfig.RekorServer != "" {
+		_ = os.Setenv(rekorServerEnvKey, rhconfig.SigStoreConfig.RekorServer)
+		debug := os.Getenv(rekorServerEnvKey)
+		log.Debug("REKOR_SERVER is set as ", debug)
+	} else {
+		_ = os.Setenv(rekorServerEnvKey, "")
+		debug := os.Getenv(rekorServerEnvKey)
+		log.Debug("REKOR_SERVER is set as ", debug)
+	}
+
 	// ObservationDetailResults
 	var constraintResults []ConstraintResult
 	for _, constraint := range constraints {

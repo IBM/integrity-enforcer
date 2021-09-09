@@ -28,6 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const AnnotationKeyDomain = "integrityshield.io"
+const ImageRefAnnotationKeyShield = "integrityshield.io/signature"
+
 func ObserveResources(resources []unstructured.Unstructured, signatureRef k8smnfconfig.SignatureRef, ignoreFields k8smanifest.ObjectFieldBindingList, secrets []k8smnfconfig.KeyConfig) []VerifyResultDetail {
 	results := []VerifyResultDetail{}
 	namespace := os.Getenv("POD_NAMESPACE")
@@ -52,6 +55,13 @@ func ObserveResources(resources []unstructured.Unstructured, signatureRef k8smnf
 		if signatureRef.ProvenanceResourceRef.Name != "" && signatureRef.ProvenanceResourceRef.Namespace != "" {
 			ref := fmt.Sprintf("k8s://ConfigMap/%s/%s", signatureRef.ProvenanceResourceRef.Namespace, signatureRef.ProvenanceResourceRef.Name)
 			vo.ProvenanceResourceRef = ref
+		}
+
+		// set Signature type
+		annotations := resource.GetAnnotations()
+		_, found := annotations[ImageRefAnnotationKeyShield]
+		if found {
+			vo.AnnotationConfig.AnnotationKeyDomain = AnnotationKeyDomain
 		}
 		// secret
 		for _, s := range secrets {

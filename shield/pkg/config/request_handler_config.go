@@ -77,6 +77,7 @@ type ImageVerificationConfig struct {
 }
 
 type SigStoreConfig struct {
+	RekorServer string `json:"rekorServer,omitempty"`
 }
 
 type RequestFilterProfile struct {

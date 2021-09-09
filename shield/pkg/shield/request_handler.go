@@ -53,6 +53,7 @@ const (
 	EventTypeValueVerifyResult   = "verify-result"
 	EventTypeAnnotationValueDeny = "deny"
 )
+const rekorServerEnvKey = "REKOR_SERVER"
 
 func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObject) *ResultFromRequestHandler {
 	// load constraint config
@@ -100,6 +101,17 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		"operation": req.Operation,
 		"userName":  req.UserInfo.Username,
 	}).Info("Process new request")
+
+	// setup env value for sigstore
+	if rhconfig.SigStoreConfig.RekorServer != "" {
+		_ = os.Setenv(rekorServerEnvKey, rhconfig.SigStoreConfig.RekorServer)
+		debug := os.Getenv(rekorServerEnvKey)
+		log.Debug("REKOR_SERVER is set as ", debug)
+	} else {
+		_ = os.Setenv(rekorServerEnvKey, "")
+		debug := os.Getenv(rekorServerEnvKey)
+		log.Debug("REKOR_SERVER is set as ", debug)
+	}
 
 	commonSkipUserMatched := false
 	skipObjectMatched := false
@@ -320,7 +332,8 @@ func mutationCheck(rawOldObject, rawObject []byte, IgnoreFields []string) (bool,
 func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfig.RequestHandlerConfig, signatureAnnotationType string) *k8smanifest.VerifyResourceOption {
 	// get verifyOption and imageRef from Parameter
 	vo := &paramObj.VerifyResourceOption
-	// vo.CheckDryRunForApply = true
+
+	// set Signature ref
 	if paramObj.SignatureRef.ImageRef != "" {
 		vo.ImageRef = paramObj.SignatureRef.ImageRef
 	}
@@ -333,11 +346,14 @@ func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfi
 		vo.ProvenanceResourceRef = ref
 	}
 
+	// set DryRun namespace
 	namespace := os.Getenv("POD_NAMESPACE")
 	if namespace == "" {
 		namespace = defaultPodNamespace
 	}
 	vo.DryRunNamespace = namespace
+
+	// set Signature type
 	if signatureAnnotationType == SignatureAnnotationTypeShield {
 		vo.AnnotationConfig.AnnotationKeyDomain = AnnotationKeyDomain
 	}
