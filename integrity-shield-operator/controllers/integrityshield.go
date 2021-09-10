@@ -219,12 +219,6 @@ func (r *IntegrityShieldReconciler) createOrUpdateACConfig(
 	return r.createOrUpdateConfigMap(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateConstraintConfig(
-	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildConstraintConfigForIShield(instance)
-	return r.createOrUpdateConfigMap(instance, expected)
-}
-
 /**********************************************
 
 				Role

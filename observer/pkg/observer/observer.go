@@ -163,11 +163,7 @@ func (self *Observer) Run() {
 	if err != nil {
 		log.Error("Failed to load RequestHandlerConfig; err: ", err.Error())
 	}
-	// load observer config
-	cconfig, err := k8smnfconfig.LoadConstraintConfig()
-	if err != nil {
-		log.Error("Failed to load Observer config; err: ", err.Error())
-	}
+
 	// load constraints
 	constraints, err := self.loadConstraints()
 	if err != nil {
@@ -261,7 +257,13 @@ func (self *Observer) Run() {
 		}
 
 		// check if targeted constraint
-		ignored := k8smnfconfig.CheckIfIgnoredConstraint(constraintName, cconfig.Constraints)
+		// ignored := k8smnfconfig.CheckIfIgnoredConstraint(constraintName, cconfig.Constraints)
+		ignored := false
+		if constraint.Parameters.Action == nil {
+			ignored = !rhconfig.DefaultConstraintAction.Inform
+		} else {
+			ignored = !constraint.Parameters.Action.Inform
+		}
 
 		// export VerifyResult
 		_ = exportVerifyResult(vrr, ignored, violated)

@@ -35,6 +35,9 @@ spec:
   requestHandlerConfigKey: config.yaml
   requestHandlerConfigName: request-handler-config
   requestHandlerConfig: |
+    action:
+      inform: true
+      enforce: false
     sideEffect:
       createDenyEvent: true
     log:
@@ -411,11 +414,3 @@ spec:
     exportDetailResult: true
     resultDetailConfigName: verify-resource-result
     resultDetailConfigKey: "config.yaml"
-  constraintConfigKey: "config.yaml"
-  constraintConfigName:  constraint-config
-  constraintConfig: |
-    constraints: 
-    - constraintName: "*"
-      action:
-        inform: true
-        enforce: false

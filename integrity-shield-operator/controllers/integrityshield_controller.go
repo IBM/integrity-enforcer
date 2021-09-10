@@ -112,11 +112,6 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return recResult, recErr
 	}
 
-	recResult, recErr = r.createOrUpdateConstraintConfig(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
 	//Service Account
 	recResult, recErr = r.createOrUpdateIShieldApiServiceAccount(instance)
 	if recErr != nil || recResult.Requeue {

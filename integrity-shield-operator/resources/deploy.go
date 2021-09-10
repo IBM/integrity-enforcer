@@ -100,14 +100,6 @@ func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployme
 				Name:  "REQUEST_HANDLER_CONFIG_NAME",
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
-			{
-				Name:  "CONSTRAINT_CONFIG_NAME",
-				Value: cr.Spec.ConstraintConfigName,
-			},
-			{
-				Name:  "CONSTRAINT_CONFIG_KEY",
-				Value: cr.Spec.ConstraintConfigKey,
-			},
 		},
 		Resources: cr.Spec.Server.Resources,
 	}
@@ -236,14 +228,6 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 				Name:  "REQUEST_HANDLER_CONFIG_NAME",
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
-			{
-				Name:  "CONSTRAINT_CONFIG_NAME",
-				Value: cr.Spec.ConstraintConfigName,
-			},
-			{
-				Name:  "CONSTRAINT_CONFIG_KEY",
-				Value: cr.Spec.ConstraintConfigKey,
-			},
 		},
 		Resources: cr.Spec.ControllerContainer.Resources,
 	}
@@ -335,14 +319,6 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 			{
 				Name:  "OBSERVER_RESULT_CONFIG_KEY",
 				Value: cr.Spec.Observer.ResultDetailConfigKey,
-			},
-			{
-				Name:  "CONSTRAINT_CONFIG_NAME",
-				Value: cr.Spec.ConstraintConfigName,
-			},
-			{
-				Name:  "CONSTRAINT_CONFIG_KEY",
-				Value: cr.Spec.ConstraintConfigKey,
 			},
 			{
 				Name:  "INTERVAL",

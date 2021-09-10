@@ -32,6 +32,12 @@ type ParameterObject struct {
 	TargetServiceAccount             []string                        `json:"targetServiceAccount,omitempty"`
 	ImageProfile                     ImageProfile                    `json:"imageProfile,omitempty"`
 	k8smanifest.VerifyResourceOption `json:""`
+	Action                           *Action `json:"action,omitempty"`
+}
+
+type Action struct {
+	Inform  bool `json:"inform,omitempty"`
+	Enforce bool `json:"enforce,omitempty"`
 }
 
 type SignatureRef struct {
