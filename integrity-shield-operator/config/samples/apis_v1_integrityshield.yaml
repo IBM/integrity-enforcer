@@ -1,7 +1,7 @@
 apiVersion: apis.integrityshield.io/v1
 kind: IntegrityShield
 metadata:
-  name: integrity-shield-server
+  name: integrity-shield
   finalizers:
   - cleanup.finalizers.integrityshield.io
 spec:
@@ -25,7 +25,6 @@ spec:
     name: integrity-shield-api
     imagePullPolicy: Always
     image: quay.io/open-cluster-management/integrity-shield-api:0.2.5
-    # image: localhost:5000/integrity-shield-api:0.2.5
     port: 8080
     selector:     
       app: integrity-shield-api
@@ -410,7 +409,6 @@ spec:
     name: integrity-shield-observer
     imagePullPolicy: Always
     image: quay.io/open-cluster-management/integrity-shield-observer:0.2.5
-    # image: localhost:5000/integrity-shield-observer:0.2.5
     selector:     
       app: integrity-shield-observer
     logLevel: info

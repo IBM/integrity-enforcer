@@ -143,7 +143,7 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Observer
 	if instance.Spec.Observer.Enabled {
-		recResult, recErr = r.createOrUpdateVerifyResourceResultCRD(instance)
+		recResult, recErr = r.createOrUpdateObserverResultCRD(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
@@ -299,7 +299,7 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 		if err != nil {
 			return err
 		}
-		_, err = r.deleteVerifyResourceResultCRD(instance)
+		_, err = r.deleteObserverResultCRD(instance)
 		if err != nil {
 			return err
 		}

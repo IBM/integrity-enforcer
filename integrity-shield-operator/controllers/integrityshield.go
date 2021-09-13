@@ -136,15 +136,15 @@ func (r *IntegrityShieldReconciler) deleteManifestIntegrityProfileCRD(
 	return r.deleteCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateVerifyResourceResultCRD(
+func (r *IntegrityShieldReconciler) createOrUpdateObserverResultCRD(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildVerifyResourceResultCRD(instance)
+	expected := res.BuildObserverResultCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) deleteVerifyResourceResultCRD(
+func (r *IntegrityShieldReconciler) deleteObserverResultCRD(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildVerifyResourceResultCRD(instance)
+	expected := res.BuildObserverResultCRD(instance)
 	return r.deleteCRD(instance, expected)
 }
 
