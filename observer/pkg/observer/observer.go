@@ -259,9 +259,10 @@ func (self *Observer) Run() {
 		// check if targeted constraint
 		ignored := false
 		if constraint.Parameters.Action == nil {
-			ignored = !rhconfig.DefaultConstraintAction.Inform
+			ignored = !rhconfig.DefaultConstraintAction.Audit.Inform
+
 		} else {
-			ignored = !constraint.Parameters.Action.Inform
+			ignored = !constraint.Parameters.Action.Audit.Inform
 		}
 
 		// export VerifyResult

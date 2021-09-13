@@ -25,6 +25,7 @@ spec:
     name: integrity-shield-api
     imagePullPolicy: Always
     image: quay.io/open-cluster-management/integrity-shield-api:0.2.5
+    # image: localhost:5000/integrity-shield-api:0.2.5
     port: 8080
     selector:     
       app: integrity-shield-api
@@ -35,9 +36,11 @@ spec:
   requestHandlerConfigKey: config.yaml
   requestHandlerConfigName: request-handler-config
   requestHandlerConfig: |
-    action:
-      inform: true
-      enforce: false
+    defaultConstraintAction:
+      audit:
+        inform: true
+      admissionControl:
+        enforce: false
     sideEffect: 
       createDenyEvent: true
     log:
@@ -409,6 +412,7 @@ spec:
     name: integrity-shield-observer
     imagePullPolicy: Always
     image: quay.io/open-cluster-management/integrity-shield-observer:0.2.5
+    # image: localhost:5000/integrity-shield-observer:0.2.5
     selector:     
       app: integrity-shield-observer
     logLevel: info

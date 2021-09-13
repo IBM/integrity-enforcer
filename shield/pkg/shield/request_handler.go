@@ -94,9 +94,9 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	// get enforce action
 	enforce := false
 	if paramObj.Action == nil {
-		enforce = rhconfig.DefaultConstraintAction.Enforce
+		enforce = rhconfig.DefaultConstraintAction.AdmissionControl.Enforce
 	} else {
-		enforce = paramObj.Action.Enforce
+		enforce = paramObj.Action.AdmissionControl.Enforce
 	}
 	if enforce {
 		log.Info("enforce action is enabled.")
