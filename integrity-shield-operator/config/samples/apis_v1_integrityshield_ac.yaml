@@ -19,9 +19,11 @@ spec:
   requestHandlerConfigKey: config.yaml
   requestHandlerConfigName: request-handler-config
   requestHandlerConfig: |
-    action:
-      inform: true
-      enforce: false
+    defaultConstraintAction:
+      audit:
+        inform: true
+      admissionControl:
+        enforce: false
     sideEffect: 
       createDenyEvent: true
     log:
