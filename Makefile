@@ -278,14 +278,14 @@ setup-image: build-images push-images-to-local
 
 tag-images-to-local:
 	@echo tag image for local registry
-	docker tag $(ISHIELD_SERVER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
+	docker tag $(ISHIELD_API_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_API_IMAGE_NAME_AND_VERSION)
 	docker tag $(ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION)
 	docker tag $(ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
 	docker tag $(ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION) $(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
 
 push-images-to-local: tag-images-to-local
 	@echo push image into local registry
-	docker push $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
+	docker push $(TEST_ISHIELD_API_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
 	docker push $(TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION)
@@ -383,7 +383,7 @@ setup-tmp-cr:
 	@echo copy cr into tmp dir
 	cp $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_local.yaml $(TMP_CR_FILE)
 	@echo insert image
-	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(TEST_ISHIELD_SERVER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(TEST_ISHIELD_API_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.imagePullPolicy Always
 	yq write -i $(TMP_CR_FILE) spec.observer.image $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
 	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always
@@ -395,8 +395,8 @@ delete-tmp-cr:
 	kubectl delete -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
 
 # show log
-log-server:
-	bash $(ISHIELD_REPO_ROOT)/scripts/log_server.sh
+log-api:
+	bash $(ISHIELD_REPO_ROOT)/scripts/log_api.sh
 log-operator:
 	bash $(ISHIELD_REPO_ROOT)/scripts/log_operator.sh
 log-observer:
@@ -471,7 +471,7 @@ setup-demo:
 	@echo insert image
 	yq write -i $(TMP_CR_FILE) spec.observer.image $(DEMO_ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME)
 	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always
-	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(DEMO_ISHIELD_SERVER_IMAGE_NAME)
+	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(DEMO_ISHIELD_API_IMAGE_NAME)
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.imagePullPolicy Always
 	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
 

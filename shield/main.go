@@ -153,6 +153,6 @@ func main() {
 	}
 
 	if err := serverObj.ListenAndServeTLS("", ""); err != nil {
-		panic(fmt.Sprintf("Fail to run integrity shield api server: %v", err))
+		panic(fmt.Sprintf("Fail to run integrity shield api: %v", err))
 	}
 }

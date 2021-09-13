@@ -7,7 +7,7 @@ metadata:
 spec:
   # Add fields here
   labels:
-    app: ishield-server
+    app: ishield-api
   affinity: {}
   security:
     serviceAccountName: integrity-shield-sa

@@ -22,12 +22,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ishield-server-tls
+// ishield-api-tls
 func BuildTlsSecretForIShield(cr *apiv1.IntegrityShield) *corev1.Secret {
 	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.ServerTlsSecretName,
+			Name:      cr.Spec.APITlsSecretName,
 			Namespace: cr.Namespace,
 		},
 		Data: map[string][]byte{

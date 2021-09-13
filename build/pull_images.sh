@@ -21,8 +21,8 @@ if ! [ -x "$(command -v docker)" ]; then
 fi
 
 
-if [ -z "$ISHIELD_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "ISHIELD_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+if [ -z "$ISHIELD_API_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_API_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
@@ -44,10 +44,10 @@ fi
 
 
 
-# Pull integrity-shield-server image
+# Pull integrity-shield-api image
 echo -----------------------------
-echo [1/3] Pulling integrity-shield-server image.
-docker pull ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION}
+echo [1/3] Pulling integrity-shield-api image.
+docker pull ${ISHIELD_API_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""

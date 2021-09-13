@@ -66,7 +66,7 @@ func BuildAPIServiceForIShield(cr *apiv1.IntegrityShield) *corev1.Service {
 					TargetPort: targetport, //"ishield-api"
 				},
 			},
-			Selector: cr.Spec.Server.SelectorLabels,
+			Selector: cr.Spec.API.SelectorLabels,
 		},
 	}
 	return svc

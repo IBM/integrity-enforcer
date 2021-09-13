@@ -175,7 +175,7 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 
 		// API Deployment
-		recResult, recErr = r.createOrUpdateIShieldServerDeployment(instance)
+		recResult, recErr = r.createOrUpdateIShieldAPIDeployment(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}

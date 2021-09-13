@@ -31,16 +31,16 @@ import (
 //deployment
 
 // shield api
-func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployment {
-	var servervolumemounts []v1.VolumeMount
+func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment {
+	var volumemounts []v1.VolumeMount
 	var volumes []v1.Volume
 	labels := cr.Spec.MetaLabels
 	volumes = []v1.Volume{
-		SecretVolume("ishield-api-certs", cr.Spec.ServerTlsSecretName),
+		SecretVolume("ishield-api-certs", cr.Spec.APITlsSecretName),
 		EmptyDirVolume("tmp"),
 	}
 
-	servervolumemounts = []v1.VolumeMount{
+	volumemounts = []v1.VolumeMount{
 		{
 			MountPath: "/run/secrets/tls",
 			Name:      "ishield-api-certs",
@@ -52,11 +52,11 @@ func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployme
 		},
 	}
 
-	serverContainer := v1.Container{
-		Name:            cr.Spec.Server.Name,
-		SecurityContext: cr.Spec.Server.SecurityContext,
-		Image:           cr.Spec.Server.Image,
-		ImagePullPolicy: cr.Spec.Server.ImagePullPolicy,
+	apiContainer := v1.Container{
+		Name:            cr.Spec.API.Name,
+		SecurityContext: cr.Spec.API.SecurityContext,
+		Image:           cr.Spec.API.Image,
+		ImagePullPolicy: cr.Spec.API.ImagePullPolicy,
 		ReadinessProbe: &v1.Probe{
 			InitialDelaySeconds: 10,
 			PeriodSeconds:       10,
@@ -82,11 +82,11 @@ func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployme
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "ishield-api",
-				ContainerPort: cr.Spec.Server.Port,
+				ContainerPort: cr.Spec.API.Port,
 				Protocol:      v1.ProtocolTCP,
 			},
 		},
-		VolumeMounts: servervolumemounts,
+		VolumeMounts: volumemounts,
 		Env: []v1.EnvVar{
 			{
 				Name:  "POD_NAMESPACE",
@@ -101,16 +101,16 @@ func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployme
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
 		},
-		Resources: cr.Spec.Server.Resources,
+		Resources: cr.Spec.API.Resources,
 	}
 
 	containers := []v1.Container{
-		serverContainer,
+		apiContainer,
 	}
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Server.Name,
+			Name:      cr.Spec.API.Name,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -123,14 +123,14 @@ func BuildDeploymentForIShieldServer(cr *apiv1.IntegrityShield) *appsv1.Deployme
 			},
 			Replicas: cr.Spec.ReplicaCount,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: cr.Spec.Server.SelectorLabels,
+				MatchLabels: cr.Spec.API.SelectorLabels,
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: cr.Spec.Server.SelectorLabels,
+					Labels: cr.Spec.API.SelectorLabels,
 				},
 				Spec: v1.PodSpec{
-					ServiceAccountName: cr.Spec.Security.ServerServiceAccountName,
+					ServiceAccountName: cr.Spec.Security.APIServiceAccountName,
 					SecurityContext:    cr.Spec.Security.PodSecurityContext,
 					Containers:         containers,
 					NodeSelector:       cr.Spec.NodeSelector,
@@ -258,7 +258,7 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 					Labels: cr.Spec.ControllerContainer.SelectorLabels,
 				},
 				Spec: v1.PodSpec{
-					ServiceAccountName: cr.Spec.Security.ServerServiceAccountName,
+					ServiceAccountName: cr.Spec.Security.APIServiceAccountName,
 					SecurityContext:    cr.Spec.Security.PodSecurityContext,
 					Containers:         containers,
 					NodeSelector:       cr.Spec.NodeSelector,

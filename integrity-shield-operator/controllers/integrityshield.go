@@ -788,8 +788,8 @@ func (r *IntegrityShieldReconciler) createOrUpdateDeployment(instance *apiv1.Int
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateIShieldServerDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildDeploymentForIShieldServer(instance)
+func (r *IntegrityShieldReconciler) createOrUpdateIShieldAPIDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildDeploymentForIShieldAPI(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
 
