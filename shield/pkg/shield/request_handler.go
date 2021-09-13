@@ -92,7 +92,6 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	}).Info("Process new request")
 
 	// get enforce action
-	// enforce := k8smnfconfig.CheckIfEnforceConstraint(paramObj.ConstraintName, cconfig.Constraints)
 	enforce := false
 	if paramObj.Action == nil {
 		enforce = rhconfig.DefaultConstraintAction.Enforce

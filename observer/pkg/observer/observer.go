@@ -257,7 +257,6 @@ func (self *Observer) Run() {
 		}
 
 		// check if targeted constraint
-		// ignored := k8smnfconfig.CheckIfIgnoredConstraint(constraintName, cconfig.Constraints)
 		ignored := false
 		if constraint.Parameters.Action == nil {
 			ignored = !rhconfig.DefaultConstraintAction.Inform
