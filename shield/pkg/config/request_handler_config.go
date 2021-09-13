@@ -59,6 +59,7 @@ type RequestHandlerConfig struct {
 	RequestFilterProfile    RequestFilterProfile    `json:"requestFilterProfile,omitempty"`
 	Log                     LogConfig               `json:"log,omitempty"`
 	SideEffectConfig        SideEffectConfig        `json:"sideEffect,omitempty"`
+	DefaultConstraintAction Action                  `json:"defaultConstraintAction,omitempty"`
 	Options                 []string
 }
 

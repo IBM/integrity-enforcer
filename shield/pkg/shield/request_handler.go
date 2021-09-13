@@ -57,27 +57,15 @@ const (
 const rekorServerEnvKey = "REKOR_SERVER"
 
 func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObject) *ResultFromRequestHandler {
-	// load constraint config
-	cconfig, err := k8smnfconfig.LoadConstraintConfig()
-	if err != nil {
-		log.Errorf("failed to load constraint config", err.Error())
-	}
-	// get enforce action
-	enforce := k8smnfconfig.CheckIfEnforceConstraint(paramObj.ConstraintName, cconfig.Constraints)
-	if enforce {
-		log.Info("enforce action is enabled by constraint config.")
-	} else {
-		log.Info("enforce action is disabled by constraint config.")
-	}
 
 	// unmarshal admission request object
 	var resource unstructured.Unstructured
 	objectBytes := req.AdmissionRequest.Object.Raw
-	err = json.Unmarshal(objectBytes, &resource)
+	err := json.Unmarshal(objectBytes, &resource)
 	if err != nil {
 		log.Errorf("failed to Unmarshal a requested object into %T; %s", resource, err.Error())
 		errMsg := "IntegrityShield failed to decide the response. Failed to Unmarshal a requested object: " + err.Error()
-		return makeResultFromRequestHandler(false, errMsg, enforce, req)
+		return makeResultFromRequestHandler(false, errMsg, false, req)
 	}
 
 	// load request handler config
@@ -85,7 +73,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	if err != nil {
 		log.Errorf("failed to load request handler config", err.Error())
 		errMsg := "IntegrityShield failed to decide the response. Failed to load request handler config: " + err.Error()
-		return makeResultFromRequestHandler(false, errMsg, enforce, req)
+		return makeResultFromRequestHandler(false, errMsg, false, req)
 	}
 	if rhconfig == nil {
 		log.Warning("request handler config is empty")
@@ -102,6 +90,19 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		"operation": req.Operation,
 		"userName":  req.UserInfo.Username,
 	}).Info("Process new request")
+
+	// get enforce action
+	enforce := false
+	if paramObj.Action == nil {
+		enforce = rhconfig.DefaultConstraintAction.Enforce
+	} else {
+		enforce = paramObj.Action.Enforce
+	}
+	if enforce {
+		log.Info("enforce action is enabled.")
+	} else {
+		log.Info("enforce action is disabled.")
+	}
 
 	// setup env value for sigstore
 	if rhconfig.SigStoreConfig.RekorServer != "" {

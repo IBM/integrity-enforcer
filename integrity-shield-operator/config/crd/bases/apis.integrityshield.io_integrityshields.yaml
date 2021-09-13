@@ -630,13 +630,6 @@ spec:
                         type: array
                     type: object
                 type: object
-              constraintConfig:
-                type: string
-              constraintConfigKey:
-                description: constraint config
-                type: string
-              constraintConfigName:
-                type: string
               labels:
                 additionalProperties:
                   type: string

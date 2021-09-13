@@ -54,11 +54,6 @@ type IntegrityShieldSpec struct {
 	ApiServiceName           string          `json:"shieldApiServiceName,omitempty"`
 	ApiServicePort           int32           `json:"shieldApiServicePort,omitempty"`
 
-	// constraint config
-	ConstraintConfigKey  string `json:"constraintConfigKey,omitempty"`
-	ConstraintConfigName string `json:"constraintConfigName,omitempty"`
-	ConstraintConfig     string `json:"constraintConfig,omitempty"`
-
 	// admission controller
 	ControllerContainer           ControllerContainer `json:"admissionController,omitempty"`
 	AdmissionControllerConfigKey  string              `json:"admissionControllerConfigKey,omitempty"`

@@ -51,18 +51,3 @@ func BuildACConfigForIShield(cr *apiv1.IntegrityShield) *corev1.ConfigMap {
 	}
 	return cm
 }
-
-// request handler config
-func BuildConstraintConfigForIShield(cr *apiv1.IntegrityShield) *corev1.ConfigMap {
-	data := map[string]string{
-		cr.Spec.ConstraintConfigKey: cr.Spec.ConstraintConfig,
-	}
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.ConstraintConfigName,
-			Namespace: cr.Namespace,
-		},
-		Data: data,
-	}
-	return cm
-}
