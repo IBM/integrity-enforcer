@@ -27,6 +27,7 @@ import (
 	acconfig "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/config"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	cosign "github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,8 +67,10 @@ func init() {
 	if !ok {
 		logLevel = log.InfoLevel
 	}
-
 	log.SetLevel(logLevel)
+	cmd := cosign.Init()
+	cmd.Exec(context.Background(), []string{})
+	log.Info("initialized cosign.")
 }
 
 func ProcessRequest(req admission.Request) admission.Response {
