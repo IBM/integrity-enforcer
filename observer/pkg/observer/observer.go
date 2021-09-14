@@ -167,7 +167,12 @@ func (self *Observer) Run() {
 	// load constraints
 	constraints, err := self.loadConstraints()
 	if err != nil {
-		log.Error("Failed to load constraints; err: ", err.Error())
+		if err.Error() == "the server could not find the requested resource" {
+			log.Info("no observation results")
+			return
+		} else {
+			log.Error("Failed to load constraints; err: ", err.Error())
+		}
 	}
 
 	// setup env value for sigstore
