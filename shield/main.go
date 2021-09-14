@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/IBM/integrity-shield/shield/pkg/shield"
+	cosign "github.com/sigstore/cosign/cmd/cosign/cli"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -38,6 +40,9 @@ const (
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
+	log.Info("initialize cosign.")
+	cmd := cosign.Init()
+	cmd.Exec(context.Background(), []string{})
 	log.Info("Integrity Shield has been started.")
 }
 

@@ -31,6 +31,7 @@ import (
 	vrcclient "github.com/IBM/integrity-shield/observer/pkg/client/manifestintegritystate/clientset/versioned/typed/manifestintegritystate/v1"
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/pkg/errors"
+	cosign "github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
@@ -124,7 +125,7 @@ func NewObserver() *Observer {
 }
 
 func (self *Observer) Init() error {
-	log.Info("init Observer....")
+	log.Info("initialize observer.")
 	kubeconf, _ := kubeutil.GetKubeConfig()
 
 	var err error
@@ -154,6 +155,11 @@ func (self *Observer) Init() error {
 	}
 	os.Setenv(k8sLogLevelEnvKey, logLevelStr)
 	log.SetLevel(logLevel)
+
+	log.Info("initialize cosign.")
+	cmd := cosign.Init()
+	cmd.Exec(context.Background(), []string{})
+
 	return nil
 }
 
@@ -167,7 +173,12 @@ func (self *Observer) Run() {
 	// load constraints
 	constraints, err := self.loadConstraints()
 	if err != nil {
-		log.Error("Failed to load constraints; err: ", err.Error())
+		if err.Error() == "the server could not find the requested resource" {
+			log.Info("no observation results")
+			return
+		} else {
+			log.Error("Failed to load constraints; err: ", err.Error())
+		}
 	}
 
 	// setup env value for sigstore

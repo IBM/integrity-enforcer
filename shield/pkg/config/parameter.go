@@ -29,7 +29,7 @@ type ParameterObject struct {
 	KeyConfigs                       []KeyConfig                     `json:"keyConfigs,omitempty"`
 	InScopeObjects                   k8smanifest.ObjectReferenceList `json:"objectSelector,omitempty"`
 	SkipUsers                        ObjectUserBindingList           `json:"skipUsers,omitempty"`
-	TargetServiceAccount             []string                        `json:"targetServiceAccount,omitempty"`
+	InScopeUsers                     ObjectUserBindingList           `json:"inScopeUsers,omitempty"`
 	ImageProfile                     ImageProfile                    `json:"imageProfile,omitempty"`
 	k8smanifest.VerifyResourceOption `json:""`
 	Action                           *Action `json:"action,omitempty"`
