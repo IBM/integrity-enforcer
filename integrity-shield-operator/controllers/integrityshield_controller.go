@@ -100,13 +100,13 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	// Pod Security Policy (PSP)
+	//Pod Security Policy (PSP)
 	recResult, recErr = r.createOrUpdatePodSecurityPolicy(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
-	// Config
+	//Config
 	recResult, recErr = r.createOrUpdateRequestHandlerConfig(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
@@ -143,22 +143,37 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Observer
 	if instance.Spec.Observer.Enabled {
+		//CRD
 		recResult, recErr = r.createOrUpdateObserverResultCRD(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
+		//Service Account
 		recResult, recErr = r.createOrUpdateObserverServiceAccount(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
-		recResult, recErr = r.createOrUpdateObserverClusterRoleForIShield(instance)
+		//Cluster Role
+		recResult, recErr = r.createOrUpdateClusterRoleForObserver(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
-		recResult, recErr = r.createOrUpdateObserverClusterRoleBindingForIShield(instance)
+		//Cluster Role Binding
+		recResult, recErr = r.createOrUpdateClusterRoleBindingForObserver(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
+		//Role
+		recResult, recErr = r.createOrUpdateRoleForObserver(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		//Role Binding
+		recResult, recErr = r.createOrUpdateRoleBindingForObserver(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		//Deployment
 		recResult, recErr = r.createOrUpdateObserverDeployment(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
@@ -167,7 +182,6 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Gatekeeper
 	if instance.Spec.UseGatekeeper {
-
 		// Shield API Secret
 		recResult, recErr = r.createOrUpdateTlsSecret(instance)
 		if recErr != nil || recResult.Requeue {
@@ -291,11 +305,11 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 	}
 
 	if instance.Spec.Observer.Enabled {
-		_, err = r.deleteObserverClusterRoleForIShield(instance)
+		_, err = r.deleteClusterRoleForObserver(instance)
 		if err != nil {
 			return err
 		}
-		_, err = r.deleteObserverClusterRoleBindingForIShield(instance)
+		_, err = r.deleteClusterRoleBindingForObserver(instance)
 		if err != nil {
 			return err
 		}

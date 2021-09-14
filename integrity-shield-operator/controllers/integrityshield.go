@@ -517,14 +517,14 @@ func (r *IntegrityShieldReconciler) deleteClusterRoleBindingForIShield(
 	return r.deleteClusterRoleBinding(instance, expected)
 }
 
-// cluster role binding for observer sa
-func (r *IntegrityShieldReconciler) createOrUpdateObserverClusterRoleBindingForIShield(
+// cluster role binding - observer
+func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleBindingForObserver(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForObserver(instance)
 	return r.createOrUpdateClusterRoleBinding(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) deleteObserverClusterRoleBindingForIShield(
+func (r *IntegrityShieldReconciler) deleteClusterRoleBindingForObserver(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleBindingForObserver(instance)
 	return r.deleteClusterRoleBinding(instance, expected)
@@ -543,14 +543,14 @@ func (r *IntegrityShieldReconciler) deleteClusterRoleForIShield(
 	return r.deleteClusterRole(instance, expected)
 }
 
-// cluster role for observer sa
-func (r *IntegrityShieldReconciler) createOrUpdateObserverClusterRoleForIShield(
+// cluster role - observer
+func (r *IntegrityShieldReconciler) createOrUpdateClusterRoleForObserver(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForObserver(instance)
 	return r.createOrUpdateClusterRole(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) deleteObserverClusterRoleForIShield(
+func (r *IntegrityShieldReconciler) deleteClusterRoleForObserver(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildClusterRoleForObserver(instance)
 	return r.deleteClusterRole(instance, expected)
@@ -563,10 +563,24 @@ func (r *IntegrityShieldReconciler) createOrUpdateRoleBindingForIShield(
 	return r.createOrUpdateRoleBinding(instance, expected)
 }
 
+// role binding - observer
+func (r *IntegrityShieldReconciler) createOrUpdateRoleBindingForObserver(
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildRoleBindingForObserver(instance)
+	return r.createOrUpdateRoleBinding(instance, expected)
+}
+
 // role
 func (r *IntegrityShieldReconciler) createOrUpdateRoleForIShield(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
 	expected := res.BuildRoleForIShield(instance)
+	return r.createOrUpdateRole(instance, expected)
+}
+
+// role - observer
+func (r *IntegrityShieldReconciler) createOrUpdateRoleForObserver(
+	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildRoleForObserver(instance)
 	return r.createOrUpdateRole(instance, expected)
 }
 
