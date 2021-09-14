@@ -47,12 +47,12 @@ type IntegrityShieldSpec struct {
 	Security SecurityConfig `json:"security,omitempty"`
 
 	// request handler
-	Server                   ServerContainer `json:"shieldApi,omitempty"`
-	RequestHandlerConfigKey  string          `json:"requestHandlerConfigKey,omitempty"`
-	RequestHandlerConfigName string          `json:"requestHandlerConfigName,omitempty"`
-	RequestHandlerConfig     string          `json:"requestHandlerConfig,omitempty"`
-	ApiServiceName           string          `json:"shieldApiServiceName,omitempty"`
-	ApiServicePort           int32           `json:"shieldApiServicePort,omitempty"`
+	API                      APIContainer `json:"shieldApi,omitempty"`
+	RequestHandlerConfigKey  string       `json:"requestHandlerConfigKey,omitempty"`
+	RequestHandlerConfigName string       `json:"requestHandlerConfigName,omitempty"`
+	RequestHandlerConfig     string       `json:"requestHandlerConfig,omitempty"`
+	ApiServiceName           string       `json:"shieldApiServiceName,omitempty"`
+	ApiServicePort           int32        `json:"shieldApiServicePort,omitempty"`
 
 	// admission controller
 	ControllerContainer           ControllerContainer `json:"admissionController,omitempty"`
@@ -63,7 +63,7 @@ type IntegrityShieldSpec struct {
 	// observer
 	Observer Observer `json:"observer,omitempty"`
 
-	ServerTlsSecretName        string     `json:"shieldApiTlsSecretName,omitempty"`
+	APITlsSecretName           string     `json:"shieldApiTlsSecretName,omitempty"`
 	WebhookServerTlsSecretName string     `json:"webhookServerTlsSecretName,omitempty"`
 	WebhookServiceName         string     `json:"webhookServiceName,omitempty"`
 	WebhookConfigName          string     `json:"webhookConfigName,omitempty"`
@@ -75,7 +75,7 @@ type IntegrityShieldSpec struct {
 	Rego          string `json:"rego,omitempty"`
 }
 
-type ServerContainer struct {
+type APIContainer struct {
 	Name            string                  `json:"name,omitempty"`
 	SelectorLabels  map[string]string       `json:"selector,omitempty"`
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
@@ -97,12 +97,12 @@ type ControllerContainer struct {
 }
 
 type SecurityConfig struct {
-	ServerServiceAccountName   string                 `json:"serviceAccountName,omitempty"`
+	APIServiceAccountName      string                 `json:"serviceAccountName,omitempty"`
 	ObserverServiceAccountName string                 `json:"observerServiceAccountName,omitempty"`
 	ObserverRole               string                 `json:"observerRole,omitempty"`
 	ObserverRoleBinding        string                 `json:"observerRoleBinding,omitempty"`
-	ServerRole                 string                 `json:"role,omitempty"`
-	ServerRoleBinding          string                 `json:"roleBinding,omitempty"`
+	APIRole                    string                 `json:"role,omitempty"`
+	APIRoleBinding             string                 `json:"roleBinding,omitempty"`
 	PodSecurityPolicyName      string                 `json:"podSecurityPolicyName,omitempty"`
 	PodSecurityContext         *v1.PodSecurityContext `json:"securityContext,omitempty"`
 	// AutoIShieldAdminCreationDisabled bool                   `json:"autoIShieldAdminRoleCreationDisabled,omitempty"`

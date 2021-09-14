@@ -42,8 +42,8 @@ if [ -z "$ISHIELD_REPO_ROOT" ]; then
     exit 1
 fi
 
-if [ -z "$ISHIELD_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "ISHIELD_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+if [ -z "$ISHIELD_API_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_API_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
@@ -73,7 +73,7 @@ if [ -z "$ISHIELD_OPERATOR" ]; then
 fi
 
 
-# Build ishield-server image
+# Build ishield-api image
 echo -----------------------------
 echo [1/4] Building ishield-api image.
 cd ${SHIELD_DIR}
@@ -91,9 +91,9 @@ if [ $exit_status -ne 0 ]; then
 fi
 
 if [ "$NO_CACHE" = true ] ; then
-     docker build -t ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} . --no-cache
+     docker build -t ${ISHIELD_API_IMAGE_NAME_AND_VERSION} . --no-cache
 else
-    docker build -t ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} .
+    docker build -t ${ISHIELD_API_IMAGE_NAME_AND_VERSION} .
 fi
 
 exit_status=$?

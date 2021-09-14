@@ -1,4 +1,4 @@
-## Integrity shield server
+## Integrity shield api
 
 ### Prerequisite
 Please install OPA/Gatekeeper in the cluster.
@@ -7,7 +7,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/open-policy-agent/gatekeepe
 ```
 
 ### Setup
-You can set up integrity shield server just by the following commands.
+You can set up integrity shield api just by the following commands.
 
 Please specify an image which you can push there and which can be pulled from the cluster as <YOUR_IMAGE_NAME>.
 
@@ -22,13 +22,13 @@ $ make gencerts
 # Create namespace
 $ kubectl create ns k8s-manifest-sigstore
 
-# Build & push an image of the integrity shield server into a registry
+# Build & push an image of the integrity shield api into a registry
 $ make build IMG=<YOUR_IMAGE_NAME>
 
-# Deploy the integrity shield server
+# Deploy the integrity shield api
 $ make deploy IMG=<YOUR_IMAGE_NAME>
 
-# Deploy a configmap for the integrity shield server
+# Deploy a configmap for the integrity shield api
 $ kubectl create -f resource/request-handler-config.yaml
 ```
 

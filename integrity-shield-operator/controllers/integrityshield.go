@@ -136,15 +136,15 @@ func (r *IntegrityShieldReconciler) deleteManifestIntegrityProfileCRD(
 	return r.deleteCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateVerifyResourceResultCRD(
+func (r *IntegrityShieldReconciler) createOrUpdateObserverResultCRD(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildVerifyResourceResultCRD(instance)
+	expected := res.BuildObserverResultCRD(instance)
 	return r.createOrUpdateCRD(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) deleteVerifyResourceResultCRD(
+func (r *IntegrityShieldReconciler) deleteObserverResultCRD(
 	instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildVerifyResourceResultCRD(instance)
+	expected := res.BuildObserverResultCRD(instance)
 	return r.deleteCRD(instance, expected)
 }
 
@@ -788,8 +788,8 @@ func (r *IntegrityShieldReconciler) createOrUpdateDeployment(instance *apiv1.Int
 
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdateIShieldServerDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	expected := res.BuildDeploymentForIShieldServer(instance)
+func (r *IntegrityShieldReconciler) createOrUpdateIShieldAPIDeployment(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
+	expected := res.BuildDeploymentForIShieldAPI(instance)
 	return r.createOrUpdateDeployment(instance, expected)
 }
 

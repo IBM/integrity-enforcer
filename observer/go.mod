@@ -1,9 +1,8 @@
-module github.com/IBM/integrity-enforcer/observer
+module github.com/IBM/integrity-shield/observer
 
 go 1.16
 
 require (
-	github.com/IBM/integrity-shield/observer v0.0.0-00010101000000-000000000000
 	github.com/IBM/integrity-shield/shield v0.0.0-00010101000000-000000000000
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/k8s-manifest-sigstore v0.0.0-20210909071548-2120192e4ff7

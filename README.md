@@ -6,11 +6,11 @@ Also, you can use the [admission controller](./webhook/admission-controller/READ
 
 ![Scenario](./docs/ishield-scenario.png)
 
-## integrity shield server
+## integrity shield api
 
-Integrity shield server includes the main logic to verify admission requests. 
-Integrity shield server receives a k8s resource from OPA/Gatekeeper, validates the resource which is included in the admission request based on the profile and sends the verification result to OPA/Gatekeeper.
-Integrity shield server uses [k8s-manifest-sigstore](https://github.com/sigstore/k8s-manifest-sigstore) internally to verify k8s manifest.
+Integrity shield api includes the main logic to verify admission requests. 
+Integrity shield api receives a k8s resource from OPA/Gatekeeper, validates the resource which is included in the admission request based on the profile and sends the verification result to OPA/Gatekeeper.
+Integrity shield api uses [k8s-manifest-sigstore](https://github.com/sigstore/k8s-manifest-sigstore) internally to verify k8s manifest.
 
 You can enable the protection by integrity shield with a few simple steps.
 Please see [Usage](./shield/README.md).

@@ -27,8 +27,8 @@ import (
 	"strings"
 	"time"
 
-	vrc "github.com/IBM/integrity-shield/observer/pkg/apis/verifyresourcecondition/v1"
-	vrcclient "github.com/IBM/integrity-shield/observer/pkg/client/verifyresourcecondition/clientset/versioned/typed/verifyresourcecondition/v1"
+	vrc "github.com/IBM/integrity-shield/observer/pkg/apis/manifestintegritystate/v1"
+	vrcclient "github.com/IBM/integrity-shield/observer/pkg/client/manifestintegritystate/clientset/versioned/typed/manifestintegritystate/v1"
 	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
@@ -247,7 +247,7 @@ func (self *Observer) Run() {
 		}
 		count := len(violations)
 
-		vrr := vrc.VerifyResourceConditionSpec{
+		vrr := vrc.ManifestIntegrityStateSpec{
 			ConstraintName:  constraintName,
 			Violation:       violated,
 			TotalViolations: count,
@@ -259,9 +259,10 @@ func (self *Observer) Run() {
 		// check if targeted constraint
 		ignored := false
 		if constraint.Parameters.Action == nil {
-			ignored = !rhconfig.DefaultConstraintAction.Inform
+			ignored = !rhconfig.DefaultConstraintAction.Audit.Inform
+
 		} else {
-			ignored = !constraint.Parameters.Action.Inform
+			ignored = !constraint.Parameters.Action.Audit.Inform
 		}
 
 		// export VerifyResult
@@ -284,7 +285,7 @@ func (self *Observer) Run() {
 	return
 }
 
-func exportVerifyResult(vrr vrc.VerifyResourceConditionSpec, ignored bool, violated bool) error {
+func exportVerifyResult(vrr vrc.ManifestIntegrityStateSpec, ignored bool, violated bool) error {
 	config, err := kubeutil.GetKubeConfig()
 	if err != nil {
 		log.Error(err)
@@ -314,10 +315,10 @@ func exportVerifyResult(vrr vrc.VerifyResourceConditionSpec, ignored bool, viola
 		VerifyResourceIgnoreLabel:    iv,
 	}
 
-	obj, err := clientset.VerifyResourceConditions(namespace).Get(context.Background(), vrr.ConstraintName, metav1.GetOptions{})
+	obj, err := clientset.ManifestIntegrityStates(namespace).Get(context.Background(), vrr.ConstraintName, metav1.GetOptions{})
 	if err != nil || obj == nil {
-		log.Info("creating new VerifyResourceCondition resource...")
-		newVRC := &vrc.VerifyResourceCondition{
+		log.Info("creating new ManifestIntegrityState resource...")
+		newVRC := &vrc.ManifestIntegrityState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: vrr.ConstraintName,
 			},
@@ -325,18 +326,18 @@ func exportVerifyResult(vrr vrc.VerifyResourceConditionSpec, ignored bool, viola
 		}
 
 		newVRC.Labels = labels
-		_, err = clientset.VerifyResourceConditions(namespace).Create(context.Background(), newVRC, metav1.CreateOptions{})
+		_, err = clientset.ManifestIntegrityStates(namespace).Create(context.Background(), newVRC, metav1.CreateOptions{})
 		if err != nil {
-			log.Error("failed to create VerifyResourceConditions:", err.Error())
+			log.Error("failed to create ManifestIntegrityStates:", err.Error())
 			return err
 		}
 	} else {
-		log.Info("updating VerifyResourceConditiones resource...")
+		log.Info("updating ManifestIntegrityStatees resource...")
 		obj.Spec = vrr
 		obj.Labels = labels
-		_, err = clientset.VerifyResourceConditions(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
+		_, err = clientset.ManifestIntegrityStates(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
 		if err != nil {
-			log.Error("failed to update VerifyResourceConditions:", err.Error())
+			log.Error("failed to update ManifestIntegrityStates:", err.Error())
 			return err
 		}
 	}

@@ -34,7 +34,7 @@ func BuildServiceAccountForIShield(cr *apiv1.IntegrityShield) *corev1.ServiceAcc
 	}
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ServerServiceAccountName,
+			Name:      cr.Spec.Security.APIServiceAccountName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -59,7 +59,7 @@ func BuildServiceAccountForObserver(cr *apiv1.IntegrityShield) *corev1.ServiceAc
 	return sa
 }
 
-//cluster role - server
+//cluster role
 func BuildClusterRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
@@ -69,7 +69,7 @@ func BuildClusterRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 	}
 	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ServerRole,
+			Name:      cr.Spec.Security.APIRole,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -147,21 +147,21 @@ func BuildClusterRoleBindingForIShield(cr *apiv1.IntegrityShield) *rbacv1.Cluste
 	}
 	rolebinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ServerRoleBinding,
+			Name:      cr.Spec.Security.APIRoleBinding,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      cr.Spec.Security.ServerServiceAccountName,
+				Name:      cr.Spec.Security.APIServiceAccountName,
 				Namespace: cr.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     cr.Spec.Security.ServerRole,
+			Name:     cr.Spec.Security.APIRole,
 		},
 	}
 	return rolebinding
@@ -177,7 +177,7 @@ func BuildRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.Role {
 	}
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ServerRole,
+			Name:      cr.Spec.Security.APIRole,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -239,21 +239,21 @@ func BuildRoleBindingForIShield(cr *apiv1.IntegrityShield) *rbacv1.RoleBinding {
 	}
 	rolebinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.ServerRoleBinding,
+			Name:      cr.Spec.Security.APIRoleBinding,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      cr.Spec.Security.ServerServiceAccountName,
+				Name:      cr.Spec.Security.APIServiceAccountName,
 				Namespace: cr.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
-			Name:     cr.Spec.Security.ServerRole,
+			Name:     cr.Spec.Security.APIRole, //dry-run
 		},
 	}
 	return rolebinding

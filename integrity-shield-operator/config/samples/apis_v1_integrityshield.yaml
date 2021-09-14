@@ -1,13 +1,13 @@
 apiVersion: apis.integrityshield.io/v1
 kind: IntegrityShield
 metadata:
-  name: integrity-shield-server
+  name: integrity-shield
   finalizers:
   - cleanup.finalizers.integrityshield.io
 spec:
   # Add fields here
   labels:
-    app: ishield-server
+    app: ishield-api
   affinity: {}
   security:
     serviceAccountName: integrity-shield-sa
@@ -36,9 +36,11 @@ spec:
   requestHandlerConfigKey: config.yaml
   requestHandlerConfigName: request-handler-config
   requestHandlerConfig: |
-    action:
-      inform: true
-      enforce: false
+    defaultConstraintAction:
+      audit:
+        inform: true
+      admissionControl:
+        enforce: false
     sideEffect: 
       createDenyEvent: true
     log:
