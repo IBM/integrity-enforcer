@@ -120,12 +120,6 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 
 	//filter by user listed in common profile
 	commonSkipUserMatched = rhconfig.RequestFilterProfile.SkipUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
-	// TODO: inserted ad hoc logic: need to fix
-	if commonSkipUserMatched && req.AdmissionRequest.UserInfo.Username == "system:admin" {
-		if req.Namespace == "akmebank-dev-ns" || req.Namespace == "akmebank-stage-ns" {
-			commonSkipUserMatched = false
-		}
-	}
 
 	// skip object
 	skipObjectMatched = skipObjectsMatch(rhconfig.RequestFilterProfile.SkipObjects, resource)
@@ -133,6 +127,9 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	// Proccess with parameter
 	//filter by user
 	skipUserMatched := paramObj.SkipUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
+
+	//force check user
+	inScopeUserMatched := paramObj.InScopeUsers.Match(resource, req.AdmissionRequest.UserInfo.Username)
 
 	//check scope
 	inScopeObjMatched := paramObj.InScopeObjects.Match(resource)
@@ -153,7 +150,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 
 	allow := false
 	message := ""
-	if skipUserMatched || commonSkipUserMatched {
+	if (skipUserMatched || commonSkipUserMatched) && !inScopeUserMatched {
 		allow = true
 		message = "SkipUsers rule matched."
 	} else if !inScopeObjMatched {
