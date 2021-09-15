@@ -226,7 +226,7 @@ test-verify-cmd:
 
 .PHONY: test-e2e test-e2e-kind test-e2e-remote test-e2e-common test-e2e-clean-common
 .PHONY: check-kubeconfig create-kind-cluster setup-image pull-images push-images-to-local delete-kind-cluster
-.PHONY: install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
+.PHONY: install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-env e2e-test delete-test-env delete-keyring-secret delete-operator clean-tmp delete-operator
 .PHONY: create-ns create-key-ring tag-images-to-local
 .PHONY: test-gpg-annotation
 
@@ -246,7 +246,7 @@ test-e2e-kind: push-images-to-local test-e2e-common
 test-e2e-remote: test-e2e-common test-e2e-clean-common
 
 # common steps to do e2e test in an existing cluster
-test-e2e-common:  check-local-test check-kubeconfig install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-resources setup-test-env e2e-test
+test-e2e-common: check-kubeconfig install-crds setup-ishield-env install-operator setup-tmp-cr setup-test-env e2e-test
 
 
 # common steps to clean e2e test resources in an existing cluster
@@ -255,12 +255,6 @@ test-e2e-clean-common: delete-test-env delete-keyring-secret delete-operator cle
 check-kubeconfig:
 	@if [ -z "$(KUBECONFIG)" ]; then \
 		echo KUBECONFIG is empty.; \
-		exit 1;\
-	fi
-
-check-local-test:
-	@if [ -z "$(TEST_LOCAL)" ]; then \
-		echo TEST_LOCAL is empty. Please set true for local test.; \
 		exit 1;\
 	fi
 
@@ -294,7 +288,6 @@ setup-test-env:
 	@echo
 	@echo creating test namespace
 	kubectl create ns $(TEST_NS)
-	kubectl create ns $(TEST_UNPROTECTED_NS)
 	@echo deploying gatekeeper
 	kubectl apply -f https://raw.githubusercontent.com/open-policy-agent/gatekeeper/release-3.5/deploy/gatekeeper.yaml
 
@@ -304,7 +297,6 @@ delete-test-env:
 	@echo deleting test namespace
 	# $TEST_NS will be deleted in e2e test usually, so ignore not found error.
 	kubectl delete ns $(TEST_NS) --ignore-not-found=true
-	kubectl delete ns $(TEST_UNPROTECTED_NS)
 	@echo deleting gatekeeper
 	kubectl delete -f https://raw.githubusercontent.com/open-policy-agent/gatekeeper/release-3.5/deploy/gatekeeper.yaml
 
@@ -335,7 +327,7 @@ create-ns:
 create-key-ring:
 	@echo creating keyring-secret
 	# kubectl create -f $(SHIELD_OP_DIR)test/deploy/certpool_secret.yaml -n $(ISHIELD_OP_NS)
-	kubectl create -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring_secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl create -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_OP_NS)
 
 install-crds:
 	@echo installing crds
@@ -523,6 +515,5 @@ setup-olm-local:
 bundle-test-local:
 	make create-key-ring
 	make setup-tmp-cr
-	make setup-test-resources
 	make setup-test-env
 	make e2e-test
