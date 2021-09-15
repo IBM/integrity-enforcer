@@ -68,7 +68,7 @@ func BuildManifestIntegrityProfileCRD(cr *apiv1.IntegrityShield) *extv1.CustomRe
 		Singular:   "manifestintegrityprofile",
 		ShortNames: []string{"mip", "mips"},
 	}
-	return buildCRD("manifestintegrityprofiles.apis.integrityshield.io", cr.Namespace, crdNames, true)
+	return buildCRD("manifestintegrityprofiles.apis.integrityshield.io", cr.Namespace, crdNames, false)
 }
 
 //shield config crd
