@@ -38,15 +38,14 @@ import (
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	// local_test, _                = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
-	skip_default_user_test         = true
-	kubeconfig_user                = os.Getenv("KUBE_CONTEXT_USERNAME")
-	ishield_namespace              = os.Getenv("ISHIELD_NS")
-	test_namespace                 = "test-ns"
-	test_unprotected_namespace     = "unprotected-test-ns"
-	shield_dir                     = os.Getenv("SHIELD_OP_DIR")
-	deploy_dir                     = shield_dir + "/test/deploy/"
-	kubeconfigManaged              = os.Getenv("KUBECONFIG")
-	tmpDir                         = os.Getenv("TMP_DIR")
+	// skip_default_user_test         = true
+	kubeconfig_user   = os.Getenv("KUBE_CONTEXT_USERNAME")
+	ishield_namespace = os.Getenv("ISHIELD_NS")
+	test_namespace    = "test-ns"
+	shield_dir        = os.Getenv("SHIELD_OP_DIR")
+	deploy_dir        = shield_dir + "/test/deploy/"
+	kubeconfigManaged = os.Getenv("KUBECONFIG")
+	// tmpDir                         = os.Getenv("TMP_DIR")
 	integrityShieldOperatorCR_gk   = deploy_dir + "apis_v1_integrityshield_gk.yaml"
 	integrityShieldOperatorCR_ac   = deploy_dir + "apis_v1_integrityshield_ac.yaml"
 	api_name                       = "integrity-shield-api"
@@ -57,7 +56,6 @@ var (
 	constraint_ac                  = deploy_dir + "test-manifest-integrity-profile.yaml"
 	constraint_name                = "configmap-constraint"
 	gatekeeper_ns                  = "gatekeeper-system"
-	test_configmap_name            = "test-configmap"
 	test_configmap_name_no_sign    = "test-configmap-no-sign"
 	test_configmap_name_annotation = "test-configmap-annotation"
 	test_configmap_name_skip       = "test-configmap-skip"
@@ -266,7 +264,7 @@ func LoadConfig(config, context string) (*rest.Config, error) {
 
 func RestclientConfig(config, context string) (*clientcmdapi.Config, error) {
 	if config == "" {
-		return nil, fmt.Errorf("Config file must be specified to load client config")
+		return nil, fmt.Errorf("config file must be specified to load client config")
 	}
 	c, err := clientcmd.LoadFromFile(config)
 	if err != nil {
