@@ -9,7 +9,7 @@ rules:
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
-  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
   verbs:
   - '*'
 - apiGroups:
@@ -21,13 +21,8 @@ rules:
 - apiGroups:
   - apis.integrityshield.io
   resources:
-  - helmreleasemetadatas
+  - integrityshieldren
   - integrityshields
-  - integrityshields/finalizers
-  - resourcesignatures
-  - resourcesigningprofiles
-  - shieldconfigs
-  - signerconfigs
   verbs:
   - create
   - delete
@@ -36,6 +31,34 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apis.integrityshield.io
+  resources:
+  - integrityshields
+  - integrityshields/finalizers
+  - manifestintegrityprofiles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apis.integrityshield.io
+  resources:
+  - integrityshields/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apis.integrityshield.io
+  resources:
+  - integrityshields/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - apps
   resources:
@@ -48,6 +71,16 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
 - apiGroups:
   - ""
   resources:
@@ -85,3 +118,14 @@ rules:
   - roles
   verbs:
   - '*'
+- apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch

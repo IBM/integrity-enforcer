@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ishield-observer
+  namespace: integrity-shield-operator-system
+spec:
+  selector:
+    matchLabels:
+      app: ishield-observer
+  template:
+    metadata:
+      labels:
+        app: ishield-observer
+    spec:
+      restartPolicy: Always
+      serviceAccountName: validator
+      containers:
+        # - command:
+        #   - sleep
+        #   - infinity
+        - resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          name: observer
+          env:
+            - name: POD_NAMESPACE
+              value: integrity-shield-operator-system
+            - name: CONFIG_KEY
+              value: "config.yaml"
+            - name: TARGET_RESOURCE_CONFIG_NAME
+              value: "target-resource-config"
+            - name: LOG_LEVEL
+              value: info
+            - name: INTERVAL
+              value: "5"
+          imagePullPolicy: Always
+          image: localhost:5000/k8s-manifest-integrity-shield-observer:0.1.0
+          volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+      serviceAccount: validator
+      volumes:
+      - name: tmp
+        emptyDir: {}

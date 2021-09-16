@@ -1,18 +1,16 @@
-//
-// Copyright 2020 IBM Corporation
+// Copyright 2021  IBM Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package e2e
 
@@ -20,13 +18,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 
+	mipclient "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1"
 	. "github.com/onsi/ginkgo" //nolint:golint
-
-	rspclient "github.com/IBM/integrity-enforcer/shield/pkg/client/resourcesigningprofile/clientset/versioned/typed/resourcesigningprofile/v1alpha1"
-	vcclient "github.com/IBM/integrity-enforcer/shield/pkg/client/shieldconfig/clientset/versioned/typed/shieldconfig/v1alpha1"
-	sigconfclient "github.com/IBM/integrity-enforcer/shield/pkg/client/signerconfig/clientset/versioned/typed/signerconfig/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,35 +37,172 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
-	local_test, _                     = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
-	skip_default_user_test            = true
-	kubeconfig_user                   = os.Getenv("KUBE_CONTEXT_USERNAME")
-	ishield_namespace                 = os.Getenv("ISHIELD_OP_NS")
-	test_namespace                    = os.Getenv("TEST_NS")
-	test_namespace_new                = os.Getenv("TEST_NS_NEW")
-	test_unprotected_namespace        = os.Getenv("TEST_UNPROTECTED_NS")
-	shield_dir                        = os.Getenv("SHIELD_OP_DIR")
-	deploy_dir                        = shield_dir + "test/deploy/"
-	kubeconfigManaged                 = os.Getenv("KUBECONFIG")
-	tmpDir                            = os.Getenv("TMP_DIR")
-	integrityShieldOperatorCR         = tmpDir + "apis_v1alpha1_integrityshield.yaml"
-	integrityShieldOperatorCR_updated = tmpDir + "apis_v1alpha1_integrityshield_update.yaml"
-	iShield_config_updated            = deploy_dir + "ishield-config-update.yaml"
-	test_rsp                          = deploy_dir + "test-rsp.yaml"
-	test_rsp_update                   = deploy_dir + "test-rsp-update.yaml"
-	test_rsp_ishield                  = deploy_dir + "test-rsp-ishield-ns.yaml"
-	test_rsp_invalid                  = deploy_dir + "test-rsp-invalid-format.yaml"
-	test_configmap                    = deploy_dir + "test-configmap.yaml"
-	test_configmap_signer2            = deploy_dir + "test-configmap-signer2.yaml"
-	test_configmap_updated            = deploy_dir + "test-configmap-update.yaml"
-	test_configmap_ignoreAtters       = deploy_dir + "test-configmap-update-ignoreAtters.yaml"
-	test_configmap_annotation         = deploy_dir + "test-configmap-annotation.yaml"
-	test_configmap_rs                 = deploy_dir + "test-configmap-rs.yaml"
-	test_deployment                   = deploy_dir + "test-deployment.yaml"
-	test_deployment_updated           = deploy_dir + "test-deployment-update.yaml"
-	DefaultSignerConfigName           = "signer-config"
-	DefaultShieldConfigName           = "ishield-config"
+	// local_test, _                = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
+	// skip_default_user_test         = true
+	kubeconfig_user   = os.Getenv("KUBE_CONTEXT_USERNAME")
+	ishield_namespace = os.Getenv("ISHIELD_NS")
+	test_namespace    = "test-ns"
+	shield_dir        = os.Getenv("SHIELD_OP_DIR")
+	deploy_dir        = shield_dir + "/test/deploy/"
+	kubeconfigManaged = os.Getenv("KUBECONFIG")
+	// tmpDir                         = os.Getenv("TMP_DIR")
+	integrityShieldOperatorCR_gk   = deploy_dir + "apis_v1_integrityshield_gk.yaml"
+	integrityShieldOperatorCR_ac   = deploy_dir + "apis_v1_integrityshield_ac.yaml"
+	api_name                       = "integrity-shield-api"
+	observer_name                  = "integrity-shield-observer"
+	ac_server_name                 = "integrity-shield-validator"
+	constraint                     = deploy_dir + "test-manifest-integrity-constraint.yaml"
+	constraint_detect              = deploy_dir + "test-manifest-integrity-constraint-detect.yaml"
+	constraint_ac                  = deploy_dir + "test-manifest-integrity-profile.yaml"
+	constraint_name                = "configmap-constraint"
+	gatekeeper_ns                  = "gatekeeper-system"
+	test_configmap_name_no_sign    = "test-configmap-no-sign"
+	test_configmap_name_annotation = "test-configmap-annotation"
+	test_configmap_name_skip       = "test-configmap-skip"
+	test_configmap_name_inscope    = "test-configmap-inscope"
+	test_configmap_no_sign         = deploy_dir + "test-configmap-no-sign.yaml"
+	test_configmap_annotation_sign = deploy_dir + "test-configmap-pgp-annotation.yaml"
+	test_configmap_inscope         = deploy_dir + "test-configmap-inscope.yaml"
+	test_configmap_skip            = deploy_dir + "test-configmap-skip.yaml"
 )
+
+var ishield_resource_list_gk = []ResourceRef{
+	{
+		Namespace:  ishield_namespace,
+		Name:       "request-handler-config",
+		Kind:       "ConfigMap",
+		ApiVersion: "",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-sa",
+		Kind:       "ServiceAccount",
+		ApiVersion: "v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-api",
+		Kind:       "Deployment",
+		ApiVersion: "apps/v1",
+	},
+	{
+		Name:       "manifestintegrityconstraint.constraints.gatekeeper.sh",
+		Kind:       "CustomResourceDefinition",
+		ApiVersion: " apiextensions.k8s.io/v1",
+	},
+	{
+		Name:       "integrity-shield-role",
+		Kind:       "ClusterRole",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Name:       "integrity-shield-rolebinding",
+		Kind:       "ClusterRoleBinding",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-role",
+		Kind:       "Role",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-rolebinding",
+		Kind:       "RoleBinding",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-api-tls",
+		Kind:       "Secret",
+		ApiVersion: "v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-api",
+		Kind:       "Service",
+		ApiVersion: "v1",
+	},
+	// {
+	// 	Name:       "integrity-shield-psp",
+	// 	Kind:       "PodSecurityPolicy",
+	// 	ApiVersion: "policy/v1beta1",
+	// },
+}
+
+var ishield_resource_list_ac = []ResourceRef{
+	{
+		Namespace:  ishield_namespace,
+		Name:       "request-handler-config",
+		Kind:       "ConfigMap",
+		ApiVersion: "",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "admission-controller-config",
+		Kind:       "ConfigMap",
+		ApiVersion: "",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-sa",
+		Kind:       "ServiceAccount",
+		ApiVersion: "v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-validator",
+		Kind:       "Deployment",
+		ApiVersion: "apps/v1",
+	},
+	{
+		Name:       "manifestintegrityprofiles.apis.integrityshield.io",
+		Kind:       "CustomResourceDefinition",
+		ApiVersion: " apiextensions.k8s.io/v1",
+	},
+	{
+		Name:       "integrity-shield-role",
+		Kind:       "ClusterRole",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Name:       "integrity-shield-rolebinding",
+		Kind:       "ClusterRoleBinding",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-role",
+		Kind:       "Role",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-rolebinding",
+		Kind:       "RoleBinding",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-validator-tls",
+		Kind:       "Secret",
+		ApiVersion: "v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-validator-service",
+		Kind:       "Service",
+		ApiVersion: "v1",
+	},
+}
+
+type ResourceRef struct {
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	Kind       string `json:"kind"`
+	ApiVersion string `json:"apiVersion"`
+}
 
 type Framework struct {
 	BaseName string
@@ -86,9 +217,7 @@ type Framework struct {
 	// Kubernetes API clientsets
 	KubeClientSet          kubernetes.Interface
 	APIExtensionsClientSet apiextcs.Interface
-	RSPClient              rspclient.ApisV1alpha1Interface
-	SignerConfigClient     sigconfclient.ApisV1alpha1Interface
-	ShieldConfigClient     vcclient.ApisV1alpha1Interface
+	MIPClient              mipclient.ApisV1Interface
 
 	// Namespace in which all test resources should reside
 	Namespace *v1.Namespace
@@ -111,19 +240,11 @@ func initFrameWork() *Framework {
 	if err != nil {
 		Fail(fmt.Sprintf("fail to set APIExtensionsClientSet"))
 	}
-	framework.RSPClient, err = rspclient.NewForConfig(kubeConfig)
+	framework.MIPClient, err = mipclient.NewForConfig(kubeConfig)
 	if err != nil {
-		Fail(fmt.Sprintf("fail to set RSPClient"))
-	}
-	framework.SignerConfigClient, err = sigconfclient.NewForConfig(kubeConfig)
-	if err != nil {
-		Fail(fmt.Sprintf("fail to set SignerConfigClient"))
+		Fail(fmt.Sprintf("fail to set MIPClient"))
 	}
 
-	framework.ShieldConfigClient, err = vcclient.NewForConfig(kubeConfig)
-	if err != nil {
-		Fail(fmt.Sprintf("fail to set ShieldConfigClient"))
-	}
 	ns := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ishield_namespace,
@@ -143,7 +264,7 @@ func LoadConfig(config, context string) (*rest.Config, error) {
 
 func RestclientConfig(config, context string) (*clientcmdapi.Config, error) {
 	if config == "" {
-		return nil, fmt.Errorf("Config file must be specified to load client config")
+		return nil, fmt.Errorf("config file must be specified to load client config")
 	}
 	c, err := clientcmd.LoadFromFile(config)
 	if err != nil {

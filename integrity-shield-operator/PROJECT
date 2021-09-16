@@ -1,11 +1,20 @@
 domain: integrityshield.io
-layout: go.kubebuilder.io/v2
-projectName: integrity-shield-operator
-repo: github.com/IBM/integrity-enforcer/integrity-shield-operator
-resources:
-- group: apis
-  kind: IntegrityShield
-  version: v1alpha1
-version: 3-alpha
+layout:
+- go.kubebuilder.io/v3
 plugins:
-  go.sdk.operatorframework.io/v2-alpha: {}
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: integrity-shield-operator
+repo: github.com/IBM/integrity-shield/integrity-shield-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: integrityshield.io
+  group: apis
+  kind: IntegrityShield
+  path: github.com/IBM/integrity-shield/integrity-shield-operator/api/v1
+  version: v1
+  plural: IntegrityShields
+version: "3"

@@ -17,7 +17,7 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,7 +25,7 @@ import (
 )
 
 //sa
-func BuildServiceAccountForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.ServiceAccount {
+func BuildServiceAccountForIShield(cr *apiv1.IntegrityShield) *corev1.ServiceAccount {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -34,7 +34,24 @@ func BuildServiceAccountForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Serv
 	}
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetServiceAccountName(),
+			Name:      cr.Spec.Security.APIServiceAccountName,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+	}
+	return sa
+}
+
+func BuildServiceAccountForObserver(cr *apiv1.IntegrityShield) *corev1.ServiceAccount {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.Security.ObserverServiceAccountName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -43,7 +60,7 @@ func BuildServiceAccountForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Serv
 }
 
 //cluster role
-func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRole {
+func BuildClusterRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -52,17 +69,17 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 	}
 	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetClusterRoleName(),
+			Name:      cr.Spec.Security.APIRole,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{
-					"extensions", "", "apis.integrityshield.io",
+					"apis.integrityshield.io",
 				},
 				Resources: []string{
-					"secrets", "namespaces", "resourcesignatures", "shieldconfigs", "signerconfigs", "signerconfigs", "resourcesigningprofiles", "resourcesignatures",
+					"manifestintegrityprofiles",
 				},
 				Verbs: []string{
 					"get", "list", "watch", "patch", "update",
@@ -79,17 +96,17 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 					"create", "update", "get",
 				},
 			},
-			{
-				APIGroups: []string{
-					"apiextensions.k8s.io",
-				},
-				Resources: []string{
-					"customresourcedefinitions",
-				},
-				Verbs: []string{
-					"get", "list", "create", "update",
-				},
-			},
+			// {
+			// 	APIGroups: []string{
+			// 		"apiextensions.k8s.io",
+			// 	},
+			// 	Resources: []string{
+			// 		"customresourcedefinitions",
+			// 	},
+			// 	Verbs: []string{
+			// 		"get", "list", "create", "update",
+			// 	},
+			// },
 			{
 				APIGroups: []string{
 					"*",
@@ -98,7 +115,7 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 					"*",
 				},
 				Verbs: []string{
-					"get",
+					"get", "list",
 				},
 			},
 			// {
@@ -121,7 +138,7 @@ func BuildClusterRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cluster
 }
 
 //cluster role-binding
-func BuildClusterRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRoleBinding {
+func BuildClusterRoleBindingForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -130,28 +147,28 @@ func BuildClusterRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.
 	}
 	rolebinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetClusterRoleBindingName(),
+			Name:      cr.Spec.Security.APIRoleBinding,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      cr.GetServiceAccountName(),
+				Name:      cr.Spec.Security.APIServiceAccountName,
 				Namespace: cr.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     cr.Spec.Security.ClusterRole,
+			Name:     cr.Spec.Security.APIRole,
 		},
 	}
 	return rolebinding
 }
 
-//role
-func BuildRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
+//role dry-run
+func BuildRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.Role {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -160,7 +177,7 @@ func BuildRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
 	}
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetDryRunRoleName(),
+			Name:      cr.Spec.Security.APIRole,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
@@ -181,95 +198,7 @@ func BuildRoleForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
 	return role
 }
 
-//role-binding
-func BuildRoleBindingForIShield(cr *apiv1alpha1.IntegrityShield) *rbacv1.RoleBinding {
-	labels := map[string]string{
-		"app":                          cr.Name,
-		"app.kubernetes.io/name":       cr.Name,
-		"app.kubernetes.io/managed-by": "operator",
-		"role":                         "security",
-	}
-	rolebinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetDryRunRoleBindingName(),
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      cr.GetServiceAccountName(),
-				Namespace: cr.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     cr.Spec.Security.ClusterRole + "-sim",
-		},
-	}
-	return rolebinding
-}
-
-//role
-func BuildRoleForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.Role {
-	labels := map[string]string{
-		"app":                          cr.Name,
-		"app.kubernetes.io/name":       cr.Name,
-		"app.kubernetes.io/managed-by": "operator",
-		"role":                         "security",
-	}
-	role := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetIShieldAdminRoleName(),
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{
-					"",
-				},
-				Resources: []string{
-					"integrityshields",
-					"shieldconfigs",
-					"signerconfigs",
-				},
-				Verbs: []string{
-					"update", "create", "delete", "get", "list", "watch", "patch",
-				},
-			},
-		},
-	}
-	return role
-}
-
-//role-binding
-func BuildRoleBindingForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.RoleBinding {
-	labels := map[string]string{
-		"app":                          cr.Name,
-		"app.kubernetes.io/name":       cr.Name,
-		"app.kubernetes.io/managed-by": "operator",
-		"role":                         "security",
-	}
-	rolebinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetIShieldAdminRoleBindingName(),
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Subjects: cr.Spec.Security.IShieldAdminSubjects,
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     "ishield-admin-role",
-		},
-	}
-	return rolebinding
-}
-
-//role
-func BuildClusterRoleForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRole {
+func BuildClusterRoleForObserver(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -278,21 +207,50 @@ func BuildClusterRoleForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cl
 	}
 	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetIShieldAdminClusterRoleName(),
+			Name:      cr.Spec.Security.ObserverRole,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{
-					"",
+					"*",
 				},
 				Resources: []string{
-					"resourcesigningprofiles",
-					"resourcesignatures",
+					"*",
 				},
 				Verbs: []string{
-					"update", "create", "delete", "get", "list", "watch", "patch",
+					"get", "list",
+				},
+			},
+		},
+	}
+	return role
+}
+
+func BuildRoleForObserver(cr *apiv1.IntegrityShield) *rbacv1.Role {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.Security.ObserverRole,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{
+					"apis.integrityshield.io", "",
+				},
+				Resources: []string{
+					"manifestintegritystates", "configmaps",
+				},
+				Verbs: []string{
+					"get", "list", "create", "watch", "patch", "update",
 				},
 			},
 		},
@@ -301,7 +259,71 @@ func BuildClusterRoleForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.Cl
 }
 
 //role-binding
-func BuildClusterRoleBindingForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rbacv1.ClusterRoleBinding {
+func BuildRoleBindingForIShield(cr *apiv1.IntegrityShield) *rbacv1.RoleBinding {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	rolebinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.Security.APIRoleBinding,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      cr.Spec.Security.APIServiceAccountName,
+				Namespace: cr.Namespace,
+			},
+			{
+				Kind:      "ServiceAccount",
+				Name:      cr.Spec.Security.ObserverServiceAccountName,
+				Namespace: cr.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     cr.Spec.Security.APIRole, //dry-run
+		},
+	}
+	return rolebinding
+}
+
+//role-binding observer
+func BuildRoleBindingForObserver(cr *apiv1.IntegrityShield) *rbacv1.RoleBinding {
+	labels := map[string]string{
+		"app":                          cr.Name,
+		"app.kubernetes.io/name":       cr.Name,
+		"app.kubernetes.io/managed-by": "operator",
+		"role":                         "security",
+	}
+	rolebinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.Security.ObserverRoleBinding,
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      cr.Spec.Security.ObserverServiceAccountName,
+				Namespace: cr.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     cr.Spec.Security.ObserverRole,
+		},
+	}
+	return rolebinding
+}
+
+func BuildClusterRoleBindingForObserver(cr *apiv1.IntegrityShield) *rbacv1.ClusterRoleBinding {
 	labels := map[string]string{
 		"app":                          cr.Name,
 		"app.kubernetes.io/name":       cr.Name,
@@ -310,28 +332,34 @@ func BuildClusterRoleBindingForIShieldAdmin(cr *apiv1alpha1.IntegrityShield) *rb
 	}
 	rolebinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetIShieldAdminClusterRoleBindingName(),
+			Name:      cr.Spec.Security.ObserverRoleBinding,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
-		Subjects: cr.Spec.Security.IShieldAdminSubjects,
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      cr.Spec.Security.ObserverServiceAccountName,
+				Namespace: cr.Namespace,
+			},
+		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "ishield-admin-clusterrole",
+			Name:     cr.Spec.Security.ObserverRole,
 		},
 	}
 	return rolebinding
 }
 
 //pod security policy
-func BuildPodSecurityPolicy(cr *apiv1alpha1.IntegrityShield) *policyv1.PodSecurityPolicy {
+func BuildPodSecurityPolicy(cr *apiv1.IntegrityShield) *policyv1.PodSecurityPolicy {
 	labels := map[string]string{
 		"app": cr.Name,
 	}
 	psp := &policyv1.PodSecurityPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetPodSecurityPolicyName(),
+			Name:      cr.Spec.Security.PodSecurityPolicyName,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
