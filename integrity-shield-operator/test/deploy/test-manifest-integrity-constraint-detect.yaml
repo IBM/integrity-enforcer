@@ -12,11 +12,11 @@ spec:
     - test-ns
   parameters:
     constraintName: configmap-constraint
-    ignoreFields:
-    - objects:
-      - kind: ConfigMap
-      fields:
-      - data.comment
     keyConfigs:
     - keySecretName: keyring-secret
       keySecretNamespace: integrity-shield-operator-system
+    action:
+      admissionControl:
+        enforce: false
+      audit:
+        inform: true

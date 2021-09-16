@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 
 	mipclient "github.com/IBM/integrity-shield/webhook/admission-controller/pkg/client/manifestintegrityprofile/clientset/versioned/typed/manifestintegrityprofile/v1"
 	. "github.com/onsi/ginkgo" //nolint:golint
@@ -38,29 +37,33 @@ import (
 
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
-	local_test, _                = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
-	skip_default_user_test       = true
-	kubeconfig_user              = os.Getenv("KUBE_CONTEXT_USERNAME")
-	ishield_namespace            = os.Getenv("ISHIELD_NS")
-	test_namespace               = "integrity-shield-test-protected-namespace"
-	test_unprotected_namespace   = "integrity-shield-test-unprotected-namespace"
-	shield_dir                   = os.Getenv("SHIELD_OP_DIR")
-	deploy_dir                   = shield_dir + "/test/deploy/"
-	kubeconfigManaged            = os.Getenv("KUBECONFIG")
-	tmpDir                       = os.Getenv("TMP_DIR")
-	integrityShieldOperatorCR_gk = deploy_dir + "apis_v1alpha1_integrityshield_gk.yaml"
-	integrityShieldOperatorCR_ac = deploy_dir + "apis_v1alpha1_integrityshield_ac.yaml"
-	api_server_name              = "integrity-shield-api"
-	constraint                   = deploy_dir + "gatekeeper-constraint-configmap.yaml"
-	constraint_name              = "configmap-constraint"
-	constraint_inscope           = deploy_dir + "gatekeeper-constraint-configmap-inscope.yaml"
-	gatekeeper_ns                = "gatekeeper-system"
-	test_configmap               = deploy_dir + "sample-configmap-signed.yaml"
-	test_configmap_name          = "sample-cm"
-	test_configmap_no_sign       = deploy_dir + "sample-configmap-no-sign.yaml"
-	test_configmap_no_sign_name  = "sample-cm-no-sign"
-	test_configmap_invalid_sign  = deploy_dir + "sample-configmap-invalid-sign.yaml"
-	test_configmap_ignore_atter  = deploy_dir + "sample-configmap-ignore-atter.yaml"
+	// local_test, _                = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
+	// skip_default_user_test         = true
+	kubeconfig_user   = os.Getenv("KUBE_CONTEXT_USERNAME")
+	ishield_namespace = os.Getenv("ISHIELD_NS")
+	test_namespace    = "test-ns"
+	shield_dir        = os.Getenv("SHIELD_OP_DIR")
+	deploy_dir        = shield_dir + "/test/deploy/"
+	kubeconfigManaged = os.Getenv("KUBECONFIG")
+	// tmpDir                         = os.Getenv("TMP_DIR")
+	integrityShieldOperatorCR_gk   = deploy_dir + "apis_v1_integrityshield_gk.yaml"
+	integrityShieldOperatorCR_ac   = deploy_dir + "apis_v1_integrityshield_ac.yaml"
+	api_name                       = "integrity-shield-api"
+	observer_name                  = "integrity-shield-observer"
+	ac_server_name                 = "integrity-shield-validator"
+	constraint                     = deploy_dir + "test-manifest-integrity-constraint.yaml"
+	constraint_detect              = deploy_dir + "test-manifest-integrity-constraint-detect.yaml"
+	constraint_ac                  = deploy_dir + "test-manifest-integrity-profile.yaml"
+	constraint_name                = "configmap-constraint"
+	gatekeeper_ns                  = "gatekeeper-system"
+	test_configmap_name_no_sign    = "test-configmap-no-sign"
+	test_configmap_name_annotation = "test-configmap-annotation"
+	test_configmap_name_skip       = "test-configmap-skip"
+	test_configmap_name_inscope    = "test-configmap-inscope"
+	test_configmap_no_sign         = deploy_dir + "test-configmap-no-sign.yaml"
+	test_configmap_annotation_sign = deploy_dir + "test-configmap-pgp-annotation.yaml"
+	test_configmap_inscope         = deploy_dir + "test-configmap-inscope.yaml"
+	test_configmap_skip            = deploy_dir + "test-configmap-skip.yaml"
 )
 
 var ishield_resource_list_gk = []ResourceRef{
@@ -128,7 +131,71 @@ var ishield_resource_list_gk = []ResourceRef{
 	// },
 }
 
-var ishield_resource_list_ac = []ResourceRef{}
+var ishield_resource_list_ac = []ResourceRef{
+	{
+		Namespace:  ishield_namespace,
+		Name:       "request-handler-config",
+		Kind:       "ConfigMap",
+		ApiVersion: "",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "admission-controller-config",
+		Kind:       "ConfigMap",
+		ApiVersion: "",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-sa",
+		Kind:       "ServiceAccount",
+		ApiVersion: "v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-validator",
+		Kind:       "Deployment",
+		ApiVersion: "apps/v1",
+	},
+	{
+		Name:       "manifestintegrityprofiles.apis.integrityshield.io",
+		Kind:       "CustomResourceDefinition",
+		ApiVersion: " apiextensions.k8s.io/v1",
+	},
+	{
+		Name:       "integrity-shield-role",
+		Kind:       "ClusterRole",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Name:       "integrity-shield-rolebinding",
+		Kind:       "ClusterRoleBinding",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-role",
+		Kind:       "Role",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-rolebinding",
+		Kind:       "RoleBinding",
+		ApiVersion: "rbac.authorization.k8s.io/v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-validator-tls",
+		Kind:       "Secret",
+		ApiVersion: "v1",
+	},
+	{
+		Namespace:  ishield_namespace,
+		Name:       "integrity-shield-validator-service",
+		Kind:       "Service",
+		ApiVersion: "v1",
+	},
+}
 
 type ResourceRef struct {
 	Name       string `json:"name"`
@@ -197,7 +264,7 @@ func LoadConfig(config, context string) (*rest.Config, error) {
 
 func RestclientConfig(config, context string) (*clientcmdapi.Config, error) {
 	if config == "" {
-		return nil, fmt.Errorf("Config file must be specified to load client config")
+		return nil, fmt.Errorf("config file must be specified to load client config")
 	}
 	c, err := clientcmd.LoadFromFile(config)
 	if err != nil {

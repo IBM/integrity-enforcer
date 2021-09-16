@@ -1,0 +1,33 @@
+
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ManifestIntegrityConstraint
+metadata:
+  name: configmap-constraint
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["ConfigMap"] 
+    namespaces:
+    - test-ns
+  parameters:
+    constraintName: configmap-constraint
+    objectSelector:
+    - name: test-configmap-inscope
+    - name: test-configmap-no-sign
+    - name: test-configmap-annotation
+    skipObjects:
+    - name: test-configmap-skip
+    ignoreFields:
+    - objects:
+      - kind: ConfigMap
+      fields:
+      - data.comment
+    keyConfigs:
+    - keySecretName: keyring-secret
+      keySecretNamespace: integrity-shield-operator-system
+    action:
+      admissionControl:
+        enforce: true
+      audit:
+        inform: true

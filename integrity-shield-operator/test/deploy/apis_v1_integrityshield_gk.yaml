@@ -1,13 +1,13 @@
-apiVersion: apis.integrityshield.io/v1alpha1
+apiVersion: apis.integrityshield.io/v1
 kind: IntegrityShield
 metadata:
-  name: integrity-shield-server
+  name: integrity-shield
   finalizers:
   - cleanup.finalizers.integrityshield.io
 spec:
   # Add fields here
   labels:
-    app: ishield-server
+    app: ishield-api
   affinity: {}
   security:
     serviceAccountName: integrity-shield-sa
@@ -24,7 +24,7 @@ spec:
   shieldApi:
     name: integrity-shield-api
     imagePullPolicy: Always
-    image: localhost:5000/integrity-shield-server:0.2.0
+    image: localhost:5000/integrity-shield-api:0.2.5
     port: 8080
     selector:     
       app: integrity-shield-api
@@ -35,7 +35,12 @@ spec:
   requestHandlerConfigKey: config.yaml
   requestHandlerConfigName: request-handler-config
   requestHandlerConfig: |
-    sideEffect:
+    defaultConstraintAction:
+      audit:
+        inform: true
+      admissionControl:
+        enforce: false
+    sideEffect: 
       createDenyEvent: true
     log:
       level: info
@@ -47,10 +52,15 @@ spec:
         name: kube-root-ca.crt
       ignoreFields:
       - fields:
+        - spec.host
+        objects:
+        - kind: Route
+      - fields:
         - metadata.namespace
         objects:
         - kind: ClusterServiceVersion
       - fields:
+        - metadata.labels.app.kubernetes.io/instance
         - metadata.managedFields.*
         - metadata.resourceVersion
         - metadata.selfLink
@@ -63,6 +73,7 @@ spec:
         - metadata.uid
         - metadata.generation
         - status
+        - metadata.annotations.deployment.kubernetes.io/revision
         - metadata.annotations.cosign.sigstore.dev/imageRef
         - metadata.annotations.cosign.sigstore.dev/bundle
         - metadata.annotations.cosign.sigstore.dev/message
@@ -258,7 +269,7 @@ spec:
       is_create_or_update
       ishield_input := {"parameters":input.parameters, "request":input.review}
       reqdata := json.marshal(ishield_input)
-      url := "https://integrity-shield-api.RPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
+      url := "https://integrity-shield-api.REPLACE_WITH_SERVER_NAMESPSCE.svc:8123/api/request"
       resp := http_post(url, reqdata)
       resp.status_code == 200
       result := json.unmarshal(resp.raw_body)
@@ -399,55 +410,12 @@ spec:
     enabled: true
     name: integrity-shield-observer
     imagePullPolicy: Always
-    image: localhost:5000/integrity-shield-observer:0.2.0
+    image: localhost:5000/integrity-shield-observer:0.2.5
     selector:     
       app: integrity-shield-observer
     logLevel: info
-    interval: "60"
-    targetResourceConfigName: target-resource-config
-    targetResourceConfigKey: "config.yaml"
-    targetResourceConfig: |
-      ignoreFields:
-      - fields:
-        - metadata.namespace
-        objects:
-        - kind: ClusterServiceVersion
-      - fields:
-        - metadata.managedFields.*
-        - metadata.resourceVersion
-        - metadata.selfLink
-        - metadata.annotations.control-plane.alpha.kubernetes.io/leader
-        - metadata.annotations.kubectl.kubernetes.io/last-applied-configuration
-        - metadata.finalizers*
-        - metadata.annotations.namespace
-        - metadata.annotations.deprecated.daemonset.template.generation
-        - metadata.creationTimestamp
-        - metadata.uid
-        - metadata.generation
-        - status
-        - metadata.annotations.cosign.sigstore.dev/imageRef
-        - metadata.annotations.cosign.sigstore.dev/bundle
-        - metadata.annotations.cosign.sigstore.dev/message
-        - metadata.annotations.cosign.sigstore.dev/certificate
-        - metadata.annotations.cosign.sigstore.dev/signature
-        objects:
-        - name: '*'
-      - fields:
-        - secrets.*.name
-        - imagePullSecrets.*.name
-        objects:
-        - kind: ServiceAccount
-      - fields:
-        - spec.ports.*.nodePort
-        - spec.clusterIP
-        - spec.clusterIPs.0
-        objects:
-        - kind: Service
-      - fields:
-        - metadata.labels.olm.api.*
-        - metadata.labels.operators.coreos.com/*
-        - metadata.annotations.*
-        - spec.install.spec.deployments.*.spec.template.spec.containers.*.resources.limits.cpu
-        - spec.cleanup.enabled
-        objects:
-        - kind: ClusterServiceVersion   
+    interval: "5"
+    exportDetailResult: true
+    resultDetailConfigName: verify-resource-result
+    resultDetailConfigKey: "config.yaml"
+
