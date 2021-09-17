@@ -33,10 +33,10 @@ const (
 func TestImageProfile(t *testing.T) {
 	imgProfile := ImageProfile{
 		Match: ImageRefList{
-			ImageRef("localhost:5000/test-match-*"),
+			ImageRef("sample-registry/test-match-*"),
 		},
 		Exclude: ImageRefList{
-			ImageRef("localhost:5000/test-exclude-*"),
+			ImageRef("sample-registry/test-exclude-*"),
 		},
 	}
 
@@ -45,8 +45,8 @@ func TestImageProfile(t *testing.T) {
 		return
 	}
 
-	testImage1 := "localhost:5000/test-match-image:0.0.1"
-	testImage2 := "localhost:5000/test-exclude-image:0.0.2"
+	testImage1 := "sample-registry/test-match-image:0.0.1"
+	testImage2 := "sample-registry/test-exclude-image:0.0.2"
 	expect1 := true
 	expect2 := false
 
