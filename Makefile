@@ -195,16 +195,12 @@ copyright-check:
 test-prereq:
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh && fetch_envtest_tools ${ENVTEST_ASSETS_DIR} && setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
-test-unit: test-prereq test-init test-verify test-init-op test-init-cmd test-verify-op test-verify-cmd
-
+test-unit: test-prereq test-init test-verify test-init-op test-verify-op 
 test-init:
 	cd $(SHIELD_DIR) &&  go test -v  $(shell cd $(SHIELD_DIR) && go list ./... | grep -v /vendor/ ) | tee $(TMP_DIR)results.txt
 
 test-init-op:
 	cd $(SHIELD_OP_DIR) &&  go test -v  $(shell cd $(SHIELD_OP_DIR) && go list ./... | grep -v /test ) | tee $(TMP_DIR)results_op.txt
-
-test-init-cmd:
-	cd $(ISHIELD_REPO_ROOT)/cmd &&  go test -v  $(shell cd $(ISHIELD_REPO_ROOT)/cmd && go list ./... ) | tee $(TMP_DIR)results_cmd.txt
 
 test-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results.txt | grep "FAIL:"))
@@ -214,10 +210,6 @@ test-verify:
 test-verify-op:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)results_op.txt | grep "FAIL:"))
 	# cat $(TMP_DIR)results_op.txt
-	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
-
-test-verify-cmd:
-	$(eval FAILURES=$(shell cat $(TMP_DIR)results_cmd.txt | grep "FAIL:"))
 	@$(if $(strip $(FAILURES)), echo "One or more unit tests failed. Failures: $(FAILURES)"; exit 1, echo "All unit tests passed successfully."; exit 0)
 
 ############################################################

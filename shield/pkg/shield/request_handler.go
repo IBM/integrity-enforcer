@@ -42,9 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const defaultConfigKeyInConfigMap = "config.yaml"
 const defaultPodNamespace = "integrity-shield-operator-system"
-const defaultHandlerConfigMapName = "request-handler-config"
 const ImageRefAnnotationKeyShield = "integrityshield.io/signature"
 const AnnotationKeyDomain = "integrityshield.io"
 const SignatureAnnotationTypeShield = "IntegrityShield"
@@ -71,7 +69,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	// load request handler config
 	rhconfig, err := k8smnfconfig.LoadRequestHandlerConfig()
 	if err != nil {
-		log.Errorf("failed to load request handler config", err.Error())
+		log.Error("failed to load request handler config", err.Error())
 		errMsg := "IntegrityShield failed to decide the response. Failed to load request handler config: " + err.Error()
 		return makeResultFromRequestHandler(false, errMsg, false, req)
 	}
@@ -139,7 +137,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		ignoreFields := getMatchedIgnoreFields(paramObj.IgnoreFields, rhconfig.RequestFilterProfile.IgnoreFields, resource)
 		mutated, err := mutationCheck(req.AdmissionRequest.OldObject.Raw, req.AdmissionRequest.Object.Raw, ignoreFields)
 		if err != nil {
-			log.Errorf("failed to check mutation", err.Error())
+			log.Error("failed to check mutation", err.Error())
 			errMsg := "IntegrityShield failed to decide the response. Failed to check mutation: " + err.Error()
 			return makeResultFromRequestHandler(false, errMsg, enforce, req)
 		}
@@ -190,7 +188,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 				"kind":      req.Kind.Kind,
 				"operation": req.Operation,
 				"userName":  req.UserInfo.Username,
-			}).Warning("Signature verification is required for this request, but verifyResource return error ; %s", err.Error())
+			}).Warningf("Signature verification is required for this request, but verifyResource return error ; %s", err.Error())
 			r := makeResultFromRequestHandler(false, err.Error(), enforce, req)
 			// generate events
 			if rhconfig.SideEffectConfig.CreateDenyEvent {
@@ -373,7 +371,7 @@ func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfi
 			if keyconfig.KeySecretName != "" {
 				keyPath, err := k8smnfconfig.LoadKeySecret(keyconfig.KeySecretNamespace, keyconfig.KeySecretName)
 				if err != nil {
-					log.Errorf("failed to load key secret", err.Error())
+					log.Error("failed to load key secret", err.Error())
 				}
 				keyPathList = append(keyPathList, keyPath)
 			}
