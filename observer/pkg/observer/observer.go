@@ -214,7 +214,24 @@ func (self *Observer) Run() {
 		ignoreFields := constraint.Parameters.IgnoreFields
 		secrets := constraint.Parameters.KeyConfigs
 		ignoreFields = append(ignoreFields, rhconfig.RequestFilterProfile.IgnoreFields...)
-		results := ObserveResources(resources, constraint.Parameters.SignatureRef, ignoreFields, secrets)
+		results := []VerifyResultDetail{}
+		for _, resource := range resources {
+			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, secrets)
+			imgAllow, imgMsg := ObserveImage(resource, constraint.Parameters.ImageProfile)
+			if !imgAllow {
+				if !result.Violation {
+					result.Violation = true
+					result.Message = imgMsg
+				} else {
+					result.Message = fmt.Sprintf("%s, [Image]%s", result.Message, imgMsg)
+				}
+			}
+
+			log.Debug("VerifyResultDetail", result)
+			results = append(results, result)
+		}
+
+		// prepare for manifest integrity state
 		for _, res := range results {
 			// simple result
 			if res.Violation {
