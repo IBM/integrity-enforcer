@@ -32,7 +32,6 @@ import (
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -324,12 +323,6 @@ func getPodSpec(rawObj []byte, group, version, kind string) (*corev1.PodSpec, er
 		ps = job.Spec.Template.Spec
 	} else if kind == "CronJob" && version == "v1beta1" && group == "batch" {
 		cronjob := batchv1beta1.CronJob{}
-		if err := json.Unmarshal(rawObj, &cronjob); err != nil {
-			return nil, err
-		}
-		ps = cronjob.Spec.JobTemplate.Spec.Template.Spec
-	} else if kind == "CronJob" && version == "v2alpha1" && group == "batch" {
-		cronjob := batchv2alpha1.CronJob{}
 		if err := json.Unmarshal(rawObj, &cronjob); err != nil {
 			return nil, err
 		}
