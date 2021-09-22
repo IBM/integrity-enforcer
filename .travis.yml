@@ -4,7 +4,7 @@ service:
   - docker
 
 go:
-   - "1.14.x"
+   - "1.16.x"
 
 os:
   - linux
@@ -80,8 +80,7 @@ jobs:
           make component/test/e2e
     - stage: publish
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
-      if: env(ENABLE_PUBLISH) = true AND branch = master
-      #type = push AND branch = master
+      if: env(ENABLE_PUBLISH) = true AND branch =~ /^release-[0-9]+\..*$/
       script:
         - |
           make init
