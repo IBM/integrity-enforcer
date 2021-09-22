@@ -305,6 +305,9 @@ e2e-test:
 	@echo run test
 	$(ISHIELD_REPO_ROOT)/build/check_test_results.sh
 
+.EXPORT_ALL_VARIABLES:
+TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
+
 test-gpg-annotation:
 	@echo
 	$(ISHIELD_REPO_ROOT)/build/run_unit_test_sign_script.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(TMP_DIR)
@@ -340,7 +343,7 @@ delete-crds:
 delete-keyring-secret:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring_secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_OP_NS)
 
 install-operator:
 	@echo
@@ -424,7 +427,7 @@ sonar-go-test-ishield:
 	@cat gosec.json
 	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		echo "--> Running sonar-scanner"; \
-		sonar-scanner --debug; \
+		sonar-scanner --debug || echo "Sonar scanner is not available"; \
 	fi
 
 sonar-go-test-op:
@@ -440,7 +443,7 @@ sonar-go-test-op:
 	@cat gosec.json
 	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		echo "--> Running sonar-scanner"; \
-		sonar-scanner --debug; \
+		sonar-scanner --debug || echo "Sonar scanner is not available"; \
 	fi
 
 .PHONY: publish

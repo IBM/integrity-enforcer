@@ -71,7 +71,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 	// load request handler config
 	rhconfig, err := k8smnfconfig.LoadRequestHandlerConfig()
 	if err != nil {
-		log.Errorf("failed to load request handler config", err.Error())
+		log.Errorf("failed to load request handler config: %s", err.Error())
 		errMsg := "IntegrityShield failed to decide the response. Failed to load request handler config: " + err.Error()
 		return makeResultFromRequestHandler(false, errMsg, false, req)
 	}
@@ -139,7 +139,7 @@ func RequestHandler(req admission.Request, paramObj *k8smnfconfig.ParameterObjec
 		ignoreFields := getMatchedIgnoreFields(paramObj.IgnoreFields, rhconfig.RequestFilterProfile.IgnoreFields, resource)
 		mutated, err := mutationCheck(req.AdmissionRequest.OldObject.Raw, req.AdmissionRequest.Object.Raw, ignoreFields)
 		if err != nil {
-			log.Errorf("failed to check mutation", err.Error())
+			log.Errorf("failed to check mutation: %s", err.Error())
 			errMsg := "IntegrityShield failed to decide the response. Failed to check mutation: " + err.Error()
 			return makeResultFromRequestHandler(false, errMsg, enforce, req)
 		}
@@ -373,7 +373,7 @@ func setVerifyOption(paramObj *k8smnfconfig.ParameterObject, config *k8smnfconfi
 			if keyconfig.KeySecretName != "" {
 				keyPath, err := k8smnfconfig.LoadKeySecret(keyconfig.KeySecretNamespace, keyconfig.KeySecretName)
 				if err != nil {
-					log.Errorf("failed to load key secret", err.Error())
+					log.Errorf("failed to load key secret: %s", err.Error())
 				}
 				keyPathList = append(keyPathList, keyPath)
 			}
@@ -482,7 +482,7 @@ func createOrUpdateEvent(req admission.Request, ar *ResultFromRequestHandler, co
 		_, err = client.CoreV1().Events(evtNamespace).Create(context.Background(), evt, metav1.CreateOptions{})
 	}
 	if err != nil {
-		log.Errorf("failed to generate deny event; %s", err.Error())
+		log.Errorf("failed to generate deny event: %s", err.Error())
 		return err
 	}
 
