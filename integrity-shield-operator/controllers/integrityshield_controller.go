@@ -284,9 +284,11 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 	}
 
 	if instance.Spec.UseGatekeeper {
-		_, err = r.deleteConstraintTemplate(instance)
-		if err != nil {
-			return err
+		if r.isGatekeeperAvailable(instance) {
+			_, err = r.deleteConstraintTemplate(instance)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		_, err = r.deleteWebhook(instance)
