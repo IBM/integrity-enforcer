@@ -48,7 +48,7 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
-const exportDetailResult = "OBSERVER_RESULT_ENABLED"
+const exportDetailResult = "ENABLE_DETAIL_RESULT"
 const detailResultConfigName = "OBSERVER_RESULT_CONFIG_NAME"
 const detailResultConfigKey = "OBSERVER_RESULT_CONFIG_KEY"
 
@@ -87,13 +87,15 @@ type VerifyResultDetail struct {
 	VerifyResourceResult *k8smanifest.VerifyResourceResult `json:"verifyResourceResult"`
 }
 type ConstraintResult struct {
-	ConstraintName  string               `json:"constraintName"`
-	Violation       bool                 `json:"violation"`
-	TotalViolations int                  `json:"totalViolations"`
-	Results         []VerifyResultDetail `json:"results"`
+	ConstraintName  string                       `json:"constraintName"`
+	Violation       bool                         `json:"violation"`
+	TotalViolations int                          `json:"totalViolations"`
+	Results         []VerifyResultDetail         `json:"results"`
+	Constraint      k8smnfconfig.ParameterObject `json:"constraint"`
 }
 
 type ObservationDetailResults struct {
+	Time              string             `json:"time"`
 	ConstraintResults []ConstraintResult `json:"constraintResults"`
 }
 
@@ -301,6 +303,7 @@ func (self *Observer) Run() {
 			Results:         results,
 			Violation:       violated,
 			TotalViolations: count,
+			Constraint:      constraint.Parameters,
 		}
 		constraintResults = append(constraintResults, cres)
 	}
@@ -308,6 +311,7 @@ func (self *Observer) Run() {
 	// export ConstraintResult
 	res := ObservationDetailResults{
 		ConstraintResults: constraintResults,
+		Time:              time.Now().Format(timeFormat),
 	}
 	_ = exportResultDetail(res)
 	return

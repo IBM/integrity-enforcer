@@ -418,6 +418,7 @@ spec:
     logLevel: info
     interval: "5"
     exportDetailResult: true
+    provenanece: true
     resultDetailConfigName: verify-resource-result
     resultDetailConfigKey: "config.yaml"
 
