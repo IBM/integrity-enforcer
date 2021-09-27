@@ -16,7 +16,7 @@ metadata:
           "spec": {
             "affinity": {},
             "labels": {
-              "app": "ishield-server"
+              "app": "ishield-api"
             },
             "observer": {
               "enabled": true,
@@ -26,6 +26,7 @@ metadata:
               "interval": "5",
               "logLevel": "info",
               "name": "integrity-shield-observer",
+              "provenanece": true,
               "resultDetailConfigKey": "config.yaml",
               "resultDetailConfigName": "verify-resource-result",
               "selector": {
