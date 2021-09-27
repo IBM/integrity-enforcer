@@ -48,7 +48,7 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
-const exportDetailResult = "OBSERVER_RESULT_ENABLED"
+const exportDetailResult = "ENABLE_DETAIL_RESULT"
 const detailResultConfigName = "OBSERVER_RESULT_CONFIG_NAME"
 const detailResultConfigKey = "OBSERVER_RESULT_CONFIG_KEY"
 
@@ -87,13 +87,15 @@ type VerifyResultDetail struct {
 	VerifyResourceResult *k8smanifest.VerifyResourceResult `json:"verifyResourceResult"`
 }
 type ConstraintResult struct {
-	ConstraintName  string               `json:"constraintName"`
-	Violation       bool                 `json:"violation"`
-	TotalViolations int                  `json:"totalViolations"`
-	Results         []VerifyResultDetail `json:"results"`
+	ConstraintName  string                       `json:"constraintName"`
+	Violation       bool                         `json:"violation"`
+	TotalViolations int                          `json:"totalViolations"`
+	Results         []VerifyResultDetail         `json:"results"`
+	Constraint      k8smnfconfig.ParameterObject `json:"constraint"`
 }
 
 type ObservationDetailResults struct {
+	Time              string             `json:"time"`
 	ConstraintResults []ConstraintResult `json:"constraintResults"`
 }
 
@@ -214,7 +216,24 @@ func (self *Observer) Run() {
 		ignoreFields := constraint.Parameters.IgnoreFields
 		secrets := constraint.Parameters.KeyConfigs
 		ignoreFields = append(ignoreFields, rhconfig.RequestFilterProfile.IgnoreFields...)
-		results := ObserveResources(resources, constraint.Parameters.SignatureRef, ignoreFields, secrets)
+		results := []VerifyResultDetail{}
+		for _, resource := range resources {
+			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, secrets)
+			imgAllow, imgMsg := ObserveImage(resource, constraint.Parameters.ImageProfile)
+			if !imgAllow {
+				if !result.Violation {
+					result.Violation = true
+					result.Message = imgMsg
+				} else {
+					result.Message = fmt.Sprintf("%s, [Image]%s", result.Message, imgMsg)
+				}
+			}
+
+			log.Debug("VerifyResultDetail", result)
+			results = append(results, result)
+		}
+
+		// prepare for manifest integrity state
 		for _, res := range results {
 			// simple result
 			if res.Violation {
@@ -284,6 +303,7 @@ func (self *Observer) Run() {
 			Results:         results,
 			Violation:       violated,
 			TotalViolations: count,
+			Constraint:      constraint.Parameters,
 		}
 		constraintResults = append(constraintResults, cres)
 	}
@@ -291,6 +311,7 @@ func (self *Observer) Run() {
 	// export ConstraintResult
 	res := ObservationDetailResults{
 		ConstraintResults: constraintResults,
+		Time:              time.Now().Format(timeFormat),
 	}
 	_ = exportResultDetail(res)
 	return

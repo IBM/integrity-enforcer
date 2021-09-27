@@ -309,8 +309,12 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
 			{
-				Name:  "OBSERVER_RESULT_ENABLED",
+				Name:  "ENABLE_DETAIL_RESULT",
 				Value: strconv.FormatBool(cr.Spec.Observer.ExportDetailResult),
+			},
+			{
+				Name:  "ENABLE_PROVENANCE_RESULT",
+				Value: strconv.FormatBool(cr.Spec.Observer.Provenanece),
 			},
 			{
 				Name:  "OBSERVER_RESULT_CONFIG_NAME",
