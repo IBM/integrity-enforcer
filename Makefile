@@ -225,6 +225,7 @@ test-verify-op:
 
 .EXPORT_ALL_VARIABLES:
 TMP_CR_FILE=$(TMP_DIR)apis_v1_integrityshield.yaml
+TMP_CR_AC_FILE=$(TMP_DIR)apis_v1_integrityshield_ac.yaml
 # export KUBE_CONTEXT_USERNAME=kind-test-managed
 
 test-e2e: export KUBECONFIG=$(SHIELD_OP_DIR)kubeconfig_managed
@@ -332,7 +333,7 @@ delete-crds:
 delete-keyring-secret:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring_secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_OP_NS)
 
 install-operator:
 	@echo
@@ -366,12 +367,16 @@ setup-tmp-cr:
 	@echo prepare cr
 	@echo copy cr into tmp dir
 	cp $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_local.yaml $(TMP_CR_FILE)
+	cp $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml $(TMP_CR_AC_FILE)
 	@echo insert image
-	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(TEST_ISHIELD_API_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(LOCAL_REGISTRY)/$(ISHIELD_IMAGE)
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.imagePullPolicy Always
-	yq write -i $(TMP_CR_FILE) spec.observer.image $(TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION)
+	yq write -i $(TMP_CR_FILE) spec.observer.image $(LOCAL_REGISTRY)/$(ISHIELD_OBSERVER)
 	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always
-
+	yq write -i $(TMP_CR_AC_FILE) spec.admissionController.image $(LOCAL_REGISTRY)/$(ISHIELD_ADMISSION_CONTROLLER)
+	yq write -i $(TMP_CR_AC_FILE) spec.admissionController.imagePullPolicy Always
+	yq write -i $(TMP_CR_AC_FILE) spec.observer.image $(LOCAL_REGISTRY)/$(ISHIELD_OBSERVER)
+	yq write -i $(TMP_CR_AC_FILE) spec.observer.imagePullPolicy Always
 create-tmp-cr:
 	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
 

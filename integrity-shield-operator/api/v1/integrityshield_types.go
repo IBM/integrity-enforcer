@@ -26,6 +26,7 @@ const (
 	DefaultIShieldAPILabel       = "integrity-shield-api"
 
 	CleanupFinalizerName = "cleanup.finalizers.integrityshield.io"
+	CsvPath              = "./bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -81,6 +82,7 @@ type APIContainer struct {
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
+	Tag             string                  `json:"tag,omitempty"`
 	Port            int32                   `json:"port,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
@@ -91,6 +93,7 @@ type ControllerContainer struct {
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
+	Tag             string                  `json:"tag,omitempty"`
 	Port            int32                   `json:"port,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 	Log             LogConfig               `json:"log,omitempty"`
@@ -119,6 +122,7 @@ type Observer struct {
 	SelectorLabels         map[string]string   `json:"selector,omitempty"`
 	ImagePullPolicy        v1.PullPolicy       `json:"imagePullPolicy,omitempty"`
 	Image                  string              `json:"image,omitempty"`
+	Tag                    string              `json:"tag,omitempty"`
 	SecurityContext        *v1.SecurityContext `json:"securityContext,omitempty"`
 	LogLevel               string              `json:"logLevel,omitempty"`
 	Interval               string              `json:"interval,omitempty"`
