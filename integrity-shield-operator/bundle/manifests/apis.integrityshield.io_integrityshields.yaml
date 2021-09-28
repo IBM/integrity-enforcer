@@ -234,6 +234,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  tag:
+                    type: string
                 type: object
               admissionControllerConfig:
                 type: string
@@ -1261,6 +1263,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  tag:
+                    type: string
                 type: object
               rego:
                 type: string
@@ -1633,6 +1637,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  tag:
+                    type: string
                 type: object
               shieldApiServiceName:
                 type: string

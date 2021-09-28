@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/IBM/integrity-shield/integrity-shield-operator v0.0.0-00010101000000-000000000000
 	github.com/IBM/integrity-shield/webhook/admission-controller v0.0.0-00010101000000-000000000000
+	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0

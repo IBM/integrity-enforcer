@@ -17,10 +17,15 @@
 package resources
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
 	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
+	"github.com/ghodss/yaml"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
@@ -52,10 +57,17 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 		},
 	}
 
+	var image string
+	if cr.Spec.API.Tag != "" {
+		image = cr.Spec.API.Image + ":" + cr.Spec.API.Tag
+	} else {
+		image = cr.Spec.API.Image + ":" + ImageVersion()
+	}
+
 	apiContainer := v1.Container{
 		Name:            cr.Spec.API.Name,
 		SecurityContext: cr.Spec.API.SecurityContext,
-		Image:           cr.Spec.API.Image,
+		Image:           image,
 		ImagePullPolicy: cr.Spec.API.ImagePullPolicy,
 		ReadinessProbe: &v1.Probe{
 			InitialDelaySeconds: 10,
@@ -165,13 +177,20 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 		},
 	}
 
+	var image string
+	if cr.Spec.ControllerContainer.Tag != "" {
+		image = cr.Spec.ControllerContainer.Image + ":" + cr.Spec.ControllerContainer.Tag
+	} else {
+		image = cr.Spec.ControllerContainer.Image + ":" + ImageVersion()
+	}
+
 	serverContainer := v1.Container{
 		Command: []string{
 			"/myapp/k8s-manifest-sigstore",
 		},
 		Name:            cr.Spec.ControllerContainer.Name,
 		SecurityContext: cr.Spec.ControllerContainer.SecurityContext,
-		Image:           cr.Spec.ControllerContainer.Image,
+		Image:           image,
 		ImagePullPolicy: cr.Spec.ControllerContainer.ImagePullPolicy,
 		ReadinessProbe: &v1.Probe{
 			Handler: v1.Handler{
@@ -285,10 +304,17 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 		},
 	}
 
+	var image string
+	if cr.Spec.Observer.Tag != "" {
+		image = cr.Spec.Observer.Image + ":" + cr.Spec.Observer.Tag
+	} else {
+		image = cr.Spec.Observer.Image + ":" + ImageVersion()
+	}
+
 	serverContainer := v1.Container{
 		Name:            cr.Spec.Observer.Name,
 		SecurityContext: cr.Spec.Observer.SecurityContext,
-		Image:           cr.Spec.Observer.Image,
+		Image:           image,
 		ImagePullPolicy: cr.Spec.Observer.ImagePullPolicy,
 		VolumeMounts:    servervolumemounts,
 		Env: []v1.EnvVar{
@@ -464,4 +490,27 @@ func EqualLabels(found map[string]string, expected map[string]string) bool {
 
 func EqualAnnotations(found map[string]string, expected map[string]string) bool {
 	return reflect.DeepEqual(found, expected)
+}
+
+func ImageVersion() string {
+	var tmpCsv map[string]interface{}
+	fpath := filepath.Clean(apiv1.CsvPath)
+	tmpBytes, err := ioutil.ReadFile(fpath)
+	if err != nil {
+		fmt.Println("failed to read file:", err)
+	}
+	_ = yaml.Unmarshal(tmpBytes, &tmpCsv)
+	// spec.version
+
+	spec, ok := tmpCsv["spec"].(map[string]interface{})
+	if !ok {
+		fmt.Println("failed to get spec")
+		return ""
+	}
+	version, ok := spec["version"].(string)
+	if !ok {
+		fmt.Println("failed to get version")
+		return ""
+	}
+	return version
 }
