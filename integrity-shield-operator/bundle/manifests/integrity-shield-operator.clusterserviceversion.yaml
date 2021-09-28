@@ -21,7 +21,7 @@ metadata:
             "observer": {
               "enabled": true,
               "exportDetailResult": true,
-              "image": "localhost:5000/integrity-shield-observer",
+              "image": "gcr.io/clean-resource-318209/integrity-shield-observer",
               "imagePullPolicy": "Always",
               "interval": "5",
               "logLevel": "info",
@@ -48,7 +48,7 @@ metadata:
               "serviceAccountName": "integrity-shield-sa"
             },
             "shieldApi": {
-              "image": "localhost:5000/integrity-shield-api",
+              "image": "gcr.io/clean-resource-318209/integrity-shield-api",
               "imagePullPolicy": "Always",
               "name": "integrity-shield-api",
               "port": 8080,
