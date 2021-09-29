@@ -358,7 +358,7 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 				Value: cr.Spec.Observer.Interval,
 			},
 		},
-		Resources: cr.Spec.ControllerContainer.Resources,
+		Resources: cr.Spec.Observer.Resources,
 	}
 
 	containers := []v1.Container{
@@ -522,9 +522,8 @@ func SetImageVersion(image, version, name string) string {
 	reqLogger := log.WithValues("BuildDeployment", name)
 	// specify registry
 	slice := strings.Split(image, "/")
-	registry := slice[0]
-	tmpImage := slice[1]
-
+	tmpImage := slice[len(slice)-1]
+	registry := strings.Replace(image, tmpImage, "", 1)
 	// specify image name (remove tag if image contains tag)
 	var img string
 	if strings.Contains(tmpImage, ":") {
@@ -534,6 +533,6 @@ func SetImageVersion(image, version, name string) string {
 	} else {
 		img = tmpImage
 	}
-	imgVersion := fmt.Sprintf("%s/%s:%s", registry, img, version)
+	imgVersion := fmt.Sprintf("%s%s:%s", registry, img, version)
 	return imgVersion
 }
