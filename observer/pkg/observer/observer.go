@@ -216,9 +216,12 @@ func (self *Observer) Run() {
 		ignoreFields := constraint.Parameters.IgnoreFields
 		secrets := constraint.Parameters.KeyConfigs
 		ignoreFields = append(ignoreFields, rhconfig.RequestFilterProfile.IgnoreFields...)
+		skipObjects := rhconfig.RequestFilterProfile.SkipObjects
+		skipObjects = append(skipObjects, constraint.Parameters.SkipObjects...)
 		results := []VerifyResultDetail{}
 		for _, resource := range resources {
-			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, secrets)
+			// skip object
+			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, skipObjects, secrets)
 			imgAllow, imgMsg := ObserveImage(resource, constraint.Parameters.ImageProfile)
 			if !imgAllow {
 				if !result.Violation {
