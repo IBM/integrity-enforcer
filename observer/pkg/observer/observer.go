@@ -87,11 +87,11 @@ type VerifyResultDetail struct {
 	VerifyResourceResult *k8smanifest.VerifyResourceResult `json:"verifyResourceResult"`
 }
 type ConstraintResult struct {
-	ConstraintName  string                       `json:"constraintName"`
-	Violation       bool                         `json:"violation"`
-	TotalViolations int                          `json:"totalViolations"`
-	Results         []VerifyResultDetail         `json:"results"`
-	Constraint      k8smnfconfig.ParameterObject `json:"constraint"`
+	ConstraintName  string               `json:"constraintName"`
+	Violation       bool                 `json:"violation"`
+	TotalViolations int                  `json:"totalViolations"`
+	Results         []VerifyResultDetail `json:"results"`
+	Constraint      ConstraintSpec       `json:"constraint"`
 }
 
 type ObservationDetailResults struct {
@@ -306,7 +306,7 @@ func (self *Observer) Run() {
 			Results:         results,
 			Violation:       violated,
 			TotalViolations: count,
-			Constraint:      constraint.Parameters,
+			Constraint:      constraint,
 		}
 		constraintResults = append(constraintResults, cres)
 	}
