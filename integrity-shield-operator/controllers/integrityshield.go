@@ -25,7 +25,6 @@ import (
 	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	policyv1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -584,75 +583,75 @@ func (r *IntegrityShieldReconciler) createOrUpdateRoleForObserver(
 	return r.createOrUpdateRole(instance, expected)
 }
 
-func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	ctx := context.Background()
-	expected := res.BuildPodSecurityPolicy(instance)
-	found := &policyv1.PodSecurityPolicy{}
+// func (r *IntegrityShieldReconciler) createOrUpdatePodSecurityPolicy(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
+// 	ctx := context.Background()
+// 	expected := res.BuildPodSecurityPolicy(instance)
+// 	found := &policyv1.PodSecurityPolicy{}
 
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name,
-		"PodSecurityPolicy.Name", expected.Name)
+// 	reqLogger := r.Log.WithValues(
+// 		"Instance.Name", instance.Name,
+// 		"PodSecurityPolicy.Name", expected.Name)
 
-	// Set CR instance as the owner and controller
-	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
-	if err != nil {
-		reqLogger.Error(err, "Failed to define expected resource")
-		return ctrl.Result{}, err
-	}
+// 	// Set CR instance as the owner and controller
+// 	err := controllerutil.SetControllerReference(instance, expected, r.Scheme)
+// 	if err != nil {
+// 		reqLogger.Error(err, "Failed to define expected resource")
+// 		return ctrl.Result{}, err
+// 	}
 
-	// If PodSecurityPolicy does not exist, create it and requeue
-	err = r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
+// 	// If PodSecurityPolicy does not exist, create it and requeue
+// 	err = r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
 
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new resource")
-		err = r.Create(ctx, expected)
-		if err != nil && errors.IsAlreadyExists(err) {
-			// Already exists from previous reconcile, requeue.
-			reqLogger.Info("Skip reconcile: resource already exists")
-			return ctrl.Result{Requeue: true}, nil
-		} else if err != nil {
-			reqLogger.Error(err, "Failed to create new resource")
-			return ctrl.Result{}, err
-		}
-		// Created successfully - return and requeue
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if err != nil {
-		return ctrl.Result{}, err
-	}
+// 	if err != nil && errors.IsNotFound(err) {
+// 		reqLogger.Info("Creating a new resource")
+// 		err = r.Create(ctx, expected)
+// 		if err != nil && errors.IsAlreadyExists(err) {
+// 			// Already exists from previous reconcile, requeue.
+// 			reqLogger.Info("Skip reconcile: resource already exists")
+// 			return ctrl.Result{Requeue: true}, nil
+// 		} else if err != nil {
+// 			reqLogger.Error(err, "Failed to create new resource")
+// 			return ctrl.Result{}, err
+// 		}
+// 		// Created successfully - return and requeue
+// 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+// 	} else if err != nil {
+// 		return ctrl.Result{}, err
+// 	}
 
-	// No extra validation
+// 	// No extra validation
 
-	// No reconcile was necessary
-	return ctrl.Result{}, nil
+// 	// No reconcile was necessary
+// 	return ctrl.Result{}, nil
 
-}
+// }
 
 // delete ishield-psp
-func (r *IntegrityShieldReconciler) deletePodSecurityPolicy(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
-	ctx := context.Background()
-	expected := res.BuildPodSecurityPolicy(instance)
-	found := &policyv1.PodSecurityPolicy{}
+// func (r *IntegrityShieldReconciler) deletePodSecurityPolicy(instance *apiv1.IntegrityShield) (ctrl.Result, error) {
+// 	ctx := context.Background()
+// 	expected := res.BuildPodSecurityPolicy(instance)
+// 	found := &policyv1.PodSecurityPolicy{}
 
-	reqLogger := r.Log.WithValues(
-		"Instance.Name", instance.Name,
-		"PodSecurityPolicy.Name", expected.Name)
+// 	reqLogger := r.Log.WithValues(
+// 		"Instance.Name", instance.Name,
+// 		"PodSecurityPolicy.Name", expected.Name)
 
-	err := r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
+// 	err := r.Get(ctx, types.NamespacedName{Name: expected.Name}, found)
 
-	if err == nil {
-		reqLogger.Info("Deleting the IShield PodSecurityPolicy")
-		err = r.Delete(ctx, found)
-		if err != nil {
-			reqLogger.Error(err, "Failed to delete the IShield PodSecurityPolicy")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else if errors.IsNotFound(err) {
-		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
-	} else {
-		return ctrl.Result{}, err
-	}
-}
+// 	if err == nil {
+// 		reqLogger.Info("Deleting the IShield PodSecurityPolicy")
+// 		err = r.Delete(ctx, found)
+// 		if err != nil {
+// 			reqLogger.Error(err, "Failed to delete the IShield PodSecurityPolicy")
+// 			return ctrl.Result{}, err
+// 		}
+// 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+// 	} else if errors.IsNotFound(err) {
+// 		return ctrl.Result{Requeue: true, RequeueAfter: time.Second * 1}, nil
+// 	} else {
+// 		return ctrl.Result{}, err
+// 	}
+// }
 
 /**********************************************
 

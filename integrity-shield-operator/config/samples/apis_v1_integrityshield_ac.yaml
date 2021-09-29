@@ -363,4 +363,8 @@ spec:
     exportDetailResult: true
     resultDetailConfigName: verify-resource-result
     resultDetailConfigKey: "config.yaml"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
