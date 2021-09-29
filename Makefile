@@ -317,13 +317,13 @@ delete-test-env-remote: delete-keyring-secret
 
 create-keyring-secret:
 	@echo creating keyring-secret
-	# kubectl create -f $(SHIELD_OP_DIR)test/deploy/certpool_secret.yaml -n $(ISHIELD_OP_NS)
-	kubectl create -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_OP_NS)
+	# kubectl create -f $(SHIELD_OP_DIR)test/deploy/certpool_secret.yaml -n $(ISHIELD_NS)
+	kubectl create -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_NS)
 
 delete-keyring-secret:
 	@echo
 	@echo deleting keyring-secret
-	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)test/deploy/pgp-keyring-secret.yaml -n $(ISHIELD_NS)
 
 e2e-test:
 	@echo
@@ -345,7 +345,7 @@ uninstall-ishield: delete-cr delete-operator
 create-ns:
 	@echo
 	@echo creating namespace
-	kubectl create ns $(ISHIELD_OP_NS)
+	kubectl create ns $(ISHIELD_NS)
 
 install-crds:
 	@echo installing crds
@@ -371,16 +371,16 @@ delete-operator:
 	kustomize build $(SHIELD_OP_DIR)config/default | kubectl delete -f -
 
 create-cr:
-	kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1_integrityshield.yaml -n $(ISHIELD_OP_NS)
+	kubectl apply -f ${SHIELD_OP_DIR}config/samples/apis_v1_integrityshield.yaml -n $(ISHIELD_NS)
 
 delete-cr:
-	kubectl delete -f ${SHIELD_OP_DIR}config/samples/apis_v1_integrityshield.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f ${SHIELD_OP_DIR}config/samples/apis_v1_integrityshield.yaml -n $(ISHIELD_NS)
 
 deploy-cr-ac:
-	kubectl apply -f $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml -n $(ISHIELD_OP_NS)
+	kubectl apply -f $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml -n $(ISHIELD_NS)
 
 delete-cr-ac:
-	kubectl delete -f $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(SHIELD_OP_DIR)config/samples/apis_v1_integrityshield_ac.yaml -n $(ISHIELD_NS)
 
 # create a temporary cr with update image names as well as signers
 setup-tmp-cr:
@@ -400,10 +400,10 @@ setup-tmp-cr:
 	yq write -i $(TMP_CR_AC_FILE) spec.observer.imagePullPolicy Always
 
 create-tmp-cr:
-	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
+	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_NS)
 
 delete-tmp-cr:
-	kubectl delete -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
+	kubectl delete -f $(TMP_CR_FILE) -n $(ISHIELD_NS)
 
 # show log
 log-api:
@@ -484,7 +484,7 @@ setup-demo:
 	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(DEMO_ISHIELD_API_IMAGE_NAME)
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.imagePullPolicy Always
-	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_OP_NS)
+	kubectl apply -f $(TMP_CR_FILE) -n $(ISHIELD_NS)
 
 .PHONY: create-private-registry
 
