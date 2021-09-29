@@ -163,6 +163,7 @@ echo -----------------------------
 echo [4/4] Building integrity-shield-operator image.
 cd ${SHIELD_OP_DIR}
 go mod tidy
+exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1

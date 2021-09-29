@@ -43,6 +43,8 @@ spec:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
+                  imageTag:
+                    type: string
                   log:
                     properties:
                       format:
@@ -234,8 +236,6 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                  tag:
-                    type: string
                 type: object
               admissionControllerConfig:
                 type: string
@@ -1099,6 +1099,8 @@ spec:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
+                  imageTag:
+                    type: string
                   interval:
                     type: string
                   logLevel:
@@ -1263,8 +1265,6 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                  tag:
-                    type: string
                 type: object
               rego:
                 type: string
@@ -1453,6 +1453,8 @@ spec:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
+                  imageTag:
+                    type: string
                   name:
                     type: string
                   port:
@@ -1637,8 +1639,6 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                  tag:
-                    type: string
                 type: object
               shieldApiServiceName:
                 type: string
