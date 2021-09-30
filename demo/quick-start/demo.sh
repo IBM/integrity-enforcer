@@ -71,7 +71,7 @@ p "First, Let's create a namespace in cluster to deploy Integrity Shield. Please
 read
 pe "make create-ns"
 echo
-p "===== A namespace ${ISHIELD_OP_NS} is created in cluster. ====="
+p "===== A namespace ${ISHIELD_NS} is created in cluster. ====="
 echo
 NO_WAIT=false
 
@@ -99,10 +99,10 @@ NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "Please wait until Integrity Shield (two pods) is successfully deployed in the namespace ${ISHIELD_OP_NS}."
+p "Please wait until Integrity Shield (two pods) is successfully deployed in the namespace ${ISHIELD_NS}."
 p "Let's wait (this script would resume shortly) "
 while true; do
-   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_OP_NS} | grep integrity-shield-api | awk '{print $3}')
+   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-api | awk '{print $3}')
    echo $ISHIELD_STATUS
    if [[ "$ISHIELD_STATUS" == "Running" ]]; then
       echo
