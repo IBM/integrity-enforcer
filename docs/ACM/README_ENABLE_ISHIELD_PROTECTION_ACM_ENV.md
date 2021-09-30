@@ -207,8 +207,8 @@ curl -s  https://raw.githubusercontent.com/open-cluster-management/integrity-shi
 ```
 #!/bin/bash
 
-signer = $1
-dir = $2
+signer="$1"
+dir="$2"
 
 find $dir -type f -name "*.yaml" | while read file;
 do

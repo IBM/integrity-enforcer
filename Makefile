@@ -129,7 +129,7 @@ check: lint
 lint: lint-init  lint-verify lint-op-init lint-op-verify
 
 lint-init:
-	cd $(SHIELD_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck > $(TMP_DIR)lint_results_ishield.txt
+	cd $(SHIELD_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck | tee $(TMP_DIR)lint_results_ishield.txt
 
 lint-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results_ishield.txt | grep "FAIL:"))
@@ -137,7 +137,7 @@ lint-verify:
 	@$(if $(strip $(FAILURES)), echo "One or more linters failed. Failures: $(FAILURES)"; exit 1, echo "All linters are passed successfully."; exit 0)
 
 lint-op-init:
-	cd $(SHIELD_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet > $(TMP_DIR)lint_results.txt
+	cd $(SHIELD_OP_DIR) && golangci-lint run --timeout 5m -D errcheck,unused,gosimple,deadcode,staticcheck,structcheck,ineffassign,varcheck,govet | tee $(TMP_DIR)lint_results.txt
 
 lint-op-verify:
 	$(eval FAILURES=$(shell cat $(TMP_DIR)lint_results.txt | grep "FAIL:"))
@@ -330,6 +330,9 @@ e2e-test:
 	@echo run test
 	$(ISHIELD_REPO_ROOT)/build/check_test_results.sh
 
+.EXPORT_ALL_VARIABLES:
+TEST_SIGNER_SUBJECT_EMAIL=signer@enterprise.com
+
 test-gpg-annotation:
 	@echo
 	$(ISHIELD_REPO_ROOT)/build/run_unit_test_sign_script.sh $(TEST_SIGNER_SUBJECT_EMAIL) $(TMP_DIR)
@@ -354,7 +357,6 @@ install-crds:
 delete-crds:
 	@echo deleting crds
 	kustomize build $(SHIELD_OP_DIR)config/crd | kubectl delete -f -
-
 
 install-operator:
 	@echo
@@ -443,7 +445,7 @@ sonar-go-test-ishield:
 	@cat gosec.json
 	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		echo "--> Running sonar-scanner"; \
-		sonar-scanner --debug; \
+		sonar-scanner --debug || echo "Sonar scanner is not available"; \
 	fi
 
 sonar-go-test-op:
@@ -459,7 +461,7 @@ sonar-go-test-op:
 	@cat gosec.json
 	@if [ "$(ISHIELD_ENV)" = remote ]; then \
 		echo "--> Running sonar-scanner"; \
-		sonar-scanner --debug; \
+		sonar-scanner --debug || echo "Sonar scanner is not available"; \
 	fi
 
 .PHONY: publish
