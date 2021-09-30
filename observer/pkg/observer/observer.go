@@ -87,11 +87,11 @@ type VerifyResultDetail struct {
 	VerifyResourceResult *k8smanifest.VerifyResourceResult `json:"verifyResourceResult"`
 }
 type ConstraintResult struct {
-	ConstraintName  string                       `json:"constraintName"`
-	Violation       bool                         `json:"violation"`
-	TotalViolations int                          `json:"totalViolations"`
-	Results         []VerifyResultDetail         `json:"results"`
-	Constraint      k8smnfconfig.ParameterObject `json:"constraint"`
+	ConstraintName  string               `json:"constraintName"`
+	Violation       bool                 `json:"violation"`
+	TotalViolations int                  `json:"totalViolations"`
+	Results         []VerifyResultDetail `json:"results"`
+	Constraint      ConstraintSpec       `json:"constraint"`
 }
 
 type ObservationDetailResults struct {
@@ -216,9 +216,12 @@ func (self *Observer) Run() {
 		ignoreFields := constraint.Parameters.IgnoreFields
 		secrets := constraint.Parameters.KeyConfigs
 		ignoreFields = append(ignoreFields, rhconfig.RequestFilterProfile.IgnoreFields...)
+		skipObjects := rhconfig.RequestFilterProfile.SkipObjects
+		skipObjects = append(skipObjects, constraint.Parameters.SkipObjects...)
 		results := []VerifyResultDetail{}
 		for _, resource := range resources {
-			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, secrets)
+			// skip object
+			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, skipObjects, secrets)
 			imgAllow, imgMsg := ObserveImage(resource, constraint.Parameters.ImageProfile)
 			if !imgAllow {
 				if !result.Violation {
@@ -303,7 +306,7 @@ func (self *Observer) Run() {
 			Results:         results,
 			Violation:       violated,
 			TotalViolations: count,
-			Constraint:      constraint.Parameters,
+			Constraint:      constraint,
 		}
 		constraintResults = append(constraintResults, cres)
 	}

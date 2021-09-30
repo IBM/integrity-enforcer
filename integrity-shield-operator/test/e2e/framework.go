@@ -38,16 +38,16 @@ import (
 var (
 	// kubeconfigPath    = os.Getenv("KUBECONFIG")
 	// local_test, _                = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
-	// skip_default_user_test         = true
-	kubeconfig_user   = os.Getenv("KUBE_CONTEXT_USERNAME")
-	ishield_namespace = os.Getenv("ISHIELD_NS")
-	test_namespace    = "test-ns"
-	shield_dir        = os.Getenv("SHIELD_OP_DIR")
-	deploy_dir        = shield_dir + "/test/deploy/"
-	kubeconfigManaged = os.Getenv("KUBECONFIG")
-	// tmpDir                         = os.Getenv("TMP_DIR")
-	integrityShieldOperatorCR_gk   = deploy_dir + "apis_v1_integrityshield_gk.yaml"
-	integrityShieldOperatorCR_ac   = deploy_dir + "apis_v1_integrityshield_ac.yaml"
+	kubeconfig_user                = os.Getenv("KUBE_CONTEXT_USERNAME")
+	ishield_namespace              = os.Getenv("ISHIELD_NS")
+	ishield_env                    = os.Getenv("ISHIELD_ENV")
+	test_namespace                 = "test-ns"
+	shield_dir                     = os.Getenv("SHIELD_OP_DIR")
+	deploy_dir                     = shield_dir + "/test/deploy/"
+	kubeconfigManaged              = os.Getenv("KUBECONFIG")
+	tmpDir                         = os.Getenv("TMP_DIR")
+	integrityShieldOperatorCR_gk   = tmpDir + "apis_v1_integrityshield.yaml"
+	integrityShieldOperatorCR_ac   = tmpDir + "apis_v1_integrityshield_ac.yaml"
 	api_name                       = "integrity-shield-api"
 	observer_name                  = "integrity-shield-observer"
 	ac_server_name                 = "integrity-shield-validator"
@@ -56,6 +56,7 @@ var (
 	constraint_ac                  = deploy_dir + "test-manifest-integrity-profile.yaml"
 	constraint_name                = "configmap-constraint"
 	gatekeeper_ns                  = "gatekeeper-system"
+	gatekeeper_ocp_ns              = "openshift-gatekeeper-system"
 	test_configmap_name_no_sign    = "test-configmap-no-sign"
 	test_configmap_name_annotation = "test-configmap-annotation"
 	test_configmap_name_skip       = "test-configmap-skip"

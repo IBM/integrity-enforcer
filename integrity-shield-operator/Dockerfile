@@ -7,6 +7,7 @@ RUN mkdir /ishield-op-app && \
 
 
 COPY build/_output/bin/integrity-shield-operator /ishield-op-app/manager
+ADD bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml /ishield-op-app/bundle/manifests/integrity-shield-operator.clusterserviceversion.yaml
 
 RUN chgrp -R 0 /ishield-op-app && chmod -R g=u /ishield-op-app
 

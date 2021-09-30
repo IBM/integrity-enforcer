@@ -24,8 +24,8 @@ spec:
   shieldApi:
     name: integrity-shield-api
     imagePullPolicy: Always
-    image: quay.io/open-cluster-management/integrity-shield-api:0.2.5
-    # image: localhost:5000/integrity-shield-api:0.2.5
+    image: quay.io/open-cluster-management/integrity-shield-api
+    # image: localhost:5000/integrity-shield-api
     port: 8080
     selector:     
       app: integrity-shield-api
@@ -411,10 +411,14 @@ spec:
     enabled: true
     name: integrity-shield-observer
     imagePullPolicy: Always
-    image: quay.io/open-cluster-management/integrity-shield-observer:0.2.5
-    # image: localhost:5000/integrity-shield-observer:0.2.5
+    image: quay.io/open-cluster-management/integrity-shield-observer
+    # image: localhost:5000/integrity-shield-observer
     selector:     
       app: integrity-shield-observer
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
     logLevel: info
     interval: "5"
     exportDetailResult: true

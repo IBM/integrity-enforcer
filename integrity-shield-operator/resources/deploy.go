@@ -17,19 +17,26 @@
 package resources
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
+	"github.com/ghodss/yaml"
+
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
-
-	v1 "k8s.io/api/core/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-//deployment
+var log = logf.Log.WithName("controller_integrityshield")
 
+//deployment
 // shield api
 func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 	var volumemounts []v1.VolumeMount
@@ -52,10 +59,18 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 		},
 	}
 
+	var image string
+	if cr.Spec.API.Tag != "" {
+		image = SetImageVersion(cr.Spec.API.Image, cr.Spec.API.Tag, cr.Spec.API.Name)
+	} else {
+		version := GetVersion(cr.Spec.API.Name)
+		image = SetImageVersion(cr.Spec.API.Image, version, cr.Spec.API.Name)
+	}
+
 	apiContainer := v1.Container{
 		Name:            cr.Spec.API.Name,
 		SecurityContext: cr.Spec.API.SecurityContext,
-		Image:           cr.Spec.API.Image,
+		Image:           image,
 		ImagePullPolicy: cr.Spec.API.ImagePullPolicy,
 		ReadinessProbe: &v1.Probe{
 			InitialDelaySeconds: 10,
@@ -136,8 +151,7 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 					NodeSelector:       cr.Spec.NodeSelector,
 					Affinity:           cr.Spec.Affinity,
 					Tolerations:        cr.Spec.Tolerations,
-
-					Volumes: volumes,
+					Volumes:            volumes,
 				},
 			},
 		},
@@ -165,13 +179,21 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 		},
 	}
 
+	var image string
+	if cr.Spec.ControllerContainer.Tag != "" {
+		image = SetImageVersion(cr.Spec.ControllerContainer.Image, cr.Spec.ControllerContainer.Tag, cr.Spec.ControllerContainer.Name)
+	} else {
+		version := GetVersion(cr.Spec.ControllerContainer.Name)
+		image = SetImageVersion(cr.Spec.ControllerContainer.Image, version, cr.Spec.ControllerContainer.Name)
+	}
+
 	serverContainer := v1.Container{
 		Command: []string{
 			"/myapp/k8s-manifest-sigstore",
 		},
 		Name:            cr.Spec.ControllerContainer.Name,
 		SecurityContext: cr.Spec.ControllerContainer.SecurityContext,
-		Image:           cr.Spec.ControllerContainer.Image,
+		Image:           image,
 		ImagePullPolicy: cr.Spec.ControllerContainer.ImagePullPolicy,
 		ReadinessProbe: &v1.Probe{
 			Handler: v1.Handler{
@@ -264,8 +286,7 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 					NodeSelector:       cr.Spec.NodeSelector,
 					Affinity:           cr.Spec.Affinity,
 					Tolerations:        cr.Spec.Tolerations,
-
-					Volumes: volumes,
+					Volumes:            volumes,
 				},
 			},
 		},
@@ -285,10 +306,18 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 		},
 	}
 
+	var image string
+	if cr.Spec.Observer.Tag != "" {
+		image = SetImageVersion(cr.Spec.Observer.Image, cr.Spec.Observer.Tag, cr.Spec.Observer.Name)
+	} else {
+		version := GetVersion(cr.Spec.Observer.Name)
+		image = SetImageVersion(cr.Spec.Observer.Image, version, cr.Spec.Observer.Name)
+	}
+
 	serverContainer := v1.Container{
 		Name:            cr.Spec.Observer.Name,
 		SecurityContext: cr.Spec.Observer.SecurityContext,
-		Image:           cr.Spec.Observer.Image,
+		Image:           image,
 		ImagePullPolicy: cr.Spec.Observer.ImagePullPolicy,
 		VolumeMounts:    servervolumemounts,
 		Env: []v1.EnvVar{
@@ -329,7 +358,7 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 				Value: cr.Spec.Observer.Interval,
 			},
 		},
-		Resources: cr.Spec.ControllerContainer.Resources,
+		Resources: cr.Spec.Observer.Resources,
 	}
 
 	containers := []v1.Container{
@@ -364,8 +393,7 @@ func BuildDeploymentForObserver(cr *apiv1.IntegrityShield) *appsv1.Deployment {
 					NodeSelector:       cr.Spec.NodeSelector,
 					Affinity:           cr.Spec.Affinity,
 					Tolerations:        cr.Spec.Tolerations,
-
-					Volumes: volumes,
+					Volumes:            volumes,
 				},
 			},
 		},
@@ -464,4 +492,47 @@ func EqualLabels(found map[string]string, expected map[string]string) bool {
 
 func EqualAnnotations(found map[string]string, expected map[string]string) bool {
 	return reflect.DeepEqual(found, expected)
+}
+
+func GetVersion(name string) string {
+	reqLogger := log.WithValues("BuildDeployment", name)
+	var version string
+	var tmpCsv map[string]interface{}
+	fpath := filepath.Clean(apiv1.CsvPath)
+	tmpBytes, err := ioutil.ReadFile(fpath)
+	if err != nil {
+		reqLogger.Error(err, fmt.Sprintf("failed to read csv file `%s`", fpath))
+	}
+
+	_ = yaml.Unmarshal(tmpBytes, &tmpCsv)
+
+	// spec.version
+	spec, ok := tmpCsv["spec"].(map[string]interface{})
+	if !ok {
+		reqLogger.Error(err, "failed to get spec from csv")
+	}
+	version, ok = spec["version"].(string)
+	if !ok {
+		reqLogger.Error(err, "failed to get version from csv")
+	}
+	return version
+}
+
+func SetImageVersion(image, version, name string) string {
+	reqLogger := log.WithValues("BuildDeployment", name)
+	// specify registry
+	slice := strings.Split(image, "/")
+	tmpImage := slice[len(slice)-1]
+	registry := strings.Replace(image, tmpImage, "", 1)
+	// specify image name (remove tag if image contains tag)
+	var img string
+	if strings.Contains(tmpImage, ":") {
+		reqLogger.Info(fmt.Sprintf("Image version should be deinfed in the 'imageTag' field. %s", image))
+		slice = strings.Split(tmpImage, ":")
+		img = slice[0]
+	} else {
+		img = tmpImage
+	}
+	imgVersion := fmt.Sprintf("%s%s:%s", registry, img, version)
+	return imgVersion
 }
