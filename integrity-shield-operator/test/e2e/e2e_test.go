@@ -41,8 +41,12 @@ var _ = Describe("Test: integrity shield", func() {
 			framework := initFrameWork()
 			var timeout int = 120
 			expected := "gatekeeper-controller-manager"
+			namespace := gatekeeper_ns
+			if ishield_env == "remote" {
+				namespace = gatekeeper_ocp_ns
+			}
 			Eventually(func() error {
-				return CheckPodStatus(framework, gatekeeper_ns, expected)
+				return CheckPodStatus(framework, namespace, expected)
 			}, timeout, 1).Should(BeNil())
 		})
 		It("IShield server should be created properly", func() {

@@ -19,7 +19,6 @@ package resources
 import (
 	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -353,61 +352,61 @@ func BuildClusterRoleBindingForObserver(cr *apiv1.IntegrityShield) *rbacv1.Clust
 }
 
 //pod security policy
-func BuildPodSecurityPolicy(cr *apiv1.IntegrityShield) *policyv1.PodSecurityPolicy {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	psp := &policyv1.PodSecurityPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Spec.Security.PodSecurityPolicyName,
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: policyv1.PodSecurityPolicySpec{
-			Privileged: true,
-			FSGroup: policyv1.FSGroupStrategyOptions{
-				Rule: policyv1.FSGroupStrategyMustRunAs,
-				Ranges: []policyv1.IDRange{
-					{
-						Min: 1,
-						Max: 65535,
-					},
-				},
-			},
-			RunAsUser: policyv1.RunAsUserStrategyOptions{
-				Rule: policyv1.RunAsUserStrategyRunAsAny,
-			},
-			SELinux: policyv1.SELinuxStrategyOptions{
-				Rule: policyv1.SELinuxStrategyRunAsAny,
-			},
-			SupplementalGroups: policyv1.SupplementalGroupsStrategyOptions{
-				Rule: policyv1.SupplementalGroupsStrategyMustRunAs,
-				Ranges: []policyv1.IDRange{
-					{
-						Min: 1,
-						Max: 65535,
-					},
-				},
-			},
-			Volumes: []policyv1.FSType{
-				policyv1.ConfigMap,
-				policyv1.HostPath,
-				policyv1.EmptyDir,
-				policyv1.Secret,
-				policyv1.PersistentVolumeClaim,
-			},
-			AllowedHostPaths: []policyv1.AllowedHostPath{
-				{
-					PathPrefix: "/",
-				},
-			},
-			AllowedCapabilities: []corev1.Capability{
-				policyv1.AllowAllCapabilities,
-			},
-			HostNetwork: true,
-			HostIPC:     true,
-			HostPID:     true,
-		},
-	}
-	return psp
-}
+// func BuildPodSecurityPolicy(cr *apiv1.IntegrityShield) *policyv1.PodSecurityPolicy {
+// 	labels := map[string]string{
+// 		"app": cr.Name,
+// 	}
+// 	psp := &policyv1.PodSecurityPolicy{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      cr.Spec.Security.PodSecurityPolicyName,
+// 			Namespace: cr.Namespace,
+// 			Labels:    labels,
+// 		},
+// 		Spec: policyv1.PodSecurityPolicySpec{
+// 			Privileged: true,
+// 			FSGroup: policyv1.FSGroupStrategyOptions{
+// 				Rule: policyv1.FSGroupStrategyMustRunAs,
+// 				Ranges: []policyv1.IDRange{
+// 					{
+// 						Min: 1,
+// 						Max: 65535,
+// 					},
+// 				},
+// 			},
+// 			RunAsUser: policyv1.RunAsUserStrategyOptions{
+// 				Rule: policyv1.RunAsUserStrategyRunAsAny,
+// 			},
+// 			SELinux: policyv1.SELinuxStrategyOptions{
+// 				Rule: policyv1.SELinuxStrategyRunAsAny,
+// 			},
+// 			SupplementalGroups: policyv1.SupplementalGroupsStrategyOptions{
+// 				Rule: policyv1.SupplementalGroupsStrategyMustRunAs,
+// 				Ranges: []policyv1.IDRange{
+// 					{
+// 						Min: 1,
+// 						Max: 65535,
+// 					},
+// 				},
+// 			},
+// 			Volumes: []policyv1.FSType{
+// 				policyv1.ConfigMap,
+// 				policyv1.HostPath,
+// 				policyv1.EmptyDir,
+// 				policyv1.Secret,
+// 				policyv1.PersistentVolumeClaim,
+// 			},
+// 			AllowedHostPaths: []policyv1.AllowedHostPath{
+// 				{
+// 					PathPrefix: "/",
+// 				},
+// 			},
+// 			AllowedCapabilities: []corev1.Capability{
+// 				policyv1.AllowAllCapabilities,
+// 			},
+// 			HostNetwork: true,
+// 			HostIPC:     true,
+// 			HostPID:     true,
+// 		},
+// 	}
+// 	return psp
+// }

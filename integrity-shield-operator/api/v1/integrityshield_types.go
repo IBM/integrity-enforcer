@@ -82,7 +82,7 @@ type APIContainer struct {
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
-	Tag             string                  `json:"tag,omitempty"`
+	Tag             string                  `json:"imageTag,omitempty"`
 	Port            int32                   `json:"port,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 }
@@ -93,7 +93,7 @@ type ControllerContainer struct {
 	SecurityContext *v1.SecurityContext     `json:"securityContext,omitempty"`
 	ImagePullPolicy v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                  `json:"image,omitempty"`
-	Tag             string                  `json:"tag,omitempty"`
+	Tag             string                  `json:"imageTag,omitempty"`
 	Port            int32                   `json:"port,omitempty"`
 	Resources       v1.ResourceRequirements `json:"resources,omitempty"`
 	Log             LogConfig               `json:"log,omitempty"`
@@ -117,19 +117,20 @@ type LogConfig struct {
 }
 
 type Observer struct {
-	Enabled                bool                `json:"enabled,omitempty"`
-	Name                   string              `json:"name,omitempty"`
-	SelectorLabels         map[string]string   `json:"selector,omitempty"`
-	ImagePullPolicy        v1.PullPolicy       `json:"imagePullPolicy,omitempty"`
-	Image                  string              `json:"image,omitempty"`
-	Tag                    string              `json:"tag,omitempty"`
-	SecurityContext        *v1.SecurityContext `json:"securityContext,omitempty"`
-	LogLevel               string              `json:"logLevel,omitempty"`
-	Interval               string              `json:"interval,omitempty"`
-	ExportDetailResult     bool                `json:"exportDetailResult,omitempty"`
-	Provenanece            bool                `json:"provenanece,omitempty"`
-	ResultDetailConfigName string              `json:"resultDetailConfigName,omitempty"`
-	ResultDetailConfigKey  string              `json:"resultDetailConfigKey,omitempty"`
+	Enabled                bool                    `json:"enabled,omitempty"`
+	Name                   string                  `json:"name,omitempty"`
+	SelectorLabels         map[string]string       `json:"selector,omitempty"`
+	ImagePullPolicy        v1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image                  string                  `json:"image,omitempty"`
+	Tag                    string                  `json:"imageTag,omitempty"`
+	SecurityContext        *v1.SecurityContext     `json:"securityContext,omitempty"`
+	LogLevel               string                  `json:"logLevel,omitempty"`
+	Interval               string                  `json:"interval,omitempty"`
+	ExportDetailResult     bool                    `json:"exportDetailResult,omitempty"`
+	Provenanece            bool                    `json:"provenanece,omitempty"`
+	ResultDetailConfigName string                  `json:"resultDetailConfigName,omitempty"`
+	ResultDetailConfigKey  string                  `json:"resultDetailConfigKey,omitempty"`
+	Resources              v1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // IntegrityShieldStatus defines the observed state of IntegrityShield

@@ -27,6 +27,12 @@ metadata:
               "logLevel": "info",
               "name": "integrity-shield-observer",
               "provenanece": true,
+              "resources": {
+                "limits": {
+                  "cpu": "300m",
+                  "memory": "512Mi"
+                }
+              },
               "resultDetailConfigKey": "config.yaml",
               "resultDetailConfigName": "verify-resource-result",
               "selector": {
@@ -54,7 +60,7 @@ metadata:
               "port": 8080,
               "resources": {
                 "limits": {
-                  "cpu": "500m",
+                  "cpu": "300m",
                   "memory": "512Mi"
                 }
               },
@@ -416,7 +422,7 @@ spec:
                       periodSeconds: 10
                     resources:
                       limits:
-                        cpu: 500m
+                        cpu: 300m
                         memory: 500Mi
                       requests:
                         cpu: 200m

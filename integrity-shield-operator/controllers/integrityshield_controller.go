@@ -101,10 +101,10 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	//Pod Security Policy (PSP)
-	recResult, recErr = r.createOrUpdatePodSecurityPolicy(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
+	// recResult, recErr = r.createOrUpdatePodSecurityPolicy(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
 
 	//Config
 	recResult, recErr = r.createOrUpdateRequestHandlerConfig(instance)
@@ -301,10 +301,10 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 			return err
 		}
 	}
-	_, err = r.deletePodSecurityPolicy(instance)
-	if err != nil {
-		return err
-	}
+	// _, err = r.deletePodSecurityPolicy(instance)
+	// if err != nil {
+	// 	return err
+	// }
 
 	if instance.Spec.Observer.Enabled {
 		_, err = r.deleteClusterRoleForObserver(instance)

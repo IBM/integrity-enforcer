@@ -18,8 +18,8 @@ set -e
 
 echo "E2E TEST BUNDLE CLEAN GOES HERE!"
 
-if [ -z "$ISHIELD_OP_NS" ]; then
-    echo "ISHIELD_OP_NS is empty. Please set env."
+if [ -z "$ISHIELD_NS" ]; then
+    echo "ISHIELD_NS is empty. Please set env."
     exit 1
 fi
 
@@ -42,7 +42,7 @@ echo "Testing BUNDLE_INDEX_IMAGE: $BUNDLE_INDEX_IMAGE"
 echo ""
 echo "-------------------------------------------------"
 
-NS_EXIST=$(kubectl get ns | grep ${ISHIELD_OP_NS} | cut -d' ' -f1)
+NS_EXIST=$(kubectl get ns | grep ${ISHIELD_NS} | cut -d' ' -f1)
 
 
 if [ ! -z $NS_EXIST ]; then
@@ -51,16 +51,16 @@ apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: operatorgroup
-  namespace: ${ISHIELD_OP_NS}
+  namespace: ${ISHIELD_NS}
 spec:
   targetNamespaces:
-  - ${ISHIELD_OP_NS}
+  - ${ISHIELD_NS}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: integrity-shield-operator
-  namespace: ${ISHIELD_OP_NS}
+  namespace: ${ISHIELD_NS}
 spec:
   channel: alpha
   name: integrity-shield-operator

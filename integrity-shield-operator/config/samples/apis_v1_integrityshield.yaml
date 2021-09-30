@@ -415,6 +415,10 @@ spec:
     # image: localhost:5000/integrity-shield-observer
     selector:     
       app: integrity-shield-observer
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
     logLevel: info
     interval: "5"
     exportDetailResult: true
