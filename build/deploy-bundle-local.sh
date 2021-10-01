@@ -24,8 +24,8 @@ if [ -z "$SHIELD_OP_DIR" ]; then
     exit 1
 fi
 
-if [ -z "$ISHIELD_OP_NS" ]; then
-    echo "ISHIELD_OP_NS is empty. Please set env."
+if [ -z "$ISHIELD_NS" ]; then
+    echo "ISHIELD_NS is empty. Please set env."
     exit 1
 fi
 
@@ -53,22 +53,22 @@ cat <<EOF | kubectl create -f -
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ${ISHIELD_OP_NS}
+  name: ${ISHIELD_NS}
 ---
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: operatorgroup
-  namespace: ${ISHIELD_OP_NS}
+  namespace: ${ISHIELD_NS}
 spec:
   targetNamespaces:
-  - ${ISHIELD_OP_NS}
+  - ${ISHIELD_NS}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: integrity-shield-operator
-  namespace: ${ISHIELD_OP_NS}
+  namespace: ${ISHIELD_NS}
 spec:
   channel: alpha
   installPlanApproval: Automatic

@@ -1,0 +1,20 @@
+apiVersion: apis.integrityshield.io/v1alpha1
+kind: ManifestIntegrityProfile
+metadata:
+  name: profile-configmap
+spec:
+  match:
+    kinds:
+    - kinds:
+      - ConfigMap
+    namespaces:
+    - sample-ns
+  parameters:
+    ignoreFields:
+    - fields:
+      - data.comment
+      objects:
+      - kind: ConfigMap
+    signers:
+    - signer@signer.com
+

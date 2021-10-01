@@ -17,13 +17,17 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNames) *extv1.CustomResourceDefinition {
+func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNames, namespaced bool) *extv1.CustomResourceDefinition {
 	trueVar := true
+	scope := extv1.NamespaceScoped
+	if !namespaced {
+		scope = extv1.ClusterScoped
+	}
 	newCRD := &extv1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CustomResourceDefinition",
@@ -37,10 +41,10 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 			Group: "apis.integrityshield.io",
 			//Version: "v1beta1",
 			Names: crdNames,
-			Scope: "Namespaced",
+			Scope: scope,
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
-					Name:    "v1alpha1",
+					Name:    "v1",
 					Served:  true,
 					Storage: true,
 					Schema: &extv1.CustomResourceValidation{
@@ -55,120 +59,26 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 	return newCRD
 }
 
-//signer config crd
-func BuildSignerConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+//shield config crd
+func BuildManifestIntegrityProfileCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:     "SignerConfig",
-		Plural:   "signerconfigs",
-		ListKind: "SignerConfigList",
-		Singular: "signerconfig",
+		Kind:       "ManifestIntegrityProfile",
+		Plural:     "manifestintegrityprofiles",
+		ListKind:   "ManifestIntegrityProfileList",
+		Singular:   "manifestintegrityprofile",
+		ShortNames: []string{"mip", "mips"},
 	}
-	return buildCRD(cr.GetSignerConfigCRDName(), cr.Namespace, crdNames)
+	return buildCRD("manifestintegrityprofiles.apis.integrityshield.io", cr.Namespace, crdNames, false)
 }
 
 //shield config crd
-func BuildShieldConfigCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
+func BuildObserverResultCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:       "ShieldConfig",
-		Plural:     "shieldconfigs",
-		ListKind:   "ShieldConfigList",
-		Singular:   "shieldconfig",
-		ShortNames: []string{"econf", "econfs"},
+		Kind:       "ManifestIntegrityState",
+		Plural:     "manifestintegritystates",
+		ListKind:   "ManifestIntegrityStateList",
+		Singular:   "manifestintegritystate",
+		ShortNames: []string{"mis"},
 	}
-	return buildCRD(cr.GetShieldConfigCRDName(), cr.Namespace, crdNames)
+	return buildCRD("manifestintegritystates.apis.integrityshield.io", cr.Namespace, crdNames, true)
 }
-
-//resource signature crd
-func BuildResourceSignatureCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:       "ResourceSignature",
-		Plural:     "resourcesignatures",
-		ListKind:   "ResourceSignatureList",
-		Singular:   "resourcesignature",
-		ShortNames: []string{"rsig", "rsigs"},
-	}
-	return buildCRD(cr.GetResourceSignatureCRDName(), cr.Namespace, crdNames)
-}
-
-// helm release metadata crd
-func BuildHelmReleaseMetadataCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:       "HelmReleaseMetadata",
-		Plural:     "helmreleasemetadatas",
-		ListKind:   "HelmReleaseMetadataList",
-		Singular:   "helmreleasemetadata",
-		ShortNames: []string{"hrm", "hrms"},
-	}
-	return buildCRD(cr.GetHelmReleaseMetadataCRDName(), cr.Namespace, crdNames)
-}
-
-// resourcesigningprofile crd
-func BuildResourceSigningProfileCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-
-	crdNames := extv1.CustomResourceDefinitionNames{
-		Kind:       "ResourceSigningProfile",
-		Plural:     "resourcesigningprofiles",
-		ListKind:   "ResourceSigningProfileList",
-		Singular:   "resourcesigningprofile",
-		ShortNames: []string{"rsp", "rsps"},
-	}
-	return buildCRD(cr.GetResourceSigningProfileCRDName(), cr.Namespace, crdNames)
-}
-
-// // protectedresourceintegrity crd
-// func BuildProtectedResourceIntegrityCRD(cr *apiv1alpha1.IntegrityShield) *extv1.CustomResourceDefinition {
-
-// 	crdNames := extv1.CustomResourceDefinitionNames{
-// 		Kind:       "ProtectedResourceIntegrity",
-// 		Plural:     "protectedresourceintegrities",
-// 		ListKind:   "ProtectedResourceIntegrityList",
-// 		Singular:   "protectedresourceintegrity",
-// 		ShortNames: []string{"pri", "pris"},
-// 	}
-// 	crd := buildCRD(cr.GetProtectedResourceIntegrityCRDName(), cr.Namespace, crdNames)
-// 	// crd.Spec.AdditionalPrinterColumns = []extv1.CustomResourceColumnDefinition{
-// 	// 	{
-// 	// 		Name:        "Profiles",
-// 	// 		Type:        "string",
-// 	// 		Description: "ResourceSigningProfiles that cover this resource",
-// 	// 		JSONPath:    ".status.profiles",
-// 	// 		Priority:    0,
-// 	// 	},
-// 	// 	{
-// 	// 		Name:        "Verified",
-// 	// 		Type:        "boolean",
-// 	// 		Description: "A boolean value represents if a signature for this resource is verified or not",
-// 	// 		JSONPath:    ".status.verified",
-// 	// 		Priority:    0,
-// 	// 	},
-// 	// 	{
-// 	// 		Name:        "LastVerified",
-// 	// 		Type:        "date",
-// 	// 		Description: "The latest timestamp when its signature was verified by inspector",
-// 	// 		JSONPath:    ".status.lastVerified",
-// 	// 		Priority:    0,
-// 	// 	},
-// 	// 	{
-// 	// 		Name:        "LastUpdated",
-// 	// 		Type:        "date",
-// 	// 		Description: "The latest timestamp when signature verification was done by inspector",
-// 	// 		JSONPath:    ".status.lastUpdated",
-// 	// 		Priority:    0,
-// 	// 	},
-// 	// 	{
-// 	// 		Name:        "Result",
-// 	// 		Type:        "string",
-// 	// 		Description: "A result from a verification of integrity-shield-server",
-// 	// 		JSONPath:    ".status.result",
-// 	// 		Priority:    1,
-// 	// 	},
-// 	// 	{
-// 	// 		Name:        "AllowedUsernames",
-// 	// 		Type:        "string",
-// 	// 		Description: "Usernames that are allowed to change this resource without signature",
-// 	// 		JSONPath:    ".status.allowedUsernames",
-// 	// 		Priority:    1,
-// 	// 	},
-// 	// }
-// 	return crd
-// }

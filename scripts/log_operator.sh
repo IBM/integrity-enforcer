@@ -24,10 +24,10 @@ if [ -z "$ISHIELD_NS" ]; then
     exit 1
 fi
 
-ISHIELD_OPERATOR_POD=`kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-operator | grep Running | awk '{print $1}'`
-if [ -z "$ISHIELD_OPERATOR_POD" ]; then
-    echo "ISHIELD_OPERATOR_POD is empty. There is no running integrity-shield-operator"
+iISHIELD_OPERATOR_POD=`kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-operator | grep Running | awk '{print $1}'`
+if [ -z "$iISHIELD_OPERATOR_POD" ]; then
+    echo "iISHIELD_OPERATOR_POD is empty. There is no running integrity-shield-operator"
     exit 1
 fi
 
-kubectl logs -f -n ${ISHIELD_NS} ${ISHIELD_OPERATOR_POD} -c manager
+kubectl logs -f -n ${ISHIELD_NS} ${iISHIELD_OPERATOR_POD} -c manager

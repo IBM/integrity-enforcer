@@ -1,0 +1,29 @@
+apiVersion: apis.integrityshield.io/v1
+kind: ManifestIntegrityProfile
+metadata:
+  name: configmap-constraint
+spec:
+  match:
+    kinds: 
+    - kinds: ["ConfigMap"]
+    labelSelector:
+      matchExpressions:
+        - operator: "In"
+          key: "integrity-shield-test-resource"
+          values: ["protected"]
+  parameters: 
+    constraintName: configmap-constraint
+    ignoreFields:
+    - objects:
+      - kind: ConfigMap
+      fields:
+      - data.comment
+    keyConfigs:
+    - keySecretName: keyring-secret
+      keySecretNamespace: integrity-shield-operator-system
+    action:
+      admissionControl:
+        enforce: true
+      audit:
+        inform: true
+

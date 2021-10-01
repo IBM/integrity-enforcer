@@ -1,5 +1,5 @@
 #
-# Copyright 2020 IBM Corporation
+# Copyright 2021 IBM Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,19 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 FROM scratch
 
+# Core bundle labels.
 LABEL operators.operatorframework.io.bundle.mediatype.v1=registry+v1
 LABEL operators.operatorframework.io.bundle.manifests.v1=manifests/
 LABEL operators.operatorframework.io.bundle.metadata.v1=metadata/
 LABEL operators.operatorframework.io.bundle.package.v1=integrity-shield-operator
 LABEL operators.operatorframework.io.bundle.channels.v1=alpha
-LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.4.2
+LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.12.0
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
-LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v2
-LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
+LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v3
+
+# Labels for testing.
 LABEL operators.operatorframework.io.test.mediatype.v1=scorecard+v1
+LABEL operators.operatorframework.io.test.config.v1=tests/scorecard/
+
+# Copy files to locations specified by labels.
 COPY bundle/manifests /manifests/
 COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/

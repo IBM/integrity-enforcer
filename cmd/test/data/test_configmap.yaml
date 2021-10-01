@@ -1,7 +1,0 @@
-apiVersion: v1
-data:
-  color: "purple"
-  comment: "test yaml signing based on cosign"
-kind: ConfigMap
-metadata:
-  name: test-configmap

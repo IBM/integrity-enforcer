@@ -1,0 +1,26 @@
+
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ManifestIntegrityConstraint
+metadata:
+  name: deployment-constraint
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"] 
+    namespaces:
+    - "sample-ns"
+  parameters:
+    constraintName: deployment-constraint
+    inScopeObjects:
+    - name: sample-deploy
+    signers:
+    - sample-signer@example.com
+    ignoreFields:
+    - objects:
+      - kind: Deployment
+      fields:
+      - spec.replicas
+    imageProfile:
+      match:
+      - "sample-registry/sample-image:*"

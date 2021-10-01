@@ -1,9 +1,16 @@
 resources:
 - manager.yaml
-- service_account.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- files:
+  - controller_manager_config.yaml
+  name: manager-config
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: quay.io/open-cluster-management/integrity-shield-operator
-  newTag: 0.2.0
+  newName: localhost:5000/integrity-shield-operator
+  newTag: 0.2.5

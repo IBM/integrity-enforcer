@@ -143,6 +143,6 @@ elif [ "${ISHIELD_ENV}" = "local" ]; then
 fi
 echo "Completed building bundle and index"
 
-targetFile="${SHIELD_OP_DIR}/bundle.Dockerfile"
-licenseFile="${SHIELD_OP_DIR}/license.txt"
+targetFile="${SHIELD_OP_DIR}bundle.Dockerfile"
+licenseFile="${SHIELD_OP_DIR}license.txt"
 $ISHIELD_REPO_ROOT/build/add_license.sh $targetFile $licenseFile

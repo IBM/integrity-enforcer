@@ -22,43 +22,28 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      serviceAccountName: integrity-shield-operator-manager
-      imagePullSecrets:
-      - name: mappregkey
       containers:
       - command:
         - /ishield-op-app/manager
         args:
-        - --enable-leader-election
-        env:
-        - name: WATCH_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
+        - --leader-elect
         image: controller:latest
         imagePullPolicy: Always
         name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
         livenessProbe:
-          exec:
-            command: ["ls"]
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
         readinessProbe:
-          exec:
-            command: ["ls"]
-        lifecycle:
-          postStart:
-            exec:
-              command: ["bash", "-c", "/ishield-op-app/scripts/poststart.sh || true"] # always return 0 to avoid pod crash triggered by postStart fail
-          preStop:
-            exec:
-              command: ["/ishield-op-app/scripts/prestop.sh"]
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: 500m
@@ -66,4 +51,5 @@ spec:
           requests:
             cpu: 200m
             memory: 200Mi
+      serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

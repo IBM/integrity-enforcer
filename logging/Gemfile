@@ -1,8 +1,0 @@
-source 'https://rubygems.org'
-git_source(:github) { |repo| "https://github.com/#{repo}.git" }
-
-gem 'fluentd', '1.7.0'
-gem 'fluent-plugin-elasticsearch', '3.5.4'
-gem 'fluent-plugin-rewrite-tag-filter', '2.2.0'
-gem 'fluent-plugin-genhashvalue', '1.1'
-gem 'oj', '3.9.2'

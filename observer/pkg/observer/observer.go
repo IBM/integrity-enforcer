@@ -17,290 +17,690 @@
 package observer
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	kubeutil "github.com/IBM/integrity-enforcer/shield/pkg/util/kubeutil"
-	"github.com/hpcloud/tail"
+	vrc "github.com/IBM/integrity-shield/observer/pkg/apis/manifestintegritystate/v1"
+	vrcclient "github.com/IBM/integrity-shield/observer/pkg/client/manifestintegritystate/clientset/versioned/typed/manifestintegritystate/v1"
+	k8smnfconfig "github.com/IBM/integrity-shield/shield/pkg/config"
+	"github.com/pkg/errors"
+	cosign "github.com/sigstore/cosign/cmd/cosign/cli"
+	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
+	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	kubeclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
-const defaultIntervalSecondsStr = "30"
-const defaultSummaryConfigMapName = "integrity-shield-status-report"
 const timeFormat = "2006-01-02 15:04:05"
 
-type IntegrityShieldObserver struct {
-	IShiledNamespace string
-	ShieldConfigName string
-	EventsFilePath   string
-	IntervalSeconds  uint64
+const exportDetailResult = "ENABLE_DETAIL_RESULT"
+const detailResultConfigName = "OBSERVER_RESULT_CONFIG_NAME"
+const detailResultConfigKey = "OBSERVER_RESULT_CONFIG_KEY"
 
-	loader     *Loader
-	logger     *log.Logger
-	eventQueue []string
+const defaultKeyInConfigMap = "config.yaml"
+const defaultPodNamespace = "integrity-shield-operator-system"
+const defaultExportDetailResult = true
+const defaultObserverResultDetailConfigName = "verify-result-detail"
+
+const logLevelEnvKey = "LOG_LEVEL"
+const k8sLogLevelEnvKey = "K8S_MANIFEST_SIGSTORE_LOG_LEVEL"
+
+// const ImageRefAnnotationKey = "cosign.sigstore.dev/imageRef"
+
+const VerifyResourceViolationLabel = "integrityshield.io/verifyResourceViolation"
+const VerifyResourceIgnoreLabel = "integrityshield.io/verifyResourceIgnored"
+
+const rekorServerEnvKey = "REKOR_SERVER"
+
+type Observer struct {
+	APIResources []groupResource
+
+	dynamicClient dynamic.Interface
 }
 
-func NewIntegrityShieldObserver(logger *log.Logger) *IntegrityShieldObserver {
-	iShieldNS := os.Getenv("SHIELD_NS")
-	shieldConfigName := os.Getenv("SHIELD_CONFIG_NAME")
-	eventsFilePath := os.Getenv("EVENTS_FILE_PATH")
-	intervalSecondsStr := os.Getenv("INTERVAL_SECONDS")
-	if intervalSecondsStr == "" {
-		intervalSecondsStr = defaultIntervalSecondsStr
-	}
-	intervalSeconds, err := strconv.ParseUint(intervalSecondsStr, 10, 64)
-	if err != nil {
-		logger.Warningf("Failed to parse interval seconds `%s`; use default value: %s", intervalSecondsStr, defaultIntervalSecondsStr)
-		intervalSeconds, _ = strconv.ParseUint(defaultIntervalSecondsStr, 10, 64)
-	}
-
-	loader := NewLoader(iShieldNS, shieldConfigName)
-
-	return &IntegrityShieldObserver{
-		IShiledNamespace: iShieldNS,
-		ShieldConfigName: shieldConfigName,
-		EventsFilePath:   eventsFilePath,
-		IntervalSeconds:  intervalSeconds,
-		loader:           loader,
-		logger:           logger,
-	}
+// Observer Result Detail
+type VerifyResultDetail struct {
+	Time                 string                            `json:"time"`
+	Namespace            string                            `json:"namespace"`
+	Name                 string                            `json:"name"`
+	Kind                 string                            `json:"kind"`
+	ApiGroup             string                            `json:"apiGroup"`
+	ApiVersion           string                            `json:"apiVersion"`
+	Error                bool                              `json:"error"`
+	Message              string                            `json:"message"`
+	Violation            bool                              `json:"violation"`
+	VerifyResourceResult *k8smanifest.VerifyResourceResult `json:"verifyResourceResult"`
+}
+type ConstraintResult struct {
+	ConstraintName  string               `json:"constraintName"`
+	Violation       bool                 `json:"violation"`
+	TotalViolations int                  `json:"totalViolations"`
+	Results         []VerifyResultDetail `json:"results"`
+	Constraint      ConstraintSpec       `json:"constraint"`
 }
 
-func (self *IntegrityShieldObserver) Run(event chan *tail.Line, report chan bool) error {
-	for {
-		var l *tail.Line
-		select {
-		case l = <-event:
-			self.addEvent(l.Text)
-		case <-report:
-			lines := self.getEvents()
-			err := self.report(lines)
-			if err != nil {
-				return err
-			}
-		}
-	}
+type ObservationDetailResults struct {
+	Time              string             `json:"time"`
+	ConstraintResults []ConstraintResult `json:"constraintResults"`
 }
 
-func (self *IntegrityShieldObserver) report(lines []string) error {
-	data, err := self.loader.Load()
+// groupResource contains the APIGroup and APIResource
+type groupResource struct {
+	APIGroup    string             `json:"apiGroup"`
+	APIVersion  string             `json:"apiVersion"`
+	APIResource metav1.APIResource `json:"resource"`
+}
+
+type groupResourceWithTargetNS struct {
+	groupResource    `json:""`
+	TargetNamespaces []string `json:"targetNamespace"`
+}
+
+var logLevelMap = map[string]log.Level{
+	"panic": log.PanicLevel,
+	"fatal": log.FatalLevel,
+	"error": log.ErrorLevel,
+	"warn":  log.WarnLevel,
+	"info":  log.InfoLevel,
+	"debug": log.DebugLevel,
+	"trace": log.TraceLevel,
+}
+
+func NewObserver() *Observer {
+	insp := &Observer{}
+	return insp
+}
+
+func (self *Observer) Init() error {
+	log.Info("initialize observer.")
+	kubeconf, _ := kubeutil.GetKubeConfig()
+
+	var err error
+
+	err = self.getAPIResources(kubeconf)
 	if err != nil {
-		self.logger.Errorf("Failed to load IShield Resources; %s", err.Error())
 		return err
 	}
-	events, err := readEventLines(lines)
+
+	dynamicClient, err := dynamic.NewForConfig(kubeconf)
 	if err != nil {
-		self.logger.Errorf("Failed to load events.txt; %s", err.Error())
 		return err
 	}
-	err = self.updateSummary(data, events)
-	if err != nil {
-		self.logger.Errorf("Failed to create or update `%s`; %s", defaultSummaryConfigMapName, err.Error())
-		return err
+	self.dynamicClient = dynamicClient
+
+	// log
+	if os.Getenv("LOG_FORMAT") == "json" {
+		log.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
 	}
-	self.logger.Info("Updated a status report")
+	logLevelStr := os.Getenv(logLevelEnvKey)
+	if logLevelStr == "" {
+		logLevelStr = "info"
+	}
+	logLevel, ok := logLevelMap[logLevelStr]
+	if !ok {
+		logLevel = log.InfoLevel
+	}
+	os.Setenv(k8sLogLevelEnvKey, logLevelStr)
+	log.SetLevel(logLevel)
+
+	log.Info("initialize cosign.")
+	cmd := cosign.Init()
+	cmd.Exec(context.Background(), []string{})
+
 	return nil
 }
 
-func (self *IntegrityShieldObserver) addEvent(line string) {
-	self.eventQueue = append(self.eventQueue, line)
-}
-
-func (self *IntegrityShieldObserver) getEvents() []string {
-	lines := []string{}
-	for _, l := range self.eventQueue {
-		lines = append(lines, l)
+func (self *Observer) Run() {
+	// load config -> requestHandlerConfig
+	rhconfig, err := k8smnfconfig.LoadRequestHandlerConfig()
+	if err != nil {
+		log.Error("Failed to load RequestHandlerConfig; err: ", err.Error())
 	}
-	self.clearEvents()
-	return lines
+
+	// load constraints
+	constraints, err := self.loadConstraints()
+	if err != nil {
+		if err.Error() == "the server could not find the requested resource" {
+			log.Info("no observation results")
+			return
+		} else {
+			log.Error("Failed to load constraints; err: ", err.Error())
+		}
+	}
+
+	// setup env value for sigstore
+	if rhconfig.SigStoreConfig.RekorServer != "" {
+		_ = os.Setenv(rekorServerEnvKey, rhconfig.SigStoreConfig.RekorServer)
+		debug := os.Getenv(rekorServerEnvKey)
+		log.Debug("REKOR_SERVER is set as ", debug)
+	} else {
+		_ = os.Setenv(rekorServerEnvKey, "")
+		debug := os.Getenv(rekorServerEnvKey)
+		log.Debug("REKOR_SERVER is set as ", debug)
+	}
+
+	// ObservationDetailResults
+	var constraintResults []ConstraintResult
+	for _, constraint := range constraints {
+		constraintName := constraint.Parameters.ConstraintName
+		var violations []vrc.VerifyResult
+		var nonViolations []vrc.VerifyResult
+		narrowedGVKList := self.getPossibleProtectedGVKs(constraint.Match)
+		if narrowedGVKList == nil {
+			log.Info("there is no resources to observe in the constraint:", constraint.Parameters.ConstraintName)
+			return
+		}
+		// get all resources of extracted GVKs
+		resources := []unstructured.Unstructured{}
+		for _, gResource := range narrowedGVKList {
+			tmpResources, _ := self.getAllResoucesByGroupResource(gResource)
+			resources = append(resources, tmpResources...)
+		}
+
+		// check all resources by verifyResource
+		ignoreFields := constraint.Parameters.IgnoreFields
+		secrets := constraint.Parameters.KeyConfigs
+		ignoreFields = append(ignoreFields, rhconfig.RequestFilterProfile.IgnoreFields...)
+		skipObjects := rhconfig.RequestFilterProfile.SkipObjects
+		skipObjects = append(skipObjects, constraint.Parameters.SkipObjects...)
+		results := []VerifyResultDetail{}
+		for _, resource := range resources {
+			// skip object
+			result := ObserveResource(resource, constraint.Parameters.SignatureRef, ignoreFields, skipObjects, secrets)
+			imgAllow, imgMsg := ObserveImage(resource, constraint.Parameters.ImageProfile)
+			if !imgAllow {
+				if !result.Violation {
+					result.Violation = true
+					result.Message = imgMsg
+				} else {
+					result.Message = fmt.Sprintf("%s, [Image]%s", result.Message, imgMsg)
+				}
+			}
+
+			log.Debug("VerifyResultDetail", result)
+			results = append(results, result)
+		}
+
+		// prepare for manifest integrity state
+		for _, res := range results {
+			// simple result
+			if res.Violation {
+				vres := vrc.VerifyResult{
+					Namespace:  res.Namespace,
+					Name:       res.Name,
+					Kind:       res.Kind,
+					ApiGroup:   res.ApiGroup,
+					ApiVersion: res.ApiVersion,
+					Result:     res.Message,
+				}
+				violations = append(violations, vres)
+			} else {
+				vres := vrc.VerifyResult{
+					Namespace:  res.Namespace,
+					Name:       res.Name,
+					Kind:       res.Kind,
+					ApiGroup:   res.ApiGroup,
+					ApiVersion: res.ApiVersion,
+					Signer:     res.VerifyResourceResult.Signer,
+					SigRef:     res.VerifyResourceResult.SigRef,
+					SignedTime: res.VerifyResourceResult.SignedTime,
+					Result:     res.Message,
+				}
+				nonViolations = append(nonViolations, vres)
+			}
+			log.WithFields(log.Fields{
+				"constraintName": constraintName,
+				"violation":      res.Violation,
+				"kind":           res.Kind,
+				"name":           res.Name,
+				"namespace":      res.Namespace,
+			}).Info(res.Message)
+		}
+		// summarize results
+		var violated bool
+		if len(violations) != 0 {
+			violated = true
+		} else {
+			violated = false
+		}
+		count := len(violations)
+
+		vrr := vrc.ManifestIntegrityStateSpec{
+			ConstraintName:  constraintName,
+			Violation:       violated,
+			TotalViolations: count,
+			Violations:      violations,
+			NonViolations:   nonViolations,
+			ObservationTime: time.Now().Format(timeFormat),
+		}
+
+		// check if targeted constraint
+		ignored := false
+		if constraint.Parameters.Action == nil {
+			ignored = !rhconfig.DefaultConstraintAction.Audit.Inform
+
+		} else {
+			ignored = !constraint.Parameters.Action.Audit.Inform
+		}
+
+		// export VerifyResult
+		_ = exportVerifyResult(vrr, ignored, violated)
+		// VerifyResultDetail
+		cres := ConstraintResult{
+			ConstraintName:  constraintName,
+			Results:         results,
+			Violation:       violated,
+			TotalViolations: count,
+			Constraint:      constraint,
+		}
+		constraintResults = append(constraintResults, cres)
+	}
+
+	// export ConstraintResult
+	res := ObservationDetailResults{
+		ConstraintResults: constraintResults,
+		Time:              time.Now().Format(timeFormat),
+	}
+	_ = exportResultDetail(res)
+	return
 }
 
-func (self *IntegrityShieldObserver) clearEvents() {
-	self.eventQueue = []string{}
+func exportVerifyResult(vrr vrc.ManifestIntegrityStateSpec, ignored bool, violated bool) error {
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	clientset, err := vrcclient.NewForConfig(config)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
+
+	// label
+	vv := "false"
+	iv := "false"
+	if violated {
+		vv = "true"
+	}
+	if ignored {
+		iv = "true"
+	}
+	labels := map[string]string{
+		VerifyResourceViolationLabel: vv,
+		VerifyResourceIgnoreLabel:    iv,
+	}
+
+	obj, err := clientset.ManifestIntegrityStates(namespace).Get(context.Background(), vrr.ConstraintName, metav1.GetOptions{})
+	if err != nil || obj == nil {
+		log.Info("creating new ManifestIntegrityState resource...")
+		newVRC := &vrc.ManifestIntegrityState{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: vrr.ConstraintName,
+			},
+			Spec: vrr,
+		}
+
+		newVRC.Labels = labels
+		_, err = clientset.ManifestIntegrityStates(namespace).Create(context.Background(), newVRC, metav1.CreateOptions{})
+		if err != nil {
+			log.Error("failed to create ManifestIntegrityStates:", err.Error())
+			return err
+		}
+	} else {
+		log.Info("updating ManifestIntegrityStatees resource...")
+		obj.Spec = vrr
+		obj.Labels = labels
+		_, err = clientset.ManifestIntegrityStates(namespace).Update(context.Background(), obj, metav1.UpdateOptions{})
+		if err != nil {
+			log.Error("failed to update ManifestIntegrityStates:", err.Error())
+			return err
+		}
+	}
+	return nil
 }
 
-func readEventLines(lines []string) ([]map[string]interface{}, error) {
-	events := []map[string]interface{}{}
-	for _, l := range lines {
-		var tmpEvent map[string]interface{}
-		err := json.Unmarshal([]byte(l), &tmpEvent)
+func exportResultDetail(results ObservationDetailResults) error {
+	exportStr := os.Getenv(exportDetailResult)
+	export := defaultExportDetailResult
+	if exportStr != "" {
+		export, _ = strconv.ParseBool(exportStr)
+	}
+	if !export {
+		return nil
+	}
+
+	if len(results.ConstraintResults) == 0 {
+		log.Info("no observation results")
+		return nil
+	}
+	namespace := os.Getenv("POD_NAMESPACE")
+	if namespace == "" {
+		namespace = defaultPodNamespace
+	}
+	configName := os.Getenv(detailResultConfigName)
+	if configName == "" {
+		configName = defaultObserverResultDetailConfigName
+	}
+	configKey := os.Getenv(detailResultConfigKey)
+	if configKey == "" {
+		configKey = defaultKeyInConfigMap
+	}
+
+	// load
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		return nil
+	}
+	clientset, err := kubeclient.NewForConfig(config)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), configName, metav1.GetOptions{})
+	if err != nil {
+		// create
+		log.Info("creating new configmap to store verify result...", configName)
+		newcm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: configName,
+			},
+		}
+		resByte, _ := json.Marshal(results)
+		newcm.Data = map[string]string{
+			configKey: string(resByte),
+		}
+		_, err := clientset.CoreV1().ConfigMaps(namespace).Create(context.Background(), newcm, metav1.CreateOptions{})
+		if err != nil {
+			log.Error("failed to create configmap", err.Error())
+			return err
+		}
+		return nil
+	} else {
+		// update
+		log.Info("updating configmap ...", configName)
+		resByte, _ := json.Marshal(results)
+		cm.Data = map[string]string{
+			configKey: string(resByte),
+		}
+		_, err := clientset.CoreV1().ConfigMaps(namespace).Update(context.Background(), cm, metav1.UpdateOptions{})
+		if err != nil {
+			log.Error("failed to update configmap", err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
+func (self *Observer) getAPIResources(kubeconfig *rest.Config) error {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	apiResourceLists, err := discoveryClient.ServerPreferredResources()
+	if err != nil {
+		return err
+	}
+
+	resources := []groupResource{}
+	for _, apiResourceList := range apiResourceLists {
+		if len(apiResourceList.APIResources) == 0 {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(apiResourceList.GroupVersion)
 		if err != nil {
 			continue
 		}
-		events = append(events, tmpEvent)
-	}
-	return events, nil
-}
-
-func readEventsFile(fpath string) ([]map[string]interface{}, error) {
-	f, err := os.Open(fpath)
-	if err != nil {
-		return nil, err
-	}
-	s := bufio.NewScanner(f)
-	lines := []string{}
-	for s.Scan() {
-		lines = append(lines, s.Text())
-	}
-	return readEventLines(lines)
-}
-
-func (self *IntegrityShieldObserver) summarize(data *RuntimeData, events []map[string]interface{}) map[string]string {
-	summary := map[string]string{}
-
-	opPods, svPods := getIShieldPods(data)
-	podsStatus := makePodsStatus(opPods, svPods)
-	for k, v := range podsStatus {
-		summary["pods."+k] = v
-	}
-
-	rspNum := len(data.RSPList.Items)
-	rsigNum := len(data.ResSigList.Items)
-
-	count := 0
-	denyCount := 0
-	for _, e := range events {
-		allowedIf, ok1 := e["allowed"]
-		if !ok1 {
-			continue
-		}
-		allowed, ok2 := allowedIf.(bool)
-		if !ok2 {
-			continue
-		}
-
-		count++
-		if !allowed {
-			denyCount++
+		for _, resource := range apiResourceList.APIResources {
+			if len(resource.Verbs) == 0 {
+				continue
+			}
+			resources = append(resources, groupResource{
+				APIGroup:    gv.Group,
+				APIVersion:  gv.Version,
+				APIResource: resource,
+			})
 		}
 	}
-	summary["count.events"] = strconv.Itoa(count)
-	summary["count.deniedEvents"] = strconv.Itoa(denyCount)
-	summary["resource.numOfRSPs"] = strconv.Itoa(rspNum)
-	summary["resource.numOfResSigs"] = strconv.Itoa(rsigNum)
-	summary["__meta.interval"] = strconv.Itoa(int(self.IntervalSeconds))
-	summary["__meta.updatedTimestamp"] = time.Now().UTC().Format(timeFormat)
-	return summary
-}
-
-func (self *IntegrityShieldObserver) updateSummary(data *RuntimeData, events []map[string]interface{}) error {
-
-	summary := self.summarize(data, events)
-
-	config, err := kubeutil.GetKubeConfig()
-	if err != nil {
-		return err
-	}
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	cmNS := self.IShiledNamespace
-	cmName := defaultSummaryConfigMapName
-	cm := &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: cmName,
-		},
-		Data: summary,
-	}
-	alreadyExists := false
-	current, getErr := client.CoreV1().ConfigMaps(cmNS).Get(context.Background(), cmName, metav1.GetOptions{})
-	if current != nil && getErr == nil {
-		alreadyExists = true
-		cm = current
-		cm.Data = summary
-	}
-
-	if alreadyExists {
-		_, err = client.CoreV1().ConfigMaps(cmNS).Update(context.Background(), cm, metav1.UpdateOptions{})
-	} else {
-		_, err = client.CoreV1().ConfigMaps(cmNS).Create(context.Background(), cm, metav1.CreateOptions{})
-	}
-	if err != nil {
-		return err
-	}
+	self.APIResources = resources
 	return nil
 }
 
-func getIShieldPods(data *RuntimeData) ([]v1.Pod, []v1.Pod) {
-	operatorDeployName := ""
-	serverDeployName := ""
-	operatorPods := []v1.Pod{}
-	serverPods := []v1.Pod{}
-	for _, ores := range data.ShieldConfig.Spec.ShieldConfig.IShieldResourceCondition.OperatorResources {
-		if ores.Kind == "Deployment" {
-			operatorDeployName = ores.Name
+func (self *Observer) getAllResoucesByGroupResource(gResourceWithTargetNS groupResourceWithTargetNS) ([]unstructured.Unstructured, error) {
+	var resources []unstructured.Unstructured
+	var err error
+	gResource := gResourceWithTargetNS.groupResource
+	targetNSs := gResourceWithTargetNS.TargetNamespaces
+	namespaced := gResource.APIResource.Namespaced
+	gvr := schema.GroupVersionResource{
+		Group:    gResource.APIGroup,
+		Version:  gResource.APIVersion,
+		Resource: gResource.APIResource.Name,
+	}
+
+	var tmpResourceList *unstructured.UnstructuredList
+	if namespaced {
+		for _, ns := range targetNSs {
+			tmpResourceList, err = self.dynamicClient.Resource(gvr).Namespace(ns).List(context.Background(), metav1.ListOptions{})
+			if err != nil {
+				log.Error("failed to get tmpResourceList:", err.Error())
+				break
+			}
+			resources = append(resources, tmpResourceList.Items...)
+		}
+
+	} else {
+		tmpResourceList, err = self.dynamicClient.Resource(gvr).List(context.Background(), metav1.ListOptions{})
+		resources = append(resources, tmpResourceList.Items...)
+	}
+	if err != nil {
+		// ignore RBAC error - IShield SA
+		log.Error("RBAC error when listing resources; error:", err.Error())
+		return []unstructured.Unstructured{}, nil
+	}
+	return resources, nil
+}
+
+func LoadKeySecret(keySecertNamespace, keySecertName string) (string, error) {
+	obj, err := kubeutil.GetResource("v1", "Secret", keySecertNamespace, keySecertName)
+	if err != nil {
+		return "", errors.Wrap(err, fmt.Sprintf("failed to get a secret `%s` in `%s` namespace", keySecertName, keySecertNamespace))
+	}
+	objBytes, _ := json.Marshal(obj.Object)
+	var secret v1.Secret
+	_ = json.Unmarshal(objBytes, &secret)
+	keyDir := fmt.Sprintf("/tmp/%s/%s/", keySecertNamespace, keySecertName)
+	log.Debug("keyDir", keyDir)
+	sumErr := []string{}
+	keyPath := ""
+	for fname, keyData := range secret.Data {
+		os.MkdirAll(keyDir, os.ModePerm)
+		fpath := filepath.Join(keyDir, fname)
+		err = ioutil.WriteFile(fpath, keyData, 0644)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		keyPath = fpath
+		break
+	}
+	if keyPath == "" && len(sumErr) > 0 {
+		return "", errors.New(fmt.Sprintf("failed to save secret data as a file; %s", strings.Join(sumErr, "; ")))
+	}
+	if keyPath == "" {
+		return "", errors.New(fmt.Sprintf("no key files are found in the secret `%s` in `%s` namespace", keySecertName, keySecertNamespace))
+	}
+
+	return keyPath, nil
+}
+
+//
+// Constraint
+//
+
+type ConstraintSpec struct {
+	Match      MatchCondition               `json:"match,omitempty"`
+	Parameters k8smnfconfig.ParameterObject `json:"parameters,omitempty"`
+}
+
+type MatchCondition struct {
+	Kinds              []Kinds               `json:"kinds,omitempty"`
+	Namespaces         []string              `json:"namespaces,omitempty"`
+	ExcludedNamespaces []string              `json:"excludedNamespaces,omitempty"`
+	LabelSelector      *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	NamespaceSelector  *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+}
+
+type Kinds struct {
+	Kinds     []string `json:"kinds,omitempty"`
+	ApiGroups []string `json:"apiGroups,omitempty"`
+}
+
+func (self *Observer) loadConstraints() ([]ConstraintSpec, error) {
+	gvr := schema.GroupVersionResource{
+		Group:    "constraints.gatekeeper.sh",
+		Version:  "v1beta1",
+		Resource: "manifestintegrityconstraint",
+	}
+	constraintList, err := self.dynamicClient.Resource(gvr).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	micList := []ConstraintSpec{}
+	for _, unstructed := range constraintList.Items {
+		log.Debug("unstructed.Object", unstructed.Object)
+		var mic ConstraintSpec
+		spec, ok := unstructed.Object["spec"]
+		if !ok {
+			fmt.Println("failed to get spec in constraint", unstructed.GetName())
+		}
+		jsonStr, err := json.Marshal(spec)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if err := json.Unmarshal(jsonStr, &mic); err != nil {
+			fmt.Println(err)
+		}
+		log.Debug("ManigestIntegrityConstraint:", mic)
+		micList = append(micList, mic)
+	}
+	return micList, nil
+}
+
+func (self *Observer) getPossibleProtectedGVKs(match MatchCondition) []groupResourceWithTargetNS {
+	possibleProtectedGVKs := []groupResourceWithTargetNS{}
+	for _, apiResource := range self.APIResources {
+		matched, tmpGvks := checkIfRuleMatchWithGVK(match, apiResource)
+		if matched {
+			possibleProtectedGVKs = append(possibleProtectedGVKs, tmpGvks...)
 			break
 		}
 	}
-	for _, sres := range data.ShieldConfig.Spec.ShieldConfig.IShieldResourceCondition.ServerResources {
-		if sres.Kind == "Deployment" {
-			serverDeployName = sres.Name
-			break
-		}
-	}
-	for _, pod := range data.PodList.Items {
-		podName := pod.GetName()
-		if strings.HasPrefix(podName, operatorDeployName) {
-			operatorPods = append(operatorPods, pod)
-		}
-		if strings.HasPrefix(podName, serverDeployName) {
-			serverPods = append(serverPods, pod)
-		}
-	}
-	return operatorPods, serverPods
+	return possibleProtectedGVKs
 }
 
-type ContainerStatus struct {
-	Name         string            `json:"name"`
-	State        v1.ContainerState `json:"state"`
-	LastState    v1.ContainerState `json:"lastState"`
-	RestartCount int32             `json:"restartCount"`
-	Ready        bool              `json:"ready"`
+// TODO: check logic
+func checkIfRuleMatchWithGVK(match MatchCondition, apiResource groupResource) (bool, []groupResourceWithTargetNS) {
+	possibleProtectedGVKs := []groupResourceWithTargetNS{}
+	// TODO: support "LabelSelector"
+	if len(match.Kinds) == 0 {
+		return false, nil
+	}
+	matched := false
+	for _, kinds := range match.Kinds {
+		kmatch := false
+		agmatch := false
+		if len(kinds.ApiGroups) != 0 {
+			agmatch = Contains(kinds.ApiGroups, apiResource.APIGroup)
+		} else {
+			agmatch = true
+		}
+		if len(kinds.ApiGroups) != 0 {
+			kmatch = Contains(kinds.Kinds, apiResource.APIResource.Kind)
+		} else {
+			kmatch = true
+		}
+		if kmatch && agmatch {
+			matched = true
+			namespaces := match.Namespaces
+			if match.NamespaceSelector != nil {
+				labeledNS := getLabelMatchedNamespace(match.NamespaceSelector)
+				namespaces = append(namespaces, labeledNS...)
+			}
+			possibleProtectedGVKs = append(possibleProtectedGVKs, groupResourceWithTargetNS{
+				groupResource:    apiResource,
+				TargetNamespaces: namespaces,
+			})
+		}
+	}
+	log.WithFields(log.Fields{
+		"matched":               matched,
+		"possibleProtectedGVKs": possibleProtectedGVKs,
+	}).Debug("check match condition")
+	return matched, possibleProtectedGVKs
 }
 
-func makePodsStatus(opPods, svPods []v1.Pod) map[string]string {
-	s := map[string]string{}
-	for _, pod := range opPods {
-		podName := pod.GetName()
-		podStatus := []ContainerStatus{}
-		for _, status := range pod.Status.ContainerStatuses {
-			tmpStatus := ContainerStatus{
-				Name:         status.Name,
-				State:        status.State,
-				LastState:    status.LastTerminationState,
-				RestartCount: status.RestartCount,
-				Ready:        status.Ready,
-			}
-			podStatus = append(podStatus, tmpStatus)
+func Contains(pattern []string, value string) bool {
+	for _, p := range pattern {
+		if p == value {
+			return true
 		}
-		podStatusBytes, _ := json.Marshal(podStatus)
-		s[podName] = string(podStatusBytes)
 	}
-	for _, pod := range svPods {
-		podName := pod.GetName()
-		podStatus := []ContainerStatus{}
-		for _, status := range pod.Status.ContainerStatuses {
-			tmpStatus := ContainerStatus{
-				Name:         status.Name,
-				State:        status.State,
-				LastState:    status.LastTerminationState,
-				RestartCount: status.RestartCount,
-				Ready:        status.Ready,
-			}
-			podStatus = append(podStatus, tmpStatus)
+	return false
+}
+
+func getLabelMatchedNamespace(labelSelector *metav1.LabelSelector) []string {
+	matchedNs := []string{}
+	if labelSelector == nil {
+		return []string{}
+	}
+	config, err := kubeutil.GetKubeConfig()
+	if err != nil {
+		return []string{}
+	}
+	clientset, err := kubeclient.NewForConfig(config)
+	if err != nil {
+		log.Error(err)
+		return []string{}
+	}
+	namespaces, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Errorf("failed to list a namespace:`%s`", err.Error())
+		return []string{}
+	}
+	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		log.Errorf("failed to convert the LabelSelector api type into a struct that implements labels.Selector; %s", err.Error())
+		return []string{}
+	}
+
+	for _, ns := range namespaces.Items {
+		labelsMap := ns.GetLabels()
+		labelsSet := labels.Set(labelsMap)
+		matched := selector.Matches(labelsSet)
+		if matched {
+			matchedNs = append(matchedNs, ns.Name)
 		}
-		podStatusBytes, _ := json.Marshal(podStatus)
-		s[podName] = string(podStatusBytes)
 	}
-	return s
+	return matchedNs
 }

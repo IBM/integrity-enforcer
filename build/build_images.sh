@@ -42,13 +42,13 @@ if [ -z "$ISHIELD_REPO_ROOT" ]; then
     exit 1
 fi
 
-if [ -z "$ISHIELD_SERVER_IMAGE_NAME_AND_VERSION" ]; then
-    echo "ISHIELD_SERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+if [ -z "$ISHIELD_API_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_API_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
-if [ -z "$ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION" ]; then
-    echo "ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+if [ -z "$ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
 fi
 
@@ -73,28 +73,17 @@ if [ -z "$ISHIELD_OPERATOR" ]; then
 fi
 
 
-SERVICE_NAME=ishield-server
-
-
-BASEDIR=./deployment
-DOCKERFILE=./image/Dockerfile
-LOGG_BASEDIR=${ISHIELD_REPO_ROOT}/logging/
-OBSV_BASEDIR=${ISHIELD_REPO_ROOT}/observer/
-INSP_BASEDIR=${ISHIELD_REPO_ROOT}/inspector/
-CHCK_BASEDIR=${ISHIELD_REPO_ROOT}/checker/
-OPERATOR_BASEDIR=${ISHIELD_REPO_ROOT}/integrity-shield-operator/
-
-# Build ishield-server image
+# Build ishield-api image
 echo -----------------------------
-echo [1/3] Building ishield-server image.
-cd ${ISHIELD_REPO_ROOT}/shield
+echo [1/4] Building ishield-api image.
+cd ${SHIELD_DIR}
 go mod tidy
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o image/${SERVICE_NAME} ./cmd/${SERVICE_NAME}
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_bin/ishield-api ./
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
@@ -102,9 +91,9 @@ if [ $exit_status -ne 0 ]; then
 fi
 
 if [ "$NO_CACHE" = true ] ; then
-    docker build -f ${DOCKERFILE} -t ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} image/ --no-cache
+     docker build -t ${ISHIELD_API_IMAGE_NAME_AND_VERSION} . --no-cache
 else
-    docker build -f ${DOCKERFILE} -t ${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} image/
+    docker build -t ${ISHIELD_API_IMAGE_NAME_AND_VERSION} .
 fi
 
 exit_status=$?
@@ -116,19 +105,26 @@ echo done.
 echo -----------------------------
 echo ""
 
-# Build ishield-logging image
+# Build ishield-ac-server image
 echo -----------------------------
-echo [2/3] Building ishield-logging image.
-cd ${LOGG_BASEDIR}
+echo [2/4] Building ishield-ac-server image.
+cd ${SHIELD_AC_DIR}
+go mod tidy
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -o build/_bin/k8s-manifest-sigstore ./
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
 if [ "$NO_CACHE" = true ] ; then
-     docker build -t ${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR} --no-cache
+     docker build -t ${ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION} . --no-cache
 else
-     docker build -t ${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION} ${LOGG_BASEDIR}
+     docker build -t ${ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION} . 
 fi
 
 exit_status=$?
@@ -140,101 +136,44 @@ echo done.
 echo -----------------------------
 echo ""
 
-# # Build ishield-observer image
-# echo -----------------------------
-# echo [3/4] Building ishield-observer image.
-# cd ${OBSV_BASEDIR}
-# exit_status=$?
-# if [ $exit_status -ne 0 ]; then
-#     echo "failed"
-#     exit 1
-# fi
-
-# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${ISHIELD_OBSERVER} main.go
-
-# if [ "$NO_CACHE" = true ] ; then
-#      docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} ${OBSV_BASEDIR} --no-cache
-# else
-#      docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} ${OBSV_BASEDIR}
-# fi
-
-# exit_status=$?
-# if [ $exit_status -ne 0 ]; then
-#     echo "failed"
-#     exit 1
-# fi
-# echo done.
-# echo -----------------------------
-# echo ""
-
-# # Build ishield-inspector image
-# echo -----------------------------
-# echo [3/4] Building ishield-inspector image.
-# cd ${INSP_BASEDIR}
-# exit_status=$?
-# if [ $exit_status -ne 0 ]; then
-#     echo "failed"
-#     exit 1
-# fi
-
-# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${ISHIELD_INSPECTOR} main.go
-
-# if [ "$NO_CACHE" = true ] ; then
-#      docker build -t ${ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION} ${INSP_BASEDIR} --no-cache
-# else
-#      docker build -t ${ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION} ${INSP_BASEDIR}
-# fi
-
-# exit_status=$?
-# if [ $exit_status -ne 0 ]; then
-#     echo "failed"
-#     exit 1
-# fi
-# echo done.
-# echo -----------------------------
-# echo ""
-
-# # Build ishield-checker image
-# echo -----------------------------
-# echo [3/4] Building ishield-checker image.
-# cd ${CHCK_BASEDIR}
-# go mod tidy
-# exit_status=$?
-# if [ $exit_status -ne 0 ]; then
-#     echo "failed"
-#     exit 1
-# fi
-
-# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_bin/checker ./
-	
-# if [ "$NO_CACHE" = true ] ; then
-#      docker build -t ${ISHIELD_CHECKER_IMAGE_NAME_AND_VERSION} ${CHCK_BASEDIR} --no-cache
-# else
-#      docker build -t ${ISHIELD_CHECKER_IMAGE_NAME_AND_VERSION} ${CHCK_BASEDIR}
-# fi
-
-# exit_status=$?
-# if [ $exit_status -ne 0 ]; then
-#     echo "failed"
-#     exit 1
-# fi
-# echo done.
-# echo -----------------------------
-# echo ""
+# Build ishield-observer image
+echo -----------------------------
+echo [3/4] Building ishield-observer image.
+cd ${SHIELD_OBSERVER_DIR}
+go mod tidy
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_bin/ishield-observer ./
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+if [ "$NO_CACHE" = true ] ; then
+    docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} . --no-cache
+else
+    docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} .
+fi
 
 # Build integrity-shield-operator image
 echo -----------------------------
-echo [3/3] Building integrity-shield-operator image.
-cd ${OPERATOR_BASEDIR}
+echo [4/4] Building integrity-shield-operator image.
+cd ${SHIELD_OP_DIR}
 go mod tidy
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
-
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/${ISHIELD_OPERATOR} main.go
-
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_output/bin/integrity-shield-operator main.go
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
 if [ "$NO_CACHE" = true ] ; then
     docker build . -t ${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} --no-cache
 else
@@ -246,6 +185,7 @@ if [ $exit_status -ne 0 ]; then
     echo "failed"
     exit 1
 fi
+
 echo done.
 echo -----------------------------
 echo ""
