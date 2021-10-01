@@ -17,32 +17,35 @@
 package resources
 
 import (
-	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//regkey.yaml
-func BuildRegKeySecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+// ishield-api-tls
+func BuildTlsSecretForIShield(cr *apiv1.IntegrityShield) *corev1.Secret {
+	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetRegKeySecretName(),
+			Name:      cr.Spec.APITlsSecretName,
 			Namespace: cr.Namespace,
 		},
 		Data: map[string][]byte{
-			corev1.DockerConfigJsonKey: cr.Spec.RegKeySecret.Value,
+			corev1.TLSCertKey:       empty, // "tls.crt"
+			corev1.TLSPrivateKeyKey: empty,
+			"ca.crt":                empty,
 		},
-		Type: corev1.SecretTypeDockerConfigJson,
+		Type: corev1.SecretTypeTLS,
 	}
 	return sec
 }
 
-// ishield-server-tls
-func BuildTlsSecretForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Secret {
+// ishield-webhook-tls
+func BuildAPITlsSecretForIShield(cr *apiv1.IntegrityShield) *corev1.Secret {
 	var empty []byte
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetWebhookServerTlsSecretName(),
+			Name:      cr.Spec.WebhookServerTlsSecretName,
 			Namespace: cr.Namespace,
 		},
 		Data: map[string][]byte{

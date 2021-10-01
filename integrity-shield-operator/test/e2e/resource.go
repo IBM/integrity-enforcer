@@ -1,18 +1,16 @@
-//
-// Copyright 2020 IBM Corporation
+// Copyright 2021  IBM Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package e2e
 
@@ -149,16 +147,12 @@ func CheckIShieldResources(framework *Framework, kind, namespace, expected strin
 		_, err := framework.APIExtensionsClientSet.ApiextensionsV1().CustomResourceDefinitions().Get(goctx.Background(), expected, metav1.GetOptions{})
 		return err
 	}
-	if kind == "ShieldConfig" {
-		_, err := framework.ShieldConfigClient.ShieldConfigs(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
-		return err
-	}
-	if kind == "SignerConfig" {
-		_, err := framework.SignerConfigClient.SignerConfigs(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
-		return err
-	}
 	if kind == "Secret" {
 		_, err := framework.KubeClientSet.CoreV1().Secrets(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "Service" {
+		_, err := framework.KubeClientSet.CoreV1().Services(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
 		return err
 	}
 	if kind == "ServiceAccount" {
@@ -183,6 +177,10 @@ func CheckIShieldResources(framework *Framework, kind, namespace, expected strin
 	}
 	if kind == "ConfigMap" {
 		_, err := framework.KubeClientSet.CoreV1().ConfigMaps(namespace).Get(goctx.Background(), expected, metav1.GetOptions{})
+		return err
+	}
+	if kind == "ManifestIntegrityProfile" {
+		_, err := framework.MIPClient.ManifestIntegrityProfiles().Get(goctx.Background(), expected, metav1.GetOptions{})
 		return err
 	}
 	return fmt.Errorf("Fail to call resource type: %v", kind)

@@ -1,0 +1,22 @@
+
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ManifestIntegrityConstraint
+metadata:
+  name: configmap-constraint
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["ConfigMap"] 
+    namespaces:
+    - "sample-ns"
+  parameters:
+    inScopeObjects:
+    - name: sample-cm
+    signers:
+    - signer@signer.com
+    ignoreFields:
+    - objects:
+      - kind: ConfigMap
+      fields:
+      - data.comment

@@ -8,5 +8,5 @@ roleRef:
   name: proxy-role
 subjects:
 - kind: ServiceAccount
-  name: integrity-shield-operator-manager
-  namespace: integrity-shield-operator-system
+  name: controller-manager
+  namespace: system

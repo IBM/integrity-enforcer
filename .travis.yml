@@ -81,7 +81,6 @@ jobs:
     - stage: publish
       name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
       if: env(ENABLE_PUBLISH) = true AND branch =~ /^release-[0-9]+\..*$/
-      #type = push AND branch = master
       script:
         - |
           make init

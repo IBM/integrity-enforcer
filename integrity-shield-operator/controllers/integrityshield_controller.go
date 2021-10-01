@@ -18,21 +18,16 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	apisv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
-	"github.com/IBM/integrity-enforcer/integrity-shield-operator/resources"
 )
-
-var log = logf.Log.WithName("controller_integrityshield")
 
 // IntegrityShieldReconciler reconciles a IntegrityShield object
 type IntegrityShieldReconciler struct {
@@ -41,20 +36,36 @@ type IntegrityShieldReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var log = logf.Log.WithName("controller_integrityshield")
+
+//+kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshieldren,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=services;serviceaccounts;events;configmaps;secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshields/finalizers;shieldconfigs;signerconfigs;resourcesigningprofiles;resourcesignatures;helmreleasemetadatas,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apis.integrityshield.io,resources=integrityshields;integrityshields/finalizers;manifestintegrityprofiles,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=*
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
 // +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=*
-// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=*
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=*
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update;delete
+// +kubebuilder:rbac:groups=templates.gatekeeper.sh,resources=constrainttemplates,verbs=get;list;watch;create;update;delete
 
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the IntegrityShield object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
+	reqLogger := r.Log.WithValues("integrityshield", req.NamespacedName)
 
+	// your logic here
 	// Fetch the IntegrityShield instance
-	instance := &apisv1alpha1.IntegrityShield{}
+	instance := &apiv1.IntegrityShield{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -70,15 +81,9 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	var recResult ctrl.Result
 	var recErr error
 
-	// apply default config if not ignored
-	// this step is necessary to identify default resource names such as ishield-webhook-config, so this should be done even before finalizer
-	if !instance.Spec.IgnoreDefaultIShieldCR {
-		instance = resources.MergeDefaultIntegrityShieldCR(instance, "")
-	}
-
 	// Integrity Shield is under deletion - finalizer step
 	if !instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if containsString(instance.ObjectMeta.Finalizers, apisv1alpha1.CleanupFinalizerName) {
+		if containsString(instance.ObjectMeta.Finalizers, apiv1.CleanupFinalizerName) {
 			if err := r.deleteClusterScopedChildrenResources(instance); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried
@@ -87,7 +92,7 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 
 			// remove our finalizer from the list and update it.
-			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, apisv1alpha1.CleanupFinalizerName)
+			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, apiv1.CleanupFinalizerName)
 			if err := r.Update(context.Background(), instance); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -95,82 +100,20 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	// otherwise, normal reconcile
+	//Pod Security Policy (PSP)
+	// recResult, recErr = r.createOrUpdatePodSecurityPolicy(instance)
+	// if recErr != nil || recResult.Requeue {
+	// 	return recResult, recErr
+	// }
 
-	if ok, nonReadyKey := r.isKeyRingReady(instance); !ok {
-		reqLogger.Info(fmt.Sprintf("KeyRing secret \"%s\" does not exist. Skip reconciling.", nonReadyKey))
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// Custom Resource Definition (CRD)
-	recResult, recErr = r.createOrUpdateShieldConfigCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateSignerConfigCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateResourceSignatureCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateResourceSigningProfileCRD(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	enabledPulgins := instance.Spec.ShieldConfig.GetEnabledPlugins()
-	if enabledPulgins["helm"] {
-		recResult, recErr = r.createOrUpdateHelmReleaseMetadataCRD(instance)
-		if recErr != nil || recResult.Requeue {
-			return recResult, recErr
-		}
-	}
-
-	//Custom Resources (CR)
-	recResult, recErr = r.createOrUpdateShieldConfigCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	recResult, recErr = r.createOrUpdateSignerConfigCR(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	if len(instance.Spec.ResourceSigningProfiles) > 0 {
-		for _, prof := range instance.Spec.ResourceSigningProfiles {
-			recResult, recErr = r.createOrUpdateResourceSigningProfileCR(instance, prof)
-			if recErr != nil || recResult.Requeue {
-				return recResult, recErr
-			}
-		}
-	}
-
-	//Secret
-	recResult, recErr = r.createOrUpdateTlsSecret(instance)
+	//Config
+	recResult, recErr = r.createOrUpdateRequestHandlerConfig(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
 
 	//Service Account
-	recResult, recErr = r.createOrUpdateServiceAccount(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	//Cluster Role
-	recResult, recErr = r.createOrUpdateClusterRoleForIShield(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	//Cluster Role Binding
-	recResult, recErr = r.createOrUpdateClusterRoleBindingForIShield(instance)
+	recResult, recErr = r.createOrUpdateIShieldApiServiceAccount(instance)
 	if recErr != nil || recResult.Requeue {
 		return recResult, recErr
 	}
@@ -187,62 +130,126 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return recResult, recErr
 	}
 
-	// ishield-admin
-	if !instance.Spec.Security.AutoIShieldAdminCreationDisabled {
+	//Cluster Role
+	recResult, recErr = r.createOrUpdateClusterRoleForIShield(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+	//Cluster Role Binding
+	recResult, recErr = r.createOrUpdateClusterRoleBindingForIShield(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
+	// Observer
+	if instance.Spec.Observer.Enabled {
+		//CRD
+		recResult, recErr = r.createOrUpdateObserverResultCRD(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		//Service Account
+		recResult, recErr = r.createOrUpdateObserverServiceAccount(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
 		//Cluster Role
-		recResult, recErr = r.createOrUpdateClusterRoleForIShieldAdmin(instance)
+		recResult, recErr = r.createOrUpdateClusterRoleForObserver(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
-
 		//Cluster Role Binding
-		recResult, recErr = r.createOrUpdateClusterRoleBindingForIShieldAdmin(instance)
+		recResult, recErr = r.createOrUpdateClusterRoleBindingForObserver(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
-
 		//Role
-		recResult, recErr = r.createOrUpdateRoleForIShieldAdmin(instance)
+		recResult, recErr = r.createOrUpdateRoleForObserver(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
-
 		//Role Binding
-		recResult, recErr = r.createOrUpdateRoleBindingForIShieldAdmin(instance)
+		recResult, recErr = r.createOrUpdateRoleBindingForObserver(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		//Deployment
+		recResult, recErr = r.createOrUpdateObserverDeployment(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
 	}
 
-	// Pod Security Policy (PSP)
-	recResult, recErr = r.createOrUpdatePodSecurityPolicy(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	//Deployment
-	recResult, recErr = r.createOrUpdateWebhookDeployment(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	//Service
-	recResult, recErr = r.createOrUpdateWebhookService(instance)
-	if recErr != nil || recResult.Requeue {
-		return recResult, recErr
-	}
-
-	//Webhook Configuration
-	// wait until deployment is available
-	if r.isDeploymentAvailable(instance) {
-		recResult, recErr = r.createOrUpdateWebhook(instance)
+	// Gatekeeper
+	if instance.Spec.UseGatekeeper {
+		// Shield API Secret
+		recResult, recErr = r.createOrUpdateTlsSecret(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
-	} else {
-		recResult, recErr = r.deleteWebhook(instance)
+
+		// API Deployment
+		recResult, recErr = r.createOrUpdateIShieldAPIDeployment(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
+		}
+
+		// API Service
+		recResult, recErr = r.createOrUpdateAPIService(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		if r.isGatekeeperAvailable(instance) {
+			// Gatekeeper constraint template
+			recResult, recErr = r.createOrUpdateConstraintTemplate(instance)
+			if recErr != nil || recResult.Requeue {
+				return recResult, recErr
+			}
+		} else {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+	} else { // If use admission controller instead of Gatekeeper
+		// CRD
+		recResult, recErr = r.createOrUpdateManifestIntegrityProfileCRD(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		// ac config
+		recResult, recErr = r.createOrUpdateACConfig(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		// webhook secret
+		recResult, recErr = r.createOrUpdateACTlsSecret(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		// webhook Deployment
+		recResult, recErr = r.createOrUpdateAdmissionControllerDeployment(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+
+		// webhook Service
+		recResult, recErr = r.createOrUpdateWebhookService(instance)
+		if recErr != nil || recResult.Requeue {
+			return recResult, recErr
+		}
+		//Webhook Configuration
+		// wait until deployment is available
+		if r.isDeploymentAvailable(instance) {
+			recResult, recErr = r.createOrUpdateWebhook(instance)
+			if recErr != nil || recResult.Requeue {
+				return recResult, recErr
+			}
+		} else {
+			recResult, recErr = r.deleteWebhook(instance)
+			if recErr != nil || recResult.Requeue {
+				return recResult, recErr
+			}
 		}
 	}
 
@@ -253,70 +260,65 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *IntegrityShieldReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apisv1alpha1.IntegrityShield{}).
-		Owns(&apisv1alpha1.IntegrityShield{}).
+		For(&apiv1.IntegrityShield{}).
 		Complete(r)
 }
 
-func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instance *apisv1alpha1.IntegrityShield) error {
+func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instance *apiv1.IntegrityShield) error {
 	// delete any cluster scope resources owned by the instance
 	// (In Iubernetes 1.20 and later, a garbage collector ignore cluster scope children even if their owner is deleted)
 	var err error
-	_, err = r.deleteWebhook(instance)
-	if err != nil {
-		return err
-	}
-	_, err = r.deletePodSecurityPolicy(instance)
-	if err != nil {
-		return err
-	}
-	if !instance.Spec.Security.AutoIShieldAdminCreationDisabled {
-		_, err = r.deleteClusterRoleBindingForIShieldAdmin(instance)
-		if err != nil {
-			return err
-		}
-		_, err = r.deleteClusterRoleForIShieldAdmin(instance)
-		if err != nil {
-			return err
-		}
-	}
-	_, err = r.deleteClusterRoleBindingForIShield(instance)
-	if err != nil {
-		return err
-	}
+
+	//Cluster Role
 	_, err = r.deleteClusterRoleForIShield(instance)
 	if err != nil {
 		return err
 	}
+	//Cluster Role Binding
+	_, err = r.deleteClusterRoleBindingForIShield(instance)
+	if err != nil {
+		return err
+	}
 
-	enabledPulgins := instance.Spec.ShieldConfig.GetEnabledPlugins()
-	if enabledPulgins["helm"] {
-		_, err = r.deleteHelmReleaseMetadataCRD(instance)
+	if instance.Spec.UseGatekeeper {
+		if r.isGatekeeperAvailable(instance) {
+			_, err = r.deleteConstraintTemplate(instance)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		_, err = r.deleteWebhook(instance)
+		if err != nil {
+			return err
+		}
+		// CRD
+		_, err = r.deleteManifestIntegrityProfileCRD(instance)
 		if err != nil {
 			return err
 		}
 	}
+	// _, err = r.deletePodSecurityPolicy(instance)
+	// if err != nil {
+	// 	return err
+	// }
 
-	_, err = r.deleteResourceSigningProfileCRD(instance)
-	if err != nil {
-		return err
-	}
-
-	_, err = r.deleteResourceSignatureCRD(instance)
-	if err != nil {
-		return err
-	}
-
-	_, err = r.deleteSignerConfigCRD(instance)
-	if err != nil {
-		return err
-	}
-
-	_, err = r.deleteShieldConfigCRD(instance)
-	if err != nil {
-		return err
+	if instance.Spec.Observer.Enabled {
+		_, err = r.deleteClusterRoleForObserver(instance)
+		if err != nil {
+			return err
+		}
+		_, err = r.deleteClusterRoleBindingForObserver(instance)
+		if err != nil {
+			return err
+		}
+		_, err = r.deleteObserverResultCRD(instance)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -39,13 +39,31 @@ echo "===== ENTER Deployment Admin ====="
 
 echo
 NO_WAIT=true
-p "First, we create Integrity Shield (IShield) Custome Resource Definitions (CRDs). Please enter."
+p "First, we install Gatekeeper. Please enter."
 read
-pe "make install-crds"
+pe "kubectl apply -f https://raw.githubusercontent.com/open-policy-agent/gatekeeper/release-3.5/deploy/gatekeeper.yaml"
 echo
-p "===== Integrity Shield CRDs are created."
+p "===== Gatekeeper is installed."
 echo
 NO_WAIT=false
+
+echo
+NO_WAIT=true
+p "Please wait until Gatekeeper (three pods) is successfully deployed in the namespace gatekeeper-system."
+p "Let's wait (this script would resume shortly) "
+while true; do
+   GK_STATUS=$(kubectl get pod -n gatekeeper-system | grep gatekeeper-controller-manager | awk '{print $3}')
+   echo $GK_STATUS
+   if [[ "$GK_STATUS" == "Running" ]]; then
+      echo
+      echo -n "===== Gatekeeper has started. ====="
+      echo
+      break
+   else
+      printf "."
+      sleep 2
+   fi
+done
 
 echo
 NO_WAIT=true
@@ -53,7 +71,7 @@ p "First, Let's create a namespace in cluster to deploy Integrity Shield. Please
 read
 pe "make create-ns"
 echo
-p "===== A namespace ${ISHIELD_OP_NS} is created in cluster. ====="
+p "===== A namespace ${ISHIELD_NS} is created in cluster. ====="
 echo
 NO_WAIT=false
 
@@ -73,7 +91,7 @@ echo
 NO_WAIT=true
 p "Now, we are ready to install IntegrityShield. Please enter."
 read
-pe "make setup-demo DEMO_ISHIELD_OP_IMAGE_NAME=${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} DEMO_ISHIELD_SERVER_IMAGE_NAME=${ISHIELD_SERVER_IMAGE_NAME_AND_VERSION} DEMO_ISHIELD_LOGGING_IMAGE_NAME=${ISHIELD_LOGGING_IMAGE_NAME_AND_VERSION}"
+pe "make setup-demo DEMO_ISHIELD_OP_IMAGE_NAME=${TEST_ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION} DEMO_ISHIELD_API_IMAGE_NAME=${TEST_ISHIELD_API_IMAGE_NAME_AND_VERSION} DEMO_ISHIELD_OBSERVER_IMAGE_NAME=${TEST_ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION}"
 echo
 echo "===== Integrtity Shield operator is being deployed and IntegrityShield custome resource (CR) is created in cluster. ====="
 echo
@@ -81,13 +99,14 @@ NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "Please wait until Integrity Shield (two pods) is successfully deployed in the namespace ${ISHIELD_OP_NS}."
+p "Please wait until Integrity Shield (two pods) is successfully deployed in the namespace ${ISHIELD_NS}."
 p "Let's wait (this script would resume shortly) "
 while true; do
-   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_OP_NS} | grep integrity-shield-server | awk '{print $3}')
+   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_NS} | grep integrity-shield-api | awk '{print $3}')
+   echo $ISHIELD_STATUS
    if [[ "$ISHIELD_STATUS" == "Running" ]]; then
       echo
-      echo -n "===== Integrity Shield server has started, let's continue with verifying integrity of resources. ====="
+      echo -n "===== Integrity Shield api has started, let's continue with verifying integrity of resources. ====="
       echo
       break
    else
@@ -107,21 +126,21 @@ echo
 NO_WAIT=false
 
 echo
-cp ${SHIELD_OP_DIR}test/deploy/test-rsp.yaml test-rsp.yaml
+cp ${SHIELD_OP_DIR}test/deploy/test-mic.yaml test-mic.yaml
 NO_WAIT=true
-p "First, we define which reource(s) should be protected in ResourceSigningProfile(RSP). Please enter to see a sample RSP."
+p "First, we define which reource(s) should be protected in Constraint ManifestIntegrityConstraint(MIC). Please enter to see a sample MIC."
 read
-pe "cat test-rsp.yaml"
+pe "cat test-mic.yaml"
 echo
 NO_WAIT=false
 
 echo
 NO_WAIT=true
-p "We create a RSP in cluster to protect specified resources in namespace: ${TEST_NS}. Please enter."
+p "We create a MIC in cluster to protect specified resources in namespace: ${TEST_NS}. Please enter."
 read
-pe "kubectl apply -f test-rsp.yaml -n ${TEST_NS}"
+pe "kubectl apply -f test-mic.yaml -n ${TEST_NS}"
 echo
-p "===== A RSP is created in cluster. ====="
+p "===== A MIC is created in cluster. ====="
 echo
 NO_WAIT=false
 
@@ -149,7 +168,7 @@ cp ${SHIELD_OP_DIR}test/deploy/test-configmap-annotation.yaml test-configmap-ann
 NO_WAIT=true
 p "Now, we create a resource with signature annotation. Please enter to see a sample ConfigMap resource with signature."
 read
-pe "cat test-configmap-annotation.yaml"
+pe "cat test-configmap-pgp-annotation.yaml"
 echo
 NO_WAIT=false
 
@@ -157,7 +176,7 @@ echo
 NO_WAIT=true
 p "Create the ConfigMap resource with signature annotation. Please enter."
 read
-pe "kubectl  apply -f test-configmap-annotation.yaml -n ${TEST_NS}"
+pe "kubectl  apply -f test-configmap-pgp-annotation.yaml -n ${TEST_NS}"
 echo
 p "===== It should be successful this time because Integrity Shield successfully verified corresponding signature, available as annotation in the resource. ====="
 read
@@ -165,16 +184,16 @@ NO_WAIT=false.
 
 p "THE END"
 
-if [ -f test-rsp.yaml ]; then
-   rm test-rsp.yaml
+if [ -f test-mic.yaml ]; then
+   rm test-mic.yaml
 fi
 
 if [ -f test-configmap.yaml ]; then
    rm test-configmap.yaml
 fi
 
-if [ -f test-configmap-annotation.yaml ]; then
-   rm test-configmap-annotation.yaml
+if [ -f test-configmap-pgp-annotation.yaml ]; then
+   rm test-configmap-pgp-annotation.yaml
 fi
 
 echo

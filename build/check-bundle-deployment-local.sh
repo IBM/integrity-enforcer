@@ -24,7 +24,7 @@ echo "-------------------------------------------------"
 echo "Check if operator bundle deployed correctly."
 echo "Let's wait for integrity-shield-operator-bundle to be depoyed..."
 while true; do
-   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_OP_NS} 2>/dev/null | grep integrity-shield-operator | awk '{print $3}')
+   ISHIELD_STATUS=$(kubectl get pod -n ${ISHIELD_NS} 2>/dev/null | grep integrity-shield-operator | awk '{print $3}')
    if [[ "$ISHIELD_STATUS" == "Running" ]]; then
       echo
       echo -n "===== Integrity Shield operator has started, let's continue with testing e2e. ====="

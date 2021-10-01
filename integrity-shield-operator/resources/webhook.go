@@ -18,43 +18,62 @@ package resources
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 
-	apiv1alpha1 "github.com/IBM/integrity-enforcer/integrity-shield-operator/api/v1alpha1"
-	"github.com/IBM/integrity-enforcer/shield/pkg/common"
-	"github.com/ghodss/yaml"
+	apiv1 "github.com/IBM/integrity-shield/integrity-shield-operator/api/v1"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
-//service
-func BuildServiceForIShield(cr *apiv1alpha1.IntegrityShield) *corev1.Service {
+// webhook service
+func BuildServiceForIShield(cr *apiv1.IntegrityShield) *corev1.Service {
 	var targetport intstr.IntOrString
 	targetport.Type = intstr.String
-	targetport.StrVal = "ac-api"
+	targetport.StrVal = "validator-port"
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetWebhookServiceName(),
+			Name:      cr.Spec.WebhookServiceName,
 			Namespace: cr.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
 					Port:       443,
-					TargetPort: targetport, //"ac-api"
+					TargetPort: targetport,
 				},
 			},
-			Selector: cr.Spec.SelectorLabels,
+			Selector: cr.Spec.ControllerContainer.SelectorLabels,
+		},
+	}
+	return svc
+}
+
+// api service
+func BuildAPIServiceForIShield(cr *apiv1.IntegrityShield) *corev1.Service {
+	var targetport intstr.IntOrString
+	targetport.Type = intstr.String
+	targetport.StrVal = "ishield-api"
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Spec.ApiServiceName,
+			Namespace: cr.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       cr.Spec.ApiServicePort,
+					TargetPort: targetport, //"ishield-api"
+				},
+			},
+			Selector: cr.Spec.API.SelectorLabels,
 		},
 	}
 	return svc
 }
 
 //webhook configuration
-func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield) *admregv1.MutatingWebhookConfiguration {
+func BuildValidatingWebhookConfigurationForIShield(cr *apiv1.IntegrityShield) *admregv1.ValidatingWebhookConfiguration {
 
 	namespaced := admregv1.NamespacedScope
 	cluster := admregv1.ClusterScope
@@ -66,57 +85,49 @@ func BuildMutatingWebhookConfigurationForIShield(cr *apiv1alpha1.IntegrityShield
 	clusterRule.Scope = &cluster
 
 	var path *string
-	mutate := "/mutate"
-	path = &mutate
+	validate := "/validate-resource"
+	path = &validate
 
 	var empty []byte
 
-	sideEffect := admregv1.SideEffectClassNone
-	timeoutSeconds := int32(apiv1alpha1.DefaultIShieldWebhookTimeout)
+	sideEffect := admregv1.SideEffectClassNoneOnDryRun
+	timeoutSeconds := int32(apiv1.DefaultIShieldWebhookTimeout)
 
 	rules := []admregv1.RuleWithOperations{
 		{
 			Operations: []admregv1.OperationType{
-				admregv1.Create, admregv1.Delete, admregv1.Update,
+				admregv1.Create, admregv1.Update,
 			},
 			Rule: namespacedRule,
 		},
 		{
 			Operations: []admregv1.OperationType{
-				admregv1.Create, admregv1.Delete, admregv1.Update,
+				admregv1.Create, admregv1.Update,
 			},
 			Rule: clusterRule,
 		},
 	}
 
-	if common.ExactMatchWithPatternArray("roks", cr.Spec.ShieldConfig.Options) {
-		var roksRules []admregv1.RuleWithOperations
-		fpath := filepath.Clean(apiv1alpha1.WebhookRulesForRoksYamlPath)
-		rulesBytes, _ := ioutil.ReadFile(fpath) // NOSONAR
-		_ = yaml.Unmarshal(rulesBytes, &roksRules)
-		rules = roksRules
-	}
-
-	wc := &admregv1.MutatingWebhookConfiguration{
+	wc := &admregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.GetWebhookConfigName(),
+			Name:      cr.Spec.WebhookConfigName,
 			Namespace: cr.Namespace,
 		},
-		Webhooks: []admregv1.MutatingWebhook{
+		Webhooks: []admregv1.ValidatingWebhook{
 			{
 				Name: fmt.Sprintf("ac-server.%s.svc", cr.Namespace),
 				ClientConfig: admregv1.WebhookClientConfig{
 					Service: &admregv1.ServiceReference{
-						Name:      cr.GetWebhookServiceName(),
+						Name:      cr.Spec.WebhookServiceName,
 						Namespace: cr.Namespace,
-						Path:      path, //"/mutate"
+						Path:      path,
 					},
 					CABundle: empty,
 				},
 				Rules:                   rules,
 				SideEffects:             &sideEffect,
 				TimeoutSeconds:          &timeoutSeconds,
-				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				AdmissionReviewVersions: []string{"v1beta1"},
 			},
 		},
 	}

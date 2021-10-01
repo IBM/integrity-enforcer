@@ -1,8 +1,5 @@
-build/_output/
-testbin/bin/
-test/e2e/e2etest-forwarder.log
-test/e2e/e2etest-server.log
 
+# Binaries for programs and plugins
 # Binaries for programs and plugins
 *.exe
 *.exe~
