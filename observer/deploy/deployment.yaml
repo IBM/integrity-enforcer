@@ -51,7 +51,7 @@ spec:
             - name: INTERVAL
               value: '5'
           imagePullPolicy: Always
-          image: localhost:5000/integrity-shield-observer:0.2.5
+          image: localhost:5000/integrity-shield-observer:0.3.0
           volumeMounts:
           - name: tmp
             mountPath: /tmp
