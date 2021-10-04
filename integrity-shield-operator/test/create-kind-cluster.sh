@@ -58,10 +58,10 @@ data:
 EOF
 
 
-status=`oc get node | grep Ready | awk '{print $2}'`
+status=`kubectl get node | grep Ready | awk '{print $2}'`
 while :
 do 
-  status=`oc get node | grep Ready | awk '{print $2}'`
+  status=`kubectl get node | grep Ready | awk '{print $2}'`
   if [ "$status" = "NotReady" ]; then
     echo "STATUS is NotReady..."
     sleep 5

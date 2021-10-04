@@ -397,6 +397,8 @@ setup-tmp-cr:
 	@echo insert image
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.image $(TMP_ISHIELD_IMG)
 	yq write -i $(TMP_CR_FILE) spec.shieldApi.imagePullPolicy Always
+	yq write -i $(TMP_CR_FILE) spec.shieldApi.resources.limits.cpu 200m
+	yq write -i $(TMP_CR_FILE) spec.shieldApi.resources.limits.memory 256Mi
 	yq write -i $(TMP_CR_FILE) spec.observer.image $(TMP_OBSERVER_IMG)
 	yq write -i $(TMP_CR_FILE) spec.observer.imagePullPolicy Always
 	yq write -i $(TMP_CR_FILE) spec.observer.resources.limits.cpu 200m
