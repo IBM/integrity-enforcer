@@ -56,3 +56,19 @@ data:
     host: "localhost:${reg_port}"
     help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
 EOF
+
+
+status=`oc get node | grep Ready | awk '{print $2}'`
+while :
+do 
+  status=`oc get node | grep Ready | awk '{print $2}'`
+  if [ "$status" = "NotReady" ]; then
+    echo "STATUS is NotReady..."
+    sleep 5
+  else
+    echo "STATUS is Ready"
+    break
+  fi
+done
+
+exit 0

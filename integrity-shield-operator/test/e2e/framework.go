@@ -40,7 +40,7 @@ var (
 	// local_test, _                = strconv.ParseBool(os.Getenv("TEST_LOCAL"))
 	kubeconfig_user                = os.Getenv("KUBE_CONTEXT_USERNAME")
 	ishield_namespace              = os.Getenv("ISHIELD_NS")
-	ishield_env                    = os.Getenv("ISHIELD_ENV")
+	ishield_env                    = os.Getenv("ISHIELD_TEST_ENV")
 	test_namespace                 = "test-ns"
 	shield_dir                     = os.Getenv("SHIELD_OP_DIR")
 	deploy_dir                     = shield_dir + "/test/deploy/"

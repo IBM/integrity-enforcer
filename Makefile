@@ -24,6 +24,9 @@ endif
 ifeq ($(ISHIELD_ENV),)
 $(error "ISHIELD_ENV is empty. Please set local or remote.")
 endif
+ifeq ($(ISHIELD_TEST_ENV),)
+$(error "ISHIELD_TEST_ENV is empty. Please set local or remote.")
+endif
 
 include  .env
 export $(shell sed 's/=.*//' .env)
@@ -227,7 +230,7 @@ test-verify-op:
 TMP_CR_FILE=$(TMP_DIR)apis_v1_integrityshield.yaml
 TMP_CR_AC_FILE=$(TMP_DIR)apis_v1_integrityshield_ac.yaml
 
-ifeq ($(ISHIELD_ENV), remote)
+ifeq ($(ISHIELD_TEST_ENV), remote)
 TMP_OBSERVER_IMG=$(REGISTRY)/$(ISHIELD_OBSERVER)
 TMP_ADMISSION_CONTROLLER_IMG=$(REGISTRY)/$(ISHIELD_ADMISSION_CONTROLLER)
 TMP_ISHIELD_IMG=$(REGISTRY)/$(ISHIELD_IMAGE)
