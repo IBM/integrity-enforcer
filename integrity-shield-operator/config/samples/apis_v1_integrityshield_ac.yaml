@@ -21,13 +21,14 @@ spec:
   requestHandlerConfig: |
     defaultConstraintAction:
       mode: detect
-      admissionOnly: false
     sideEffect: 
       createDenyEvent: true
     log:
       level: info
       manifestSigstoreLogLevel: info
       format: json
+    decisionReporterConfig:
+      enabled: true
     requestFilterProfile: 
       skipObjects:
       - kind: ConfigMap
@@ -57,6 +58,7 @@ spec:
         - metadata.annotations.cosign.sigstore.dev/message
         - metadata.annotations.cosign.sigstore.dev/certificate
         - metadata.annotations.cosign.sigstore.dev/signature
+        - metadata.annotations.deployment.kubernetes.io/revision
         objects:
         - name: '*'
       - fields:
@@ -240,7 +242,7 @@ spec:
         - system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount
   admissionController: 
     name: integrity-shield-validator
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
      # image: quay.io/open-cluster-management/integrity-shield-admission-controller
     image: localhost:5000/integrity-shield-admission-controller
     port: 9443
@@ -251,8 +253,17 @@ spec:
       app: integrity-shield-validator
     resources:
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 250m
+        memory: 256Mi
+  reporter:
+    name: integrity-shield-reporter
+    imagePullPolicy: IfNotPresent
+    image: localhost:5000/integrity-shield-reporter
+    intervalSeconds: "10"
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
   webhookServerTlsSecretName: integrity-shield-validator-tls
   webhookServiceName: integrity-shield-validator-service
   webhookConfigName: integrity-shield-validating-webhook-configuration
@@ -353,7 +364,7 @@ spec:
   observer: 
     enabled: true
     name: integrity-shield-observer
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     # image: quay.io/open-cluster-management/integrity-shield-observer
     image: localhost:5000/integrity-shield-observer
     selector:     
@@ -365,6 +376,6 @@ spec:
     resultDetailConfigKey: "config.yaml"
     resources:
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 250m
+        memory: 256Mi
 

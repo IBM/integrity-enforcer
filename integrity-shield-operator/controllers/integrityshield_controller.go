@@ -138,10 +138,16 @@ func (r *IntegrityShieldReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return recResult, recErr
 	}
 
+	//CRD
+	recResult, recErr = r.createOrUpdateManifestIntegrityDecisionCRD(instance)
+	if recErr != nil || recResult.Requeue {
+		return recResult, recErr
+	}
+
 	// Observer
 	if instance.Spec.Observer.Enabled {
 		//CRD
-		recResult, recErr = r.createOrUpdateObserverResultCRD(instance)
+		recResult, recErr = r.createOrUpdateManifestIntegrityStateCRD(instance)
 		if recErr != nil || recResult.Requeue {
 			return recResult, recErr
 		}
@@ -280,6 +286,12 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 		return err
 	}
 
+	// CRD
+	_, err = r.deleteManifestIntegrityDecisionCRD(instance)
+	if err != nil {
+		return err
+	}
+
 	if instance.Spec.UseGatekeeper {
 		if r.isGatekeeperAvailable(instance) {
 			_, err = r.deleteConstraintTemplate(instance)
@@ -312,7 +324,7 @@ func (r *IntegrityShieldReconciler) deleteClusterScopedChildrenResources(instanc
 		if err != nil {
 			return err
 		}
-		_, err = r.deleteObserverResultCRD(instance)
+		_, err = r.deleteManifestIntegrityStateCRD(instance)
 		if err != nil {
 			return err
 		}

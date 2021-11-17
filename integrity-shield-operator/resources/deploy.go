@@ -45,6 +45,7 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 	volumes = []v1.Volume{
 		SecretVolume("ishield-api-certs", cr.Spec.APITlsSecretName),
 		EmptyDirVolume("tmp"),
+		EmptyDirVolume("report-volume"),
 	}
 
 	volumemounts = []v1.VolumeMount{
@@ -57,6 +58,21 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 			MountPath: "/tmp",
 			Name:      "tmp",
 		},
+		{
+			MountPath: "/ishield-app/shared",
+			Name:      "report-volume",
+		},
+	}
+
+	loggerVolumemounts := []v1.VolumeMount{
+		{
+			MountPath: "/tmp",
+			Name:      "tmp",
+		},
+		{
+			MountPath: "/ishield-app/shared",
+			Name:      "report-volume",
+		},
 	}
 
 	var image string
@@ -67,6 +83,13 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 		image = SetImageVersion(cr.Spec.API.Image, version, cr.Spec.API.Name)
 	}
 
+	var reporterImage string
+	if cr.Spec.Reporter.Tag != "" {
+		reporterImage = SetImageVersion(cr.Spec.Reporter.Image, cr.Spec.Reporter.Tag, cr.Spec.Reporter.Name)
+	} else {
+		version := GetVersion(cr.Spec.Reporter.Name)
+		reporterImage = SetImageVersion(cr.Spec.Reporter.Image, version, cr.Spec.Reporter.Name)
+	}
 	apiContainer := v1.Container{
 		Name:            cr.Spec.API.Name,
 		SecurityContext: cr.Spec.API.SecurityContext,
@@ -115,12 +138,60 @@ func BuildDeploymentForIShieldAPI(cr *apiv1.IntegrityShield) *appsv1.Deployment 
 				Name:  "REQUEST_HANDLER_CONFIG_NAME",
 				Value: cr.Spec.RequestHandlerConfigName,
 			},
+			{
+				Name:  "DECISION_FILE_PATH",
+				Value: apiv1.DefaultFilePath,
+			},
 		},
 		Resources: cr.Spec.API.Resources,
 	}
-
+	reporterContainer := v1.Container{
+		Name:            cr.Spec.Reporter.Name,
+		SecurityContext: cr.Spec.Reporter.SecurityContext,
+		Image:           reporterImage,
+		ImagePullPolicy: cr.Spec.Reporter.ImagePullPolicy,
+		ReadinessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/health/readiness",
+					Port:   intstr.IntOrString{IntVal: 8080},
+					Scheme: v1.URISchemeHTTPS,
+				},
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       10,
+			Handler: v1.Handler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/health/liveness",
+					Port:   intstr.IntOrString{IntVal: 8080},
+					Scheme: v1.URISchemeHTTPS,
+				},
+			},
+		},
+		VolumeMounts: loggerVolumemounts,
+		Env: []v1.EnvVar{
+			{
+				Name:  "POD_NAMESPACE",
+				Value: cr.Namespace,
+			},
+			{
+				Name:  "INTERVAL_SECONDS",
+				Value: cr.Spec.Reporter.IntervalSeconds,
+			},
+			{
+				Name:  "DECISION_FILE_PATH",
+				Value: apiv1.DefaultFilePath,
+			},
+		},
+		Resources: cr.Spec.Reporter.Resources,
+	}
 	containers := []v1.Container{
 		apiContainer,
+		reporterContainer,
 	}
 
 	return &appsv1.Deployment{
@@ -165,6 +236,7 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 	volumes := []v1.Volume{
 		SecretVolume("webhook-tls", cr.Spec.WebhookServerTlsSecretName),
 		EmptyDirVolume("tmp"),
+		EmptyDirVolume("report-volume"),
 	}
 
 	servervolumemounts := []v1.VolumeMount{
@@ -176,6 +248,10 @@ func BuildDeploymentForAdmissionController(cr *apiv1.IntegrityShield) *appsv1.De
 		{
 			MountPath: "/tmp",
 			Name:      "tmp",
+		},
+		{
+			MountPath: "/ishield-app/shared",
+			Name:      "report-volume",
 		},
 	}
 

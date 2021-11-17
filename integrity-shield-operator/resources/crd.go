@@ -59,7 +59,7 @@ func buildCRD(name, namespace string, crdNames extv1.CustomResourceDefinitionNam
 	return newCRD
 }
 
-//shield config crd
+//manifest integrity profile crd for custom admission controller (equivalent to manifest integrity constraint)
 func BuildManifestIntegrityProfileCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
 		Kind:       "ManifestIntegrityProfile",
@@ -71,8 +71,8 @@ func BuildManifestIntegrityProfileCRD(cr *apiv1.IntegrityShield) *extv1.CustomRe
 	return buildCRD("manifestintegrityprofiles.apis.integrityshield.io", cr.Namespace, crdNames, false)
 }
 
-//shield config crd
-func BuildObserverResultCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
+//manifest integrity state crd
+func BuildManifestIntegrityStateCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
 	crdNames := extv1.CustomResourceDefinitionNames{
 		Kind:       "ManifestIntegrityState",
 		Plural:     "manifestintegritystates",
@@ -81,4 +81,16 @@ func BuildObserverResultCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefi
 		ShortNames: []string{"mis"},
 	}
 	return buildCRD("manifestintegritystates.apis.integrityshield.io", cr.Namespace, crdNames, true)
+}
+
+//manifest integrity decision crd
+func BuildManifestIntegrityDecisionCRD(cr *apiv1.IntegrityShield) *extv1.CustomResourceDefinition {
+	crdNames := extv1.CustomResourceDefinitionNames{
+		Kind:       "ManifestIntegrityDecision",
+		Plural:     "manifestintegritydecisions",
+		ListKind:   "ManifestIntegrityDecisionList",
+		Singular:   "manifestintegritydecision",
+		ShortNames: []string{"mid"},
+	}
+	return buildCRD("manifestintegritydecisions.apis.integrityshield.io", cr.Namespace, crdNames, true)
 }

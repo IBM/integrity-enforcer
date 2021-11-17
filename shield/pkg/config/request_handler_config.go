@@ -18,7 +18,6 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,11 +26,10 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
+	kubeutil "github.com/open-cluster-management/integrity-shield/shield/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
-	"github.com/sigstore/k8s-manifest-sigstore/pkg/util/kubeutil"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -53,13 +51,13 @@ var logLevelMap = map[string]log.Level{
 }
 
 type RequestHandlerConfig struct {
-	ImageVerificationConfig ImageVerificationConfig `json:"imageVerificationConfig,omitempty"`
-	KeyPathList             []string                `json:"keyPathList,omitempty"`
-	SigStoreConfig          SigStoreConfig          `json:"sigStoreConfig,omitempty"`
-	RequestFilterProfile    RequestFilterProfile    `json:"requestFilterProfile,omitempty"`
-	Log                     LogConfig               `json:"log,omitempty"`
-	SideEffectConfig        SideEffectConfig        `json:"sideEffect,omitempty"`
-	DefaultConstraintAction Action                  `json:"defaultConstraintAction,omitempty"`
+	KeyPathList             []string               `json:"keyPathList,omitempty"`
+	SigStoreConfig          SigStoreConfig         `json:"sigStoreConfig,omitempty"`
+	RequestFilterProfile    RequestFilterProfile   `json:"requestFilterProfile,omitempty"`
+	Log                     LogConfig              `json:"log,omitempty"`
+	DecisionReporterConfig  DecisionReporterConfig `json:"decisionReporterConfig,omitempty"`
+	SideEffectConfig        SideEffectConfig       `json:"sideEffect,omitempty"`
+	DefaultConstraintAction Action                 `json:"defaultConstraintAction,omitempty"`
 	Options                 []string
 }
 
@@ -69,12 +67,15 @@ type LogConfig struct {
 	Format                   string `json:"format,omitempty"`
 }
 
+type DecisionReporterConfig struct {
+	Enabled   bool  `json:"enabled,omitempty"`
+	LimitSize int64 `json:"limitSize,omitempty"`
+	File      string
+}
+
 type SideEffectConfig struct {
 	// Event
 	CreateDenyEvent bool `json:"createDenyEvent"`
-}
-
-type ImageVerificationConfig struct {
 }
 
 type SigStoreConfig struct {
@@ -113,13 +114,15 @@ func SetupLogger(config LogConfig, req admission.Request) {
 }
 
 func LoadKeySecret(keySecretNamespace, keySecretName string) (string, error) {
-	obj, err := kubeutil.GetResource("v1", "Secret", keySecretNamespace, keySecretName)
+	kubeconf, _ := kubeutil.GetKubeConfig()
+	clientset, err := kubeclient.NewForConfig(kubeconf)
+	if err != nil {
+		return "", err
+	}
+	secret, err := clientset.CoreV1().Secrets(keySecretNamespace).Get(context.Background(), keySecretName, metav1.GetOptions{})
 	if err != nil {
 		return "", errors.Wrap(err, fmt.Sprintf("failed to get a secret `%s` in `%s` namespace", keySecretName, keySecretNamespace))
 	}
-	objBytes, _ := json.Marshal(obj.Object)
-	var secret v1.Secret
-	_ = json.Unmarshal(objBytes, &secret)
 	keyDir := fmt.Sprintf("/tmp/%s/%s/", keySecretNamespace, keySecretName)
 	sumErr := []string{}
 	keyPath := ""

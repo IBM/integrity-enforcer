@@ -57,10 +57,10 @@ if [ -z "$ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION" ]; then
     exit 1
 fi
 
-# if [ -z "$ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION" ]; then
-#     echo "ISHIELD_INSPECTOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
-#     exit 1
-# fi
+if [ -z "$ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+    exit 1
+fi
 
 if [ -z "$ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
     echo "ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
@@ -75,7 +75,7 @@ fi
 
 # Build ishield-api image
 echo -----------------------------
-echo [1/4] Building ishield-api image.
+echo [1/5] Building ishield-api image.
 cd ${SHIELD_DIR}
 go mod tidy
 exit_status=$?
@@ -107,7 +107,7 @@ echo ""
 
 # Build ishield-ac-server image
 echo -----------------------------
-echo [2/4] Building ishield-ac-server image.
+echo [2/5] Building ishield-ac-server image.
 cd ${SHIELD_AC_DIR}
 go mod tidy
 exit_status=$?
@@ -138,7 +138,7 @@ echo ""
 
 # Build ishield-observer image
 echo -----------------------------
-echo [3/4] Building ishield-observer image.
+echo [3/5] Building ishield-observer image.
 cd ${SHIELD_OBSERVER_DIR}
 go mod tidy
 exit_status=$?
@@ -158,9 +158,31 @@ else
     docker build -t ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION} .
 fi
 
+# Build ishield-reporter image
+echo -----------------------------
+echo [4/5] Building ishield-reporter image.
+cd ${SHIELD_REPORTER_DIR}
+go mod tidy
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags="-s -w" -a -o build/_bin/ishield-reporter ./
+exit_status=$?
+if [ $exit_status -ne 0 ]; then
+    echo "failed"
+    exit 1
+fi
+if [ "$NO_CACHE" = true ] ; then
+    docker build -t ${ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION} . --no-cache
+else
+    docker build -t ${ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION} .
+fi
+
 # Build integrity-shield-operator image
 echo -----------------------------
-echo [4/4] Building integrity-shield-operator image.
+echo [5/5] Building integrity-shield-operator image.
 cd ${SHIELD_OP_DIR}
 go mod tidy
 exit_status=$?

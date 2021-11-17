@@ -49,7 +49,7 @@ var _ = Describe("Test: integrity shield", func() {
 				return CheckPodStatus(framework, namespace, expected)
 			}, timeout, 1).Should(BeNil())
 		})
-		It("IShield server should be created properly", func() {
+		It("IShield API Pod should be created properly", func() {
 			framework := initFrameWork()
 			var timeout int = 300
 			expected := api_name
@@ -177,7 +177,7 @@ var _ = Describe("Test: integrity shield", func() {
 			framework := initFrameWork()
 			api_name := api_name
 			api := GetPodName(framework, ishield_namespace, api_name)
-			err, serverLog := KubectlOut("logs", "-n", ishield_namespace, api)
+			err, serverLog := KubectlOut("logs", "-n", ishield_namespace, api, "-c", "integrity-shield-api")
 			Expect(err).To(BeNil())
 			_ = ioutil.WriteFile("./e2etest-api.log", []byte(serverLog), 0640) // NO SONAR
 
@@ -290,7 +290,7 @@ var _ = Describe("Test: integrity shield", func() {
 			framework := initFrameWork()
 			ac_server_name := ac_server_name
 			ac_server := GetPodName(framework, ishield_namespace, ac_server_name)
-			err, serverLog := KubectlOut("logs", "-n", ishield_namespace, ac_server)
+			err, serverLog := KubectlOut("logs", "-n", ishield_namespace, ac_server, "-c", "integrity-shield-validator")
 			Expect(err).To(BeNil())
 			_ = ioutil.WriteFile("./e2etest-ac-server.log", []byte(serverLog), 0640) // NO SONAR
 

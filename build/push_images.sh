@@ -31,6 +31,16 @@ if [ -z "$ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION" ]; then
     exit 1
 fi
 
+if [ -z "$ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+    exit 1
+fi
+
+if [ -z "$ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION" ]; then
+    echo "ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
+    exit 1
+fi
+
 if [ -z "$ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION" ]; then
     echo "ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION is empty. Please set IShield build env settings."
     exit 1
@@ -40,7 +50,7 @@ fi
 
 # Push integrity-shield-api image
 echo -----------------------------
-echo [1/4] Pushing integrity-shield-api image.
+echo [1/5] Pushing integrity-shield-api image.
 docker push ${ISHIELD_API_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
@@ -49,8 +59,16 @@ echo ""
 
 # Push integrity-shield-observer image
 echo -----------------------------
-echo [2/4] Pushing integrity-shield-observer image.
+echo [2/5] Pushing integrity-shield-observer image.
 docker push ${ISHIELD_OBSERVER_IMAGE_NAME_AND_VERSION}
+echo done.
+echo -----------------------------
+echo ""
+
+# Push integrity-shield-reporter image
+echo -----------------------------
+echo [3/5] Pushing integrity-shield-reporter image.
+docker push ${ISHIELD_REPORTER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
 echo ""
@@ -58,7 +76,7 @@ echo ""
 
 # Push integrity-shield-admission-controller image
 echo -----------------------------
-echo [3/4] Pushing integrity-shield-admission-controller image.
+echo [4/5] Pushing integrity-shield-admission-controller image.
 docker push ${ISHIELD_ADMISSION_CONTROLLER_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------
@@ -67,7 +85,7 @@ echo ""
 
 # Push integrity-shield-operator image
 echo -----------------------------
-echo [4/4] Pushing integrity-shield-operator image.
+echo [5/5] Pushing integrity-shield-operator image.
 docker push ${ISHIELD_OPERATOR_IMAGE_NAME_AND_VERSION}
 echo done.
 echo -----------------------------

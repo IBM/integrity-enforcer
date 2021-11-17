@@ -131,6 +131,17 @@ func BuildClusterRoleForIShield(cr *apiv1.IntegrityShield) *rbacv1.ClusterRole {
 			// 		cr.Spec.Security.PodSecurityPolicyName,
 			// 	},
 			// },
+			{
+				APIGroups: []string{
+					"apis.integrityshield.io",
+				},
+				Resources: []string{
+					"manifestintegritydecisions",
+				},
+				Verbs: []string{
+					"get", "list", "create", "update", "delete",
+				},
+			},
 		},
 	}
 	return role
