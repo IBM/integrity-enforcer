@@ -52,7 +52,6 @@ var logLevelMap = map[string]log.Level{
 
 type RequestHandlerConfig struct {
 	KeyPathList             []string               `json:"keyPathList,omitempty"`
-	SigStoreConfig          SigStoreConfig         `json:"sigStoreConfig,omitempty"`
 	RequestFilterProfile    RequestFilterProfile   `json:"requestFilterProfile,omitempty"`
 	Log                     LogConfig              `json:"log,omitempty"`
 	DecisionReporterConfig  DecisionReporterConfig `json:"decisionReporterConfig,omitempty"`
@@ -76,10 +75,6 @@ type DecisionReporterConfig struct {
 type SideEffectConfig struct {
 	// Event
 	CreateDenyEvent bool `json:"createDenyEvent"`
-}
-
-type SigStoreConfig struct {
-	RekorServer string `json:"rekorServer,omitempty"`
 }
 
 type RequestFilterProfile struct {
