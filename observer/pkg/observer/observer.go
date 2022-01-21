@@ -32,9 +32,9 @@ import (
 	midclient "github.com/open-cluster-management/integrity-shield/reporter/pkg/client/manifestintegritydecision/clientset/versioned/typed/manifestintegritydecision/v1"
 	k8smnfconfig "github.com/open-cluster-management/integrity-shield/shield/pkg/config"
 	kubeutil "github.com/open-cluster-management/integrity-shield/shield/pkg/kubernetes"
+	gkmatch "github.com/open-policy-agent/gatekeeper/pkg/mutation/match"
 	"github.com/pkg/errors"
-	cosign "github.com/sigstore/cosign/cmd/cosign/cli/initialize"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
+	cosign "github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -161,8 +161,7 @@ func (self *Observer) Init() error {
 	log.SetLevel(logLevel)
 
 	log.Info("initialize cosign.")
-	o := &options.InitializeOptions{}
-	_ = cosign.DoInitialize(context.Background(), o.Root, o.Mirror, o.Threshold)
+	_ = cosign.Initialize()
 	return nil
 }
 
@@ -493,16 +492,8 @@ func LoadKeySecret(keySecretNamespace, keySecretName string) (string, error) {
 //
 
 type ConstraintSpec struct {
-	Match      MatchCondition               `json:"match,omitempty"`
+	Match      gkmatch.Match                `json:"match,omitempty"`
 	Parameters k8smnfconfig.ParameterObject `json:"parameters,omitempty"`
-}
-
-type MatchCondition struct {
-	Kinds              []Kinds               `json:"kinds,omitempty"`
-	Namespaces         []string              `json:"namespaces,omitempty"`
-	ExcludedNamespaces []string              `json:"excludedNamespaces,omitempty"`
-	LabelSelector      *metav1.LabelSelector `json:"labelSelector,omitempty"`
-	NamespaceSelector  *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 }
 
 type Kinds struct {
