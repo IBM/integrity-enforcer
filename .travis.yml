@@ -4,7 +4,7 @@ service:
   - docker
 
 go:
-   - "1.16.x"
+   - "1.17.x"
 
 os:
   - linux
@@ -46,6 +46,9 @@ stages:
   - test-e2e
   - publish
 
+before_script:
+  - make init
+
 jobs:
   include:
     - stage: lint
@@ -56,26 +59,25 @@ jobs:
     - stage: build
       name: "Build the image and push it"
       script:
-         - |
-           make init
-           make component/build
-           make sec-scan
+         - make component/build
+         - ./build/sec_scan.sh
     - stage: test-unit
       name: "Run unit test"
       script:
         - set -e
         - |
-          make init
           make component/test/unit
           make test-gpg-annotation
-          make sonar-go-test-ishield
-          make sonar-go-test-op
+        - |
+          ./build/sonar-go-test-ishield.sh
+          ./build/sonar-go-test-op.sh
+          # make sonar-go-test-ishield
+          # make sonar-go-test-op
           # make sonar/go enable it after resolving package references to upstream repo
     - stage: test-e2e
       name: "Deploy the image to a cluster and run e2e tests"
       script:
         - |
-          make init
           make component/pull
           make component/test/e2e
     - stage: publish
@@ -83,7 +85,6 @@ jobs:
       if: env(ENABLE_PUBLISH) = true AND branch =~ /^release-[0-9]+\..*$/
       script:
         - |
-          make init
           make component/build
           make publish
           #${TRAVIS_BUILD_DIR}/build/pipeline.sh

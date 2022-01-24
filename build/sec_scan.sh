@@ -20,6 +20,7 @@ echo "SECURITY SCAN GOES HERE!"
 
 # Run our build target
 
+. ${ISHIELD_REPO_ROOT}/ishield-build.conf
 
 echo "Scaning integrity shield images : $(date)"
 
