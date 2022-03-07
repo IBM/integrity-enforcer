@@ -17,25 +17,42 @@
 package config
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/jinzhu/copier"
+	"github.com/pkg/errors"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	k8smnfutil "github.com/sigstore/k8s-manifest-sigstore/pkg/util"
+	kubeutil "github.com/stolostron/integrity-shield/shield/pkg/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kubeclient "k8s.io/client-go/kubernetes"
 )
 
+// Parameter in constraint
 type ParameterObject struct {
-	ConstraintName                   string                          `json:"constraintName"`
+	ConstraintName     string `json:"constraintName"`
+	ManifestVerifyRule `json:""`
+	ImageProfile       ImageProfile `json:"imageProfile,omitempty"`
+	Action             *Action      `json:"action,omitempty"`
+	GetProvenance      bool         `json:"getProvenance,omitempty"`
+}
+
+type ManifestVerifyRule struct {
 	SignatureRef                     SignatureRef                    `json:"signatureRef,omitempty"`
 	KeyConfigs                       []KeyConfig                     `json:"keyConfigs,omitempty"`
 	InScopeObjects                   k8smanifest.ObjectReferenceList `json:"objectSelector,omitempty"`
 	SkipUsers                        ObjectUserBindingList           `json:"skipUsers,omitempty"`
 	InScopeUsers                     ObjectUserBindingList           `json:"inScopeUsers,omitempty"`
-	ImageProfile                     ImageProfile                    `json:"imageProfile,omitempty"`
 	k8smanifest.VerifyResourceOption `json:""`
-	Action                           *Action `json:"action,omitempty"`
-	GetProvenance                    bool    `json:"getProvenance,omitempty"`
 }
 
+// enforce/inform mode
 type Action struct {
 	Mode          string `json:"mode,omitempty"`
 	AdmissionOnly bool   `json:"admissionOnly,omitempty"`
@@ -53,8 +70,19 @@ type ResourceRef struct {
 }
 
 type KeyConfig struct {
-	KeySecretName      string `json:"keySecretName,omitempty"`
-	KeySecretNamespace string `json:"keySecretNamespace,omitempty"`
+	Key    Key       `json:"key,omitempty"`       // PEM encoded public key
+	Secret KeySecret `json:"keySecret,omitempty"` // public key as a Kubernetes Secret
+}
+
+type Key struct {
+	Name string `json:"name,omitempty"`
+	PEM  string `json:"PEM,omitempty"`
+}
+
+type KeySecret struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Mount     bool   `json:"mount,omitempty"` // if true, save secret data as a file.
 }
 
 type ImageRef string
@@ -93,6 +121,10 @@ func (p *ParameterObject) DeepCopyInto(p2 *ParameterObject) {
 	_ = copier.Copy(&p2, &p)
 }
 
+func (p *ManifestVerifyRule) DeepCopyInto(p2 *ManifestVerifyRule) {
+	_ = copier.Copy(&p2, &p)
+}
+
 func (u ObjectUserBinding) Match(obj unstructured.Unstructured, username string) bool {
 	if u.Objects.Match(obj) {
 		if k8smnfutil.MatchWithPatternArray(username, u.Users) {
@@ -127,4 +159,68 @@ func (p ImageProfile) MatchWith(imageRef string) bool {
 		excluded = p.Exclude.Match(imageRef)
 	}
 	return matched && !excluded
+}
+
+// validate ManifestVerifyRule
+func ValidateManifestVerifyRule(p *ManifestVerifyRule) error {
+	// TODO: fix
+	return nil
+}
+
+func (k KeyConfig) LoadKeySecret() (string, error) {
+	kubeconf, _ := kubeutil.GetKubeConfig()
+	clientset, err := kubeclient.NewForConfig(kubeconf)
+	if err != nil {
+		return "", err
+	}
+	secret, err := clientset.CoreV1().Secrets(k.Secret.Namespace).Get(context.Background(), k.Secret.Name, metav1.GetOptions{})
+	if err != nil {
+		return "", errors.Wrap(err, fmt.Sprintf("failed to get a secret `%s` in `%s` namespace", k.Secret.Namespace, k.Secret.Name))
+	}
+	keyDir := fmt.Sprintf("/tmp/%s/%s/", k.Secret.Namespace, k.Secret.Name)
+	sumErr := []string{}
+	keyPath := ""
+	for fname, keyData := range secret.Data {
+		err := os.MkdirAll(keyDir, os.ModePerm)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		fpath := filepath.Join(keyDir, fname)
+		err = ioutil.WriteFile(fpath, keyData, 0644)
+		if err != nil {
+			sumErr = append(sumErr, err.Error())
+			continue
+		}
+		keyPath = fpath
+		break
+	}
+	if keyPath == "" && len(sumErr) > 0 {
+		return "", errors.New(fmt.Sprintf("failed to save secret data as a file; %s", strings.Join(sumErr, "; ")))
+	}
+	if keyPath == "" {
+		return "", errors.New(fmt.Sprintf("no key files are found in the secret `%s` in `%s` namespace", k.Secret.Namespace, k.Secret.Name))
+	}
+
+	return keyPath, nil
+}
+
+func (k KeyConfig) ConvertToCosignKeyRef() string {
+	ref := fmt.Sprintf("k8s://%s/%s", k.Secret.Namespace, k.Secret.Name)
+	return ref
+}
+
+func (k KeyConfig) ConvertToLocalFilePath() (string, error) {
+	keyDir := fmt.Sprintf("/tmp/%s/", k.Key.Name)
+	err := os.MkdirAll(keyDir, os.ModePerm)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("failed to save PEM public key as a file; %s", err))
+	}
+	fpath := filepath.Join(keyDir, "key.pub")
+	err = ioutil.WriteFile(fpath, []byte(k.Key.PEM), 0644)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("failed to save PEM public key as a file; %s; %s", fpath, err))
+	}
+
+	return fpath, nil
 }

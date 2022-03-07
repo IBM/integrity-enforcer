@@ -20,22 +20,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	gkmatch "github.com/open-policy-agent/gatekeeper/pkg/mutation/match"
-	"github.com/pkg/errors"
 	cosign "github.com/sigstore/cosign/cmd/cosign/cli"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	log "github.com/sirupsen/logrus"
 	vrc "github.com/stolostron/integrity-shield/observer/pkg/apis/manifestintegritystate/v1"
 	misclient "github.com/stolostron/integrity-shield/observer/pkg/client/manifestintegritystate/clientset/versioned/typed/manifestintegritystate/v1"
 	midclient "github.com/stolostron/integrity-shield/reporter/pkg/client/manifestintegritydecision/clientset/versioned/typed/manifestintegritydecision/v1"
-	k8smnfconfig "github.com/stolostron/integrity-shield/shield/pkg/config"
+	"github.com/stolostron/integrity-shield/shield/pkg/config"
 	kubeutil "github.com/stolostron/integrity-shield/shield/pkg/kubernetes"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -168,7 +164,7 @@ func (self *Observer) Init() error {
 
 func (self *Observer) Run() {
 	// load requestHandlerConfig
-	rhconfig, err := k8smnfconfig.LoadRequestHandlerConfig()
+	rhconfig, err := config.LoadRequestHandlerConfig()
 	if err != nil {
 		log.Error("Failed to load RequestHandlerConfig; err: ", err.Error())
 	}
@@ -458,52 +454,13 @@ func (self *Observer) exportResultDetail(results ObservationDetailResults) error
 	return nil
 }
 
-func LoadKeySecret(keySecretNamespace, keySecretName string) (string, error) {
-	kubeconf, _ := kubeutil.GetKubeConfig()
-	clientset, err := kubeclient.NewForConfig(kubeconf)
-	if err != nil {
-		return "", err
-	}
-	secret, err := clientset.CoreV1().Secrets(keySecretNamespace).Get(context.Background(), keySecretName, metav1.GetOptions{})
-	if err != nil {
-		return "", errors.Wrap(err, fmt.Sprintf("failed to get a secret `%s` in `%s` namespace", keySecretName, keySecretNamespace))
-	}
-	keyDir := fmt.Sprintf("/tmp/%s/%s/", keySecretNamespace, keySecretName)
-	log.Debug("keyDir", keyDir)
-	sumErr := []string{}
-	keyPath := ""
-	for fname, keyData := range secret.Data {
-		err = os.MkdirAll(keyDir, os.ModePerm)
-		if err != nil {
-			sumErr = append(sumErr, err.Error())
-			continue
-		}
-		fpath := filepath.Join(keyDir, fname)
-		err = ioutil.WriteFile(fpath, keyData, 0644)
-		if err != nil {
-			sumErr = append(sumErr, err.Error())
-			continue
-		}
-		keyPath = fpath
-		break
-	}
-	if keyPath == "" && len(sumErr) > 0 {
-		return "", errors.New(fmt.Sprintf("failed to save secret data as a file; %s", strings.Join(sumErr, "; ")))
-	}
-	if keyPath == "" {
-		return "", errors.New(fmt.Sprintf("no key files are found in the secret `%s` in `%s` namespace", keySecretName, keySecretNamespace))
-	}
-
-	return keyPath, nil
-}
-
 //
 // Constraint
 //
 
 type ConstraintSpec struct {
-	Match      gkmatch.Match                `json:"match,omitempty"`
-	Parameters k8smnfconfig.ParameterObject `json:"parameters,omitempty"`
+	Match      gkmatch.Match          `json:"match,omitempty"`
+	Parameters config.ParameterObject `json:"parameters,omitempty"`
 }
 
 type Kinds struct {

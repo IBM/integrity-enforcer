@@ -22,17 +22,17 @@ import (
 	"strings"
 	"time"
 
-	k8smnfconfig "github.com/stolostron/integrity-shield/shield/pkg/config"
-	ishieldimage "github.com/stolostron/integrity-shield/shield/pkg/image"
 	"github.com/sigstore/k8s-manifest-sigstore/pkg/k8smanifest"
 	log "github.com/sirupsen/logrus"
+	config "github.com/stolostron/integrity-shield/shield/pkg/config"
+	ishieldimage "github.com/stolostron/integrity-shield/shield/pkg/image"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const AnnotationKeyDomain = "integrityshield.io"
 const ImageRefAnnotationKeyShield = "integrityshield.io/signature"
 
-func ObserveResource(resource unstructured.Unstructured, paramObj k8smnfconfig.ParameterObject, ignoreFields k8smanifest.ObjectFieldBindingList, skipObjects k8smanifest.ObjectReferenceList, secrets []k8smnfconfig.KeyConfig) VerifyResultDetail {
+func ObserveResource(resource unstructured.Unstructured, paramObj config.ParameterObject, ignoreFields k8smanifest.ObjectFieldBindingList, skipObjects k8smanifest.ObjectReferenceList, secrets []config.KeyConfig) VerifyResultDetail {
 	namespace := os.Getenv("POD_NAMESPACE")
 	if namespace == "" {
 		namespace = defaultPodNamespace
@@ -61,17 +61,68 @@ func ObserveResource(resource unstructured.Unstructured, paramObj k8smnfconfig.P
 	if found {
 		vo.AnnotationConfig.AnnotationKeyDomain = AnnotationKeyDomain
 	}
-	// secret
-	for _, s := range secrets {
-		if s.KeySecretName != "" {
-			pubkey, err := LoadKeySecret(s.KeySecretNamespace, s.KeySecretName)
-			if err != nil {
-				fmt.Println("Failed to load pubkey; err: ", err.Error())
+
+	// prepare local key for verifyResource
+	keyPathList := []string{}
+	if len(secrets) != 0 {
+		for _, keyconfig := range secrets {
+			if keyconfig.Secret.Namespace != "" && keyconfig.Secret.Name != "" {
+				if keyconfig.Secret.Mount {
+					keyPath, err := keyconfig.LoadKeySecret()
+					if err != nil {
+						log.Errorf("Failed to load key secret: %s", err.Error())
+						return VerifyResultDetail{
+							Time:                 time.Now().Format(timeFormat),
+							Kind:                 resource.GroupVersionKind().Kind,
+							Name:                 resource.GetName(),
+							Namespace:            resource.GetNamespace(),
+							Error:                false,
+							Message:              fmt.Sprintf("Failed to load key secret: %s", err.Error()),
+							VerifyResourceResult: &k8smanifest.VerifyResourceResult{},
+							Violation:            true,
+						}
+					}
+					keyPathList = append(keyPathList, keyPath)
+				} else {
+					keyRef := keyconfig.ConvertToCosignKeyRef()
+					keyPathList = append(keyPathList, keyRef)
+				}
 			}
-			vo.KeyPath = pubkey
-			break
+			if keyconfig.Key.PEM != "" && keyconfig.Key.Name != "" {
+				keyPath, err := keyconfig.ConvertToLocalFilePath()
+				if err != nil {
+					return VerifyResultDetail{
+						Time:                 time.Now().Format(timeFormat),
+						Kind:                 resource.GroupVersionKind().Kind,
+						Name:                 resource.GetName(),
+						Namespace:            resource.GetNamespace(),
+						Error:                false,
+						Message:              fmt.Sprintf("Failed to set public key file: %s", err.Error()),
+						VerifyResourceResult: &k8smanifest.VerifyResourceResult{},
+						Violation:            true,
+					}
+				}
+				keyPathList = append(keyPathList, keyPath)
+			}
+		}
+		if len(keyPathList) == 0 {
+			return VerifyResultDetail{
+				Time:                 time.Now().Format(timeFormat),
+				Kind:                 resource.GroupVersionKind().Kind,
+				Name:                 resource.GetName(),
+				Namespace:            resource.GetNamespace(),
+				Error:                false,
+				Message:              "KeyConfigs is not properly configured, failed to set public key.",
+				VerifyResourceResult: &k8smanifest.VerifyResourceResult{},
+				Violation:            true,
+			}
+		}
+		keyPathString := strings.Join(keyPathList, ",")
+		if keyPathString != "" {
+			vo.KeyPath = keyPathString
 		}
 	}
+
 	// log.Debug("VerifyResourceOption", vo)
 	result, err := k8smanifest.VerifyResource(resource, vo)
 	log.Debug("Verify resource result from k8smanifest: ", result)
@@ -128,7 +179,7 @@ func ObserveResource(resource unstructured.Unstructured, paramObj k8smnfconfig.P
 	}
 }
 
-func ObserveImage(resource unstructured.Unstructured, profile k8smnfconfig.ImageProfile) (bool, string) {
+func ObserveImage(resource unstructured.Unstructured, profile config.ImageProfile) (bool, string) {
 	// image verify
 	imageAllow := true
 	imageMessage := ""
