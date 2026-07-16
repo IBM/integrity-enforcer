@@ -39,7 +39,7 @@ Integrity Shield can be deployed with operator. We have verified the feasibility
       include:
       - "secure-ns"
       exclude:
-      - "kube-*"
+      - "another-ns"
     protectRules:
     - match:
       - kind: ConfigMap

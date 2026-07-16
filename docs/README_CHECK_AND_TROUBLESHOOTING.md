@@ -182,7 +182,7 @@ To see all RSPs in your cluster, you can use a [list_rsp.sh ](../scripts/list_rs
 ```
 $ ./scripts/list_rsp.sh
 NAMESPACE                         NAME                    RULES                                                                                      TARGET_NAMESPACE
-integrity-shield-operator-system  global-rsp              {"protectRules":[{"match":[{"kind":"Service"}]}]}                                          {"exclude":["kube-*"],"include":["*"]}
+integrity-shield-operator-system  global-rsp              {"protectRules":[{"match":[{"kind":"Service"}]}]}                                          {"exclude":["kube-system","kube-public","kube-node-lease"],"include":["*"]}
 secure-ns                         sample-rsp              {"protectRules":[[{"match":[{"kind":"Pod"},{"kind":"ConfigMap"},{"kind":"Deployment"}]}]}  secure-ns
 test-ns                           sample-clusterrole-rsp  {"protectRules":[[{"match":[{"kind":"ClusterRole"}]}]}                                     test-ns
 ```

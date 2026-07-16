@@ -72,8 +72,10 @@ spec:
       include:
       - "*"
       exclude:
-      - "kube-*"
-      - "openshift-*"
+      - "kube-system"
+      - "kube-public"
+      - "kube-node-lease"
+      # ... plus other system namespaces; see webhook/admission-controller/resource/admission-controller-config.yaml for the complete shipped default list
   signerConfig:
     policies:
     - namespaces:

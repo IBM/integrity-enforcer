@@ -86,7 +86,7 @@ spec:
 
 ## Define In-scope Namespaces
 You can define which namespace is not checked by Integrity Shield even if ResourceSigningProfile is there.
-Wildcard "*" can be used for this config. By default, Integrity Shield checks RSPs in all namespaces except ones in `kube-*` and `openshift-*` namespaces.
+By default, Integrity Shield checks RSPs in all namespaces except an explicit list of known Kubernetes and OpenShift system namespaces (e.g. `kube-system`, `kube-public`, `kube-node-lease`, `openshift`, `openshift-apiserver`, ...). See the complete shipped default list in [`admission-controller-config.yaml`](../webhook/admission-controller/resource/admission-controller-config.yaml).
 
 ```yaml
 spec:
@@ -94,9 +94,13 @@ spec:
     include:
     - "*"
     exclude:
-    - "kube-*"
-    - "openshift-*"
+    - "kube-system"
+    - "kube-public"
+    - "kube-node-lease"
+    # ... plus other system namespaces; see admission-controller-config.yaml for the complete list
 ```
+
+Wildcards (e.g. `kube-*`) are supported syntactically in this field, but note that a wildcard pattern such as `kube-*` will match **any** namespace name beginning with `kube-`, including user-created ones. Prefer listing individual namespace names when you want a precise exclusion.
 
 ## Unprocessed Requests
 Some resources are not relevant to the signature-based protection by Integrity Shield.
